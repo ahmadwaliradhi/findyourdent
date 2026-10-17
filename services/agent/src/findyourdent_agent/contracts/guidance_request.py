@@ -17,7 +17,10 @@ class Audio(BaseModel):
         extra="forbid",
     )
     mimeType: Literal["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav"]
-    dataBase64: Annotated[str, Field(min_length=1)]
+    dataBase64: Annotated[str, Field(max_length=2800000, min_length=1)]
+    """
+    Base64 of the recording. At most 2,800,000 characters (about 2 MB): 60 seconds of 16 kHz mono WAV, and well above 60 seconds of Opus or AAC.
+    """
 
 
 class GuidanceRequest1(BaseModel):

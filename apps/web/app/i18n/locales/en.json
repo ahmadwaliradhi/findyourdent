@@ -14,7 +14,7 @@
   "home": {
     "headline": "Toothache? Understand it before you see a dentist.",
     "intro": "Describe your problem in your own words. We explain how urgent it is, what it may be, what it might cost, and whether BPJS covers it.",
-    "consent": "Educational information, not a diagnosis. Your complaint text is not stored and is processed by Google AI outside Indonesia.",
+    "consent": "Educational information, not a diagnosis. Your complaint, typed or as a voice note, is not stored and is processed by Google AI outside Indonesia.",
     "complaintLabel": "Describe your dental problem",
     "complaintPlaceholder": "Example: my lower left molar has been throbbing for three days and hurts more at night",
     "complaintHint": "Write in Indonesian, a regional language, or English.",
@@ -22,7 +22,15 @@
     "submitting": "Working on it…",
     "followUpAnswerLabel": "Your answer",
     "followUpSubmit": "Send answer",
-    "quickRepliesLabel": "Quick replies"
+    "quickRepliesLabel": "Quick replies",
+    "voiceOr": "or",
+    "voiceRecord": "Record a voice note",
+    "voiceStop": "Stop and send",
+    "voiceCancel": "Cancel",
+    "voiceHint": "Press the button, then describe your problem. Up to 1 minute.",
+    "voiceRecording": "Recording. Press Stop and send when you are done, up to 1 minute.",
+    "voiceDenied": "Microphone access is blocked. Allow the microphone in your browser settings, or type your complaint.",
+    "voiceFailed": "Recording did not work. Try again, or type your complaint."
   },
   "errors": {
     "title": "Sorry, something went wrong",
@@ -35,7 +43,9 @@
     "agent_unavailable": "The guidance service is unavailable right now. Please try again in a moment.",
     "invalid_agent_response": "The guidance service sent an answer we cannot show. Please try again.",
     "app_check_required": "We could not confirm this request came from your browser. Reload the page and try again.",
-    "rate_limited": "Too many requests in a short time. Please try again later."
+    "rate_limited": "Too many requests in a short time. Please try again later.",
+    "audio_too_large": "The voice note is too long. Record again for up to 1 minute, or type your complaint.",
+    "no_speech": "We could not hear you. Record again somewhere quieter, or type your complaint."
   },
   "card": {
     "transcriptLabel": "What we understood from your voice note",
@@ -69,7 +79,8 @@
       "privacy": "The link contains only the guidance above, not the complaint you wrote.",
       "whatsapp": "Share on WhatsApp",
       "open": "Open guidance link"
-    }
+    },
+    "transcriptHint": "A word wrong? Fix it in the complaint box above, then press Get guidance."
   },
   "estimate": "estimasi (estimate)",
   "urgency": {

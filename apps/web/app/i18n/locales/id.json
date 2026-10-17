@@ -14,7 +14,7 @@
   "home": {
     "headline": "Sakit gigi? Pahami dulu sebelum ke dokter gigi.",
     "intro": "Ceritakan keluhan Anda dengan kata-kata sendiri. Kami bantu jelaskan seberapa mendesak, kemungkinan masalahnya, perkiraan biaya, dan apakah BPJS menanggungnya.",
-    "consent": "Informasi edukasi, bukan diagnosis. Teks keluhan Anda tidak disimpan dan diproses oleh Google AI di luar Indonesia.",
+    "consent": "Informasi edukasi, bukan diagnosis. Keluhan Anda, tertulis maupun pesan suara, tidak disimpan dan diproses oleh Google AI di luar Indonesia.",
     "complaintLabel": "Ceritakan keluhan gigi Anda",
     "complaintPlaceholder": "Contoh: gigi geraham kiri bawah nyut-nyutan sejak tiga hari, makin sakit kalau malam",
     "complaintHint": "Boleh dalam Bahasa Indonesia, bahasa daerah, atau English.",
@@ -22,7 +22,15 @@
     "submitting": "Sedang memproses…",
     "followUpAnswerLabel": "Jawaban Anda",
     "followUpSubmit": "Kirim jawaban",
-    "quickRepliesLabel": "Pilihan jawaban cepat"
+    "quickRepliesLabel": "Pilihan jawaban cepat",
+    "voiceOr": "atau",
+    "voiceRecord": "Rekam pesan suara",
+    "voiceStop": "Berhenti dan kirim",
+    "voiceCancel": "Batal",
+    "voiceHint": "Tekan tombol, lalu ceritakan keluhan Anda. Maksimal 1 menit.",
+    "voiceRecording": "Sedang merekam. Tekan Berhenti dan kirim jika sudah selesai, maksimal 1 menit.",
+    "voiceDenied": "Mikrofon tidak diizinkan. Izinkan mikrofon di pengaturan peramban, atau tulis keluhan Anda.",
+    "voiceFailed": "Perekaman tidak berhasil. Coba lagi, atau tulis keluhan Anda."
   },
   "errors": {
     "title": "Maaf, ada yang tidak beres",
@@ -35,7 +43,9 @@
     "agent_unavailable": "Layanan panduan sedang tidak tersedia. Silakan coba lagi sebentar lagi.",
     "invalid_agent_response": "Layanan panduan memberi jawaban yang tidak dapat ditampilkan. Silakan coba lagi.",
     "app_check_required": "Kami belum bisa memastikan permintaan ini dari peramban Anda. Muat ulang halaman lalu coba lagi.",
-    "rate_limited": "Terlalu banyak permintaan dalam waktu singkat. Silakan coba lagi nanti."
+    "rate_limited": "Terlalu banyak permintaan dalam waktu singkat. Silakan coba lagi nanti.",
+    "audio_too_large": "Pesan suara terlalu panjang. Rekam ulang maksimal 1 menit, atau tulis keluhan Anda.",
+    "no_speech": "Suara Anda tidak terdengar. Rekam ulang di tempat yang lebih tenang, atau tulis keluhan Anda."
   },
   "card": {
     "transcriptLabel": "Yang kami pahami dari pesan suara Anda",
@@ -69,7 +79,8 @@
       "privacy": "Tautan ini hanya berisi panduan di atas, tanpa keluhan yang Anda tulis.",
       "whatsapp": "Bagikan lewat WhatsApp",
       "open": "Buka tautan panduan"
-    }
+    },
+    "transcriptHint": "Ada kata yang salah? Perbaiki di kotak keluhan di atas, lalu tekan Lihat panduan."
   },
   "estimate": "estimasi",
   "urgency": {

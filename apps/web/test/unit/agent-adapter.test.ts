@@ -75,6 +75,19 @@ describe("HTTP agent adapter for Shortlist reasons", () => {
       status: 503,
     });
   });
+
+  it("keeps the agent's error code, so a voice note without speech can ask for a new recording", async () => {
+    const fetch = (async () => Response.json({ error: "no_speech" }, { status: 422 })) as typeof globalThis.fetch;
+    const adapter = createHttpAgentAdapter({ baseUrl: "https://agent.example", fetch });
+
+    await expect(
+      adapter.requestGuidance({
+        sessionId: "sess-0001-abcd",
+        language: "id",
+        audio: { mimeType: "audio/webm", dataBase64: "GkXfow==" },
+      }),
+    ).rejects.toMatchObject({ name: "AgentUnavailableError", status: 422, code: "no_speech" });
+  });
 });
 
 describe("HTTP agent adapter on Cloud Run", () => {

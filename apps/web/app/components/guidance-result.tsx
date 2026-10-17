@@ -56,10 +56,13 @@ function shareTokenOf(path: string): string | null {
 function Transcript({ text }: { text: string }) {
   const { t } = useTranslation();
   return (
-    <p className="rounded-md bg-muted px-3 py-2 text-sm">
-      <span className="font-medium">{t("card.transcriptLabel")}: </span>
-      {text}
-    </p>
+    <div className="flex flex-col gap-1 rounded-md bg-muted px-3 py-2 text-sm" data-testid="transcript">
+      <p>
+        <span className="font-medium">{t("card.transcriptLabel")}: </span>
+        {text}
+      </p>
+      <p className="text-xs text-muted-foreground">{t("card.transcriptHint")}</p>
+    </div>
   );
 }
 

@@ -21,7 +21,7 @@ from .contracts.shortlist_reasons_request import ShortlistReasonsRequest
 from .contracts.shortlist_reasons_response import ShortlistReasonsResponse
 from .data import procedure_codes
 from .escalation import default_matcher
-from .guidance import AudioNotSupportedError, answer_turn
+from .guidance import InvalidAudioError, NoSpeechError, answer_turn
 from .knowledge import bpjs_coverage, cost_estimates, guidance_safety
 from .moderation import InvalidAttachmentError, moderate
 from .shortlist import write_reasons
@@ -122,8 +122,16 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
                 red_flags=red_flags,
                 settings=settings,
             )
-        except AudioNotSupportedError:
-            return _error(request, 501, "audio_not_supported")
+        except InvalidAudioError:
+            request.state.outcome = "invalid_request"
+            detail = {
+                "type": "invalid_base64",
+                "loc": ["body", "audio"],
+                "msg": "audio is not base64",
+            }
+            return JSONResponse(status_code=422, content={"detail": [detail]})
+        except NoSpeechError:
+            return _error(request, 422, "no_speech")
         except ModelQuotaExhaustedError:
             return _error(request, 503, "model_quota_exhausted")
         except ModelUnavailableError as error:
