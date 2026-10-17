@@ -100,7 +100,8 @@ infra/gcp/smoke.sh           # on its own at any time
 
 | Thing | Value |
 | --- | --- |
-| Public URL | https://findyourdent.web.app (Hosting rewrites every path to `fyd-web`) |
+| Public URL | https://findyourdent.com, a [custom domain on Firebase Hosting](https://firebase.google.com/docs/hosting/custom-domain) with a Hosting-managed certificate, added in the Firebase console (not in `firebase.json`); `www.findyourdent.com` is added there too, set to redirect to the apex. https://findyourdent.web.app serves the same site. Hosting rewrites every path to `fyd-web` |
+| Domain | `findyourdent.com`, registered at Hostinger, which also hosts its DNS: the apex `A` record points at Firebase Hosting and `www` is a `CNAME` to `findyourdent.web.app` |
 | Artifact Registry | `asia-southeast2-docker.pkg.dev/findyourdent/findyourdent/{web,agent}:<commit>` |
 | `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS`, `RATE_LIMIT_SALT`, `SHARE_LINK_SECRET` from Secret Manager; public Firebase web config and reCAPTCHA site key looked up at deploy; `TRUST_PROXY_HOPS=2` |
 | `fyd-agent` | `--no-allow-unauthenticated`; `roles/run.invoker` only for `fyd-web` and the Monitoring service agent (uptime check); maximum 4 instances |
@@ -118,4 +119,4 @@ Request bodies never reach Cloud Logging. Cloud Run's request log has only the m
 These have no API that works without upgrading to Identity Platform:
 
 1. Firebase console, Authentication, Get started, Sign-in method, Google, Enable; pick the support email; Save.
-2. Patients reach the app through `findyourdent.web.app`, which is already an authorized domain and in `RECAPTCHA_DOMAINS`. When the custom domain is attached, add it under Authentication, Settings, Authorized domains. Never add the bare `run.app` suffix to `RECAPTCHA_DOMAINS`.
+2. Patients reach the app through `findyourdent.com` (and `findyourdent.web.app`). Under Authentication, Settings, Authorized domains, the list holds `findyourdent.com`, `www.findyourdent.com`, `findyourdent.web.app` and `findyourdent.firebaseapp.com`; `RECAPTCHA_DOMAINS` in `setup.sh` already has `findyourdent.com`. Never add the bare `run.app` suffix to `RECAPTCHA_DOMAINS`.
