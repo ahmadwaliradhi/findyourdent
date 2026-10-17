@@ -5,12 +5,10 @@
 // in `adminActions` inside the same transaction as the change it records.
 import {
   type AdminActionDoc,
-  type AdminActionType,
   COLLECTIONS,
   type ModerationDecisionDoc,
   type NameCorrectionDoc,
   type ProviderDoc,
-  type Timestamp as StoredTimestamp,
   type TestimonyContent,
   type TestimonyDoc,
   type TestimonyReportDoc,
@@ -34,7 +32,7 @@ import {
   type AdminActionResponse,
   type AdminApiError,
   type AdminQueueResponse,
-  QUEUE_TARGET_HOURS,
+  OWNER_ACTIONS,
   type QueueHistoryEntry,
   type QueueItem,
   type QueueModeration,
@@ -47,8 +45,9 @@ import {
 import { normalizeName } from "~/lib/normalize-name";
 import { testimonyPhotoUrl } from "~/lib/testimony-photos";
 import type { LatLng } from "../../server/adapters/places.ts";
-import type { SignedInUser } from "../../server/auth.ts";
+import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
+import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
 import {
   coordinatesFor,
   publishedOf,
@@ -61,10 +60,8 @@ import { deleteTestimonyMedia } from "./testimony-media.server.ts";
 import { canTransition } from "./testimony-state.ts";
 
 const SUBJECT_ID = /^[A-Za-z0-9_-]{1,64}$/;
-const TARGET_MS = QUEUE_TARGET_HOURS * 60 * 60 * 1000;
 
 const col = (firestore: Firestore, name: keyof typeof COLLECTIONS) => firestore.collection(COLLECTIONS[name]);
-const iso = (time: StoredTimestamp | undefined) => (time ? time.toDate().toISOString() : new Date(0).toISOString());
 
 // Queue ------------------------------------------------------------------------------
 
@@ -136,22 +133,13 @@ async function historyOf(firestore: Firestore, testimonyId: string): Promise<Que
   return entries.sort((a, b) => a.ms - b.ms).map(({ ms: _ms, ...entry }) => entry);
 }
 
-function item(
-  base: Omit<QueueItem, "createdAt" | "dueAt" | "overdue">,
-  enteredAt: StoredTimestamp | undefined,
-  nowMs: number,
-): QueueItem {
-  const ms = enteredAt?.toMillis() ?? 0;
-  return {
-    ...base,
-    createdAt: iso(enteredAt),
-    dueAt: new Date(ms + TARGET_MS).toISOString(),
-    overdue: nowMs > ms + TARGET_MS,
-  };
-}
-
 /** Everything waiting for an admin: hidden Testimonies first (harm is paused, a decision is owed), then oldest first. */
-export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): Promise<AdminQueueResponse> {
+export async function loadAdminQueue(
+  context: Pick<AppLoadContext, "adapters" | "logger">,
+  firestore: Firestore,
+  nowMs = Date.now(),
+): Promise<AdminQueueResponse> {
+  const owner = loadOwnerQueue(context, firestore, nowMs);
   const [held, hidden, revisions, reports, corrections, spotChecks] = await Promise.all([
     col(firestore, "testimonies").where("status", "==", "held").get(),
     col(firestore, "testimonies").where("status", "==", "hidden").get(),
@@ -233,7 +221,7 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     const t = testimonies.get(doc.id) as TestimonyDoc;
     items.push(
       view(doc.id).then((testimony) =>
-        item({ id: doc.id, kind: "held", subjectId: doc.id, testimony }, t.updatedAt, nowMs),
+        queueItem({ id: doc.id, kind: "held", subjectId: doc.id, testimony }, t.updatedAt, nowMs),
       ),
     );
   }
@@ -244,7 +232,7 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     const t = testimonies.get(doc.id) as TestimonyDoc;
     items.push(
       view(doc.id).then((testimony) =>
-        item({ id: doc.id, kind: "hidden", subjectId: doc.id, testimony }, t.updatedAt, nowMs),
+        queueItem({ id: doc.id, kind: "hidden", subjectId: doc.id, testimony }, t.updatedAt, nowMs),
       ),
     );
   }
@@ -254,7 +242,11 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     if (t.status !== "published") continue;
     items.push(
       view(doc.id).then((testimony) =>
-        item({ id: doc.id, kind: "revision", subjectId: doc.id, testimony }, t.pendingRevision?.submittedAt, nowMs),
+        queueItem(
+          { id: doc.id, kind: "revision", subjectId: doc.id, testimony },
+          t.pendingRevision?.submittedAt,
+          nowMs,
+        ),
       ),
     );
   }
@@ -263,7 +255,7 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     const oldest = list.reduce((a, b) => (a.report.createdAt.toMillis() <= b.report.createdAt.toMillis() ? a : b));
     items.push(
       view(testimonyId).then((testimony) =>
-        item(
+        queueItem(
           {
             id: testimonyId,
             kind: "report",
@@ -289,7 +281,7 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     if (testimonies.get(decision.subjectId)?.status !== "published") continue;
     items.push(
       view(decision.subjectId).then((testimony) =>
-        item(
+        queueItem(
           // The sampled decision, which may not be the Testimony's latest one.
           {
             id: doc.id,
@@ -307,7 +299,7 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     const c = doc.data() as NameCorrectionDoc;
     items.push(
       Promise.resolve(
-        item(
+        queueItem(
           {
             id: doc.id,
             kind: "nameCorrection",
@@ -327,24 +319,14 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     );
   }
 
-  const resolved = await Promise.all(items);
+  const { items: ownerItems, approvedClaims } = await owner;
+  const resolved = [...(await Promise.all(items)), ...ownerItems];
   const hiddenFirst = (i: QueueItem) => (i.testimony?.status === "hidden" ? 0 : 1);
   resolved.sort((a, b) => hiddenFirst(a) - hiddenFirst(b) || Date.parse(a.createdAt) - Date.parse(b.createdAt));
-  return { items: resolved };
+  return { items: resolved, approvedClaims };
 }
 
 // Actions ----------------------------------------------------------------------------
-
-class AdminRefusal extends Error {
-  readonly status: number;
-  readonly code: AdminApiError["error"];
-
-  constructor(status: number, code: AdminApiError["error"]) {
-    super(code);
-    this.status = status;
-    this.code = code;
-  }
-}
 
 async function errorResponse(request: Request, status: number, error: AdminApiError["error"]) {
   const language = await detectLanguage(request);
@@ -359,6 +341,7 @@ const ACTIONS: ReadonlySet<string> = new Set<AdminActionRequest["action"]>([
   "applyNameCorrection",
   "dismissNameCorrection",
   "spotCheckConfirm",
+  ...OWNER_ACTIONS,
 ]);
 
 function parseAction(body: unknown): AdminActionRequest | null {
@@ -372,34 +355,11 @@ function parseAction(body: unknown): AdminActionRequest | null {
   return { action: action as AdminActionRequest["action"], subjectId, ...(trimmed ? { reason: trimmed } : {}) };
 }
 
-interface Acting {
-  firestore: Firestore;
-  admin: SignedInUser;
-  request: AdminActionRequest;
-  actionRef: DocumentReference;
-}
-
-function logAction(
-  tx: Transaction,
-  acting: Acting,
-  entry: Omit<AdminActionDoc, "action" | "adminEmail" | "adminUid" | "createdAt" | "reason">,
-) {
-  const doc: AdminActionDoc = {
-    action: acting.request.action as AdminActionType,
-    ...entry,
-    adminEmail: acting.admin.email ?? "",
-    adminUid: acting.admin.uid,
-    ...(acting.request.reason ? { reason: acting.request.reason } : {}),
-    createdAt: Timestamp.now(),
-  };
-  tx.create(acting.actionRef, doc);
-}
-
 /** GET /admin/api/queue. */
 export async function adminQueueResponse(context: AppLoadContext, request: Request): Promise<Response> {
   if (!context.admin) return errorResponse(request, 403, "not_allowed");
   if (!context.firestore) return errorResponse(request, 503, "unavailable");
-  return Response.json(await loadAdminQueue(context.firestore), { headers: { "Cache-Control": "no-store" } });
+  return Response.json(await loadAdminQueue(context, context.firestore), { headers: { "Cache-Control": "no-store" } });
 }
 
 /** POST /admin/api/actions: one admin decision, applied and logged together. */
@@ -428,6 +388,15 @@ export async function adminActionResponse(context: AppLoadContext, request: Requ
         break;
       case "spotCheckConfirm":
         await firestore.runTransaction((tx) => confirmSpotCheck(tx, acting));
+        break;
+      case "approveClaim":
+      case "rejectClaim":
+      case "revokeClaim":
+      case "publishOwnerFacts":
+      case "rejectOwnerFacts":
+      case "publishReply":
+      case "rejectReply":
+        await ownerAction(context, acting, parsed.action);
         break;
       default: {
         const orphaned = await testimonyAction(context, acting, parsed.action);

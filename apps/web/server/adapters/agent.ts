@@ -1,4 +1,4 @@
-import type { GuidanceRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
+import type { GuidanceRequest, ModerationRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
 
 /**
  * Port to the agent service (services/agent). The web service is the only caller;
@@ -9,6 +9,11 @@ export interface AgentAdapter {
   requestGuidance(request: GuidanceRequest, options?: AgentCallOptions): Promise<unknown>;
   /** The caller validates the body against the ShortlistReasonsResponse contract. */
   requestShortlistReasons(request: ShortlistReasonsRequest, options?: AgentCallOptions): Promise<unknown>;
+  /**
+   * The caller validates the body against the ModerationDecision contract. Any
+   * non-200, a 422 for a broken attachment included, throws: never publish on it.
+   */
+  requestModeration(request: ModerationRequest, options?: AgentCallOptions): Promise<unknown>;
 }
 
 export interface AgentCallOptions {
@@ -46,6 +51,8 @@ export interface HttpAgentAdapterOptions {
    * rather than held for Gemini (spec 02).
    */
   reasonsTimeoutMs?: number;
+  /** Longer than the agent's own 20 s model timeout, so its hold arrives rather than ours. */
+  moderationTimeoutMs?: number;
   fetch?: typeof fetch;
   /**
    * Identity token for the agent service URL. On Cloud Run the agent service only
@@ -55,13 +62,14 @@ export interface HttpAgentAdapterOptions {
 }
 
 /**
- * Real adapter: POST {AGENT_URL}/v1/guidance and /v1/shortlist-reasons. Never logs or
- * echoes the request body.
+ * Real adapter: POST {AGENT_URL}/v1/guidance, /v1/shortlist-reasons and /v1/moderation.
+ * Never logs or echoes the request body.
  */
 export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentAdapter {
   const baseUrl = options.baseUrl.replace(/\/+$/, "");
   const timeoutMs = options.timeoutMs ?? 30_000;
   const reasonsTimeoutMs = options.reasonsTimeoutMs ?? 12_000;
+  const moderationTimeoutMs = options.moderationTimeoutMs ?? 25_000;
   const doFetch = options.fetch ?? fetch;
 
   async function post(path: string, body: unknown, timeout: number, { requestId }: AgentCallOptions) {
@@ -96,6 +104,9 @@ export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentA
     },
     requestShortlistReasons(request, callOptions = {}) {
       return post("/v1/shortlist-reasons", request, reasonsTimeoutMs, callOptions);
+    },
+    requestModeration(request, callOptions = {}) {
+      return post("/v1/moderation", request, moderationTimeoutMs, callOptions);
     },
   };
 }

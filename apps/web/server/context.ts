@@ -34,6 +34,11 @@ export interface RateLimits {
   testimoniesPerDay: number;
   /** Testimony reports, per App Check token. RATE_LIMIT_REPORTS_PER_HOUR */
   reportsPerHour: number;
+  /**
+   * Claims, owner facts and replies, per signed-in account (each but a Claim runs
+   * Moderation). RATE_LIMIT_OWNER_WRITES_PER_DAY
+   */
+  ownerWritesPerDay: number;
   /** High on purpose: Indonesian mobile carriers put many people behind one IP. RATE_LIMIT_IP_PER_HOUR */
   ipPerHour: number;
 }
@@ -43,6 +48,7 @@ export const DEFAULT_RATE_LIMITS: RateLimits = {
   placesPerHour: 30,
   testimoniesPerDay: 5,
   reportsPerHour: 10,
+  ownerWritesPerDay: 30,
   ipPerHour: 300,
 };
 
@@ -191,6 +197,7 @@ function rateLimitsFromEnv(env: NodeJS.ProcessEnv): RateLimits {
     placesPerHour: read("RATE_LIMIT_PLACES_PER_HOUR", DEFAULT_RATE_LIMITS.placesPerHour),
     testimoniesPerDay: read("RATE_LIMIT_TESTIMONIES_PER_DAY", DEFAULT_RATE_LIMITS.testimoniesPerDay),
     reportsPerHour: read("RATE_LIMIT_REPORTS_PER_HOUR", DEFAULT_RATE_LIMITS.reportsPerHour),
+    ownerWritesPerDay: read("RATE_LIMIT_OWNER_WRITES_PER_DAY", DEFAULT_RATE_LIMITS.ownerWritesPerDay),
     ipPerHour: read("RATE_LIMIT_IP_PER_HOUR", DEFAULT_RATE_LIMITS.ipPerHour),
   };
 }

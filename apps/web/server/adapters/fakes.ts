@@ -1,4 +1,10 @@
-import type { GuidanceRequest, ShortlistReasonsRequest, ShortlistReasonsResponse } from "@findyourdent/contracts";
+import type {
+  GuidanceRequest,
+  ModerationDecision,
+  ModerationRequest,
+  ShortlistReasonsRequest,
+  ShortlistReasonsResponse,
+} from "@findyourdent/contracts";
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
@@ -68,9 +74,47 @@ export function stubShortlistReasons(request: ShortlistReasonsRequest): Shortlis
   return { reasons: request.providers.map((p) => ({ placeId: p.placeId, reason })) };
 }
 
+/** What the stub holds owner facts and replies for: the promotional words spec 05 names. */
+const STUB_PROMOTIONAL = /\b(terbaik|termurah|diskon|promo)\b/i;
+
+/**
+ * A stub Moderation decision, valid against moderation-decision.schema.json:
+ * promotional wording holds, anything else publishes. Lets local runs with
+ * AGENT_ADAPTER=fake walk the owner-facts and reply flows without Gemini.
+ */
+export function stubModeration(request: ModerationRequest): ModerationDecision {
+  const en = request.language === "en";
+  const hit = STUB_PROMOTIONAL.exec(request.text);
+  if (!hit) {
+    return {
+      decision: "publish",
+      ruleCodes: [],
+      flaggedSpans: [],
+      confidence: 0.95,
+      authorMessage: en ? "Thank you, it is live." : "Terima kasih, sudah tayang.",
+      ...(request.subjectType === "testimony"
+        ? { proofOfVisit: request.proofOfVisit ? "accepted" : "notProvided" }
+        : {}),
+    };
+  }
+  return {
+    decision: "hold",
+    ruleCodes: ["promotional_wording"],
+    flaggedSpans: [{ start: hit.index, end: hit.index + hit[0].length, text: hit[0], ruleCode: "promotional_wording" }],
+    confidence: 0.9,
+    authorMessage: en ? "Held for a review by our team." : "Ditahan untuk ditinjau tim kami.",
+  };
+}
+
 export interface FakeAgentAdapter extends AgentAdapter {
   readonly calls: GuidanceRequest[];
   readonly reasonsCalls: ShortlistReasonsRequest[];
+  readonly moderationCalls: ModerationRequest[];
+  /**
+   * Next value returned (or thrown, if an Error) by requestModeration, until changed;
+   * the default is `stubModeration`.
+   */
+  respondToModerationWith(response: unknown): void;
   /** Next value returned (or thrown, if an Error) by requestGuidance. */
   respondWith(response: unknown): void;
   /** Next value returned (or thrown, if an Error) by requestShortlistReasons; the default is stub reasons. */
@@ -80,11 +124,22 @@ export interface FakeAgentAdapter extends AgentAdapter {
 export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE): FakeAgentAdapter {
   let next: unknown = initial;
   let nextReasons: unknown;
+  let nextModeration: unknown;
   const calls: GuidanceRequest[] = [];
   const reasonsCalls: ShortlistReasonsRequest[] = [];
+  const moderationCalls: ModerationRequest[] = [];
   return {
     calls,
     reasonsCalls,
+    moderationCalls,
+    respondToModerationWith(response) {
+      nextModeration = response;
+    },
+    async requestModeration(request) {
+      moderationCalls.push(structuredClone(request));
+      if (nextModeration instanceof Error) throw nextModeration;
+      return nextModeration === undefined ? stubModeration(request) : structuredClone(nextModeration);
+    },
     respondWith(response) {
       next = response;
     },

@@ -69,8 +69,16 @@ export interface AspectRatings {
 
 // providers/{placeId} ---------------------------------------------------------
 
-/** Owner-entered facts from an approved Claim (spec 05). First-party data. */
+/**
+ * Owner-entered facts from an approved Claim (spec 05). First-party data. Once
+ * published, name, type and Region are copied onto the Listed Provider (replacing
+ * the first Testimony author's typed name and the inferred type); while held, the
+ * Listed Provider keeps its previous values.
+ */
 export interface ProviderOwnerFacts {
+  name: string;
+  providerType: ProviderType;
+  region: RegionRef;
   address?: string;
   phone?: string;
   whatsapp?: string;
@@ -79,6 +87,7 @@ export interface ProviderOwnerFacts {
   services?: ProcedureCode[];
   /** Moderation result for the current facts; held facts are not shown. */
   moderationStatus: "published" | "held";
+  moderationDecisionId?: string;
   updatedAt: Timestamp;
 }
 
@@ -117,7 +126,10 @@ export interface ProviderDoc {
   claimStatus: "unclaimed" | "claimed";
   /** Approved Claim id when claimed. */
   claimId?: string;
+  /** Published owner facts; only these are shown. */
   ownerFacts?: ProviderOwnerFacts;
+  /** An edit Moderation held for the admin; `ownerFacts` stays live until it is decided. */
+  pendingOwnerFacts?: ProviderOwnerFacts;
   aggregates: ProviderAggregates;
   /** What made it a Listed Provider. */
   listedBy: "testimony" | "claim";
@@ -244,6 +256,12 @@ export interface ClaimDoc {
   claimantUid: Uid;
   role: "owner" | "practisingDentist" | "manager";
   contactPhone: string;
+  /**
+   * For a place that is not yet a Listed Provider: the name and Region it is listed
+   * under when the Claim is approved. Never Google's name.
+   */
+  proposedProviderName?: string;
+  proposedRegion?: RegionRef;
   /** Private bucket path; deleted (and this field removed) when the Claim leaves `submitted`. */
   permitDocumentPath?: string;
   status: ClaimStatus;

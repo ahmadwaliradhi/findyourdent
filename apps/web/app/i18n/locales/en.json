@@ -155,7 +155,10 @@
         "report": "Reports",
         "spotCheck": "Spot check (10%)",
         "nameCorrection": "Name correction",
-        "hidden": "Hidden Testimony"
+        "hidden": "Hidden Testimony",
+        "claim": "Page claim",
+        "ownerFacts": "Owner details held",
+        "reply": "Reply held"
       },
       "status": {
         "submitted": "Being checked",
@@ -196,11 +199,31 @@
         "dismissReport": "Dismiss report",
         "applyNameCorrection": "Apply correction",
         "dismissNameCorrection": "Dismiss correction",
-        "spotCheckConfirm": "Checked, keep live"
+        "spotCheckConfirm": "Checked, keep live",
+        "approveClaim": "Approve claim",
+        "rejectClaim": "Reject claim",
+        "revokeClaim": "Revoke claim",
+        "publishOwnerFacts": "Publish details",
+        "rejectOwnerFacts": "Reject details",
+        "publishReply": "Publish reply",
+        "rejectReply": "Reject reply"
       },
       "reasonFor": "Reason for \"{{action}}\" (logged; the author sees it except for hide)",
       "logged": "Every action is logged with the admin, time and reason.",
-      "failed": "The action failed. Please try again."
+      "failed": "The action failed. Please try again.",
+      "approvedClaims": "Approved claims ({{count}})",
+      "replyTo": "Replying to the Testimony:",
+      "claim": {
+        "place": "Place",
+        "notListed": "not Listed yet, listed on approval",
+        "role": "Role",
+        "contactPhone": "Claimant's phone",
+        "googlePhone": "Phone on Google",
+        "noGooglePhone": "Not available from Google right now",
+        "permit": "Document",
+        "openPermit": "Open the SIP or practice permit",
+        "callHint": "Phone the number on Google (not the claimant's) to confirm the owner. The document is deleted as soon as the claim is decided."
+      }
     }
   },
   "footer": {
@@ -363,7 +386,12 @@
       "empty": "No Google reviews yet.",
       "unavailable": "Google reviews are temporarily unavailable.",
       "rating": "{{rating}} out of 5"
-    }
+    },
+    "claimHint": "Are you the owner or a dentist here?",
+    "claimCta": "Claim this page",
+    "ownerHint": "Own this practice?",
+    "manageCta": "Manage page",
+    "services": "Services: {{services}}"
   },
   "shortlist": {
     "reason": {
@@ -654,5 +682,90 @@
     "sent": "Thank you. The FindYourDent team will review this report within 24 hours.",
     "sentHidden": "Thank you. This Testimony is now hidden and the FindYourDent team will review it within 24 hours.",
     "failed": "The report was not sent. Please try again."
+  },
+  "claimApi": {
+    "errors": {
+      "sign_in_required": "Sign in with Google first to claim this page.",
+      "invalid_claim": "Some fields need fixing: your role, phone number and, for a new place, its name and region.",
+      "invalid_file": "Upload one photo or PDF of your SIP or practice permit, up to 10 MB.",
+      "invalid_facts": "Some practice details need fixing. Check the name, type, region, phone numbers and services.",
+      "invalid_reply": "Write a reply of up to 2,000 characters.",
+      "claim_exists": "This page is already claimed, or another claim is being checked.",
+      "not_owner": "Only the owner with an approved claim can do this.",
+      "not_found": "This page or Testimony was not found.",
+      "unavailable": "Claims are unavailable right now. Please try again shortly."
+    },
+    "submitted": "We have your claim. The FindYourDent team checks the document and phones the number on Google Maps within {{days}} working days. The result shows on this page.",
+    "facts": {
+      "published": "Your practice details are live.",
+      "held": "Your practice details are being reviewed by the FindYourDent team, usually within 24 hours. Until then the page shows the previous details."
+    },
+    "reply": {
+      "published": "Your reply is live under the Testimony.",
+      "held": "Your reply is being reviewed by the FindYourDent team, usually within 24 hours."
+    }
+  },
+  "claim": {
+    "title": "Claim this page",
+    "manageTitle": "Manage your practice page",
+    "back": "Back to the practice page",
+    "intro": "For dentists, clinic owners and managers. Once your claim is approved, this page shows \"Claimed by owner\", and you can update the practice details and reply to Testimonies.",
+    "steps": {
+      "signIn": "Sign in with your Google account.",
+      "permit": "Upload a photo or PDF of your SIP or practice permit. It is kept private and deleted after the decision.",
+      "check": "The FindYourDent team checks the document and phones the number on this place's Google Maps listing, within {{days}} working days."
+    },
+    "ethics": "In line with the dental code of ethics, there is no promotion, advertising, discounts or paid ranking. A claim does not change the Shortlist order, and practices cannot delete or hide Testimonies.",
+    "signIn": "Sign in with Google to claim",
+    "role": "Your role",
+    "roles": {
+      "owner": "Owner",
+      "practisingDentist": "Dentist practising here",
+      "manager": "Manager"
+    },
+    "contactPhone": "Your phone number",
+    "contactPhoneHint": "Only for the FindYourDent team to reach you if needed. Never shown.",
+    "permit": "SIP or practice permit",
+    "permitHint": "One photo (JPG, PNG, WebP) or PDF, up to 10 MB.",
+    "submit": "Send claim",
+    "sending": "Sending…",
+    "failed": "Sending failed. Check your connection and try again.",
+    "choose": "Choose",
+    "status": {
+      "submitted": "Your claim is being checked. The FindYourDent team checks the document and phones the number on Google Maps within {{days}} working days. The result shows on this page.",
+      "rejected": "Your previous claim was rejected: {{reason}}. You can send a new claim with the right document.",
+      "revoked": "Your previous claim was revoked by the FindYourDent team. Contact us if this is a mistake, or send a new claim.",
+      "claimedByOther": "This page is already claimed, or another claim is being checked. If you are the owner, contact the FindYourDent team."
+    },
+    "ownerIntro": "Your claim is approved. Details and replies are checked automatically before they go live; anything promotional is held for the team to review.",
+    "facts": {
+      "title": "Practice details",
+      "intro": "These replace the name typed by the first Testimony author and the estimated type. No promotional words such as \"best\", \"cheapest\" or discounts.",
+      "held": "Under review",
+      "name": "Practice name",
+      "providerType": "Type",
+      "region": "Region",
+      "province": "Province",
+      "regency": "City or regency",
+      "address": "Address",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "openingHours": "Opening hours",
+      "services": "Services",
+      "save": "Save details"
+    },
+    "replies": {
+      "title": "Reply to Testimonies",
+      "intro": "One public reply per Testimony. You can edit it at any time. If you believe a Testimony is false, use the Report button on the practice page.",
+      "write": "Your reply",
+      "edit": "Edit your reply",
+      "send": "Send reply",
+      "status": {
+        "submitted": "Checking",
+        "published": "Live",
+        "held": "Under team review",
+        "rejected": "Rejected"
+      }
+    }
   }
 }
