@@ -65,6 +65,22 @@ describe("POST /api/guidance", () => {
     expect(turn2?.followUpAnswer).toBe("Tidak");
   });
 
+  it("forwards the follow-up question with the answer, so a bare 'Ya' is not ambiguous", async () => {
+    const question = "Apakah sakitnya muncul sendiri di malam hari?";
+    const response = await server.post("/api/guidance", {
+      complaintText: COMPLAINT,
+      language: "id",
+      followUpQuestion: question,
+      followUpAnswer: "Ya",
+    });
+
+    expect(response.status).toBe(200);
+    const [sent] = server.fakes.agent.calls;
+    expect(validateGuidanceRequest(sent), JSON.stringify(validateGuidanceRequest.errors)).toBe(true);
+    expect(sent).toMatchObject({ followUpQuestion: question, followUpAnswer: "Ya" });
+    expect(server.logs.join("\n")).not.toContain(question);
+  });
+
   it("refuses an invalid request without calling the agent", async () => {
     const response = await server.post("/api/guidance", { complaintText: "", language: "fr" });
 
