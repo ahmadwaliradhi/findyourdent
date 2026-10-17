@@ -1,0 +1,30 @@
+# Deletes Cloud Scheduler jobs, then finishes. Run once by the agent-warm-cleanup
+# job after judging (infra/gcp/deploy.sh), because cron has no year and the
+# warm-instance jobs would otherwise fire again every October.
+#
+# Argument: {"jobs": ["projects/P/locations/R/jobs/NAME", ...]}. A job that is
+# already gone counts as deleted, so a rerun is harmless.
+main:
+  params: [args]
+  steps:
+    - deleteJobs:
+        for:
+          value: job
+          in: ${args.jobs}
+          steps:
+            - deleteJob:
+                try:
+                  call: googleapis.cloudscheduler.v1.projects.locations.jobs.delete
+                  args:
+                    name: ${job}
+                except:
+                  as: e
+                  steps:
+                    - alreadyGone:
+                        switch:
+                          - condition: ${e.code == 404}
+                            next: continue
+                    - failed:
+                        raise: ${e}
+    - done:
+        return: ${args.jobs}
