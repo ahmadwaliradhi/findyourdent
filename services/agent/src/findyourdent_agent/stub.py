@@ -1,7 +1,8 @@
 """Fixed Guidance card returned by the walking-skeleton endpoint. No model is called.
 
 Content mirrors a typical deep-caries complaint so the web app can render a realistic
-card. Procedure codes come from packages/contracts/data/procedures.json.
+card. The procedure codes are hard-coded here; app startup warns if any of them is
+missing from packages/contracts/data/procedures.json.
 """
 
 from __future__ import annotations

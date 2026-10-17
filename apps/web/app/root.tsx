@@ -22,7 +22,7 @@ export const links: Route.LinksFunction = () => [{ rel: "icon", href: "/favicon.
 
 export async function loader({ request }: Route.LoaderArgs) {
   const language = await detectLanguage(request);
-  return data({ language }, { headers: { Vary: "Cookie, Accept-Language" } });
+  return data({ language }, { headers: { Vary: "Cookie" } });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {

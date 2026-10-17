@@ -53,8 +53,8 @@ The browser never calls the agent service, Places or Gemini; the web service cal
 
 There are two seams, and tests go through them the way real callers do instead of reaching into internal functions.
 
-1. **Web API seam** (`apps/web`). Vitest drives the web service over HTTP, against the Firebase emulators (Firestore, Auth, Storage), with the Places, agent and Gemini adapters replaced by fakes. `pnpm --filter web test` starts the emulators with `firebase emulators:exec` and runs Vitest inside it. Tests assert responses and what ends up in the emulators (for example, that no Google field other than `place_id` and dated coordinates is ever written).
-2. **Agent contract seam** (`services/agent`). pytest calls the FastAPI HTTP contract with the Gemini, Agent Search and Places adapters replaced by fakes, and checks every response against the shared schemas (for example, that the deterministic Emergency Escalation rule fires without any model call).
+1. **Web API seam** (`apps/web`). Vitest drives the web service over HTTP, against the Firebase emulators (Firestore, Auth, Storage), with the Places, agent and Gemini adapters replaced by fakes. `pnpm --filter web test` starts the emulators with `firebase emulators:exec` and runs Vitest inside it. Tests assert responses and what ends up in the emulators (the example test checks that a Guidance request writes nothing to Firestore and never logs the complaint text).
+2. **Agent contract seam** (`services/agent`). pytest calls the FastAPI HTTP contract with the Gemini, Agent Search and Places adapters replaced by fakes, and checks every response against the shared schemas (the example test checks that the stub Guidance card validates and no fake adapter was called).
 
 CI (`.github/workflows/ci.yml`) runs both on every pull request and on pushes to `main`: Biome, the contracts check, typecheck and tests, the web tests under the emulators, then Ruff, the Pydantic contracts check and pytest.
 

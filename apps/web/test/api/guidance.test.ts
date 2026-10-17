@@ -82,3 +82,23 @@ describe("POST /api/guidance", () => {
     expect(await response.json()).toEqual({ error: "invalid_agent_response" });
   });
 });
+
+describe("language detection", () => {
+  it("serves Indonesian to an English-locale browser until the toggle is used", async () => {
+    const first = await fetch(new URL("/", server.baseUrl), { headers: { "accept-language": "en-US,en;q=0.9" } });
+    expect(await first.text()).toMatch(/<html[^>]*lang="id"/);
+
+    const toggle = await fetch(new URL("/language", server.baseUrl), {
+      method: "POST",
+      body: new URLSearchParams({ lang: "en", redirectTo: "/" }),
+      redirect: "manual",
+    });
+    const cookie = toggle.headers.get("set-cookie")?.split(";")[0] ?? "";
+    expect(cookie).toMatch(/^lang=/);
+
+    const toggled = await fetch(new URL("/", server.baseUrl), {
+      headers: { "accept-language": "en-US,en;q=0.9", cookie },
+    });
+    expect(await toggled.text()).toMatch(/<html[^>]*lang="en"/);
+  });
+});
