@@ -30,7 +30,7 @@ When the product owner starts it, three pieces of work run during the judging wi
 10. As the product owner, I want to recruit 30 real Testimonies from people in my network across Indonesia about their own past dental visits, so that the feed shows real experiences.
 11. As the product owner, I want a short message and instructions I can send on WhatsApp, so that recruiting is quick.
 12. As the product owner, I want to be sure no Testimony is written by the team or invented, so that the platform stays honest and legal.
-13. As the product owner, I want a short evaluation of ElevenLabs speech-to-text against Gemini native audio on a handful of Indonesian voice notes, so that the voice input decision in spec 01 is based on evidence.
+13. As the product owner, I want a short evaluation of Gemini native audio on a handful of Indonesian voice notes with dental terms, so that I know whether it hears Patients well enough and whether a dental term list helps.
 14. As a judge, I want to see these results update during the judging window, so that I see the product being validated.
 
 ## Implementation Decisions
@@ -48,7 +48,7 @@ When the product owner starts it, three pieces of work run during the judging wi
 - Real Testimonies:
   - Target 30 published Testimonies from real Patients in several cities, recruited through the product owner's network over WhatsApp, each written by the Patient themselves through the normal posting journey.
   - No Testimony is written, edited or invented by the team; no incentives that depend on the Testimony being positive.
-- Voice evaluation: 10 short Indonesian voice notes recorded by the team, transcribed by Gemini native audio and by ElevenLabs speech-to-text; compare word accuracy on dental terms and record the result with the trade-offs listed in spec 01.
+- Voice evaluation: 10 short Indonesian voice notes recorded by the team, transcribed by Gemini native audio through the production Guidance call, with and without the dental term list in the Guidance instruction; compare dental term recall, WER and the Emergency Escalation result (docs/evaluations/voice-input.md). ElevenLabs is out of scope (ADR 0010).
 - Results: a results table in the README and the deck, with the date, model version, labeller and pass or fail for each gate.
 
 ## Testing Decisions
