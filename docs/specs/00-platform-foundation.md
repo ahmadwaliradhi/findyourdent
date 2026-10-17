@@ -10,11 +10,11 @@ cut_order: never cut
 
 ## Problem Statement
 
-Every FindYourDent feature (Guidance, Shortlist, Testimonies, the feed, Claims) needs the same base: a fast, installable web app that Indonesian Patients can use on a low-end Android phone over mobile data, a separate agent service, Google sign-in, protection against bots that would run up Google Places and Gemini bills, privacy handling for symptom text under UU 27/2022, and a deployment that stays up through the judging window (19 October to 7 November 2026). Without this base, each feature would solve these concerns differently, and one bot crawl or one leaked log could end the project.
+Every FindYourDent feature (Guidance, Shortlist, Testimonies, the feed, Claims) needs the same base: a fast, mobile-first web app that Indonesian Patients can use on a low-end Android phone over mobile data, a separate agent service, Google sign-in, protection against bots that would run up Google Places and Gemini bills, privacy handling for symptom text under UU 27/2022, and a deployment that stays up through the judging window (19 October to 7 November 2026). Without this base, each feature would solve these concerns differently, and one bot crawl or one leaked log could end the project.
 
 ## Solution
 
-A Patient opens findyourdent.com (until the domain is bought, the default Firebase Hosting or Cloud Run URL) and gets a fast Indonesian-first progressive web app with an English toggle, a one-line consent notice before sharing any symptom, and Google sign-in only when they post a Testimony or make a Claim. Behind it, two Cloud Run services (web and agent) run in Jakarta, data stays in Jakarta, Gemini is called on the global endpoint with that disclosed, Google keys never reach the browser, and bots are stopped by App Check, rate limits and hard daily caps on every paid API before they can cost money.
+A Patient opens findyourdent.com (until the domain is bought, the default Firebase Hosting or Cloud Run URL) and gets a fast, mobile-first, Indonesian-first web app with an English toggle, a one-line consent notice before sharing any symptom, and Google sign-in only when they post a Testimony or make a Claim. Behind it, two Cloud Run services (web and agent) run in Jakarta, data stays in Jakarta, Gemini is called on the global endpoint with that disclosed, Google keys never reach the browser, and bots are stopped by App Check, rate limits and hard daily caps on every paid API before they can cost money.
 
 ## User Stories
 
@@ -22,7 +22,7 @@ A Patient opens findyourdent.com (until the domain is bought, the default Fireba
 2. As a judge or foreign visitor, I want an English toggle that is visible on every page, so that I can follow the product.
 3. As a Patient who writes in English, I want the agent to answer in the language I wrote in, so that the toggle and my message never conflict.
 4. As a Patient on a low-end Android phone with a slow connection, I want pages to load quickly, so that I do not give up.
-5. As a Patient, I want to install FindYourDent on my home screen, so that I can return to it like an app.
+5. As a Patient on a phone, I want every screen designed for a small touch screen first, so that the site is easy to use even though I only visit it occasionally.
 6. As a Patient, I want to see a short consent notice ("informasi edukasi, bukan diagnosis") before I describe my symptoms, so that I know what the service is and is not.
 7. As a Patient, I want to know that my complaint text is not stored and is processed by Google AI outside Indonesia, so that I can decide whether to share it.
 8. As a Patient, I want to read everything public without creating an account, so that I can try the service immediately.
@@ -47,7 +47,7 @@ A Patient opens findyourdent.com (until the domain is bought, the default Fireba
 
 ## Implementation Decisions
 
-- Two services on Cloud Run in `asia-southeast2` (Jakarta): the web app (Next.js PWA, TypeScript, server-rendered) and the agent service (Python, Google ADK). Firestore (default database, so the free quota applies), Cloud Storage and Artifact Registry also in Jakarta.
+- Two services on Cloud Run in `asia-southeast2` (Jakarta): the web app (React Router v7 in framework mode, TypeScript, server-rendered, mobile-first responsive; not a PWA, see ADR-0006) and the agent service (Python, Google ADK). Firestore (default database, so the free quota applies), Cloud Storage and Artifact Registry also in Jakarta.
 - The web service is the only public entry point and acts as the backend for the browser. The browser never calls the agent service, Places or Gemini directly; all calls go through the web service API, which holds the Places key server-side. The agent service accepts only authenticated service-to-service calls from the web service.
 - Gemini runs on the global endpoint (ADR-0003): Gemini 3.8 Flash for Guidance and Shortlist reasons, Gemini 3.5 Flash-Lite for Moderation and document extraction. Model names live in configuration so they can change without code changes.
 - Firebase Hosting fronts the web service for HTTPS and the custom domain. First task: confirm that Firebase Hosting rewrites support a Cloud Run service in `asia-southeast2`. If they do not, fall back to a global external Application Load Balancer (about USD 13.80 for the window) or move only the web service to `asia-southeast1`; record the choice in an ADR.
@@ -77,7 +77,7 @@ A Patient opens findyourdent.com (until the domain is bought, the default Fireba
 - Buying and attaching findyourdent.com (a human step after the specs and tickets are final).
 - Cloud Armor and a WAF (cost at least about USD 20 a month; App Check, rate limits and caps cover the hackathon).
 - Phone OTP, email verification, and any sign-in provider other than Google.
-- Native mobile apps and push notifications.
+- Native mobile apps, push notifications, and PWA features (install prompt, service worker, offline mode); see ADR-0006.
 - Any data residency guarantee for Gemini processing beyond disclosure (ADR-0003).
 
 ## Further Notes

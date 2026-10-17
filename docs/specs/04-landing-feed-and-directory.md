@@ -56,7 +56,7 @@ The landing page leads with the agent entry ("Gigi sakit? Ceritakan keluhanmu", 
 - Seam: the web service HTTP API and server-rendered HTML against the Firestore emulator, with the Places adapter faked.
 - Tests: loading the landing page, every feed page and every directory query results in zero calls to the fake Places adapter; each filter returns only matching Testimonies or Listed Providers; removed, hidden, held and deleted Testimonies never appear; the counter changes on publish and removal; the server-rendered HTML of the landing and a Listed Provider page contains the Testimony text and first-party name; the sitemap lists exactly the Listed Providers.
 - End-to-end: the landing page renders with feed and counter; filtering by kota narrows the feed.
-- Lighthouse on the deployed landing page (performance, accessibility, best practices, PWA) is run once before submission and the scores go in the README.
+- Lighthouse on the deployed landing page (performance, accessibility, best practices, SEO; mobile profile) is run once before submission and the scores go in the README.
 - Prior art: specs 00 and 03 API tests.
 
 ## Out of Scope
