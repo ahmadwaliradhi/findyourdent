@@ -7,6 +7,7 @@ import {
   type SetOptions,
   type WithFieldValue,
 } from "firebase-admin/firestore";
+import type { ImpactCounts } from "~/lib/impact";
 
 /** One of the stored impact counters (`counters/{IMPACT_COUNTERS[key]}`). */
 export type ImpactCounterKey = keyof typeof IMPACT_COUNTERS;
@@ -19,16 +20,6 @@ export interface TestimonyImpactState {
   status: TestimonyStatus;
   /** Kunjungan terbukti. */
   verifiedVisit: boolean;
-}
-
-/** The public impact counter (spec 04). */
-export interface ImpactCounts {
-  testimoniesPublished: number;
-  /** Distinct kota/kabupaten across Listed Providers. */
-  kotaCovered: number;
-  verifiedVisits: number;
-  listedProviders: number;
-  guidanceSessionsCompleted: number;
 }
 
 /**

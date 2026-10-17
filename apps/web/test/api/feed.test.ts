@@ -1,6 +1,6 @@
 import type { TestimonyStatus } from "@findyourdent/contracts/firestore";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { FeedItem } from "../../app/server/feed.server.ts";
+import type { FeedItem } from "../../app/lib/feed.ts";
 import { type ProviderFixture, seedProvider, seedTestimony } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 

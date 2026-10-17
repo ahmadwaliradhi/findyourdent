@@ -1,25 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
-import { isLanguage, type Language } from "~/i18n/config";
-import { formatRupiah } from "~/lib/format";
+import { isLanguage } from "~/i18n/config";
+import { ASPECTS } from "~/lib/aspects";
+import type { FeedItem } from "~/lib/feed";
+import { formatRupiah, formatVisitMonth } from "~/lib/format";
 import { providerPath, testimonyPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import { regionLabel } from "~/lib/regions";
-import type { FeedItem } from "~/server/feed.server";
-
-const ASPECTS = ["service", "hygiene", "materialsEquipment"] as const;
-
-/** "2026-09" as "September 2026"; UTC so server and browser agree. */
-function formatVisitMonth(visitMonth: string, language: Language): string {
-  const [year, month] = visitMonth.split("-").map(Number);
-  if (!year || !month) return visitMonth;
-  return new Intl.DateTimeFormat(language === "id" ? "id-ID" : "en-GB", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
-}
 
 /** One Testimony in the landing feed (spec 04). */
 export function TestimonyCard({ item }: { item: FeedItem }) {

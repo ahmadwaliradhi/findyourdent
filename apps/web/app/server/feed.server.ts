@@ -1,39 +1,9 @@
 // The public feed of published Testimonies (spec 04). First-party data only:
 // no Places call, no Google data, never the author's uid.
-import {
-  type AspectRatings,
-  COLLECTIONS,
-  type ProviderDoc,
-  type ProviderType,
-  type RegionRef,
-  type TestimonyDoc,
-} from "@findyourdent/contracts/firestore";
+import { COLLECTIONS, type ProviderDoc, type TestimonyDoc } from "@findyourdent/contracts/firestore";
 import { FieldPath, type Firestore, Timestamp } from "firebase-admin/firestore";
+import type { FeedItem, FeedPage } from "~/lib/feed";
 import type { ListingFilters } from "~/lib/listing-filters";
-
-/** One feed card. Plain, serialisable data. */
-export interface FeedItem {
-  id: string;
-  placeId: string;
-  /** The Listed Provider's first-party name. */
-  providerName: string;
-  providerType: ProviderType;
-  region: RegionRef;
-  ratings: AspectRatings;
-  excerpt: string;
-  visitMonth: string;
-  procedureCode?: string;
-  pricePaidRupiah?: number;
-  /** Kunjungan terbukti. */
-  verifiedVisit: boolean;
-  displayName: string;
-}
-
-export interface FeedPage {
-  items: FeedItem[];
-  /** Pass back as `cursor` for the next page; null on the last page. */
-  nextCursor: string | null;
-}
 
 /** A cursor that this module did not make, or that was damaged on the way. */
 export class FeedCursorError extends Error {

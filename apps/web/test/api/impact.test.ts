@@ -1,7 +1,8 @@
 import { COLLECTIONS, type TestimonyStatus } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { type ImpactCounts, recordTestimonyTransition } from "../../app/server/impact.server.ts";
+import type { ImpactCounts } from "../../app/lib/impact.ts";
+import { recordTestimonyTransition } from "../../app/server/impact.server.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
 import { seedProvider, seedTestimony } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";

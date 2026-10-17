@@ -1,104 +1,21 @@
-import {
-  type AspectRatings,
-  COLLECTIONS,
-  type ProcedureCode,
-  type ProviderDoc,
-  type TestimonyDoc,
-} from "@findyourdent/contracts/firestore";
 import { useTranslation } from "react-i18next";
 import { data } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getI18n, type Language } from "~/i18n/config";
-import { formatRupiah } from "~/lib/format";
+import { ASPECTS } from "~/lib/aspects";
+import { formatRupiah, formatScore, formatVisitMonth } from "~/lib/format";
 import { providerPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
-import { regionLabel } from "~/lib/regions";
 import { openGraphMeta, SITE_NAME } from "~/lib/seo";
+import { loadProviderPage } from "~/server/provider-page.server";
 import type { Route } from "./+types/tempat.$placeId";
 
-/** Published Testimonies shown on the page; older ones wait for pagination. */
-const TESTIMONY_LIMIT = 100;
-
-interface PublicTestimony {
-  id: string;
-  displayName: string;
-  ratings: AspectRatings;
-  text: string;
-  visitMonth: string;
-  procedureCode?: ProcedureCode;
-  pricePaidRupiah?: number;
-  verifiedVisit: boolean;
-}
-
-/**
- * Listed Provider page (spec 02), first-party content only: the stored name,
- * Region and type, aggregates and published Testimonies. No Places call here.
- */
+/** Listed Provider page (spec 02). 404 for a place that is not a Listed Provider. */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const firestore = context.firestore;
-  if (!firestore) throw data(null, { status: 404 });
-  const placeId = params.placeId;
-
-  const [providerSnapshot, testimonySnapshot] = await Promise.all([
-    firestore.collection(COLLECTIONS.providers).doc(placeId).get(),
-    firestore
-      .collection(COLLECTIONS.testimonies)
-      .where("placeId", "==", placeId)
-      .where("status", "==", "published")
-      .orderBy("publishedAt", "desc")
-      .limit(TESTIMONY_LIMIT)
-      .get(),
-  ]);
-  if (!providerSnapshot.exists) throw data(null, { status: 404 });
-  const doc = providerSnapshot.data() as ProviderDoc;
-
-  const testimonies: PublicTestimony[] = testimonySnapshot.docs.map((snapshot) => {
-    const t = snapshot.data() as TestimonyDoc;
-    return {
-      id: snapshot.id,
-      displayName: t.displayName,
-      ratings: t.ratings,
-      text: t.text,
-      visitMonth: t.visitMonth,
-      procedureCode: t.procedureCode,
-      pricePaidRupiah: t.pricePaidRupiah,
-      verifiedVisit: t.verifiedVisit === true,
-    };
-  });
-
-  return {
-    url: `${new URL(request.url).origin}${providerPath(placeId)}`,
-    provider: {
-      placeId,
-      name: doc.name,
-      area: regionLabel(doc.region),
-      providerType: doc.providerType,
-      providerTypeInferred: doc.providerTypeSource === "inferred",
-      claimed: doc.claimStatus === "claimed",
-      testimonyCount: doc.aggregates?.testimonyCount ?? 0,
-      verifiedVisitCount: doc.aggregates?.verifiedVisitCount ?? 0,
-      averages: doc.aggregates?.averages ?? null,
-    },
-    testimonies,
-  };
-}
-
-function formatScore(value: number, language: Language): string {
-  return new Intl.NumberFormat(language === "id" ? "id-ID" : "en-US", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(value);
-}
-
-function formatVisitMonth(visitMonth: string, language: Language): string {
-  const [year, month] = visitMonth.split("-").map(Number);
-  if (!year || !month) return visitMonth;
-  return new Intl.DateTimeFormat(language === "id" ? "id-ID" : "en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
+  const page = context.firestore ? await loadProviderPage(context.firestore, params.placeId) : null;
+  if (!page) throw data(null, { status: 404 });
+  return { url: `${new URL(request.url).origin}${providerPath(params.placeId)}`, ...page };
 }
 
 export function meta({ loaderData, matches }: Route.MetaArgs) {
@@ -124,8 +41,6 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
     ...openGraphMeta({ title, description, url }),
   ];
 }
-
-const ASPECTS = ["service", "hygiene", "materialsEquipment"] as const;
 
 export default function ProviderPage({ loaderData }: Route.ComponentProps) {
   const { t, i18n } = useTranslation();
@@ -189,6 +104,8 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
     </div>
   );
 }
+
+type PublicTestimony = Route.ComponentProps["loaderData"]["testimonies"][number];
 
 function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; language: Language }) {
   const { t } = useTranslation();

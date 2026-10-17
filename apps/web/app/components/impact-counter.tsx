@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
-import type { Language } from "~/i18n/config";
-import type { ImpactCounts } from "~/server/impact.server";
+import { isLanguage, type Language } from "~/i18n/config";
+import { formatCount } from "~/lib/format";
+import type { ImpactCounts } from "~/lib/impact";
 
 const ITEMS = [
   "testimoniesPublished",
@@ -13,7 +14,7 @@ const ITEMS = [
 /** The live impact counter (spec 04): five labelled numbers. */
 export function ImpactCounter({ counts }: { counts: ImpactCounts }) {
   const { t, i18n } = useTranslation();
-  const format = new Intl.NumberFormat((i18n.language as Language) === "en" ? "en-US" : "id-ID");
+  const language: Language = isLanguage(i18n.language) ? i18n.language : "id";
   return (
     <section aria-labelledby="impact-title" className="flex flex-col gap-2">
       <h2 id="impact-title" className="sr-only">
@@ -24,7 +25,7 @@ export function ImpactCounter({ counts }: { counts: ImpactCounts }) {
           <div key={key} className="flex flex-col-reverse rounded-md border bg-card px-3 py-2">
             <dt className="text-xs text-muted-foreground">{t(`impact.${key}`)}</dt>
             <dd className="text-xl font-bold tabular-nums" data-counter={key}>
-              {format.format(counts[key])}
+              {formatCount(counts[key], language)}
             </dd>
           </div>
         ))}

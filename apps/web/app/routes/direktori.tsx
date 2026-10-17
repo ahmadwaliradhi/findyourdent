@@ -4,7 +4,8 @@ import { Link } from "react-router";
 import { fieldClassName, ListingFiltersForm } from "~/components/listing-filters-form";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { getI18n } from "~/i18n/config";
+import { getI18n, isLanguage, type Language } from "~/i18n/config";
+import { ASPECTS } from "~/lib/aspects";
 import {
   DIRECTORY_PARAMS,
   DIRECTORY_ROW_LIMIT,
@@ -14,6 +15,7 @@ import {
   parseDirectoryQuery,
   parseDirectorySort,
 } from "~/lib/directory";
+import { formatKm, formatScore } from "~/lib/format";
 import { haversineKm, type LatLng } from "~/lib/geo";
 import { type ListingFilters, parseListingFilters } from "~/lib/listing-filters";
 import { providerPath } from "~/lib/paths";
@@ -95,6 +97,7 @@ function sortByDistance(rows: DirectoryRow[], origin: LatLng): { row: DirectoryR
 export default function Directory({ loaderData }: Route.ComponentProps) {
   const { filters, q, sort, rows } = loaderData;
   const { t, i18n } = useTranslation();
+  const language: Language = isLanguage(i18n.language) ? i18n.language : "id";
   const location = useVisitorLocation(sort === "jarak");
   const area = areaName(filters);
   const shown = useMemo(
@@ -102,8 +105,6 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
       location.status === "ready" ? sortByDistance(rows, location.origin) : rows.map((row) => ({ row, km: null })),
     [rows, location],
   );
-  const formatKm = (km: number) =>
-    new Intl.NumberFormat(i18n.language === "en" ? "en-ID" : "id-ID", { maximumFractionDigits: 1 }).format(km);
 
   return (
     <div className="flex flex-col gap-6">
@@ -195,7 +196,7 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
               <DirectoryRowItem
                 key={row.placeId}
                 row={row}
-                distance={location.status === "ready" ? (km === null ? null : formatKm(km)) : undefined}
+                distance={location.status === "ready" ? (km === null ? null : formatKm(km, language)) : undefined}
               />
             ))}
           </ol>
@@ -212,11 +213,7 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
 /** distance: formatted km, null when the row has no coordinates, undefined when not sorting by distance. */
 function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: string | null | undefined }) {
   const { t, i18n } = useTranslation();
-  const formatScore = (value: number) =>
-    new Intl.NumberFormat(i18n.language === "en" ? "en-ID" : "id-ID", {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    }).format(value);
+  const language: Language = isLanguage(i18n.language) ? i18n.language : "id";
   const headingId = `provider-${row.placeId}`;
 
   return (
@@ -246,10 +243,10 @@ function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: stri
 
       {row.averages ? (
         <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {(["service", "hygiene", "materialsEquipment"] as const).map((aspect) => (
+          {ASPECTS.map((aspect) => (
             <div key={aspect} className="flex gap-1">
               <dt className="text-muted-foreground">{t(`directory.aspects.${aspect}`)}</dt>
-              <dd className="font-medium">{formatScore(row.averages?.[aspect] ?? 0)}</dd>
+              <dd className="font-medium">{formatScore(row.averages?.[aspect] ?? 0, language)}</dd>
             </div>
           ))}
         </dl>
@@ -261,7 +258,9 @@ function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: stri
         <span>{t("directory.testimonies", { count: row.testimonyCount })}</span>
         <span>{t("directory.verifiedVisits", { count: row.verifiedVisitCount })}</span>
         {row.score !== null && (
-          <span className="text-muted-foreground">{t("directory.score", { score: formatScore(row.score) })}</span>
+          <span className="text-muted-foreground">
+            {t("directory.score", { score: formatScore(row.score, language) })}
+          </span>
         )}
       </p>
     </li>
