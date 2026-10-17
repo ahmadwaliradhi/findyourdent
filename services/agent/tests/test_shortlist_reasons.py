@@ -124,7 +124,7 @@ def test_one_call_to_the_shortlist_model_with_its_own_settings(
     assert len(fake_gemini.calls) == 1
     call = fake_gemini.calls[0]
     assert call["model"] == defaults.shortlist_model
-    assert call["temperature"] == defaults.shortlist_temperature
+    assert call["response_schema"]["required"] == ["reasons"]
     assert call["max_output_tokens"] == defaults.shortlist_max_output_tokens
     assert call["thinking_level"] == defaults.shortlist_thinking_level
     # Provider names are data after the stable instruction, never part of it.
@@ -247,7 +247,6 @@ def test_the_local_development_adapter_writes_a_reason_for_every_provider() -> N
             instruction="",
             contents=shortlist_contents(request),
             response_schema=MODEL_OUTPUT_SCHEMA,
-            temperature=0.2,
         )
     )
 

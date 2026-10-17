@@ -109,7 +109,6 @@ def generation_config(
     """The ADK agent's equivalent of the adapter call in shortlist.py."""
     return types.GenerateContentConfig(
         system_instruction=instruction,
-        temperature=settings.shortlist_temperature,
         max_output_tokens=settings.shortlist_max_output_tokens,
         response_mime_type="application/json",
         response_json_schema=MODEL_OUTPUT_SCHEMA,

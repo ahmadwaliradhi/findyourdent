@@ -226,12 +226,10 @@ def guidance_contents(
 def generation_config(
     settings: Settings, response_schema: dict[str, Any], instruction: str | None = None
 ) -> types.GenerateContentConfig:
-    """Low temperature, JSON output, bounded output tokens (thinking tokens count as
-    output and have no daily quota). The ADK agent's equivalent of the adapter call
-    in guidance.py."""
+    """JSON output, bounded output tokens (thinking tokens count as output and have
+    no daily quota). The ADK agent's equivalent of the adapter call in guidance.py."""
     return types.GenerateContentConfig(
         system_instruction=instruction,
-        temperature=settings.guidance_temperature,
         max_output_tokens=settings.guidance_max_output_tokens,
         response_mime_type="application/json",
         response_json_schema=response_schema,
