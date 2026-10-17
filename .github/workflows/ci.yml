@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web and contracts (Biome, Vitest against Firebase emulators)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # Version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # The Firebase emulators need a JVM.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome
+        run: pnpm exec biome ci .
+
+      - name: Contracts are generated and current
+        run: pnpm contracts:check
+
+      - name: Contracts typecheck
+        run: pnpm --filter @findyourdent/contracts typecheck
+
+      - name: Contracts tests
+        run: pnpm --filter @findyourdent/contracts test
+
+      - name: Web API tests (Vitest under firebase emulators:exec)
+        run: pnpm --filter web test
+
+  agent:
+    name: Agent service (Ruff, pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # setup-uv publishes exact version tags only; there is no floating major tag.
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --directory services/agent --locked
+
+      - name: Ruff lint
+        run: uv run --directory services/agent ruff check .
+
+      - name: Ruff format
+        run: uv run --directory services/agent ruff format --check .
+
+      - name: Pydantic models are generated and current
+        run: uv run --directory services/agent python scripts/generate_contracts.py --check
+
+      - name: pytest
+        run: uv run --directory services/agent pytest

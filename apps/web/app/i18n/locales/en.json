@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "FindYourDent: understand your dental problem",
+    "description": "Describe your dental problem and get educational information: how urgent it is, what it may be, a cost estimate and BPJS coverage."
+  },
+  "nav": {
+    "skipToContent": "Skip to content",
+    "home": "FindYourDent, home"
+  },
+  "language": {
+    "switchTo": "Bahasa Indonesia",
+    "switchToLabel": "Switch language to Bahasa Indonesia"
+  },
+  "home": {
+    "headline": "Toothache? Understand it before you see a dentist.",
+    "intro": "Describe your problem in your own words. We explain how urgent it is, what it may be, what it might cost, and whether BPJS covers it.",
+    "consent": "Educational information, not a diagnosis. Your complaint text is not stored and is processed by Google AI outside Indonesia.",
+    "complaintLabel": "Describe your dental problem",
+    "complaintPlaceholder": "Example: my lower left molar has been throbbing for three days and hurts more at night",
+    "complaintHint": "Write in Indonesian, a regional language, or English.",
+    "submit": "Get guidance",
+    "submitting": "Working on it…",
+    "followUpAnswerLabel": "Your answer",
+    "followUpSubmit": "Send answer",
+    "quickRepliesLabel": "Quick replies"
+  },
+  "errors": {
+    "title": "Sorry, something went wrong",
+    "generic": "Something went wrong. Please try again in a moment.",
+    "notFoundTitle": "Page not found",
+    "notFound": "The page you are looking for does not exist.",
+    "backHome": "Back to home",
+    "retry": "Try again",
+    "invalid_request": "We could not read your complaint. Describe your problem (up to 4000 characters) and send it again.",
+    "agent_unavailable": "The guidance service is unavailable right now. Please try again in a moment.",
+    "invalid_agent_response": "The guidance service sent an answer we cannot show. Please try again."
+  },
+  "card": {
+    "transcriptLabel": "What we understood from your voice note",
+    "emergency": {
+      "title": "Go to the emergency department now",
+      "redFlagsLabel": "Danger signs detected",
+      "hospitalsPending": "Nearby hospitals with an emergency department will appear here.",
+      "action": "Go to the nearest hospital emergency department (IGD) now. Do not wait for a dentist appointment."
+    },
+    "followUp": {
+      "title": "One more question"
+    },
+    "guidance": {
+      "title": "Guidance for your problem",
+      "urgencyLabel": "Urgency",
+      "categoryLabel": "Likely problem",
+      "journeyLabel": "Expected visits",
+      "journeySingle": "Usually done in a single visit",
+      "journeyMulti": "Usually needs several visits",
+      "visit": "Visit {{order}}",
+      "proceduresLabel": "Likely procedures",
+      "whyPricesVaryLabel": "Why prices vary",
+      "costLabel": "Cost estimate",
+      "costRange": "{{min}} to {{max}}",
+      "costSource": "Source: {{source}}",
+      "bpjsLabel": "BPJS Kesehatan",
+      "sourcesLabel": "Sources"
+    }
+  },
+  "estimate": "estimasi (estimate)",
+  "urgency": {
+    "darurat": {
+      "label": "Emergency",
+      "description": "Go to the emergency department now"
+    },
+    "segera": {
+      "label": "Soon",
+      "description": "See a dentist within 1 to 3 days"
+    },
+    "terjadwal": {
+      "label": "Scheduled",
+      "description": "Book within 2 weeks"
+    },
+    "rutin": {
+      "label": "Routine",
+      "description": "Routine care, pick a convenient time"
+    }
+  },
+  "category": {
+    "deep_caries_or_pulpitis": "Deep cavity or inflamed tooth nerve",
+    "dental_abscess": "Dental abscess",
+    "wisdom_tooth_or_pericoronitis": "Wisdom tooth or inflamed gum around it",
+    "sensitive_teeth": "Sensitive teeth",
+    "gingivitis": "Gum inflammation (gingivitis)",
+    "periodontitis": "Gum disease affecting the bone (periodontitis)",
+    "fractured_or_knocked_out_tooth": "Broken or knocked-out tooth",
+    "loose_tooth": "Loose tooth",
+    "mouth_ulcer_or_lesion": "Mouth ulcer or sore",
+    "orthodontic_problem": "Tooth alignment or braces problem",
+    "denture_problem": "Denture problem",
+    "cosmetic_or_scaling": "Cosmetic care or tartar cleaning"
+  },
+  "bpjs": {
+    "covered_at_fktp": "Covered at your FKTP",
+    "referral_needed": "Needs a referral from your FKTP",
+    "not_covered": "Not covered by BPJS"
+  },
+  "redFlag": {
+    "facial_or_neck_swelling": "Swelling of the face or neck",
+    "fever": "Fever",
+    "difficulty_swallowing": "Difficulty swallowing",
+    "difficulty_breathing": "Difficulty breathing",
+    "trismus": "Cannot open the mouth properly",
+    "uncontrolled_bleeding": "Bleeding that does not stop",
+    "knocked_out_permanent_tooth": "Adult tooth knocked out by an injury"
+  },
+  "footer": {
+    "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription."
+  }
+}

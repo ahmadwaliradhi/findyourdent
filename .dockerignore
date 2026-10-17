@@ -1,0 +1,9 @@
+**/node_modules
+**/.venv
+**/build
+**/.react-router
+**/__pycache__
+.git
+**/test-results
+**/playwright-report
+.lighthouseci

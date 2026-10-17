@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/procedures.schema.json",
+  "title": "ProcedureList",
+  "description": "Shape of data/procedures.json: the shared procedure code list used by Guidance (likelyProcedures, costEstimate), Testimonies (procedure) and Price Lists (rows).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "procedures"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string", "minLength": 1 },
+    "procedures": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Procedure" }
+    }
+  },
+  "$defs": {
+    "Procedure": {
+      "title": "Procedure",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "category", "label"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "category": { "$ref": "#/$defs/ProcedureCategory" },
+        "label": { "$ref": "#/$defs/LocalizedText" },
+        "description": { "$ref": "#/$defs/LocalizedText" }
+      }
+    },
+    "ProcedureCategory": {
+      "type": "string",
+      "enum": [
+        "diagnostic",
+        "preventive",
+        "restorative",
+        "endodontic",
+        "periodontal",
+        "surgical",
+        "prosthodontic",
+        "orthodontic",
+        "cosmetic",
+        "oral_medicine"
+      ]
+    },
+    "LocalizedText": {
+      "title": "LocalizedText",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "en"],
+      "properties": {
+        "id": { "description": "Bahasa Indonesia.", "type": "string", "minLength": 1 },
+        "en": { "description": "English.", "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

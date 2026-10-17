@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/guidance-response.schema.json",
+  "title": "GuidanceResponse",
+  "description": "Agent service to web service: exactly one of three kinds (spec 01).",
+  "oneOf": [
+    { "$ref": "#/$defs/EmergencyResponse" },
+    { "$ref": "#/$defs/FollowUpResponse" },
+    { "$ref": "#/$defs/GuidanceCardResponse" }
+  ],
+  "$defs": {
+    "Transcript": {
+      "description": "What Gemini understood from a voice note, shown back to the Patient. Absent for typed complaints.",
+      "type": "string"
+    },
+    "EmergencyResponse": {
+      "title": "EmergencyResponse",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reason", "redFlags", "hospitalSearch"],
+      "properties": {
+        "kind": { "const": "emergency" },
+        "reason": {
+          "description": "Plain one-line reason in the Patient's language.",
+          "type": "string",
+          "minLength": 1
+        },
+        "redFlags": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/RedFlag" }
+        },
+        "hospitalSearch": {
+          "description": "Request for nearby Hospitals with an IGD; the web service resolves it through the Places adapter (spec 02).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providerType", "requiresEmergencyDepartment"],
+          "properties": {
+            "providerType": { "const": "hospital" },
+            "requiresEmergencyDepartment": { "const": true }
+          }
+        },
+        "transcript": { "$ref": "#/$defs/Transcript" }
+      }
+    },
+    "RedFlag": {
+      "type": "string",
+      "enum": [
+        "facial_or_neck_swelling",
+        "fever",
+        "difficulty_swallowing",
+        "difficulty_breathing",
+        "trismus",
+        "uncontrolled_bleeding",
+        "knocked_out_permanent_tooth"
+      ]
+    },
+    "FollowUpResponse": {
+      "title": "FollowUpResponse",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "question"],
+      "properties": {
+        "kind": { "const": "followUp" },
+        "question": { "type": "string", "minLength": 1 },
+        "quickReplies": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "transcript": { "$ref": "#/$defs/Transcript" }
+      }
+    },
+    "GuidanceCardResponse": {
+      "title": "GuidanceCardResponse",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "guidance"],
+      "properties": {
+        "kind": { "const": "guidance" },
+        "guidance": { "$ref": "#/$defs/Guidance" },
+        "transcript": { "$ref": "#/$defs/Transcript" }
+      }
+    },
+    "UrgencyTier": {
+      "description": "darurat only appears with the emergency kind.",
+      "type": "string",
+      "enum": ["darurat", "segera", "terjadwal", "rutin"]
+    },
+    "LikelyCategoryCode": {
+      "type": "string",
+      "enum": [
+        "deep_caries_or_pulpitis",
+        "dental_abscess",
+        "wisdom_tooth_or_pericoronitis",
+        "sensitive_teeth",
+        "gingivitis",
+        "periodontitis",
+        "fractured_or_knocked_out_tooth",
+        "loose_tooth",
+        "mouth_ulcer_or_lesion",
+        "orthodontic_problem",
+        "denture_problem",
+        "cosmetic_or_scaling"
+      ]
+    },
+    "ProcedureCode": {
+      "description": "Code from the shared procedure list (packages/contracts/data/procedures.json).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "Guidance": {
+      "title": "Guidance",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "urgencyTier",
+        "likelyCategory",
+        "journey",
+        "likelyProcedures",
+        "whyPricesVary",
+        "costEstimate",
+        "bpjs",
+        "sources",
+        "disclaimer"
+      ],
+      "properties": {
+        "urgencyTier": { "$ref": "#/$defs/UrgencyTier" },
+        "likelyCategory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "explanation"],
+          "properties": {
+            "code": { "$ref": "#/$defs/LikelyCategoryCode" },
+            "explanation": {
+              "description": "Plain-language, worded as a possibility, never a diagnosis.",
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "journey": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "visits"],
+          "properties": {
+            "type": { "type": "string", "enum": ["single", "multi"] },
+            "visits": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["order", "purpose"],
+                "properties": {
+                  "order": { "type": "integer", "minimum": 1 },
+                  "purpose": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        "likelyProcedures": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ProcedureCode" }
+        },
+        "whyPricesVary": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "costEstimate": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["procedureCode", "minRupiah", "maxRupiah", "label", "source"],
+            "properties": {
+              "procedureCode": { "$ref": "#/$defs/ProcedureCode" },
+              "minRupiah": { "type": "integer", "minimum": 0 },
+              "maxRupiah": { "type": "integer", "minimum": 0 },
+              "label": { "const": "estimasi" },
+              "source": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "bpjs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "explanation"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["covered_at_fktp", "referral_needed", "not_covered"]
+            },
+            "explanation": { "type": "string", "minLength": 1 }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title"],
+            "properties": {
+              "title": { "type": "string", "minLength": 1 },
+              "citation": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          }
+        },
+        "disclaimer": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "FindYourDent: pahami keluhan gigi Anda",
+    "description": "Ceritakan keluhan gigi Anda dan dapatkan informasi edukasi: seberapa mendesak, kemungkinan masalahnya, perkiraan biaya, dan cakupan BPJS."
+  },
+  "nav": {
+    "skipToContent": "Langsung ke konten",
+    "home": "FindYourDent, halaman utama"
+  },
+  "language": {
+    "switchTo": "English",
+    "switchToLabel": "Ganti bahasa ke English"
+  },
+  "home": {
+    "headline": "Sakit gigi? Pahami dulu sebelum ke dokter gigi.",
+    "intro": "Ceritakan keluhan Anda dengan kata-kata sendiri. Kami bantu jelaskan seberapa mendesak, kemungkinan masalahnya, perkiraan biaya, dan apakah BPJS menanggungnya.",
+    "consent": "Informasi edukasi, bukan diagnosis. Teks keluhan Anda tidak disimpan dan diproses oleh Google AI di luar Indonesia.",
+    "complaintLabel": "Ceritakan keluhan gigi Anda",
+    "complaintPlaceholder": "Contoh: gigi geraham kiri bawah nyut-nyutan sejak tiga hari, makin sakit kalau malam",
+    "complaintHint": "Boleh dalam Bahasa Indonesia, bahasa daerah, atau English.",
+    "submit": "Lihat panduan",
+    "submitting": "Sedang memproses…",
+    "followUpAnswerLabel": "Jawaban Anda",
+    "followUpSubmit": "Kirim jawaban",
+    "quickRepliesLabel": "Pilihan jawaban cepat"
+  },
+  "errors": {
+    "title": "Maaf, ada yang tidak beres",
+    "generic": "Terjadi kesalahan. Silakan coba lagi sebentar lagi.",
+    "notFoundTitle": "Halaman tidak ditemukan",
+    "notFound": "Halaman yang Anda cari tidak ada.",
+    "backHome": "Kembali ke beranda",
+    "retry": "Coba lagi",
+    "invalid_request": "Keluhan belum terbaca. Tulis keluhan Anda (maksimal 4000 karakter) lalu kirim lagi.",
+    "agent_unavailable": "Layanan panduan sedang tidak tersedia. Silakan coba lagi sebentar lagi.",
+    "invalid_agent_response": "Layanan panduan memberi jawaban yang tidak dapat ditampilkan. Silakan coba lagi."
+  },
+  "card": {
+    "transcriptLabel": "Yang kami pahami dari pesan suara Anda",
+    "emergency": {
+      "title": "Ke IGD sekarang",
+      "redFlagsLabel": "Tanda bahaya yang terdeteksi",
+      "hospitalsPending": "Rumah sakit terdekat dengan IGD akan ditampilkan di sini.",
+      "action": "Segera pergi ke Instalasi Gawat Darurat (IGD) rumah sakit terdekat. Jangan menunggu jadwal dokter gigi."
+    },
+    "followUp": {
+      "title": "Satu pertanyaan lagi"
+    },
+    "guidance": {
+      "title": "Panduan untuk keluhan Anda",
+      "urgencyLabel": "Tingkat urgensi",
+      "categoryLabel": "Kemungkinan masalah",
+      "journeyLabel": "Perkiraan kunjungan",
+      "journeySingle": "Biasanya selesai dalam satu kunjungan",
+      "journeyMulti": "Biasanya perlu beberapa kunjungan",
+      "visit": "Kunjungan {{order}}",
+      "proceduresLabel": "Kemungkinan tindakan",
+      "whyPricesVaryLabel": "Mengapa harganya berbeda-beda",
+      "costLabel": "Perkiraan biaya",
+      "costRange": "{{min}} sampai {{max}}",
+      "costSource": "Sumber: {{source}}",
+      "bpjsLabel": "BPJS Kesehatan",
+      "sourcesLabel": "Sumber rujukan"
+    }
+  },
+  "estimate": "estimasi",
+  "urgency": {
+    "darurat": {
+      "label": "Darurat",
+      "description": "Ke IGD sekarang"
+    },
+    "segera": {
+      "label": "Segera",
+      "description": "Temui dokter gigi dalam 1 sampai 3 hari"
+    },
+    "terjadwal": {
+      "label": "Terjadwal",
+      "description": "Buat janji dalam 2 minggu"
+    },
+    "rutin": {
+      "label": "Rutin",
+      "description": "Perawatan rutin, atur waktu yang nyaman"
+    }
+  },
+  "category": {
+    "deep_caries_or_pulpitis": "Lubang gigi dalam atau radang saraf gigi",
+    "dental_abscess": "Abses gigi (kantong nanah)",
+    "wisdom_tooth_or_pericoronitis": "Gigi bungsu atau radang gusi di sekitarnya",
+    "sensitive_teeth": "Gigi sensitif",
+    "gingivitis": "Radang gusi",
+    "periodontitis": "Radang jaringan penyangga gigi (periodontitis)",
+    "fractured_or_knocked_out_tooth": "Gigi patah atau copot",
+    "loose_tooth": "Gigi goyang",
+    "mouth_ulcer_or_lesion": "Sariawan atau luka di mulut",
+    "orthodontic_problem": "Masalah susunan gigi atau kawat gigi",
+    "denture_problem": "Masalah gigi tiruan",
+    "cosmetic_or_scaling": "Estetika gigi atau pembersihan karang gigi"
+  },
+  "bpjs": {
+    "covered_at_fktp": "Ditanggung di FKTP Anda",
+    "referral_needed": "Perlu rujukan dari FKTP",
+    "not_covered": "Tidak ditanggung BPJS"
+  },
+  "redFlag": {
+    "facial_or_neck_swelling": "Bengkak di wajah atau leher",
+    "fever": "Demam",
+    "difficulty_swallowing": "Sulit menelan",
+    "difficulty_breathing": "Sulit bernapas",
+    "trismus": "Mulut sulit dibuka",
+    "uncontrolled_bleeding": "Perdarahan yang tidak berhenti",
+    "knocked_out_permanent_tooth": "Gigi permanen copot karena benturan"
+  },
+  "footer": {
+    "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat."
+  }
+}

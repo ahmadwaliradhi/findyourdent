@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/moderation-decision.schema.json",
+  "title": "ModerationDecision",
+  "description": "Agent service to web service: the Moderation result (spec 03). Model errors, timeouts or invalid output always become hold with ruleCodes [\"model_error\"].",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "ruleCodes", "flaggedSpans", "confidence", "authorMessage"],
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["publish", "authorFix", "hold"]
+    },
+    "ruleCodes": {
+      "description": "Every rule that fired; empty only when decision is publish.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/ModerationRuleCode" }
+    },
+    "flaggedSpans": {
+      "description": "Exact spans of the submitted text that triggered a rule, shown to the author on authorFix and to the admin on hold.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/FlaggedSpan" }
+    },
+    "flaggedPhotos": {
+      "type": "array",
+      "items": {
+        "title": "FlaggedPhoto",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["photoIndex", "ruleCode"],
+        "properties": {
+          "photoIndex": { "type": "integer", "minimum": 0, "maximum": 3 },
+          "ruleCode": { "$ref": "#/$defs/ModerationRuleCode" }
+        }
+      }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "authorMessage": {
+      "description": "Short author-facing message in the author's language.",
+      "type": "string",
+      "minLength": 1
+    },
+    "ownHealthDataWarning": {
+      "description": "The author shared their own health details: a gentle warning only, never a hold (R8 note).",
+      "type": "boolean"
+    },
+    "proofOfVisit": {
+      "description": "Plausible match with the Provider name and a date within 24 months of the visit month. A rejection never holds the Testimony; it only withholds Kunjungan terbukti.",
+      "type": "string",
+      "enum": ["accepted", "rejected", "notProvided"]
+    }
+  },
+  "$defs": {
+    "ModerationRuleCode": {
+      "type": "string",
+      "enum": [
+        "r1_personal_data",
+        "r2_accusation_as_fact",
+        "r3_hate_or_harassment",
+        "r4_not_first_hand",
+        "r5_medical_advice",
+        "r6_wrong_provider",
+        "r7_conflict_of_interest",
+        "r8_third_party_health_data",
+        "r9_manipulation",
+        "named_person_negative",
+        "photo_not_clinic_setting",
+        "promotional_wording",
+        "misleading_statement",
+        "model_error"
+      ]
+    },
+    "FlaggedSpan": {
+      "title": "FlaggedSpan",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "text", "ruleCode"],
+      "properties": {
+        "start": { "description": "UTF-16 code unit offset, inclusive.", "type": "integer", "minimum": 0 },
+        "end": { "description": "UTF-16 code unit offset, exclusive.", "type": "integer", "minimum": 0 },
+        "text": { "type": "string", "minLength": 1 },
+        "ruleCode": { "$ref": "#/$defs/ModerationRuleCode" }
+      }
+    }
+  }
+}

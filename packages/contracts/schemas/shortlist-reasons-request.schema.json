@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/shortlist-reasons-request.schema.json",
+  "title": "ShortlistReasonsRequest",
+  "description": "Web service to agent service: the second Gemini call of a Patient session (spec 02). The web service has already ranked the Providers deterministically; the agent only writes one reason per Provider and can neither reorder nor add Providers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sessionId", "language", "likelyProcedures", "providers"],
+  "properties": {
+    "sessionId": {
+      "description": "Same opaque session id as the Guidance request.",
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "language": {
+      "description": "Language the reasons are written in: the language of the Patient's complaint.",
+      "type": "string",
+      "enum": ["id", "en"]
+    },
+    "likelyCategoryCode": {
+      "description": "Guidance likelyCategory.code, absent for emergency Hospital lists.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "likelyProcedures": {
+      "description": "Procedure codes from the Guidance (shared procedure list).",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+    },
+    "providers": {
+      "description": "The top Providers in rank order. Facts are passed to Gemini in memory only.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/ShortlistProviderFacts" }
+    }
+  },
+  "$defs": {
+    "ShortlistProviderFacts": {
+      "title": "ShortlistProviderFacts",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["placeId", "name", "providerType", "providerTypeSource", "rank", "testimonies"],
+      "properties": {
+        "placeId": { "type": "string", "minLength": 1 },
+        "name": {
+          "description": "Listed Provider name, or the live Google display name for a non-Listed Provider (never stored).",
+          "type": "string",
+          "minLength": 1
+        },
+        "providerType": { "type": "string", "enum": ["klinik", "privateDentist", "hospital"] },
+        "providerTypeSource": { "type": "string", "enum": ["inferred", "claimed"] },
+        "rank": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "distanceMeters": { "type": "integer", "minimum": 0 },
+        "procedureFit": {
+          "description": "Likely procedures this Provider is expected to handle, as computed by the ranking.",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+        },
+        "testimonies": {
+          "title": "ShortlistTestimonySummary",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "verifiedVisitCount"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "verifiedVisitCount": { "type": "integer", "minimum": 0 },
+            "averageService": { "type": "number", "minimum": 1, "maximum": 5 },
+            "averageHygiene": { "type": "number", "minimum": 1, "maximum": 5 },
+            "averageMaterialsEquipment": { "type": "number", "minimum": 1, "maximum": 5 }
+          }
+        },
+        "priceSignals": {
+          "type": "array",
+          "items": {
+            "title": "ShortlistPriceSignal",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["procedureCode", "minRupiah", "maxRupiah", "source"],
+            "properties": {
+              "procedureCode": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+              "minRupiah": { "type": "integer", "minimum": 0 },
+              "maxRupiah": { "type": "integer", "minimum": 0 },
+              "source": {
+                "description": "testimonies: median price paid (at least two); priceList: owner's confirmed Price List; costEstimate: Guidance estimasi.",
+                "type": "string",
+                "enum": ["testimonies", "priceList", "costEstimate"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
