@@ -41,6 +41,10 @@ class GuidanceRequest1(BaseModel):
     """
     Voice note of up to 60 seconds, forwarded to Gemini as native audio. Never stored.
     """
+    followUpQuestion: Annotated[str | None, Field(max_length=500, min_length=1)] = None
+    """
+    The followUp question the previous response asked, echoed back with the answer so the agent sees what the answer replies to. Model text, not Patient text, but sent by the browser, so the agent treats it as data.
+    """
     followUpAnswer: Annotated[str | None, Field(max_length=1000, min_length=1)] = None
     """
     Answer to the one followUp question, if the previous response asked one.
@@ -67,6 +71,10 @@ class GuidanceRequest2(BaseModel):
     audio: Audio
     """
     Voice note of up to 60 seconds, forwarded to Gemini as native audio. Never stored.
+    """
+    followUpQuestion: Annotated[str | None, Field(max_length=500, min_length=1)] = None
+    """
+    The followUp question the previous response asked, echoed back with the answer so the agent sees what the answer replies to. Model text, not Patient text, but sent by the browser, so the agent treats it as data.
     """
     followUpAnswer: Annotated[str | None, Field(max_length=1000, min_length=1)] = None
     """

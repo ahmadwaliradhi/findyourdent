@@ -16,13 +16,27 @@ import { formatRupiah } from "~/lib/format";
 import { procedureLabel } from "~/lib/procedures";
 import { cn } from "~/lib/utils";
 
-export function GuidanceResult({ response, pending }: { response: GuidanceResponse; pending: boolean }) {
+export interface ShareLink {
+  /** /panduan/<token>, built from the Guidance object alone. */
+  path: string;
+  origin: string;
+}
+
+export function GuidanceResult({
+  response,
+  pending,
+  share,
+}: {
+  response: GuidanceResponse;
+  pending: boolean;
+  share?: ShareLink | null;
+}) {
   return (
     <div className="flex flex-col gap-3">
       {response.transcript && <Transcript text={response.transcript} />}
       {response.kind === "emergency" && <EmergencyCard response={response} />}
       {response.kind === "followUp" && <FollowUpCard response={response} pending={pending} />}
-      {response.kind === "guidance" && <GuidanceCard guidance={response.guidance} />}
+      {response.kind === "guidance" && <GuidanceCard guidance={response.guidance} share={share ?? null} />}
     </div>
   );
 }
@@ -86,6 +100,8 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
         <CardDescription className="text-base text-foreground">{response.question}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        {/* Sent back with the answer so the agent knows what "Ya" or "Tidak" replies to. */}
+        <input type="hidden" name="followUpQuestion" value={response.question} />
         {response.quickReplies && response.quickReplies.length > 0 && (
           <fieldset className="flex flex-wrap gap-2">
             <legend className="sr-only">{t("home.quickRepliesLabel")}</legend>
@@ -131,7 +147,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function GuidanceCard({ guidance }: { guidance: Guidance }) {
+export function GuidanceCard({ guidance, share }: { guidance: Guidance; share: ShareLink | null }) {
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   return (
@@ -231,7 +247,29 @@ function GuidanceCard({ guidance }: { guidance: Guidance }) {
         </Section>
 
         <p className="border-t pt-4 text-sm font-medium">{guidance.disclaimer}</p>
+
+        {share && <ShareSection share={share} />}
       </CardContent>
     </Card>
+  );
+}
+
+function ShareSection({ share }: { share: ShareLink }) {
+  const { t } = useTranslation();
+  const url = `${share.origin}${share.path}`;
+  return (
+    <Section title={t("card.share.title")}>
+      <p className="text-sm text-muted-foreground">{t("card.share.privacy")}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="secondary" size="sm">
+          <a href={`https://wa.me/?text=${encodeURIComponent(url)}`} rel="noreferrer" target="_blank">
+            {t("card.share.whatsapp")}
+          </a>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <a href={share.path}>{t("card.share.open")}</a>
+        </Button>
+      </div>
+    </Section>
   );
 }

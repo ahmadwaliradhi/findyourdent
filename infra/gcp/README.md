@@ -22,7 +22,7 @@ ADMIN_EMAILS="a@example.com,b@example.com" infra/gcp/setup.sh
 | Firebase web app | `1:1001413011907:web:d59beb8fb53f70f21d3576` |
 | reCAPTCHA Enterprise site key (App Check) | `6LeFCfMtAAAAACLP7NiG2xaEClvTnRY5qqTPFdxC` (score-based; public by design) |
 | Service accounts | `fyd-web@findyourdent.iam.gserviceaccount.com`, `fyd-agent@findyourdent.iam.gserviceaccount.com` |
-| Secrets (Secret Manager, Jakarta) | `places-api-key` (API key restricted to Places API (New)), `admin-emails` (comma-separated allowlist), `rate-limit-salt` (web service rate-limit key hashes), `app-check-debug-token` (registered with App Check as `smoke-test`; `smoke.sh` exchanges it for an App Check token) |
+| Secrets (Secret Manager, Jakarta) | `places-api-key` (API key restricted to Places API (New)), `admin-emails` (comma-separated allowlist), `share-link-secret` (random key that signs shareable Guidance links; created once by `setup.sh`, mounted on the web service as `SHARE_LINK_SECRET`; rotating it breaks links already shared), `rate-limit-salt` (web service rate-limit key hashes), `app-check-debug-token` (registered with App Check as `smoke-test`; `smoke.sh` exchanges it for an App Check token) |
 | Budget | `findyourdent-usd100`: IDR 1,650,000 (about USD 100) on the whole billing account, alerts at 50% and 90% |
 
 The admin allowlist is kept in Secret Manager instead of the repository because the repository is public and the addresses are personal data.
@@ -89,7 +89,7 @@ infra/gcp/smoke.sh           # on its own at any time
 | Uptime checks | `fyd-web health` (through Hosting) and `fyd-agent health` (with an identity token), `/health` every minute from three regions |
 | Alert policy | `FindYourDent demo is down`: either uptime check failing, or 5xx responses every minute, for five minutes; email to the `admin-emails` allowlist |
 
-The warm instance is a service-level minimum, which changes without a new revision. Cloud Scheduler jobs `agent-warm-on` (00:00 on 19 October) and `agent-warm-off` (00:00 on 8 November) set it through the Cloud Run Admin API as `fyd-scheduler`, and every agent deploy sets the value for the current date. Cron has no year, so delete both jobs after judging. To flip it by hand: `gcloud run services update fyd-agent --region asia-southeast2 --min=1` (or `--min=0`).
+The warm instance is a service-level minimum, which changes without a new revision. Cloud Scheduler jobs `agent-warm-on` (00:00 on 19 October) and `agent-warm-off` (00:00 on 8 November) set it through the Cloud Run Admin API as `fyd-scheduler`, and every agent deploy sets the value for the current date. Cron has no year, so at 02:00 on 8 November `agent-warm-cleanup` runs the `scheduler-cleanup` workflow once (`scheduler-cleanup.workflow.yaml`). It deletes both warm jobs and `agent-warm-cleanup` itself. Both services keep running after the hackathon; the agent just goes back to starting on demand. To flip it by hand: `gcloud run services update fyd-agent --region asia-southeast2 --min=1` (or `--min=0`). A redeploy of the agent after 8 November recreates the jobs, which do nothing until the next October; delete them, or remove the warm-instance section from `deploy.sh` then.
 
 Request bodies never reach Cloud Logging. Cloud Run's request log has only the method, URL, status, latency and sizes. Both services write one JSON line per request with the request id (Cloud Run's trace id, passed to the agent as `X-Request-Id`), path, status and outcome code, and never a body, header or query string.
 

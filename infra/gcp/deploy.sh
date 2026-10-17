@@ -134,9 +134,36 @@ if [[ "$SERVICE" == agent ]]; then
       --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
     printf '    %s: %s -> min %s\n' "$1" "$2" "$3"
   }
-  # Cron has no year: both jobs fire again in 2027. Delete them after judging.
   warm_job agent-warm-on "0 0 19 10 *" 1
   warm_job agent-warm-off "0 0 8 11 *" 0
+
+  # Cron has no year, so both jobs would fire again every October. At 02:00 on
+  # 8 November, after agent-warm-off, agent-warm-cleanup runs the
+  # scheduler-cleanup workflow once; it deletes both jobs and agent-warm-cleanup
+  # itself. The services are untouched and keep running at minimum 0.
+  log "Warm schedule cleanup after judging"
+  gcloud services enable workflows.googleapis.com --project "$PROJECT_ID"
+  for role in roles/cloudscheduler.admin roles/workflows.invoker; do
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:${SCHEDULER_SA}" \
+      --role="$role" --condition=None --quiet >/dev/null
+  done
+  gcloud workflows deploy scheduler-cleanup --project "$PROJECT_ID" --location "$REGION" \
+    --source infra/gcp/scheduler-cleanup.workflow.yaml --service-account "$SCHEDULER_SA" --quiet >/dev/null
+  jobs_base="projects/${PROJECT_ID}/locations/${REGION}/jobs"
+  cleanup_arg=$(jq -nc --arg b "$jobs_base" \
+    '{jobs: [$b + "/agent-warm-on", $b + "/agent-warm-off", $b + "/agent-warm-cleanup"]}')
+  verb=create headers=--headers
+  if gcloud scheduler jobs describe agent-warm-cleanup --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+    verb=update headers=--update-headers
+  fi
+  gcloud scheduler jobs "$verb" http agent-warm-cleanup --project "$PROJECT_ID" --location "$REGION" \
+    --schedule="0 2 8 11 *" --time-zone=Asia/Jakarta --http-method=POST \
+    --uri="https://workflowexecutions.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/workflows/scheduler-cleanup/executions" \
+    "${headers}=Content-Type=application/json" \
+    --message-body="$(jq -nc --arg a "$cleanup_arg" '{argument: $a}')" \
+    --oauth-service-account-email="$SCHEDULER_SA" \
+    --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+  echo "    agent-warm-cleanup: 0 2 8 11 * -> delete the warm jobs and itself"
 
   today=$(TZ=Asia/Jakarta date +%F)
   if [[ ! "$today" < "$WARM_FROM" && "$today" < "$WARM_UNTIL" ]]; then min=1; else min=0; fi
@@ -179,7 +206,7 @@ gcloud run deploy "$WEB_SERVICE" --project "$PROJECT_ID" --region "$REGION" \
   --allow-unauthenticated --ingress=all \
   --cpu=1 --memory=512Mi --concurrency=80 --timeout=60 --min-instances=0 --max-instances=4 \
   --set-env-vars="AGENT_URL=${AGENT_URL},AGENT_AUTH=id_token,FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID},TRUST_PROXY_HOPS=2,FIREBASE_WEB_API_KEY=${WEB_API_KEY},FIREBASE_WEB_APP_ID=${WEB_APP_ID},FIREBASE_AUTH_DOMAIN=${WEB_AUTH_DOMAIN},RECAPTCHA_SITE_KEY=${SITE_KEY}" \
-  --set-secrets="PLACES_API_KEY=places-api-key:latest,ADMIN_EMAILS=admin-emails:latest,RATE_LIMIT_SALT=rate-limit-salt:latest" \
+  --set-secrets="PLACES_API_KEY=places-api-key:latest,ADMIN_EMAILS=admin-emails:latest,RATE_LIMIT_SALT=rate-limit-salt:latest,SHARE_LINK_SECRET=share-link-secret:latest" \
   --quiet
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).

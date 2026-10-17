@@ -68,6 +68,22 @@ describe("POST /api/guidance", () => {
     expect(turn2?.followUpAnswer).toBe("Tidak");
   });
 
+  it("forwards the follow-up question with the answer, so a bare 'Ya' is not ambiguous", async () => {
+    const question = "Apakah sakitnya muncul sendiri di malam hari?";
+    const response = await server.post("/api/guidance", {
+      complaintText: COMPLAINT,
+      language: "id",
+      followUpQuestion: question,
+      followUpAnswer: "Ya",
+    });
+
+    expect(response.status).toBe(200);
+    const [sent] = server.fakes.agent.calls;
+    expect(validateGuidanceRequest(sent), JSON.stringify(validateGuidanceRequest.errors)).toBe(true);
+    expect(sent).toMatchObject({ followUpQuestion: question, followUpAnswer: "Ya" });
+    expect(server.logs.join("\n")).not.toContain(question);
+  });
+
   it("refuses an invalid request without calling the agent", async () => {
     const response = await server.post("/api/guidance", { complaintText: "", language: "fr" });
 
@@ -129,5 +145,51 @@ describe("Emergency Escalation card", () => {
     expect(html).toContain('href="https://www.google.com/maps/search/?api=1&amp;query=IGD%20rumah%20sakit%20terdekat"');
     expect(html).not.toMatch(/maps\/search[^"]*bengkak/i);
     expect(server.fakes.places.calls).toEqual([]);
+  });
+});
+
+describe("Shareable Guidance link", () => {
+  async function shareLink(complaintText: string): Promise<{ html: string; link: string }> {
+    const response = await fetch(new URL("/?index", server.baseUrl), {
+      method: "POST",
+      body: new URLSearchParams({ complaintText, appCheckToken: server.appCheckToken() }),
+    });
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    const link = html.match(/href="(\/panduan\/[^"]+)"/)?.[1];
+    if (!link) throw new Error("no share link on the Guidance card");
+    return { html, link };
+  }
+
+  it("is built from the Guidance alone, so the complaint never reaches it", async () => {
+    const first = await shareLink(COMPLAINT);
+    const second = await shareLink("Gigi belakang ngilu banget kalau minum es, sudah seminggu");
+
+    // Same Guidance, different complaints: the same link.
+    expect(second.link).toBe(first.link);
+    expect(first.html).toContain(`https://wa.me/?text=${encodeURIComponent(`${server.baseUrl}${first.link}`)}`);
+  });
+
+  it("opens a read-only Guidance card that search engines do not index", async () => {
+    const { link } = await shareLink(COMPLAINT);
+
+    const shared = await fetch(new URL(link, server.baseUrl));
+
+    expect(shared.status).toBe(200);
+    const html = await shared.text();
+    expect(html).toContain('data-kind="guidance"');
+    expect(html).toContain(STUB_GUIDANCE_RESPONSE.guidance.disclaimer);
+    expect(html).toMatch(/<meta name="robots" content="noindex"/);
+    expect(html).not.toContain("nyut-nyutan");
+    expect(server.fakes.agent.calls).toHaveLength(1);
+  });
+
+  it("refuses a link whose Guidance was altered", async () => {
+    const { link } = await shareLink(COMPLAINT);
+    const tampered = `${link.slice(0, 20)}${link[20] === "A" ? "B" : "A"}${link.slice(21)}`;
+
+    const shared = await fetch(new URL(tampered, server.baseUrl));
+
+    expect(shared.status).toBe(404);
   });
 });

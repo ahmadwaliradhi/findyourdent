@@ -49,6 +49,8 @@ APIS=(
   firebaseappcheck.googleapis.com
   firebasehosting.googleapis.com
   logging.googleapis.com
+  # Deletes the warm-instance schedule after judging (infra/gcp/deploy.sh).
+  workflows.googleapis.com
 )
 
 log() { printf '\n==> %s\n' "$*"; }
@@ -261,6 +263,25 @@ fi
 gcloud secrets add-iam-policy-binding admin-emails --project "$PROJECT_ID" \
   --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
 
+# 8b. Share-link signing key ------------------------------------------------------
+# Signs shareable Guidance links (apps/web/app/server/share.server.ts). Every web
+# instance must use the same key, or a link opened on another instance 404s.
+# Generated once; rotating it breaks every link already shared.
+log "Secret share-link-secret"
+if ! gcloud secrets describe share-link-secret --project "$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud secrets create share-link-secret --project "$PROJECT_ID" \
+    --replication-policy=user-managed --locations="$REGION"
+fi
+if [[ -n "$(gcloud secrets versions list share-link-secret --project "$PROJECT_ID" \
+       --filter='state=ENABLED' --limit=1 --format='value(name)')" ]]; then
+  skip "secret share-link-secret has a version"
+else
+  openssl rand -base64 32 | tr -d '\n' \
+    | gcloud secrets versions add share-link-secret --project "$PROJECT_ID" --data-file=-
+fi
+gcloud secrets add-iam-policy-binding share-link-secret --project "$PROJECT_ID" \
+  --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
+
 # Rate-limit salt: the web service hashes IPs, tokens and session ids with it
 # before storing counters, so it must be secret and shared by every instance.
 log "Secret rate-limit-salt"
@@ -268,7 +289,7 @@ if ! gcloud secrets describe rate-limit-salt --project "$PROJECT_ID" >/dev/null 
   gcloud secrets create rate-limit-salt --project "$PROJECT_ID" \
     --replication-policy=user-managed --locations="$REGION"
 fi
-if gcloud secrets versions list rate-limit-salt --project "$PROJECT_ID" --filter=state=enabled \
+if gcloud secrets versions list rate-limit-salt --project "$PROJECT_ID" --filter='state=ENABLED' \
   --limit=1 --format='value(name)' | grep -q .; then
   skip "rate-limit-salt has a version"
 else
@@ -285,7 +306,7 @@ if ! gcloud secrets describe app-check-debug-token --project "$PROJECT_ID" >/dev
   gcloud secrets create app-check-debug-token --project "$PROJECT_ID" \
     --replication-policy=user-managed --locations="$REGION"
 fi
-if gcloud secrets versions list app-check-debug-token --project "$PROJECT_ID" --filter=state=enabled \
+if gcloud secrets versions list app-check-debug-token --project "$PROJECT_ID" --filter='state=ENABLED' \
   --limit=1 --format='value(name)' | grep -q .; then
   skip "app-check-debug-token has a version"
 else

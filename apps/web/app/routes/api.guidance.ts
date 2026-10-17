@@ -4,7 +4,7 @@ import { getOrCreateSessionId } from "~/server/session.server";
 import type { Route } from "./+types/api.guidance";
 
 /**
- * Web API: POST /api/guidance with { complaintText, language, followUpAnswer? }.
+ * Web API: POST /api/guidance with { complaintText, language, followUpQuestion?, followUpAnswer? }.
  * Returns the agent's GuidanceResponse (validated) or { error }.
  */
 export async function action({ request, context }: Route.ActionArgs) {
@@ -32,6 +32,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     sessionId,
     language: input.language,
     complaintText: input.complaintText,
+    followUpQuestion: input.followUpQuestion,
     followUpAnswer: input.followUpAnswer,
   });
   if (!outcome.ok) {

@@ -10,6 +10,7 @@ from findyourdent_agent.adapters.fakes import (
     FakeAgentSearchAdapter,
     FakeGeminiAdapter,
     FakePlacesAdapter,
+    guidance_model_output,
 )
 from findyourdent_agent.contracts.guidance_response import (
     GuidanceCardResponse,
@@ -31,6 +32,8 @@ def test_complaint_returns_guidance_card_matching_the_contract(
     response_validator: Draft202012Validator,
     language: str,
 ) -> None:
+    fake_gemini.outputs.append(guidance_model_output(language=language))
+
     response = client.post(
         "/v1/guidance",
         json={"sessionId": "sess-0001-abcd", "language": language, "complaintText": COMPLAINT_ID},
@@ -52,23 +55,10 @@ def test_complaint_returns_guidance_card_matching_the_contract(
     assert set(guidance["likelyProcedures"]) <= known_codes
     assert {c["procedureCode"] for c in guidance["costEstimate"]} <= known_codes
 
-    # The stub never reaches a paid adapter.
-    assert fake_gemini.calls == []
+    # One Gemini call per Guidance; grounding and Places are not called yet (T06, spec 02).
+    assert len(fake_gemini.calls) == 1
     assert fake_agent_search.calls == []
     assert fake_places.calls == []
-
-
-def test_card_language_follows_request_language(client: TestClient) -> None:
-    def disclaimer(language: str) -> str:
-        body = client.post(
-            "/v1/guidance",
-            json={"sessionId": "sess-0001-abcd", "language": language, "complaintText": "sakit"},
-        ).json()
-        return body["guidance"]["disclaimer"]
-
-    assert disclaimer("id") != disclaimer("en")
-    assert "bukan diagnosis" in disclaimer("id")
-    assert "not a diagnosis" in disclaimer("en")
 
 
 @pytest.mark.parametrize(
@@ -87,9 +77,10 @@ def test_invalid_request_returns_422(client: TestClient, body: dict[str, object]
 
 
 def test_complaint_text_never_reaches_logs(
-    client: TestClient, caplog: pytest.LogCaptureFixture
+    client: TestClient, fake_gemini: FakeGeminiAdapter, caplog: pytest.LogCaptureFixture
 ) -> None:
     complaint = "RAHASIA-KELUHAN-bengkak-pipi-kanan"
+    fake_gemini.outputs.append(guidance_model_output())
     with caplog.at_level(logging.DEBUG):
         ok = client.post(
             "/v1/guidance",

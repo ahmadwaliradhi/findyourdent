@@ -157,7 +157,13 @@ export async function startTestServer(): Promise<TestServer> {
     auth: firebase.auth,
     rateLimiter,
     logger,
-    config: { production: false, limits, adminEmails: ADMIN_EMAILS, firebaseWeb: NO_FIREBASE },
+    config: {
+      production: false,
+      limits,
+      adminEmails: ADMIN_EMAILS,
+      firebaseWeb: NO_FIREBASE,
+      shareLinkSecret: "test-share-link-secret",
+    },
   });
 
   const app = createApp({ mode: "development", vite, context });

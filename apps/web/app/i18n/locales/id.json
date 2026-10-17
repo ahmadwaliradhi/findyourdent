@@ -63,6 +63,12 @@
       "costSource": "Sumber: {{source}}",
       "bpjsLabel": "BPJS Kesehatan",
       "sourcesLabel": "Sumber rujukan"
+    },
+    "share": {
+      "title": "Bagikan panduan ini",
+      "privacy": "Tautan ini hanya berisi panduan di atas, tanpa keluhan yang Anda tulis.",
+      "whatsapp": "Bagikan lewat WhatsApp",
+      "open": "Buka tautan panduan"
     }
   },
   "estimate": "estimasi",
@@ -128,5 +134,11 @@
   },
   "footer": {
     "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat."
+  },
+  "shared": {
+    "title": "Panduan yang dibagikan",
+    "metaDescription": "Panduan gigi FindYourDent yang dibagikan kepada Anda.",
+    "intro": "Seseorang membagikan panduan FindYourDent ini kepada Anda. Panduan ini tidak memuat keluhan aslinya.",
+    "cta": "Tulis keluhan Anda sendiri"
   }
 }

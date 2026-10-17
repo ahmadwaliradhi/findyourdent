@@ -8,4 +8,5 @@ export default [
   route("auth/session", "routes/auth.session.ts"),
   route("auth/signout", "routes/auth.signout.ts"),
   route("admin", "routes/admin.tsx"),
+  route("panduan/:token", "routes/panduan.$token.tsx"),
 ] satisfies RouteConfig;

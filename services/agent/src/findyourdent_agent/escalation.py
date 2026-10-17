@@ -33,7 +33,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from .contracts.guidance_response import EmergencyResponse, HospitalSearch
-from .stub import Language
+from .knowledge import Language
 
 # Mirrors the redFlags enum in guidance-response.schema.json; red_flags.json is
 # validated against it on load, and EmergencyResponse validates every response.
@@ -214,9 +214,13 @@ class RedFlagMatcher:
         tokens = self._tokens(text)
         return {flag for flag, spec in self._flags.items() if self._present(tokens, spec)}
 
+    def flags(self, *texts: str | None) -> set[RedFlag]:
+        """Every red flag in the Patient's texts, whether or not a rule fires on it."""
+        return set().union(*(self._flags_in(t) for t in texts if t))
+
     def check(self, *texts: str | None, language: Language) -> EmergencyResponse | None:
         """The emergency response if any rule fires on the Patient's texts, else None."""
-        found = set().union(*(self._flags_in(t) for t in texts if t))
+        found = self.flags(*texts)
         fired = [rule for rule in self.rules.rules if set(rule.all) <= found]
         if not fired:
             return None

@@ -22,6 +22,10 @@ export interface GuidanceRequest {
     dataBase64: string;
   };
   /**
+   * The followUp question the previous response asked, echoed back with the answer so the agent sees what the answer replies to. Model text, not Patient text, but sent by the browser, so the agent treats it as data.
+   */
+  followUpQuestion?: string;
+  /**
    * Answer to the one followUp question, if the previous response asked one.
    */
   followUpAnswer?: string;

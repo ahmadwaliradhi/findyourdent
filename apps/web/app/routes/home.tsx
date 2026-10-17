@@ -13,6 +13,7 @@ import { useFirebaseConfig } from "~/lib/firebase-config";
 import { requestGuidance } from "~/server/guidance.server";
 import { guidanceRoute, protectPaidRequest, setRetryAfter } from "~/server/protection.server";
 import { getOrCreateSessionId } from "~/server/session.server";
+import { sharePath } from "~/server/share.server";
 import type { Route } from "./+types/home";
 
 export function meta({ matches }: Route.MetaArgs) {
@@ -25,6 +26,7 @@ export function meta({ matches }: Route.MetaArgs) {
 export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const complaintText = form.get("complaintText");
+  const followUpQuestion = form.get("followUpQuestion");
   const followUpAnswer = form.get("followUpAnswer");
   // The complaint is echoed back only so the Patient's own form keeps it; it is never stored.
   const echoed = typeof complaintText === "string" ? complaintText : "";
@@ -51,13 +53,23 @@ export async function action({ request, context }: Route.ActionArgs) {
     sessionId: session.sessionId,
     language,
     complaintText,
+    followUpQuestion,
     followUpAnswer,
   });
 
   if (!outcome.ok) {
-    return data({ complaintText: echoed, error: outcome.error, response: null }, { status: outcome.status, headers });
+    return data(
+      { complaintText: echoed, error: outcome.error, response: null, share: null },
+      { status: outcome.status, headers },
+    );
   }
-  return data({ complaintText: echoed, error: null, response: outcome.response }, { headers });
+  const { response } = outcome;
+  // Built from the Guidance object alone: the link never carries the complaint.
+  const share =
+    response.kind === "guidance"
+      ? { path: sharePath(response.guidance, context.config.shareLinkSecret), origin: new URL(request.url).origin }
+      : null;
+  return data({ complaintText: echoed, error: null, response, share }, { headers });
 }
 
 export default function Home({ actionData }: Route.ComponentProps) {
@@ -135,7 +147,9 @@ export default function Home({ actionData }: Route.ComponentProps) {
               </Button>
             </div>
           )}
-          {actionData?.response && <GuidanceResult response={actionData.response} pending={pending} />}
+          {actionData?.response && (
+            <GuidanceResult response={actionData.response} pending={pending} share={actionData.share} />
+          )}
         </div>
       </Form>
     </div>
