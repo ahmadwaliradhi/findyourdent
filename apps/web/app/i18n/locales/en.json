@@ -40,7 +40,7 @@
     "emergency": {
       "title": "Go to the emergency department now",
       "redFlagsLabel": "Danger signs detected",
-      "hospitalsPending": "Nearby hospitals with an emergency department will appear here.",
+      "findIgd": "Find the nearest IGD on Google Maps",
       "action": "Go to the nearest hospital emergency department (IGD) now. Do not wait for a dentist appointment."
     },
     "followUp": {

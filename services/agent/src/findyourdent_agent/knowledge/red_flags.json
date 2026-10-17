@@ -1,0 +1,297 @@
+{
+  "version": "2026-10-17.1",
+  "notes": [
+    "Emergency Escalation red flags (spec 01), checked before any model call. A clinical reviewer extends this file; bump version on every change and add must-escalate or must-not-escalate cases to services/agent/tests/test_emergency_escalation.py.",
+    "Matching is on normalised words: lower case, no accents or apostrophes, repeated letters collapsed (bengkaaak = bengkak, tinggi = tingi), 'gigi2' = 'gigi'. Write phrases in plain spelling; misspellings and slang go in synonyms.",
+    "synonyms map one word to one or more words, applied to the Patient's text and to every phrase below.",
+    "A phrase matches when its words appear in order within one clause, with at most max_gap other words between them. Clauses end at . , ; : ! ? ( ) and at clause_breaks words.",
+    "A flag can set its own max_gap, and cross_clauses: true to let its phrases span clauses (a fall in one sentence, the lost tooth in the next).",
+    "A match is ignored when a negator appears up to negation_window words before it in the same clause, unless the phrase starts with the negator, or when an exclude phrase of the same flag appears in the clauses the match covers.",
+    "rules fire when every flag in 'all' is present; the first rule that fires (top to bottom) gives the reason shown to the Patient.",
+    "Sources for the red flags: NHS 111 and SDCEP dental emergency guidance (UK), Alberta Dental Association guidance (Canada), Queensland Health dental emergency referral guidance, IADT avulsion guideline."
+  ],
+  "max_gap": 2,
+  "negation_window": 2,
+  "negators": ["tidak", "bukan", "belum", "tanpa", "no", "not", "without", "never", "dont", "doesnt", "didnt", "isnt", "havent", "hasnt", "nor"],
+  "clause_breaks": ["tapi", "tetapi", "namun", "but", "however", "although", "walaupun", "meskipun", "cuma", "hanya"],
+  "synonyms": {
+    "gak": "tidak",
+    "ga": "tidak",
+    "gk": "tidak",
+    "nggak": "tidak",
+    "ngga": "tidak",
+    "enggak": "tidak",
+    "engga": "tidak",
+    "tdk": "tidak",
+    "tak": "tidak",
+    "ndak": "tidak",
+    "nda": "tidak",
+    "kagak": "tidak",
+    "teu": "tidak",
+    "henteu": "tidak",
+    "ora": "tidak",
+    "gabisa": "tidak bisa",
+    "gakbisa": "tidak bisa",
+    "nggakbisa": "tidak bisa",
+    "tdkbisa": "tidak bisa",
+    "gbs": "tidak bisa",
+    "bs": "bisa",
+    "bsa": "bisa",
+    "isa": "bisa",
+    "iso": "bisa",
+    "sulit": "susah",
+    "sukar": "susah",
+    "hese": "susah",
+    "angel": "susah",
+    "sesek": "sesak",
+    "ssak": "sesak",
+
+    "bngkak": "bengkak",
+    "bengkk": "bengkak",
+    "benkak": "bengkak",
+    "bengkek": "bengkak",
+    "bengkakan": "bengkak",
+    "membengkak": "bengkak",
+    "abuh": "bengkak",
+    "bareuh": "bengkak",
+    "bengep": "bengkak",
+    "pipinya": "pipi",
+    "pipiku": "pipi",
+    "muka": "wajah",
+    "mukanya": "wajah",
+    "mukaku": "wajah",
+    "wajahnya": "wajah",
+    "wajahku": "wajah",
+    "rai": "wajah",
+    "beungeut": "wajah",
+    "lehernya": "leher",
+    "leherku": "leher",
+    "rahangnya": "rahang",
+    "rahangku": "rahang",
+    "dagunya": "dagu",
+    "swelling": "swollen",
+    "swelled": "swollen",
+    "swells": "swollen",
+    "swolen": "swollen",
+    "cheeks": "cheek",
+
+    "demem": "demam",
+    "deman": "demam",
+    "dmam": "demam",
+    "demamnya": "demam",
+    "meriyang": "meriang",
+    "muriang": "meriang",
+    "nggreges": "meriang",
+    "greges": "meriang",
+    "sumeng": "meriang",
+    "badannya": "badan",
+    "badanku": "badan",
+    "awak": "badan",
+    "fevr": "fever",
+    "feaver": "fever",
+    "feverish": "fever",
+
+    "nelan": "menelan",
+    "telan": "menelan",
+    "ditelan": "menelan",
+    "nelen": "menelan",
+    "neureuy": "menelan",
+    "nguntal": "menelan",
+    "swallowing": "swallow",
+    "swalow": "swallow",
+    "swalowing": "swallow",
+    "difficult": "difficulty",
+    "hard": "difficulty",
+    "trouble": "difficulty",
+    "struggling": "difficulty",
+    "struggle": "difficulty",
+    "cant": "cannot",
+    "unable": "cannot",
+    "wont": "cannot",
+
+    "nafas": "napas",
+    "bernapas": "napas",
+    "bernafas": "napas",
+    "nafasnya": "napas",
+    "napasnya": "napas",
+    "ngambekan": "napas",
+    "ambegan": "napas",
+    "breathing": "breathe",
+    "breath": "breathe",
+    "breth": "breathe",
+
+    "membuka": "buka",
+    "dibuka": "buka",
+    "terbuka": "buka",
+    "bukak": "buka",
+    "ngebuka": "buka",
+    "kebuka": "buka",
+    "mangap": "buka mulut",
+    "mangab": "buka mulut",
+    "nganga": "buka mulut",
+    "menganga": "buka mulut",
+    "mulutnya": "mulut",
+    "mulutku": "mulut",
+    "opening": "open",
+    "opens": "open",
+
+    "darahnya": "darah",
+    "berdarah": "darah",
+    "pendarahan": "darah",
+    "perdarahan": "darah",
+    "brenti": "berhenti",
+    "berenti": "berhenti",
+    "henti": "berhenti",
+    "mampet": "berhenti",
+    "dicabut": "cabut",
+    "pencabutan": "cabut",
+    "bleed": "bleeding",
+    "bleeds": "bleeding",
+
+    "lepas": "copot",
+    "terlepas": "copot",
+    "tanggal": "copot",
+    "coplok": "copot",
+    "copotnya": "copot",
+    "jatoh": "jatuh",
+    "terjatuh": "jatuh",
+    "kepleset": "jatuh",
+    "terpeleset": "jatuh",
+    "kecelakaan": "benturan",
+    "tabrakan": "benturan",
+    "terbentur": "benturan",
+    "kebentur": "benturan",
+    "kepentok": "benturan",
+    "berantem": "benturan",
+    "dipukul": "pukul",
+    "pukulan": "pukul",
+    "kepukul": "pukul",
+    "ditonjok": "pukul",
+    "ditinju": "pukul",
+    "giginya": "gigi",
+    "susunya": "susu",
+    "gigiku": "gigi",
+    "knock": "knocked",
+    "knocks": "knocked",
+    "avulsed": "knocked out",
+    "avulsion": "knocked out",
+    "teeth": "tooth"
+  },
+  "flags": {
+    "facial_or_neck_swelling": {
+      "phrases": [
+        "pipi bengkak", "bengkak pipi",
+        "wajah bengkak", "bengkak wajah",
+        "leher bengkak", "bengkak leher",
+        "rahang bengkak", "bengkak rahang",
+        "dagu bengkak", "bengkak dagu",
+        "bengkak sampai mata", "mata bengkak",
+        "pipi besar sebelah", "wajah besar sebelah",
+        "swollen face", "face swollen", "facial swollen",
+        "swollen cheek", "cheek swollen",
+        "swollen jaw", "jaw swollen",
+        "swollen neck", "neck swollen",
+        "swollen under jaw"
+      ]
+    },
+    "fever": {
+      "phrases": [
+        "demam", "meriang", "panas dingin", "badan panas", "panas badan", "panas tinggi",
+        "fever", "high temperature", "chills"
+      ]
+    },
+    "difficulty_swallowing": {
+      "phrases": [
+        "susah menelan", "tidak bisa menelan", "menelan susah", "ludah tidak bisa menelan",
+        "difficulty swallow", "cannot swallow", "can not swallow"
+      ]
+    },
+    "difficulty_breathing": {
+      "phrases": [
+        "sesak napas", "napas sesak", "susah napas", "napas susah", "tidak bisa napas",
+        "difficulty breathe", "short breathe", "shortness breathe", "cannot breathe",
+        "can not breathe"
+      ]
+    },
+    "trismus": {
+      "phrases": [
+        "tidak bisa buka mulut", "susah buka mulut", "mulut tidak bisa buka",
+        "mulut susah buka", "mulut terkunci", "rahang terkunci",
+        "cannot open mouth", "can not open mouth", "difficulty open mouth",
+        "mouth cannot open", "mouth will not open", "lockjaw", "jaw locked", "locked jaw"
+      ]
+    },
+    "uncontrolled_bleeding": {
+      "phrases": [
+        "darah tidak berhenti", "darah terus keluar", "darah keluar terus",
+        "darah terus mengalir", "darah mengalir terus", "darah ngocor", "darah muncrat",
+        "bleeding cannot stop", "bleeding will not stop", "bleeding does not stop",
+        "bleeding doesnt stop", "bleeding not stopping", "cannot stop bleeding",
+        "bleeding heavily", "heavy bleeding", "uncontrolled bleeding", "bleeding nonstop",
+        "bleeding non stop",
+        "darah cabut tidak berhenti", "darah cabut terus keluar"
+      ],
+      "max_gap": 1
+    },
+    "knocked_out_permanent_tooth": {
+      "phrases": [
+        "gigi copot jatuh", "gigi copot benturan", "gigi copot pukul", "gigi copot bola",
+        "jatuh gigi copot", "benturan gigi copot", "pukul gigi copot", "bola gigi copot",
+        "gigi copot dengan akar", "gigi copot utuh",
+        "knocked out", "tooth fell out fall", "fall tooth fell out", "tooth came out fall"
+      ],
+      "exclude": [
+        "gigi susu", "baby tooth", "milk tooth",
+        "gigi palsu", "gigi tiruan", "denture", "dentures",
+        "tambalan", "filling", "mahkota", "crown", "veneer",
+        "behel", "kawat gigi", "braces"
+      ],
+      "max_gap": 4,
+      "cross_clauses": true
+    }
+  },
+  "rules": [
+    {
+      "all": ["difficulty_breathing"],
+      "reason": {
+        "id": "Sulit bernapas bersama keluhan gigi bisa berarti infeksi atau bengkak menekan jalan napas.",
+        "en": "Difficulty breathing with a dental problem can mean infection or swelling is pressing on the airway."
+      }
+    },
+    {
+      "all": ["difficulty_swallowing"],
+      "reason": {
+        "id": "Sulit menelan bersama keluhan gigi bisa berarti infeksi sudah menyebar ke tenggorokan.",
+        "en": "Difficulty swallowing with a dental problem can mean an infection has spread to the throat."
+      }
+    },
+    {
+      "all": ["facial_or_neck_swelling", "fever"],
+      "reason": {
+        "id": "Bengkak di wajah atau leher disertai demam bisa berarti infeksi yang menyebar.",
+        "en": "Swelling of the face or neck with a fever can mean an infection is spreading."
+      }
+    },
+    {
+      "all": ["trismus"],
+      "reason": {
+        "id": "Mulut yang sulit dibuka bisa berarti infeksi sudah menyebar ke otot rahang.",
+        "en": "Being unable to open your mouth can mean an infection has spread to the jaw muscles."
+      }
+    },
+    {
+      "all": ["uncontrolled_bleeding"],
+      "reason": {
+        "id": "Perdarahan dari mulut yang tidak berhenti perlu dihentikan oleh tenaga medis sekarang.",
+        "en": "Bleeding from the mouth that will not stop needs medical care now."
+      }
+    },
+    {
+      "all": ["knocked_out_permanent_tooth"],
+      "reason": {
+        "id": "Gigi dewasa yang copot karena benturan paling mungkin diselamatkan bila ditangani dalam satu jam.",
+        "en": "An adult tooth knocked out in an accident is most likely to be saved if treated within an hour."
+      }
+    }
+  ]
+}

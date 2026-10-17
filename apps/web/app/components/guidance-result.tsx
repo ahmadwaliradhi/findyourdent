@@ -37,6 +37,13 @@ function Transcript({ text }: { text: string }) {
   );
 }
 
+/**
+ * Free Google Maps search for the nearest IGD: a plain Maps URL, no Places API call.
+ * Fixed query, so the Patient's complaint never ends up in a link. Replaced by the
+ * nearby-Hospitals list when Places lands (T08).
+ */
+const NEAREST_IGD_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("IGD rumah sakit terdekat")}`;
+
 function EmergencyCard({ response }: { response: EmergencyResponse }) {
   const { t } = useTranslation();
   return (
@@ -55,7 +62,16 @@ function EmergencyCard({ response }: { response: EmergencyResponse }) {
             ))}
           </ul>
         </div>
-        <p className="text-sm text-muted-foreground">{t("card.emergency.hospitalsPending")}</p>
+        <Button
+          asChild
+          variant="destructive"
+          size="lg"
+          className="h-auto w-full whitespace-normal py-3 text-center sm:w-auto sm:self-start"
+        >
+          <a href={NEAREST_IGD_MAPS_URL} target="_blank" rel="noreferrer">
+            {t("card.emergency.findIgd")}
+          </a>
+        </Button>
       </CardContent>
     </Card>
   );

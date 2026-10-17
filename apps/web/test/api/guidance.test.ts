@@ -102,3 +102,29 @@ describe("language detection", () => {
     expect(await toggled.text()).toMatch(/<html[^>]*lang="en"/);
   });
 });
+
+describe("Emergency Escalation card", () => {
+  it("renders the red IGD card with a Google Maps search for the nearest IGD", async () => {
+    server.fakes.agent.respondWith({
+      kind: "emergency",
+      reason: "Bengkak di wajah atau leher disertai demam bisa berarti infeksi yang menyebar.",
+      redFlags: ["facial_or_neck_swelling", "fever"],
+      hospitalSearch: { providerType: "hospital", requiresEmergencyDepartment: true },
+    });
+
+    const response = await fetch(new URL("/?index", server.baseUrl), {
+      method: "POST",
+      body: new URLSearchParams({ complaintText: "Pipi bengkak dan demam" }),
+    });
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('data-kind="emergency"');
+    expect(html).toContain("Ke IGD sekarang");
+    expect(html).toContain("infeksi yang menyebar");
+    // Plain Maps URL, no Places call, and the complaint never goes into it.
+    expect(html).toContain('href="https://www.google.com/maps/search/?api=1&amp;query=IGD%20rumah%20sakit%20terdekat"');
+    expect(html).not.toMatch(/maps\/search[^"]*bengkak/i);
+    expect(server.fakes.places.calls).toEqual([]);
+  });
+});
