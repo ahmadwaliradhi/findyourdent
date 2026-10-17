@@ -2,7 +2,7 @@ import type { App } from "firebase-admin/app";
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
 import type { PublicFirebaseConfig } from "../app/lib/firebase-config.ts";
-import { type AgentAdapter, createHttpAgentAdapter } from "./adapters/agent.ts";
+import { type AgentAdapter, createHttpAgentAdapter, createMetadataIdTokenSource } from "./adapters/agent.ts";
 import {
   type AppCheckVerifier,
   createDebugAppCheckVerifier,
@@ -52,7 +52,10 @@ export interface WebContext {
   admin: SignedInUser | null;
   /** The caller's IP as Express resolved it (`trust proxy`); used only for the per-IP ceiling. */
   clientIp: string;
+  /** Logger bound to this request's request_id. */
   logger: Logger;
+  /** Cloud Run trace id, else a random one; also sent back as X-Request-Id. */
+  requestId: string;
   config: {
     production: boolean;
     limits: RateLimits;
@@ -63,8 +66,8 @@ export interface WebContext {
   };
 }
 
-/** The context minus what Express fills in per request (server/app.ts). */
-export type SharedContext = Omit<WebContext, "clientIp" | "admin">;
+/** The per-process part of the context; createApp adds the per-request fields (server/app.ts). */
+export type SharedContext = Omit<WebContext, "clientIp" | "admin" | "requestId">;
 
 declare module "react-router" {
   interface AppLoadContext extends WebContext {}
@@ -77,10 +80,11 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Shar
   if (production && !env.RATE_LIMIT_SALT) {
     throw new Error("RATE_LIMIT_SALT must be set in production (secret rate-limit-salt)");
   }
+  const agentUrl = (env.AGENT_URL ?? "http://localhost:8000").replace(/\/+$/, "");
+  // On Cloud Run (AGENT_AUTH=id_token) every call carries a fyd-web identity token.
+  const idToken = env.AGENT_AUTH === "id_token" ? createMetadataIdTokenSource({ audience: agentUrl }) : undefined;
   const agent =
-    env.AGENT_ADAPTER === "fake"
-      ? createFakeAgentAdapter()
-      : createHttpAgentAdapter({ baseUrl: env.AGENT_URL ?? "http://localhost:8000" });
+    env.AGENT_ADAPTER === "fake" ? createFakeAgentAdapter() : createHttpAgentAdapter({ baseUrl: agentUrl, idToken });
   return {
     adapters: {
       agent,

@@ -15,8 +15,11 @@ from .adapters import Adapters
 from .config import Settings
 from .contracts.guidance_request import GuidanceRequest
 from .contracts.guidance_response import GuidanceResponse
+from .contracts.moderation_decision import ModerationDecision
+from .contracts.moderation_request import ModerationRequest
 from .data import procedure_codes
 from .escalation import default_matcher
+from .moderation import InvalidAttachmentError, moderate
 from .stub import PROCEDURES, stub_guidance
 
 log = logging.getLogger("findyourdent_agent")
@@ -82,8 +85,9 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         ]
         return JSONResponse(status_code=422, content={"detail": detail})
 
-    @app.get("/healthz")
-    async def healthz(request: Request) -> dict[str, str]:
+    # Not /healthz: Cloud Run reserves some paths ending in "z".
+    @app.get("/health")
+    async def health(request: Request) -> dict[str, str]:
         request.state.outcome = "ok"
         return {"status": "ok"}
 
@@ -102,5 +106,22 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         ) or stub_guidance(turn.language)
         request.state.outcome = card.kind
         return GuidanceResponse(root=card)
+
+    @app.post(
+        "/v1/moderation",
+        response_model=ModerationDecision,
+        response_model_exclude_none=True,
+    )
+    async def moderation(
+        body: ModerationRequest, request: Request
+    ) -> ModerationDecision | JSONResponse:
+        try:
+            result = await moderate(body, adapters.gemini, settings)
+        except InvalidAttachmentError:
+            request.state.outcome = "invalid_request"
+            detail = {"type": "invalid_base64", "loc": ["body"], "msg": "attachment is not base64"}
+            return JSONResponse(status_code=422, content={"detail": [detail]})
+        request.state.outcome = result.outcome
+        return result.decision
 
     return app

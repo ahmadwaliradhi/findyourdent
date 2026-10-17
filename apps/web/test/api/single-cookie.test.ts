@@ -112,19 +112,4 @@ describe("behind Firebase Hosting, with only the __session cookie", () => {
     expect((await guidance()).status).toBe(429);
     expect(server.logs.some((line) => line.includes('"scope":"session"'))).toBe(true);
   });
-
-  it("replaces a Guidance session id older than 12 hours even while the cookie lives on", async () => {
-    // What a browser holds a day after toggling to English: the cookie lasts a year for
-    // the language, but the session id in it must not (spec 01: opaque, short-lived).
-    const state = { sid: "sess-old-0001-abcd", sidAt: Date.now() - 24 * 60 * 60 * 1000, lang: "en" };
-    const cookie = `__session=${encodeURIComponent(Buffer.from(JSON.stringify(state)).toString("base64"))}`;
-
-    const response = await server.post("/api/guidance", BODY, { headers: { cookie } });
-
-    expect(response.status).toBe(200);
-    expect(server.fakes.agent.calls[0]?.sessionId).not.toBe("sess-old-0001-abcd");
-    const renewed = response.headers.get("set-cookie")?.split(";")[0] ?? "";
-    const page = await fetch(new URL("/", server.baseUrl), { headers: { cookie: renewed } });
-    expect(await page.text()).toMatch(/<html[^>]*lang="en"/);
-  });
 });

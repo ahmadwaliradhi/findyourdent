@@ -1,0 +1,11 @@
+# Builds one service image and pushes it to Artifact Registry in Jakarta.
+# Called by infra/gcp/deploy.sh; the build context is the repository root.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    # BuildKit for the cache mounts and Dockerfile.dockerignore files.
+    env: ["DOCKER_BUILDKIT=1"]
+    args: ["build", "-f", "${_DOCKERFILE}", "-t", "${_IMAGE}", "."]
+images: ["${_IMAGE}"]
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s
