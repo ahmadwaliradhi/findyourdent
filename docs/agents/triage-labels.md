@@ -16,7 +16,7 @@ Edit the "Label in our tracker" column to match whatever vocabulary you actually
 
 ## When a ticket is human
 
-Give a ticket `ready-for-human` and `lane:human` only when its core needs one of these:
+`lane:human` is the lane label that goes with `ready-for-human` (the other lanes are `lane:A-agent`, `lane:B-web` and `lane:C-platform`; see the build plan, issue 32). Give a ticket these two labels only when its core needs one of these:
 
 - **Identity**: an action Google or another vendor ties to a person, such as a console-only toggle, a terms acceptance, or a payment.
 - **Money**: a purchase or a contract.
