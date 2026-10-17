@@ -90,7 +90,7 @@ export async function startTestServer(): Promise<TestServer> {
     adapters: fakes,
     firestore: firebase.firestore,
     logger,
-    config: { production: false },
+    config: { production: false, shareLinkSecret: "test-share-link-secret" },
   });
 
   const app = createApp({ mode: "development", vite, context });

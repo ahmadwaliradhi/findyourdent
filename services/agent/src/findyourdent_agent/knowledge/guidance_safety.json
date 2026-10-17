@@ -1,0 +1,146 @@
+{
+  "version": "2026-10-17.1",
+  "notes": [
+    "Guidance safety rules (spec 01). Model output that names a medicine, gives a dose, or tells the Patient not to see a dentist is replaced with the safe fallback. Complaints that try to change the agent's rules get the fixed polite redirect without any model call.",
+    "Matching is case-insensitive on the text with accents removed. medicines and phrases match whole words; dosePatterns are regular expressions.",
+    "Add cases to services/agent/tests/test_guidance.py when you extend this file, and bump version."
+  ],
+  "medicines": [
+    "paracetamol",
+    "parasetamol",
+    "acetaminophen",
+    "panadol",
+    "sanmol",
+    "ibuprofen",
+    "proris",
+    "asam mefenamat",
+    "mefenamic acid",
+    "ponstan",
+    "amoxicillin",
+    "amoxicilin",
+    "amoksisilin",
+    "amoxsan",
+    "metronidazole",
+    "metronidazol",
+    "flagyl",
+    "clindamycin",
+    "klindamisin",
+    "aspirin",
+    "asetosal",
+    "diclofenac",
+    "diklofenak",
+    "cataflam",
+    "voltaren",
+    "ketorolac",
+    "ketorolak",
+    "tramadol",
+    "codeine",
+    "kodein",
+    "antalgin",
+    "metamizole",
+    "metamizol",
+    "dexamethasone",
+    "deksametason",
+    "cefadroxil",
+    "sefadroksil",
+    "ciprofloxacin",
+    "siprofloksasin",
+    "piroxicam",
+    "piroksikam",
+    "meloxicam",
+    "meloksikam",
+    "naproxen",
+    "celecoxib",
+    "amoxiclav",
+    "co-amoxiclav",
+    "penicillin",
+    "penisilin",
+    "erythromycin",
+    "eritromisin",
+    "azithromycin",
+    "azitromisin",
+    "lidocaine",
+    "lidokain",
+    "benzocaine",
+    "benzokain"
+  ],
+  "dosePatterns": [
+    "\\b\\d+([.,]\\d+)?\\s*(mg|mcg|ug|ml|cc|g|gr|gram|miligram|mililiter|tablet|tab|tabs|kaplet|kapsul|capsules?|caps|butir|pil|pills?|sendok|tetes|drops?|puffs?)\\b",
+    "\\b\\d+\\s*(x|kali)\\s*(sehari|per hari|a day|daily|per day)\\b",
+    "\\b(tiap|setiap|every)\\s*\\d+\\s*(jam|hours?|hrs?)\\b",
+    "\\b(once|twice|thrice)\\s+(a|per)\\s+day\\b"
+  ],
+  "discouragePhrases": [
+    "tidak perlu ke dokter gigi",
+    "tidak usah ke dokter gigi",
+    "tak perlu ke dokter gigi",
+    "gak perlu ke dokter gigi",
+    "nggak perlu ke dokter gigi",
+    "tidak perlu periksa ke dokter gigi",
+    "no need to see a dentist",
+    "no need to visit a dentist",
+    "dont need to see a dentist",
+    "don't need to see a dentist",
+    "do not need to see a dentist",
+    "do not need a dentist",
+    "dont need a dentist",
+    "don't need a dentist"
+  ],
+  "injectionPhrases": [
+    "abaikan instruksi",
+    "abaikan semua instruksi",
+    "abaikan perintah",
+    "abaikan aturan",
+    "lupakan instruksi",
+    "lupakan semua instruksi",
+    "lupakan aturan",
+    "ignore previous instructions",
+    "ignore all previous instructions",
+    "ignore all instructions",
+    "ignore your instructions",
+    "ignore the instructions",
+    "ignore your rules",
+    "ignore the rules",
+    "disregard previous instructions",
+    "disregard your instructions",
+    "forget your instructions",
+    "forget your rules",
+    "system prompt",
+    "prompt sistem",
+    "developer mode",
+    "jailbreak",
+    "you are now",
+    "kamu sekarang adalah",
+    "anda sekarang adalah"
+  ],
+  "redirect": {
+    "id": "FindYourDent hanya membantu keluhan gigi dan mulut. Ceritakan keluhan gigi atau mulut Anda, misalnya gigi mana yang sakit dan sejak kapan.",
+    "en": "FindYourDent only helps with tooth and mouth problems. Tell us about your tooth or mouth complaint, for example which tooth hurts and since when."
+  },
+  "fallback": {
+    "id": {
+      "explanation": "Keluhan Anda perlu diperiksa langsung oleh dokter gigi supaya penyebabnya jelas. Untuk obat dan dosisnya, tanyakan apoteker atau dokter gigi.",
+      "visit": "Pemeriksaan oleh dokter gigi untuk mencari penyebab keluhan dan menentukan perawatannya.",
+      "whyPricesVary": [
+        "Perawatan yang dibutuhkan baru bisa dipastikan setelah pemeriksaan.",
+        "Ditangani dokter gigi umum atau dokter gigi spesialis."
+      ]
+    },
+    "en": {
+      "explanation": "Your complaint needs a dentist to examine it so the cause is clear. For medicines and doses, ask a pharmacist or dentist.",
+      "visit": "An examination by a dentist to find the cause and decide the treatment.",
+      "whyPricesVary": [
+        "The treatment needed is only certain after an examination.",
+        "Whether a general dentist or a specialist treats it."
+      ]
+    }
+  },
+  "emergencyReason": {
+    "id": "Keluhan Anda menunjukkan tanda bahaya yang perlu ditangani di IGD sekarang.",
+    "en": "Your complaint shows warning signs that need an emergency department now."
+  },
+  "disclaimer": {
+    "id": "Ini informasi edukasi, bukan diagnosis. Tetap periksakan gigi Anda ke dokter gigi. Untuk obat, tanyakan apoteker atau dokter gigi.",
+    "en": "This is educational information, not a diagnosis. Please still see a dentist. For medicines, ask a pharmacist or dentist."
+  }
+}

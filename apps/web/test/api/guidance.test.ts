@@ -128,3 +128,49 @@ describe("Emergency Escalation card", () => {
     expect(server.fakes.places.calls).toEqual([]);
   });
 });
+
+describe("Shareable Guidance link", () => {
+  async function shareLink(complaintText: string): Promise<{ html: string; link: string }> {
+    const response = await fetch(new URL("/?index", server.baseUrl), {
+      method: "POST",
+      body: new URLSearchParams({ complaintText }),
+    });
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    const link = html.match(/href="(\/panduan\/[^"]+)"/)?.[1];
+    if (!link) throw new Error("no share link on the Guidance card");
+    return { html, link };
+  }
+
+  it("is built from the Guidance alone, so the complaint never reaches it", async () => {
+    const first = await shareLink(COMPLAINT);
+    const second = await shareLink("Gigi belakang ngilu banget kalau minum es, sudah seminggu");
+
+    // Same Guidance, different complaints: the same link.
+    expect(second.link).toBe(first.link);
+    expect(first.html).toContain(`https://wa.me/?text=${encodeURIComponent(`${server.baseUrl}${first.link}`)}`);
+  });
+
+  it("opens a read-only Guidance card that search engines do not index", async () => {
+    const { link } = await shareLink(COMPLAINT);
+
+    const shared = await fetch(new URL(link, server.baseUrl));
+
+    expect(shared.status).toBe(200);
+    const html = await shared.text();
+    expect(html).toContain('data-kind="guidance"');
+    expect(html).toContain(STUB_GUIDANCE_RESPONSE.guidance.disclaimer);
+    expect(html).toMatch(/<meta name="robots" content="noindex"/);
+    expect(html).not.toContain("nyut-nyutan");
+    expect(server.fakes.agent.calls).toHaveLength(1);
+  });
+
+  it("refuses a link whose Guidance was altered", async () => {
+    const { link } = await shareLink(COMPLAINT);
+    const tampered = `${link.slice(0, 20)}${link[20] === "A" ? "B" : "A"}${link.slice(21)}`;
+
+    const shared = await fetch(new URL(tampered, server.baseUrl));
+
+    expect(shared.status).toBe(404);
+  });
+});

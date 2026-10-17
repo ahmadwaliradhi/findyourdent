@@ -1,0 +1,151 @@
+{
+  "version": "2026-10-17.1",
+  "notes": [
+    "Cost Estimate ranges per procedure code (spec 01), shown to the Patient labelled 'estimasi'. Codes must match packages/contracts/data/procedures.json; a test checks every code has a range.",
+    "These ranges are a team estimate awaiting review against published price lists (T05). A reviewer replaces 'source' with the specific price lists or tariffs used and bumps version on every change.",
+    "Ranges are out-of-pocket prices at private clinics. BPJS Kesehatan coverage lives in bpjs_coverage.json; never promise a scaling frequency."
+  ],
+  "sources": {
+    "team_estimate": {
+      "id": "Estimasi tim FindYourDent dari tarif publik dan daftar harga klinik, Oktober 2026",
+      "en": "FindYourDent team estimate from public tariffs and clinic price lists, October 2026"
+    }
+  },
+  "ranges": {
+    "consultation": {
+      "minRupiah": 50000,
+      "maxRupiah": 250000,
+      "source": "team_estimate"
+    },
+    "dental_xray_periapical": {
+      "minRupiah": 50000,
+      "maxRupiah": 200000,
+      "source": "team_estimate"
+    },
+    "dental_xray_panoramic": {
+      "minRupiah": 150000,
+      "maxRupiah": 500000,
+      "source": "team_estimate"
+    },
+    "scaling": {
+      "minRupiah": 150000,
+      "maxRupiah": 800000,
+      "source": "team_estimate"
+    },
+    "fluoride_application": {
+      "minRupiah": 100000,
+      "maxRupiah": 400000,
+      "source": "team_estimate"
+    },
+    "fissure_sealant": {
+      "minRupiah": 100000,
+      "maxRupiah": 400000,
+      "source": "team_estimate"
+    },
+    "tooth_filling": {
+      "minRupiah": 150000,
+      "maxRupiah": 800000,
+      "source": "team_estimate"
+    },
+    "pulpotomy": {
+      "minRupiah": 300000,
+      "maxRupiah": 1000000,
+      "source": "team_estimate"
+    },
+    "root_canal_treatment": {
+      "minRupiah": 1000000,
+      "maxRupiah": 5000000,
+      "source": "team_estimate"
+    },
+    "tooth_extraction": {
+      "minRupiah": 150000,
+      "maxRupiah": 1000000,
+      "source": "team_estimate"
+    },
+    "surgical_extraction": {
+      "minRupiah": 750000,
+      "maxRupiah": 3000000,
+      "source": "team_estimate"
+    },
+    "wisdom_tooth_surgery": {
+      "minRupiah": 1500000,
+      "maxRupiah": 6000000,
+      "source": "team_estimate"
+    },
+    "abscess_drainage": {
+      "minRupiah": 300000,
+      "maxRupiah": 1500000,
+      "source": "team_estimate"
+    },
+    "tooth_replantation": {
+      "minRupiah": 500000,
+      "maxRupiah": 2500000,
+      "source": "team_estimate"
+    },
+    "tooth_splinting": {
+      "minRupiah": 500000,
+      "maxRupiah": 2000000,
+      "source": "team_estimate"
+    },
+    "periodontal_treatment": {
+      "minRupiah": 500000,
+      "maxRupiah": 3000000,
+      "source": "team_estimate"
+    },
+    "dental_crown": {
+      "minRupiah": 1500000,
+      "maxRupiah": 7000000,
+      "source": "team_estimate"
+    },
+    "dental_bridge": {
+      "minRupiah": 4000000,
+      "maxRupiah": 15000000,
+      "source": "team_estimate"
+    },
+    "dental_implant": {
+      "minRupiah": 10000000,
+      "maxRupiah": 30000000,
+      "source": "team_estimate"
+    },
+    "removable_denture": {
+      "minRupiah": 500000,
+      "maxRupiah": 5000000,
+      "source": "team_estimate"
+    },
+    "denture_repair": {
+      "minRupiah": 150000,
+      "maxRupiah": 750000,
+      "source": "team_estimate"
+    },
+    "orthodontic_braces": {
+      "minRupiah": 5000000,
+      "maxRupiah": 25000000,
+      "source": "team_estimate"
+    },
+    "orthodontic_adjustment": {
+      "minRupiah": 150000,
+      "maxRupiah": 500000,
+      "source": "team_estimate"
+    },
+    "clear_aligners": {
+      "minRupiah": 15000000,
+      "maxRupiah": 60000000,
+      "source": "team_estimate"
+    },
+    "teeth_whitening": {
+      "minRupiah": 1000000,
+      "maxRupiah": 4000000,
+      "source": "team_estimate"
+    },
+    "dental_veneer": {
+      "minRupiah": 1000000,
+      "maxRupiah": 7000000,
+      "source": "team_estimate"
+    },
+    "oral_lesion_treatment": {
+      "minRupiah": 100000,
+      "maxRupiah": 750000,
+      "source": "team_estimate"
+    }
+  }
+}
