@@ -30,7 +30,7 @@ A Listed Provider. **Document id = `placeId`.** Created by the first published T
 | `aggregates` | `testimonyCount`, `verifiedVisitCount`, aspect `averages`, `procedurePrices` (count, median, min, max per procedure). Recomputed whenever a Testimony enters or leaves `published`. |
 | `listedBy`, `createdAt`, `updatedAt` | |
 
-Indexes: `region.provinceCode` + `region.regencyCode` + `aggregates.testimonyCount` for the directory; `nameNormalized` for prefix search.
+Indexes (`firestore.indexes.json`): each of `region.provinceCode`, `region.regencyCode`, `region.districtCode` and `providerType` with `aggregates.testimonyCount desc` (directory) and with `nameNormalized` (prefix search); Firestore merges them when filters combine.
 
 ### `testimonies`
 
@@ -79,7 +79,7 @@ Append-only audit log of every admin action (publish, reject, send back to the a
 
 Single-value counters (`{ value, updatedAt, expiresAt? }`), incremented with `FieldValue.increment`. Type `CounterDoc`.
 
-- Impact counters (spec 04), ids in `IMPACT_COUNTERS`: `impact.testimoniesPublished`, `impact.listedProviders`, `impact.guidanceSessionsCompleted`, `impact.verifiedVisits`. The distinct kota/kabupaten count is computed from `providers`.
+- Impact counters (spec 04), ids in `IMPACT_COUNTERS`: `impact.testimoniesPublished`, `impact.listedProviders`, `impact.guidanceSessionsCompleted`, `impact.verifiedVisits`. The Listed Provider count and the distinct kota/kabupaten count are computed from `providers` when read, so `impact.listedProviders` is not written.
 - Daily paid-API usage for the adapter-side caps (spec 02): `quota.places.<method>.<YYYY-MM-DD>` and `quota.gemini.<model>.<YYYY-MM-DD>`, Asia/Jakarta date, built with `dailyQuotaCounterId`. `expiresAt` lets a Firestore TTL policy delete old days.
 
 ### `rateLimits`

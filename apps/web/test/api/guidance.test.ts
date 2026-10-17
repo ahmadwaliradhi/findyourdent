@@ -34,11 +34,15 @@ describe("POST /api/guidance", () => {
     expect(sent).toMatchObject({ complaintText: COMPLAINT, language: "id" });
     expect(response.headers.get("set-cookie")).toMatch(/^__session=/);
 
-    // Complaint text is processed in memory only: nothing stored but rate-limit counters, nothing logged.
+    // Complaint text is processed in memory only: nothing stored but rate-limit counters and the
+    // completed-session impact counter (a bare number), nothing logged.
     const collections = await server.firestore.listCollections();
-    expect(collections.map((c) => c.id)).toEqual(["rateLimits"]);
-    const counters = await server.firestore.collection("rateLimits").get();
-    expect(JSON.stringify(counters.docs.map((d) => d.data()))).not.toContain("nyut-nyutan");
+    expect(collections.map((c) => c.id).sort()).toEqual(["counters", "rateLimits"]);
+    const impact = await server.firestore.collection("counters").get();
+    expect(impact.docs.map((d) => d.id)).toEqual(["impact.guidanceSessionsCompleted"]);
+    expect(Object.keys(impact.docs[0]?.data() ?? {}).sort()).toEqual(["updatedAt", "value"]);
+    const stored = [...(await server.firestore.collection("rateLimits").get()).docs, ...impact.docs];
+    expect(JSON.stringify(stored.map((d) => d.data()))).not.toContain("nyut-nyutan");
     expect(server.logs.join("\n")).not.toContain("nyut-nyutan");
     expect(server.fakes.places.calls).toEqual([]);
     expect(server.fakes.gemini.calls).toEqual([]);

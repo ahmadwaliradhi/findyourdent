@@ -10,4 +10,9 @@ export default [
   route("auth/signout", "routes/auth.signout.ts"),
   route("admin", "routes/admin.tsx"),
   route("panduan/:token", "routes/panduan.$token.tsx"),
+  route("api/feed", "routes/api.feed.ts"),
+  route("direktori", "routes/direktori.tsx"),
+  route("tempat/:placeId", "routes/tempat.$placeId.tsx"),
+  route("dampak", "routes/dampak.ts"),
+  route("sitemap.xml", "routes/sitemap.xml.ts"),
 ] satisfies RouteConfig;

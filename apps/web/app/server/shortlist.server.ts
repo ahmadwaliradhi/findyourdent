@@ -11,13 +11,13 @@ import type { AppLoadContext } from "react-router";
 import { getI18n, type Language } from "~/i18n/config";
 import { formatDistance } from "~/lib/format";
 import { procedureLabel } from "~/lib/procedures";
+import { overallAverage } from "~/lib/scores";
 import type { PriceSignal, ShortlistProvider, ShortlistResponse } from "~/lib/shortlist";
 import type { LatLng, PlaceSummary, TextSearch } from "../../server/adapters/places.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import {
   HOSPITAL_PROCEDURES,
   isDiagnostic,
-  meanRating,
   type RankedProvider,
   type RankingCandidate,
   rankProviders,
@@ -310,7 +310,7 @@ function templatedReason(ranked: RankedProvider, request: ShortlistRequest, lang
   }
   const { count, averages } = ranked.testimonies;
   if (count > 0 && averages) {
-    const score = meanRating(averages);
+    const score = overallAverage(averages);
     return t("shortlist.reason.testimonies", {
       score: score.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1 }),
       count,

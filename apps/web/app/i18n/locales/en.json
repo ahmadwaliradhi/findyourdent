@@ -141,6 +141,133 @@
     "intro": "Someone shared this FindYourDent guidance with you. It does not include their original complaint.",
     "cta": "Describe your own problem"
   },
+  "feed": {
+    "title": "Latest Testimonies",
+    "intro": "Real Patients' experiences at clinics, private dentists and hospitals, in their own words.",
+    "titleIn": "Dental Testimonies in {{area}}",
+    "metaTitle": "Dental Testimonies in {{area}} | FindYourDent",
+    "metaDescription": "Read real Patients' dental experiences in {{area}}: service, hygiene, materials and equipment, and the price they paid.",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "loadError": "The next Testimonies could not be loaded. Please try again.",
+    "emptyTitle": "No Testimonies for this selection yet",
+    "emptyBody": "Been to a dentist here? Be the first to share and help other Patients choose.",
+    "writeCta": "Share your experience",
+    "card": {
+      "ratingsLabel": "Ratings",
+      "score": "{{score}} out of 5",
+      "aspects": {
+        "service": "Service",
+        "hygiene": "Hygiene",
+        "materialsEquipment": "Materials and equipment"
+      },
+      "verified": "Verified visit",
+      "visitMonth": "Visited {{month}}",
+      "procedure": "Procedure",
+      "price": "Price paid",
+      "byline": "by {{name}}",
+      "readMore": "Read the full Testimony"
+    }
+  },
+  "filters": {
+    "title": "Filter",
+    "province": "Province",
+    "allProvinces": "All provinces",
+    "regency": "City/regency",
+    "allRegencies": "All cities/regencies",
+    "chooseProvinceFirst": "Choose a province first",
+    "district": "District code",
+    "districtHint": "Optional, Kemendagri code, e.g. 31.71.01.",
+    "procedure": "Procedure",
+    "allProcedures": "All procedures",
+    "providerType": "Provider type",
+    "allProviderTypes": "All types",
+    "providerTypes": {
+      "klinik": "Clinic",
+      "privateDentist": "Private dentist",
+      "hospital": "Hospital"
+    },
+    "verifiedOnly": "Verified visits only",
+    "apply": "Apply",
+    "reset": "Clear filters"
+  },
+  "directory": {
+    "metaTitle": "Directory of dentists and dental clinics | FindYourDent",
+    "metaTitleArea": "Directory of dentists and dental clinics in {{area}} | FindYourDent",
+    "metaDescription": "Compare dental clinics, private dentists and hospitals that Patients have written about on FindYourDent: service, hygiene, materials and equipment scores, and Kunjungan terbukti.",
+    "metaDescriptionArea": "Compare dental clinics, private dentists and hospitals in {{area}} that Patients have written about on FindYourDent: service, hygiene, materials and equipment scores, and Kunjungan terbukti.",
+    "title": "Directory of dental care places",
+    "titleArea": "Dental care places in {{area}}",
+    "intro": "Clinics, private dentists and hospitals that Patients have written about on FindYourDent.",
+    "searchLabel": "Search by name",
+    "searchPlaceholder": "For example: Klinik Gigi Sehat",
+    "sortLabel": "Sort by",
+    "sort": {
+      "testimoni": "Most Testimonies",
+      "skor": "Highest score",
+      "jarak": "Nearest"
+    },
+    "sortHint": "Distance is computed on your device. Your location is not sent to FindYourDent.",
+    "resultsHeading": "Results",
+    "resultCount": "{{count}} places",
+    "resultCapped": "Showing the first {{count}} places. Narrow down with filters or a name search.",
+    "inferred": "estimated",
+    "claimed": "Claimed by owner",
+    "aspects": {
+      "service": "Service",
+      "hygiene": "Hygiene",
+      "materialsEquipment": "Materials and equipment"
+    },
+    "score": "Score {{score}}",
+    "noRatings": "No scores yet",
+    "testimonies": "{{count}} Testimonies",
+    "verifiedVisits": "{{count}} Kunjungan terbukti",
+    "distance": "{{km}} km",
+    "noLocation": "Distance unavailable",
+    "locating": "Finding your location...",
+    "locationDenied": "Your location could not be used, so the list is sorted by number of Testimonies. Allow location access in your browser to sort by distance.",
+    "locationUnsupported": "This browser cannot share your location, so the list is sorted by number of Testimonies.",
+    "locationReady": "Sorted from nearest to your location.",
+    "emptyTitle": "No matching places yet",
+    "emptyBody": "No Patient has written about a place matching these filters yet. Be the first.",
+    "emptyCta": "Share your experience"
+  },
+  "impact": {
+    "title": "FindYourDent impact",
+    "testimoniesPublished": "Testimonies",
+    "kotaCovered": "Cities and regencies",
+    "verifiedVisits": "Verified visits",
+    "listedProviders": "Listed places",
+    "guidanceSessionsCompleted": "Guidance sessions"
+  },
+  "provider": {
+    "title": "{{name}}, {{area}}",
+    "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} testimonies.",
+    "metaDescriptionNoScores": "{{name}} in {{area}}. Read patient testimonies and share your own on FindYourDent.",
+    "type": {
+      "klinik": "Clinic",
+      "privateDentist": "Private dentist",
+      "hospital": "Hospital"
+    },
+    "typeInferred": "estimated",
+    "claimed": "Claimed by owner",
+    "aspectsTitle": "Patient ratings",
+    "aspects": {
+      "service": "Service",
+      "hygiene": "Hygiene",
+      "materialsEquipment": "Materials and equipment"
+    },
+    "noScores": "No ratings yet.",
+    "testimonyCount": "{{count}} testimonies",
+    "verifiedVisitCount": "{{count}} verified visits",
+    "testimoniesTitle": "Patient testimonies",
+    "noTestimonies": "No published testimonies for this place yet.",
+    "verifiedVisit": "Verified visit",
+    "visitMonth": "Visited {{month}}",
+    "procedure": "Procedure: {{procedure}}",
+    "pricePaid": "Paid: {{price}}",
+    "ratingsLabel": "Ratings for {{name}}"
+  },
   "shortlist": {
     "reason": {
       "emergency": "Hospital with an emergency department, about {{distance}} away",
