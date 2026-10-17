@@ -80,8 +80,8 @@ CI (`.github/workflows/ci.yml`) runs both on every pull request and on pushes to
 
 The deterministic red-flag check runs before any Gemini call. Its phrases, slang, misspellings, negations and rules are a versioned data file a clinical reviewer can extend: [`services/agent/src/findyourdent_agent/knowledge/red_flags.json`](services/agent/src/findyourdent_agent/knowledge/red_flags.json). Every build runs the agent contract tests in [`test_emergency_escalation.py`](services/agent/tests/test_emergency_escalation.py) (Indonesian, Javanese, Sundanese, English, slang, misspellings, and red flags buried in long messages):
 
-- **38 of 38 must-escalate** phrases return the red "Ke IGD sekarang" card, and the fake Gemini adapter is never called for them.
-- **23 of 23 must-not-escalate** phrases (ordinary toothache, sensitive teeth, bleeding gums when brushing, a child's baby tooth, a loose denture, negated symptoms such as "tidak demam" or "demam sih nggak") do not escalate.
+- **48 of 48 must-escalate** phrases return the red "Ke IGD sekarang" card, and the fake Gemini adapter is never called for them.
+- **28 of 28 must-not-escalate** phrases (ordinary toothache, sensitive teeth, bleeding gums when brushing, a child's baby tooth, a loose denture, negated symptoms such as "tidak demam" or "demam sih nggak") do not escalate.
 
 A test keeps these counts in step with the test file, so CI fails if they drift.
 
