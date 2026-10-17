@@ -123,4 +123,8 @@ export interface Guidance {
     url?: string;
   }[];
   disclaimer: string;
+  /**
+   * Language of the Patient's complaint, which every text in this Guidance is written in. Shortlist reasons follow it rather than the UI toggle (spec 02). Absent on Guidance links made before it existed.
+   */
+  language?: "id" | "en";
 }

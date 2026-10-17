@@ -511,4 +511,65 @@ describe("POST /api/shortlist reasons (T09)", () => {
     expect(logs).not.toContain("Klinik Senyum Gubeng");
     expect(logs).not.toContain("Gemini:");
   });
+
+  /** The `cookie` header a browser sends after the Patient picks a language on the toggle. */
+  async function toggleCookie(lang: "id" | "en"): Promise<string> {
+    const response = await fetch(new URL("/language", server.baseUrl), {
+      method: "POST",
+      body: new URLSearchParams({ lang, redirectTo: "/" }),
+      redirect: "manual",
+    });
+    return response.headers.get("set-cookie")?.split(";")[0] ?? "";
+  }
+  const ENGLISH_GUIDANCE: Guidance = { ...ROOT_CANAL_GUIDANCE, language: "en" };
+
+  it("writes reasons in the language of the complaint, not the toggle", async () => {
+    await seedRankedThree();
+    server.fakes.agent.respondToReasonsWith(reasonsFor(RANKED));
+
+    await shortlist(
+      { purpose: "shortlist", guidanceToken: tokenFor(ENGLISH_GUIDANCE), location: GUBENG },
+      { headers: { cookie: await toggleCookie("id") } },
+    );
+
+    expect(server.fakes.agent.reasonsCalls[0]).toMatchObject({ language: "en" });
+  });
+
+  it("falls back to templated reasons in the language of the complaint", async () => {
+    await seedRankedThree();
+    server.fakes.agent.respondToReasonsWith(new AgentUnavailableError("agent responded 503", 503));
+
+    const english = await shortlist({
+      purpose: "shortlist",
+      guidanceToken: tokenFor(ENGLISH_GUIDANCE),
+      location: GUBENG,
+    });
+    const indonesian = await shortlist(
+      { purpose: "shortlist", guidanceToken: tokenFor({ ...ROOT_CANAL_GUIDANCE, language: "id" }), location: GUBENG },
+      { headers: { cookie: await toggleCookie("en") } },
+    );
+
+    expect(english.body.providers[0]?.reason).toBe("Testimony score 4.6 from 6 patients");
+    expect(indonesian.body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 6 pasien");
+  });
+
+  it("follows the toggle when the Guidance does not say which language the complaint was in", async () => {
+    await seedRankedThree();
+    server.fakes.agent.respondToReasonsWith(reasonsFor(RANKED));
+
+    await shortlist(request(), { headers: { cookie: await toggleCookie("en") } });
+
+    expect(server.fakes.agent.reasonsCalls[0]).toMatchObject({ language: "en" });
+  });
+
+  it("keeps the emergency Hospital list in the toggle language", async () => {
+    server.fakes.places.respondWith([GOOGLE_HOSPITAL]);
+
+    const { body } = await shortlist(
+      { purpose: "emergency", location: GUBENG },
+      { headers: { cookie: await toggleCookie("en") } },
+    );
+
+    expect(body.providers[0]?.reason).toMatch(/^Hospital with an emergency department/);
+  });
 });

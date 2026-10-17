@@ -61,6 +61,23 @@ def test_complaint_returns_guidance_card_matching_the_contract(
     assert fake_places.calls == []
 
 
+def test_guidance_carries_the_language_of_the_complaint_not_the_toggle(
+    client: TestClient,
+    fake_gemini: FakeGeminiAdapter,
+) -> None:
+    # The toggle says Indonesian; Gemini read the complaint as English (spec 02:
+    # Shortlist reasons follow the complaint, so the Guidance must say which it was).
+    fake_gemini.outputs.append(guidance_model_output(language="en"))
+
+    response = client.post(
+        "/v1/guidance",
+        json={"sessionId": "sess-0001-abcd", "language": "id", "complaintText": "My lower left molar throbs."},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["guidance"]["language"] == "en"
+
+
 @pytest.mark.parametrize(
     "body",
     [
