@@ -106,3 +106,37 @@ describe("coordinate refresh job", () => {
     expect(await locationOf("place-missing")).toBeUndefined();
   });
 });
+
+describe("coordinate refresh job, against the 30-day limit", () => {
+  it("deletes coordinates that would pass 30 days before tomorrow's run when the refresh fails", async () => {
+    await seedProvider(server.firestore, { placeId: "place-29", location: fetchedDaysAgo(29.5) });
+    await seedProvider(server.firestore, { placeId: "place-28", location: fetchedDaysAgo(28.5) });
+    server.fakes.places.respondWithCoordinates({ ok: false, reason: "not_found" });
+
+    await run();
+
+    expect(await locationOf("place-29")).toBeUndefined();
+    expect(await locationOf("place-28")).toMatchObject({ lat: -6.2, lng: 106.8 });
+  });
+
+  it("keeps coordinates written while it ran, and carries on past a Provider that went away", async () => {
+    await seedProvider(server.firestore, { placeId: "place-rewritten", location: fetchedDaysAgo(33) });
+    await seedProvider(server.firestore, { placeId: "place-gone", location: fetchedDaysAgo(32) });
+    await seedProvider(server.firestore, { placeId: "place-stale", location: fetchedDaysAgo(31) });
+    const providers = server.firestore.collection(COLLECTIONS.providers);
+    server.fakes.places.respondWithCoordinates(async (placeId) => {
+      // What a Testimony landing during the run, or a removal, would do.
+      if (placeId === "place-rewritten") {
+        await providers.doc(placeId).update({ location: { lat: 1, lng: 2, fetchedAt: Timestamp.fromMillis(NOW) } });
+      }
+      if (placeId === "place-gone") await providers.doc(placeId).delete();
+      return { ok: false, reason: "unavailable" };
+    });
+
+    await run();
+
+    expect(await locationOf("place-rewritten")).toMatchObject({ lat: 1, lng: 2 });
+    expect((await providers.doc("place-gone").get()).exists).toBe(false);
+    expect(await locationOf("place-stale")).toBeUndefined();
+  });
+});

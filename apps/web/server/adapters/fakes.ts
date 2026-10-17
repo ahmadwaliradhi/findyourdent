@@ -121,8 +121,8 @@ export interface FakePlacesAdapter extends PlacesAdapter {
   respondWithSuggestions(answer: AutocompleteSuggestion[] | AutocompleteResult): void;
   /** Place ids asked for coordinates, in order. */
   readonly coordinatesCalls: string[];
-  /** Next coordinates answer. Defaults to a point in Jakarta. */
-  respondWithCoordinates(answer: CoordinatesResult): void;
+  /** Next coordinates answer, or a function answering per place id. Defaults to a point in Jakarta. */
+  respondWithCoordinates(answer: CoordinatesResult | ((placeId: string) => Promise<CoordinatesResult>)): void;
 }
 
 export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlacesAdapter {
@@ -130,7 +130,10 @@ export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlace
   let nextBlock: Omit<GoogleBlock, "placeId"> | GoogleBlockResult = { displayName: "Fake Google Place", types: [] };
   let nextReviews: GoogleReviewsResult = { ok: true, reviews: [] };
   let nextSuggestions: AutocompleteResult = { ok: true, suggestions: [] };
-  let nextCoordinates: CoordinatesResult = { ok: true, location: { lat: -6.1754, lng: 106.8272 } };
+  let nextCoordinates: CoordinatesResult | ((placeId: string) => Promise<CoordinatesResult>) = {
+    ok: true,
+    location: { lat: -6.1754, lng: 106.8272 },
+  };
   const calls: TextSearch[] = [];
   const detailsCalls: FakePlacesAdapter["detailsCalls"] = [];
   const autocompleteCalls: AutocompleteRequest[] = [];
@@ -152,6 +155,7 @@ export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlace
     },
     async getCoordinates(placeId) {
       coordinatesCalls.push(placeId);
+      if (typeof nextCoordinates === "function") return nextCoordinates(placeId);
       return structuredClone(nextCoordinates);
     },
     respondWith(answer) {
