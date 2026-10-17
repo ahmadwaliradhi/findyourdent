@@ -8,7 +8,7 @@
   "labelStatus": "draft",
   "metrics": {
     "cases": 30,
-    "decisionAccuracy": 0.9666666666666667,
+    "decisionAccuracy": 1.0,
     "falsePublishes": [],
     "neutralityMismatches": [],
     "pairRunDisagreements": [],
@@ -18,8 +18,8 @@
     "invalidCases": [],
     "outcomes": {
       "authorFix": 18,
-      "hold": 35,
-      "publish": 37
+      "hold": 34,
+      "publish": 38
     }
   },
   "gates": [
@@ -41,7 +41,7 @@
       "name": "decisionAccuracy",
       "threshold": 0.9,
       "op": ">=",
-      "value": 0.9666666666666667,
+      "value": 1.0,
       "status": "pass"
     }
   ],
@@ -70,14 +70,14 @@
           "ruleCodes": [],
           "confidence": 1.0,
           "outcome": "publish",
-          "ownHealthDataWarning": true
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
           "outcome": "publish",
-          "ownHealthDataWarning": true
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -87,8 +87,8 @@
       "pairId": null,
       "expected": "publish",
       "expectedRules": [],
-      "majority": "hold",
-      "correct": false,
+      "majority": "publish",
+      "correct": true,
       "flipped": true,
       "rulesFoundInRuns": 3,
       "warningFoundInRuns": null,
@@ -110,12 +110,10 @@
           "ownHealthDataWarning": false
         },
         {
-          "decision": "hold",
-          "ruleCodes": [
-            "r8_third_party_health_data"
-          ],
+          "decision": "publish",
+          "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "hold",
+          "outcome": "publish",
           "ownHealthDataWarning": false
         }
       ]
@@ -284,7 +282,7 @@
           "ruleCodes": [],
           "confidence": 1.0,
           "outcome": "publish",
-          "ownHealthDataWarning": true
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
@@ -623,7 +621,8 @@
         {
           "decision": "hold",
           "ruleCodes": [
-            "r7_conflict_of_interest"
+            "r7_conflict_of_interest",
+            "named_person_negative"
           ],
           "confidence": 1.0,
           "outcome": "hold",
