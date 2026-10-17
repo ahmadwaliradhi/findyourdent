@@ -1,4 +1,17 @@
 {
+  "hosting": {
+    "public": "apps/web/public",
+    "ignore": ["**/.*"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "fyd-web",
+          "region": "asia-southeast2"
+        }
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules"
   },

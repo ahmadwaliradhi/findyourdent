@@ -118,8 +118,9 @@ def test_complaint_text_never_reaches_logs(
     assert all(complaint not in str(record.__dict__) for record in caplog.records)
 
 
-def test_healthz(client: TestClient) -> None:
-    response = client.get("/healthz")
+def test_health(client: TestClient) -> None:
+    # Not /healthz: Cloud Run reserves some paths ending in "z".
+    response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
