@@ -26,3 +26,12 @@ test("home shows the consent line in Indonesian before the complaint box, and th
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
 });
+
+test("a complaint gets a Guidance card, with the App Check token attached by the page", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByLabel("Ceritakan keluhan gigi Anda").fill("Gigi geraham nyut-nyutan sejak tiga hari");
+  await page.getByRole("button", { name: "Lihat panduan" }).click();
+
+  await expect(page.getByText("Panduan untuk keluhan Anda")).toBeVisible();
+});

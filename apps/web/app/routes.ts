@@ -4,4 +4,8 @@ export default [
   index("routes/home.tsx"),
   route("language", "routes/language.ts"),
   route("api/guidance", "routes/api.guidance.ts"),
+  route("signin", "routes/signin.tsx"),
+  route("auth/session", "routes/auth.session.ts"),
+  route("auth/signout", "routes/auth.signout.ts"),
+  route("admin", "routes/admin.tsx"),
 ] satisfies RouteConfig;

@@ -1,5 +1,6 @@
 import type { GuidanceRequest } from "@findyourdent/contracts";
 import type { AgentAdapter } from "./agent.ts";
+import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
 import type { NearbyProviderSearch, PlaceSummary, PlacesAdapter } from "./places.ts";
 
@@ -105,6 +106,26 @@ export function createFakeGeminiAdapter(initial: unknown = {}): FakeGeminiAdapte
       calls.push(structuredClone(request));
       if (next instanceof Error) throw next;
       return structuredClone(next);
+    },
+  };
+}
+
+export interface FakeAppCheckVerifier extends AppCheckVerifier {
+  /** A fresh token the fake accepts, standing in for one browser's App Check token. */
+  issueToken(): string;
+}
+
+/** Accepts only tokens it issued, so a test can tell one browser from another. */
+export function createFakeAppCheckVerifier(): FakeAppCheckVerifier {
+  const issued = new Set<string>();
+  return {
+    issueToken() {
+      const token = `fake-app-check.${crypto.randomUUID()}`;
+      issued.add(token);
+      return token;
+    },
+    async verify(token) {
+      return issued.has(token);
     },
   };
 }

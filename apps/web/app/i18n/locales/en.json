@@ -33,7 +33,9 @@
     "retry": "Try again",
     "invalid_request": "We could not read your complaint. Describe your problem (up to 4000 characters) and send it again.",
     "agent_unavailable": "The guidance service is unavailable right now. Please try again in a moment.",
-    "invalid_agent_response": "The guidance service sent an answer we cannot show. Please try again."
+    "invalid_agent_response": "The guidance service sent an answer we cannot show. Please try again.",
+    "app_check_required": "We could not confirm this request came from your browser. Reload the page and try again.",
+    "rate_limited": "Too many requests in a short time. Please try again later."
   },
   "card": {
     "transcriptLabel": "What we understood from your voice note",
@@ -109,6 +111,20 @@
     "trismus": "Cannot open the mouth properly",
     "uncontrolled_bleeding": "Bleeding that does not stop",
     "knocked_out_permanent_tooth": "Adult tooth knocked out by an injury"
+  },
+  "signin": {
+    "title": "Sign in",
+    "intro": "Sign in with your Google account. No email or phone verification needed.",
+    "google": "Sign in with Google",
+    "pending": "Signing in…",
+    "failed": "Sign-in failed. Please try again.",
+    "unavailable": "Google sign-in is not available here yet."
+  },
+  "admin": {
+    "title": "Admin",
+    "signedInAs": "Signed in as {{email}}",
+    "empty": "The moderation and Claim queues will appear here.",
+    "signOut": "Sign out"
   },
   "footer": {
     "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription."

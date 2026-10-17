@@ -1,14 +1,8 @@
 import { redirect } from "react-router";
 import { isLanguage } from "~/i18n/config";
 import { languageCookie } from "~/i18n/language.server";
+import { safeRedirect } from "~/lib/safe-redirect";
 import type { Route } from "./+types/language";
-
-function safeRedirect(value: FormDataEntryValue | null): string {
-  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
-    return "/";
-  }
-  return value;
-}
 
 /** The language toggle posts here; works without JavaScript. */
 export async function action({ request }: Route.ActionArgs) {

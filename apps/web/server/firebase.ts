@@ -1,9 +1,11 @@
 import { type App, getApps, initializeApp } from "firebase-admin/app";
+import { type Auth, getAuth } from "firebase-admin/auth";
 import { type Firestore, getFirestore } from "firebase-admin/firestore";
 
 export interface FirebaseHandles {
   app: App;
   firestore: Firestore;
+  auth: Auth;
   projectId: string;
 }
 
@@ -19,5 +21,5 @@ export function initFirebaseAdmin(env: NodeJS.ProcessEnv = process.env): Firebas
 
   const projectId = env.GCLOUD_PROJECT ?? env.GOOGLE_CLOUD_PROJECT ?? "demo-findyourdent";
   const app = getApps().find((a) => a.name === "[DEFAULT]") ?? initializeApp({ projectId });
-  return { app, firestore: getFirestore(app), projectId };
+  return { app, firestore: getFirestore(app), auth: getAuth(app), projectId };
 }

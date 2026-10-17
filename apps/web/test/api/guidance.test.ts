@@ -34,8 +34,11 @@ describe("POST /api/guidance", () => {
     expect(sent).toMatchObject({ complaintText: COMPLAINT, language: "id" });
     expect(response.headers.get("set-cookie")).toMatch(/^fyd_sid=/);
 
-    // Complaint text is processed in memory only: nothing stored, nothing logged.
-    expect(await server.firestore.listCollections()).toEqual([]);
+    // Complaint text is processed in memory only: nothing stored but rate-limit counters, nothing logged.
+    const collections = await server.firestore.listCollections();
+    expect(collections.map((c) => c.id)).toEqual(["rateLimits"]);
+    const counters = await server.firestore.collection("rateLimits").get();
+    expect(JSON.stringify(counters.docs.map((d) => d.data()))).not.toContain("nyut-nyutan");
     expect(server.logs.join("\n")).not.toContain("nyut-nyutan");
     expect(server.fakes.places.calls).toEqual([]);
     expect(server.fakes.gemini.calls).toEqual([]);
@@ -114,7 +117,7 @@ describe("Emergency Escalation card", () => {
 
     const response = await fetch(new URL("/?index", server.baseUrl), {
       method: "POST",
-      body: new URLSearchParams({ complaintText: "Pipi bengkak dan demam" }),
+      body: new URLSearchParams({ complaintText: "Pipi bengkak dan demam", appCheckToken: server.appCheckToken() }),
     });
 
     expect(response.status).toBe(200);

@@ -261,6 +261,22 @@ fi
 gcloud secrets add-iam-policy-binding admin-emails --project "$PROJECT_ID" \
   --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
 
+# Rate-limit salt: the web service hashes IPs, tokens and session ids with it
+# before storing counters, so it must be secret and shared by every instance.
+log "Secret rate-limit-salt"
+if ! gcloud secrets describe rate-limit-salt --project "$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud secrets create rate-limit-salt --project "$PROJECT_ID" \
+    --replication-policy=user-managed --locations="$REGION"
+fi
+if gcloud secrets versions list rate-limit-salt --project "$PROJECT_ID" --filter=state=enabled \
+  --limit=1 --format='value(name)' | grep -q .; then
+  skip "rate-limit-salt has a version"
+else
+  openssl rand -hex 32 | tr -d '\n' | gcloud secrets versions add rate-limit-salt --project "$PROJECT_ID" --data-file=-
+fi
+gcloud secrets add-iam-policy-binding rate-limit-salt --project "$PROJECT_ID" \
+  --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
+
 # 9. Budget ---------------------------------------------------------------------
 log "Budget ${BUDGET_NAME} (${BUDGET_AMOUNT}, 50% and 90%)"
 budgets=$(gcloud billing budgets list --billing-account="$BILLING_ACCOUNT" --format='value(displayName)')

@@ -20,9 +20,9 @@ import "./app.css";
 
 export const links: Route.LinksFunction = () => [{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }];
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const language = await detectLanguage(request);
-  return data({ language }, { headers: { Vary: "Cookie" } });
+  return data({ language, firebase: context.config.firebaseWeb }, { headers: { Vary: "Cookie" } });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
