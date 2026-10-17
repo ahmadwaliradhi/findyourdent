@@ -86,7 +86,7 @@ def test_clean_testimony_is_published(client: TestClient, fake_gemini: FakeGemin
     assert decision["proofOfVisit"] == "notProvided"
 
 
-def test_uses_moderation_model_at_temperature_zero(
+def test_uses_moderation_model_with_the_testimony_output_schema(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
     fake_gemini.outputs.append(model_output())
@@ -95,7 +95,17 @@ def test_uses_moderation_model_at_temperature_zero(
 
     (call,) = fake_gemini.calls
     assert call["model"] == "gemini-3.5-flash-lite"
-    assert call["temperature"] == 0
+    schema = call["response_schema"]
+    assert schema["required"] == [
+        "ruleCodes",
+        "flaggedSpans",
+        "confidence",
+        "authorMessage",
+        "flaggedPhotos",
+        "ownHealthDataWarning",
+        "proofOfVisit",
+    ]
+    assert "r2_accusation_as_fact" in schema["properties"]["ruleCodes"]["items"]["enum"]
 
 
 class ExplodingGemini(FakeGeminiAdapter):
@@ -685,7 +695,6 @@ def test_provider_facts_use_their_own_rule_set(
     assert "misleading_statement" in rule_enum
     assert "r2_accusation_as_fact" not in rule_enum
     assert facts_call["model"] == "gemini-3.5-flash-lite"
-    assert facts_call["temperature"] == 0
     submissions = [
         json.loads(p.text) for p in facts_call["contents"] if p.text and p.text[0] == "{"
     ]

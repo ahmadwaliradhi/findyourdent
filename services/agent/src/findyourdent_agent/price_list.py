@@ -161,7 +161,6 @@ async def extract_price_list(
                 instruction=EXTRACTION_INSTRUCTION + _procedure_lines(),
                 contents=contents,
                 response_schema=_output_schema(),
-                temperature=0,
                 max_output_tokens=settings.extraction_max_output_tokens,
             ),
             timeout=settings.extraction_timeout_seconds,
