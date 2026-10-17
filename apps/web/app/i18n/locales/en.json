@@ -267,5 +267,51 @@
     "procedure": "Procedure: {{procedure}}",
     "pricePaid": "Paid: {{price}}",
     "ratingsLabel": "Ratings for {{name}}"
+  },
+  "shortlist": {
+    "reason": {
+      "emergency": "Hospital with an emergency department, about {{distance}} away",
+      "emergencyNoDistance": "Hospital with an emergency department in the area you typed",
+      "hospitalFit": "Hospital, suited to {{procedure}}",
+      "listedService": "Lists {{procedure}} among its services",
+      "testimonies": "Testimony score {{score}} from {{count}} patients",
+      "distance": "About {{distance}} from you",
+      "procedure": "Can handle {{procedure}}",
+      "generic": "Dentist near you"
+    },
+    "open": "See dentists near me",
+    "openEmergency": "See hospitals with an emergency department near me",
+    "title": "Dentists near you for your complaint",
+    "emergencyTitle": "Nearest hospitals with an emergency department",
+    "useLocation": "Use my location",
+    "locating": "Finding your location…",
+    "locationDenied": "We could not read your location. Type your area instead.",
+    "areaLabel": "Or type your area",
+    "areaPlaceholder": "For example: Gubeng, Surabaya",
+    "search": "Search",
+    "searching": "Searching…",
+    "privacy": "Your location or area is used only for this search and is not stored.",
+    "rankingNote": "Ranked by fit with your complaint, Testimonies, price and distance. Never by payment.",
+    "fallbackNote": "Today's Google search limit has been reached. These are dentists listed on FindYourDent near you.",
+    "empty": "No matching dentists near you yet.",
+    "mapsSearch": "Search in Google Maps",
+    "openInMaps": "Open in Google Maps",
+    "type": {
+      "klinik": "Clinic",
+      "privateDentist": "Private dentist",
+      "hospital": "Hospital"
+    },
+    "estimated": "perkiraan (estimated)",
+    "claimed": "Claimed by owner",
+    "testimoniesNone": "No Testimonies yet",
+    "testimoniesCount": "{{count}} Testimonies, {{verified}} proven visits",
+    "aspects": "Service {{service}} · Hygiene {{hygiene}} · Materials and equipment {{materials}}",
+    "priceSource": {
+      "testimonies": "Price paid by patients (median)",
+      "priceList": "Owner's price list",
+      "costEstimate": "Cost estimate"
+    },
+    "asOf": "as of {{date}}",
+    "error": "The dentist search failed. Please try again."
   }
 }

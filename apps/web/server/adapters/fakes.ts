@@ -2,7 +2,7 @@ import type { GuidanceRequest } from "@findyourdent/contracts";
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
-import type { NearbyProviderSearch, PlaceSummary, PlacesAdapter } from "./places.ts";
+import type { PlaceSummary, PlacesAdapter, TextSearch, TextSearchResult } from "./places.ts";
 
 /** A stub Guidance card, valid against guidance-response.schema.json. */
 export const STUB_GUIDANCE_RESPONSE = {
@@ -70,19 +70,20 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
 }
 
 export interface FakePlacesAdapter extends PlacesAdapter {
-  readonly calls: NearbyProviderSearch[];
-  respondWith(places: PlaceSummary[]): void;
+  readonly calls: TextSearch[];
+  /** Next answer: places found, or a failed result such as the daily cap being reached. */
+  respondWith(answer: PlaceSummary[] | TextSearchResult): void;
 }
 
 export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlacesAdapter {
-  let next = initial;
-  const calls: NearbyProviderSearch[] = [];
+  let next: TextSearchResult = { ok: true, places: initial };
+  const calls: TextSearch[] = [];
   return {
     calls,
-    respondWith(places) {
-      next = places;
+    respondWith(answer) {
+      next = Array.isArray(answer) ? { ok: true, places: answer } : answer;
     },
-    async searchNearby(search) {
+    async searchText(search) {
       calls.push(structuredClone(search));
       return structuredClone(next);
     },

@@ -7,6 +7,7 @@ import type {
 } from "@findyourdent/contracts";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { ShortlistPanel } from "~/components/shortlist-panel";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -36,9 +37,20 @@ export function GuidanceResult({
       {response.transcript && <Transcript text={response.transcript} />}
       {response.kind === "emergency" && <EmergencyCard response={response} />}
       {response.kind === "followUp" && <FollowUpCard response={response} pending={pending} />}
-      {response.kind === "guidance" && <GuidanceCard guidance={response.guidance} share={share ?? null} />}
+      {response.kind === "guidance" && (
+        <GuidanceCard
+          guidance={response.guidance}
+          share={share ?? null}
+          guidanceToken={share ? shareTokenOf(share.path) : null}
+        />
+      )}
     </div>
   );
+}
+
+/** The signed Guidance token in /panduan/<token>; the Shortlist reads the Guidance from it. */
+function shareTokenOf(path: string): string | null {
+  return path.split("/").pop() || null;
 }
 
 function Transcript({ text }: { text: string }) {
@@ -53,8 +65,8 @@ function Transcript({ text }: { text: string }) {
 
 /**
  * Free Google Maps search for the nearest IGD: a plain Maps URL, no Places API call.
- * Fixed query, so the Patient's complaint never ends up in a link. Replaced by the
- * nearby-Hospitals list when Places lands (T08).
+ * Fixed query, so the Patient's complaint never ends up in a link. Kept beside the
+ * nearby-Hospitals list, which needs a location first.
  */
 const NEAREST_IGD_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("IGD rumah sakit terdekat")}`;
 
@@ -86,6 +98,7 @@ function EmergencyCard({ response }: { response: EmergencyResponse }) {
             {t("card.emergency.findIgd")}
           </a>
         </Button>
+        <ShortlistPanel purpose="emergency" />
       </CardContent>
     </Card>
   );
@@ -147,7 +160,16 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function GuidanceCard({ guidance, share }: { guidance: Guidance; share: ShareLink | null }) {
+export function GuidanceCard({
+  guidance,
+  share,
+  guidanceToken,
+}: {
+  guidance: Guidance;
+  share: ShareLink | null;
+  /** Signed Guidance token for the Shortlist; null hides "Lihat dokter gigi terdekat". */
+  guidanceToken: string | null;
+}) {
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   return (
@@ -247,6 +269,8 @@ export function GuidanceCard({ guidance, share }: { guidance: Guidance; share: S
         </Section>
 
         <p className="border-t pt-4 text-sm font-medium">{guidance.disclaimer}</p>
+
+        {guidanceToken && <ShortlistPanel purpose="shortlist" guidanceToken={guidanceToken} />}
 
         {share && <ShareSection share={share} />}
       </CardContent>

@@ -34,3 +34,9 @@ export function formatVisitMonth(visitMonth: string, language: Language): string
     new Date(Date.UTC(year, month - 1, 1)),
   );
 }
+
+/** "450 m" or "1,2 km". */
+export function formatDistance(meters: number, language: Language): string {
+  if (meters < 1000) return `${Math.round(meters / 10) * 10} m`;
+  return `${formatKm(meters / 1000, language)} km`;
+}

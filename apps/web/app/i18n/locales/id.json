@@ -267,5 +267,51 @@
     "procedure": "Tindakan: {{procedure}}",
     "pricePaid": "Biaya: {{price}}",
     "ratingsLabel": "Penilaian {{name}}"
+  },
+  "shortlist": {
+    "reason": {
+      "emergency": "Rumah sakit dengan IGD, sekitar {{distance}} dari Anda",
+      "emergencyNoDistance": "Rumah sakit dengan IGD di area yang Anda tulis",
+      "hospitalFit": "Rumah sakit, sesuai untuk {{procedure}}",
+      "listedService": "Mencantumkan layanan {{procedure}}",
+      "testimonies": "Nilai Testimoni {{score}} dari {{count}} pasien",
+      "distance": "Sekitar {{distance}} dari lokasi Anda",
+      "procedure": "Dapat menangani {{procedure}}",
+      "generic": "Dokter gigi di dekat Anda"
+    },
+    "open": "Lihat dokter gigi terdekat",
+    "openEmergency": "Lihat rumah sakit dengan IGD terdekat",
+    "title": "Dokter gigi terdekat untuk keluhan Anda",
+    "emergencyTitle": "Rumah sakit dengan IGD terdekat",
+    "useLocation": "Gunakan lokasi saya",
+    "locating": "Mencari lokasi Anda…",
+    "locationDenied": "Lokasi tidak bisa dibaca. Tulis nama area Anda saja.",
+    "areaLabel": "Atau tulis area Anda",
+    "areaPlaceholder": "Contoh: Gubeng, Surabaya",
+    "search": "Cari",
+    "searching": "Mencari…",
+    "privacy": "Lokasi atau area Anda hanya dipakai untuk pencarian ini dan tidak disimpan.",
+    "rankingNote": "Diurutkan menurut kecocokan dengan keluhan, Testimoni, harga, dan jarak. Tidak pernah berdasarkan bayaran.",
+    "fallbackNote": "Batas pencarian Google hari ini sudah tercapai. Berikut dokter gigi yang terdaftar di FindYourDent di sekitar Anda.",
+    "empty": "Belum ada dokter gigi yang cocok di sekitar Anda.",
+    "mapsSearch": "Cari di Google Maps",
+    "openInMaps": "Buka di Google Maps",
+    "type": {
+      "klinik": "Klinik",
+      "privateDentist": "Dokter gigi praktik mandiri",
+      "hospital": "Rumah sakit"
+    },
+    "estimated": "perkiraan",
+    "claimed": "Diklaim pemilik",
+    "testimoniesNone": "Belum ada Testimoni",
+    "testimoniesCount": "{{count}} Testimoni, {{verified}} Kunjungan terbukti",
+    "aspects": "Pelayanan {{service}} · Kebersihan {{hygiene}} · Bahan dan alat {{materials}}",
+    "priceSource": {
+      "testimonies": "Harga yang dibayar pasien (median)",
+      "priceList": "Daftar harga dari pemilik",
+      "costEstimate": "Perkiraan biaya"
+    },
+    "asOf": "per {{date}}",
+    "error": "Pencarian dokter gigi gagal. Silakan coba lagi."
   }
 }
