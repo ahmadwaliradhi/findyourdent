@@ -36,7 +36,7 @@ TestimonyRule = Literal[
 ]
 
 # Spec 03: R1, R4, R5, R6 can be fixed by the author; everything else is held for an admin.
-HOLD_RULES: frozenset[str] = frozenset(
+HOLD_RULES: frozenset[TestimonyRule] = frozenset(
     {
         "r2_accusation_as_fact",
         "r3_hate_or_harassment",
@@ -167,7 +167,7 @@ MODEL_OUTPUT_SCHEMA: dict[str, Any] = {
 
 _HOLD_MESSAGE = {
     "id": "Testimoni Anda sedang ditinjau tim FindYourDent. Biasanya selesai dalam 24 jam.",
-    "en": "Your Testimony is being reviewed by the FindYourDent team, usually within 24 hours.",
+    "en": "The FindYourDent team is checking your Testimony and usually decides within 24 hours.",
 }
 
 
@@ -275,10 +275,16 @@ def _decide(request: ModerationRequest, output: ModelOutput, settings: Settings)
             ]
         )
     )
+    spans = _locate_spans(request.text, output.flaggedSpans)
+    # R6 can rest on the typed name alone; every other fixable rule must point at text.
+    unseen = {r for r in rules if r != "r6_wrong_provider"} - {s.ruleCode for s in spans}
     outcome = None
     # Any flagged photo is held, whichever rule the model tagged it with (spec 03 photo rules).
     if photos or any(rule in HOLD_RULES for rule in rules):
         decision = "hold"
+    elif unseen:
+        # The author cannot fix what they cannot see, so an admin decides.
+        decision, outcome = "hold", "author_fix_without_span"
     elif rules:
         # After three authorFix rounds the content goes to the admin instead (spec 03).
         if (request.authorFixRound or 0) < MAX_AUTHOR_FIX_ROUNDS:
@@ -298,7 +304,7 @@ def _decide(request: ModerationRequest, output: ModelOutput, settings: Settings)
         ModerationDecision(
             decision=decision,
             ruleCodes=rules,
-            flaggedSpans=_locate_spans(request.text, output.flaggedSpans),
+            flaggedSpans=spans,
             flaggedPhotos=[
                 FlaggedPhoto(photoIndex=p.photoIndex, ruleCode=p.ruleCode) for p in photos
             ]
@@ -319,20 +325,20 @@ def _utf16_len(text: str) -> int:
 
 
 def _locate_spans(text: str, spans: list[ModelSpan]) -> list[FlaggedSpan]:
-    """Turn quoted spans into UTF-16 offsets (what the web app indexes by). Quotes the
-    model invented, which are not in the text, are dropped."""
+    """Turn quoted spans into UTF-16 offsets (what the web app indexes by), one per
+    occurrence. Quotes the model invented, which are not in the text, are dropped."""
     located: list[FlaggedSpan] = []
     for span in spans:
         index = text.find(span.text)
-        if index < 0:
-            continue
-        start = _utf16_len(text[:index])
-        located.append(
-            FlaggedSpan(
-                start=start,
-                end=start + _utf16_len(span.text),
-                text=span.text,
-                ruleCode=span.ruleCode,
+        while index >= 0:
+            start = _utf16_len(text[:index])
+            located.append(
+                FlaggedSpan(
+                    start=start,
+                    end=start + _utf16_len(span.text),
+                    text=span.text,
+                    ruleCode=span.ruleCode,
+                )
             )
-        )
+            index = text.find(span.text, index + len(span.text))
     return located

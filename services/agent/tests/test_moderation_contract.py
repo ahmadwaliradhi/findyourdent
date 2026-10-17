@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 
 from findyourdent_agent.adapters import Adapters
 from findyourdent_agent.adapters.fakes import (
@@ -34,7 +34,7 @@ CLEAN_TEXT = (
 def decision_validator() -> Draft202012Validator:
     path = contracts_dir() / "schemas" / "moderation-decision.schema.json"
     schema = json.loads(path.read_text(encoding="utf-8"))
-    return Draft202012Validator(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
 def assert_valid_decision(body: dict[str, Any]) -> None:
@@ -177,10 +177,17 @@ def test_hold_message_follows_author_language(
     "rule",
     ["r1_personal_data", "r4_not_first_hand", "r5_medical_advice", "r6_wrong_provider"],
 )
-def test_fixable_rules_go_back_to_the_author(
+def test_fixable_rules_with_a_located_span_go_back_to_the_author(
     client: TestClient, fake_gemini: FakeGeminiAdapter, rule: str
 ) -> None:
-    fake_gemini.outputs.append(model_output(ruleCodes=[rule], authorMessage="Mohon perbaiki."))
+    flagged = "Saya bayar sesuai daftar harga."  # a quote from CLEAN_TEXT
+    fake_gemini.outputs.append(
+        model_output(
+            ruleCodes=[rule],
+            flaggedSpans=[{"text": flagged, "ruleCode": rule}],
+            authorMessage="Mohon perbaiki.",
+        )
+    )
 
     decision = screen(client, a_testimony())
 
@@ -273,10 +280,12 @@ def test_low_confidence_is_held_even_with_no_rule(
 def test_fourth_author_fix_round_is_held(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    fake_gemini.outputs.extend([model_output(ruleCodes=["r1_personal_data"])] * 2)
+    text = "Hubungi 0812-3456-7890."
+    phone = {"text": "0812-3456-7890", "ruleCode": "r1_personal_data"}
+    fake_gemini.outputs.extend([model_output(flaggedSpans=[phone])] * 2)
 
-    third = screen(client, a_testimony(authorFixRound=2))
-    fourth = screen(client, a_testimony(authorFixRound=3))
+    third = screen(client, a_testimony(text, authorFixRound=2))
+    fourth = screen(client, a_testimony(text, authorFixRound=3))
 
     assert third["decision"] == "authorFix"
     assert fourth["decision"] == "hold"
@@ -460,7 +469,8 @@ def test_attachment_that_is_not_base64_is_refused(
 def test_provider_reply_is_screened_by_the_same_rules(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    fake_gemini.outputs.append(model_output(ruleCodes=["r1_personal_data"]))
+    phone = {"text": "0812-0000-0000", "ruleCode": "r1_personal_data"}
+    fake_gemini.outputs.append(model_output(flaggedSpans=[phone]))
 
     decision = screen(client, a_testimony("Silakan hubungi 0812-0000-0000.", subjectType="reply"))
 
@@ -474,3 +484,41 @@ def test_provider_facts_are_held_until_their_rule_set_exists(
 
     assert decision["decision"] == "hold"
     assert fake_gemini.calls == []
+
+
+def test_author_fix_with_no_span_found_in_the_text_is_held(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    # The author cannot fix what they cannot see, so an unlocatable fix goes to an admin.
+    fake_gemini.outputs.append(
+        model_output(flaggedSpans=[{"text": "0812-0000-0000", "ruleCode": "r1_personal_data"}])
+    )
+
+    decision = screen(client, a_testimony())
+
+    assert decision["decision"] == "hold"
+    assert decision["ruleCodes"] == ["r1_personal_data"]
+
+
+def test_every_occurrence_of_a_flagged_quote_is_flagged(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    text = "WA 0812-3456-7890 atau telepon 0812-3456-7890."
+    fake_gemini.outputs.append(
+        model_output(flaggedSpans=[{"text": "0812-3456-7890", "ruleCode": "r1_personal_data"}])
+    )
+
+    decision = screen(client, a_testimony(text))
+
+    assert [(s["start"], s["end"]) for s in decision["flaggedSpans"]] == [(3, 17), (31, 45)]
+
+
+def test_wrong_provider_can_be_fixed_without_a_span(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    # R6 can rest on the typed name alone, which is not part of the text.
+    fake_gemini.outputs.append(model_output(ruleCodes=["r6_wrong_provider"]))
+
+    decision = screen(client, a_testimony(typedProviderName="Apotek Sehat"))
+
+    assert decision["decision"] == "authorFix"
