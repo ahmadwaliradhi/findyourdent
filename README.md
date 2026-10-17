@@ -1,2 +1,2 @@
 # findyourdent
-An Integrated platform that connects dentists, dental clinics, and their patients seamlessly
+An integrated agentic platform that connects dentists, dental clinics, and their patients seamlessly
