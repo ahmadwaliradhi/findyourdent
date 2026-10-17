@@ -4,13 +4,14 @@ import { describe, expect, it } from "vitest";
 import { COLLECTIONS, dailyQuotaCounterId } from "../src/firestore.js";
 
 describe("Firestore model", () => {
-  it("has the nine collections from spec 00, each documented in docs/data-model.md", () => {
+  it("has the ten collections from spec 00, each documented in docs/data-model.md", () => {
     expect(Object.values(COLLECTIONS).sort()).toEqual(
       [
         "adminActions",
         "claims",
         "counters",
         "moderationDecisions",
+        "nameCorrections",
         "priceLists",
         "providers",
         "rateLimits",

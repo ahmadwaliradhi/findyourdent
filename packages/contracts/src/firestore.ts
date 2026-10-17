@@ -27,6 +27,7 @@ export const COLLECTIONS = {
   claims: "claims",
   priceLists: "priceLists",
   moderationDecisions: "moderationDecisions",
+  nameCorrections: "nameCorrections",
   adminActions: "adminActions",
   counters: "counters",
   rateLimits: "rateLimits",
@@ -291,6 +292,27 @@ export interface ModerationDecisionDoc {
   decidedAt: Timestamp;
 }
 
+// nameCorrections/{correctionId} ------------------------------------------------
+
+/**
+ * A "Sarankan koreksi" suggestion on a Listed Provider's name or Region (spec 03).
+ * Nothing changes on the Provider until an admin applies it (`applyNameCorrection`).
+ */
+export interface NameCorrectionDoc {
+  placeId: PlaceId;
+  /** At least one of suggestedName and suggestedRegion is present. */
+  suggestedName?: string;
+  suggestedRegion?: RegionRef;
+  /** The stored values when the suggestion was made, so the admin sees the diff. */
+  currentName: string;
+  currentRegion: RegionRef;
+  suggesterUid: Uid;
+  status: "open" | "applied" | "dismissed";
+  resolvedBy?: string;
+  resolvedAt?: Timestamp;
+  createdAt: Timestamp;
+}
+
 // adminActions/{actionId} -------------------------------------------------------
 
 export type AdminActionType =
@@ -304,12 +326,13 @@ export type AdminActionType =
   | "rejectClaim"
   | "revokeClaim"
   | "applyNameCorrection"
+  | "dismissNameCorrection"
   | "spotCheckConfirm";
 
 /** Append-only audit log of every admin decision. */
 export interface AdminActionDoc {
   action: AdminActionType;
-  subjectType: "testimony" | "reply" | "testimonyReport" | "claim" | "provider" | "providerFacts";
+  subjectType: "testimony" | "reply" | "testimonyReport" | "claim" | "provider" | "providerFacts" | "nameCorrection";
   subjectId: string;
   placeId?: PlaceId;
   /** Allowlisted admin email. */

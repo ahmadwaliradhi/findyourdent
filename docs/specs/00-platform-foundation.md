@@ -59,7 +59,7 @@ A Patient opens findyourdent.com (until the domain is bought, the default Fireba
 - Internationalisation: Indonesian default, English toggle remembered per browser; every UI string in both languages from day one.
 - Firestore data model (top-level collections, field names indicative):
   - `providers`: keyed by `place_id`; first-party name and its source, Region codes, coordinates with the date fetched, Provider type with its source (inferred or claimed), Claim status, Testimony aggregates, timestamps. Never holds Google fields other than `place_id` and coordinates.
-  - `testimonies`, `testimonyReports`, `claims`, `priceLists`, `moderationDecisions`, `adminActions`, `counters`, `rateLimits`.
+  - `testimonies`, `testimonyReports`, `claims`, `priceLists`, `moderationDecisions`, `nameCorrections` ("Sarankan koreksi" suggestions on a Listed Provider's name or Region, spec 03), `adminActions`, `counters`, `rateLimits`.
 - Observability: structured logs with request IDs and outcome codes only; Cloud Monitoring uptime checks on both services; an alert when either service returns errors for five minutes.
 - Warm instance: the agent service has a minimum of one instance from 19 October to 7 November 2026 (request-based billing), zero otherwise. The web service has a minimum of zero.
 - Deployment: one script or Cloud Build trigger per service; container images in Artifact Registry; configuration through environment variables and Secret Manager.
