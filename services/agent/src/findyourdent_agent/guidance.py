@@ -4,24 +4,29 @@ Order of checks:
 
 1. Emergency Escalation, deterministic layer: no model call.
 2. Prompt-injection phrases: the fixed polite redirect, no model call.
-3. One Gemini call. Its output is validated; off-topic gets the redirect; the model can
+3. One Agent Search query with the complaint alone; the documents it returns reach
+   Gemini as reference excerpts and head the card's sources. If the data store fails
+   or finds nothing, the curated knowledge files ground the card on their own.
+4. One Gemini call. Its output is validated; off-topic gets the redirect; the model can
    raise urgency (to the emergency kind) but never lower it below a deterministic red
    flag; a follow-up question is asked at most once; text that names a medicine, gives
    a dose, discourages a dentist or quotes the Patient is replaced with the safe
    fallback.
-4. The Cost Estimate, BPJS answer, sources and disclaimer come from the knowledge files.
+5. The Cost Estimate, BPJS answer, sources and disclaimer come from the knowledge files.
 
 Complaint text stays in memory for the length of the request. Nothing here logs it.
 """
 
 from __future__ import annotations
 
+import logging
+import re
 from dataclasses import dataclass
 from functools import cache
 
 from pydantic import ValidationError
 
-from .adapters import GeminiAdapter, ModelUnavailableError
+from .adapters import AgentSearchAdapter, GeminiAdapter, GroundingDoc, ModelUnavailableError
 from .agents.guidance import (
     ModelTurn,
     UrgencyTier,
@@ -39,6 +44,7 @@ from .contracts.guidance_response import (
     HospitalSearch,
     Journey,
     LikelyCategory,
+    Source,
     Visit,
 )
 from .data import load_procedures, procedure_codes
@@ -53,6 +59,8 @@ from .knowledge import (
     quotes,
     sources,
 )
+
+log = logging.getLogger("findyourdent_agent")
 
 Response = EmergencyResponse | FollowUpResponse | GuidanceCardResponse
 GuidanceTurn = GuidanceRequest1 | GuidanceRequest2
@@ -77,6 +85,8 @@ class Outcome:
     outcome: str
     """Logged instead of any content: emergency, emergency_model, followUp, redirect,
     guidance or guidance_fallback."""
+    grounding: str | None = None
+    """Logged with the outcome when Gemini was called: agent_search or curated."""
 
 
 @cache
@@ -118,11 +128,54 @@ def _procedures(turn: ModelTurn) -> list[str]:
     return codes or ["consultation"]
 
 
+async def _retrieve(
+    agent_search: AgentSearchAdapter, complaint: str, settings: Settings
+) -> list[GroundingDoc]:
+    """Reference documents for the complaint alone, so the follow-up turn retrieves the
+    same ones and keeps the cached prefix. A failing data store never fails Guidance."""
+    try:
+        return await agent_search.search(complaint, max_results=settings.agent_search_max_results)
+    except Exception as error:  # any adapter failure falls back
+        # The class name only: the message could echo the query.
+        log.warning("agent search unavailable, using curated knowledge: %s", type(error).__name__)
+        return []
+
+
+# "KMK HK.01.07/MENKES/1492/2023", "Permenkes 3/2023", "Perpres No. 59 Tahun 2024".
+_REGULATION = re.compile(r"\b(kmk|permenkes|perpres)\b.*?(\d+)(?:/|\s+tahun\s+)(\d{4})\b")
+
+
+def _regulation(source: Source) -> tuple[str, ...] | None:
+    """The regulation a source is, from its citation or title: the data store and the
+    curated file name the same regulation with different titles and links."""
+    for text in (source.citation, source.title):
+        if text and (match := _REGULATION.search(text.lower())):
+            return match.groups()
+    return None
+
+
+def _same_source(a: Source, b: Source) -> bool:
+    if a.url and b.url and str(a.url).rstrip("/") == str(b.url).rstrip("/"):
+        return True
+    if (regulation := _regulation(a)) and regulation == _regulation(b):
+        return True
+    return " ".join(a.title.lower().split()) == " ".join(b.title.lower().split())
+
+
+def _sources(retrieved: list[GroundingDoc], curated_keys: list[str]) -> list[Source]:
+    """The retrieved documents first, then the curated citations they do not already
+    cover, so the BPJS answer keeps its sources."""
+    cited = [Source(title=d.title, citation=d.publisher, url=d.url) for d in retrieved]
+    curated = [s for s in sources(curated_keys) if not any(_same_source(s, c) for c in cited)]
+    return cited + curated
+
+
 def _card(
     turn: ModelTurn,
     urgency: UrgencyTier,
     *,
     safe: bool,
+    retrieved: list[GroundingDoc],
 ) -> GuidanceCardResponse:
     language: Language = turn.language
     procedures = _procedures(turn)
@@ -145,7 +198,7 @@ def _card(
         costEstimate=cost_estimate(procedures, language)
         or cost_estimate(["consultation"], language),
         bpjs=bpjs,
-        sources=sources(source_keys),
+        sources=_sources(retrieved, source_keys),
         disclaimer=guidance_safety().disclaimer(language),
     )
     return GuidanceCardResponse(kind="guidance", guidance=guidance)
@@ -155,6 +208,7 @@ async def answer_turn(
     turn: GuidanceTurn,
     *,
     gemini: GeminiAdapter,
+    agent_search: AgentSearchAdapter,
     red_flags: RedFlagMatcher,
     settings: Settings,
 ) -> Outcome:
@@ -169,10 +223,14 @@ async def answer_turn(
     if any(is_injection(t) for t in (*texts, turn.followUpQuestion) if t):
         return Outcome(_redirect(turn.language), "redirect")
 
+    retrieved = await _retrieve(agent_search, turn.complaintText, settings)
+    grounding = "agent_search" if retrieved else "curated"
     raw = await gemini.generate_structured(
         model=settings.guidance_model,
         instruction=guidance_instruction(),
-        contents=guidance_contents(turn.complaintText, turn.followUpAnswer, turn.followUpQuestion),
+        contents=guidance_contents(
+            turn.complaintText, turn.followUpAnswer, turn.followUpQuestion, retrieved
+        ),
         response_schema=model_response_schema(),
         temperature=settings.guidance_temperature,
         max_output_tokens=settings.guidance_max_output_tokens,
@@ -185,7 +243,7 @@ async def answer_turn(
         raise InvalidModelOutputError(f"{error.error_count()} validation errors") from None
 
     if model.offTopic:
-        return Outcome(_redirect(model.language), "redirect")
+        return Outcome(_redirect(model.language), "redirect", grounding)
 
     patient_texts = [t for t in texts if t]
     safe = not any(
@@ -196,7 +254,9 @@ async def answer_turn(
     if model.urgencyTier == "darurat" and (deterministic or model.redFlags):
         reason = model.emergencyReason if safe and model.emergencyReason else None
         reason = reason or guidance_safety().emergencyReason(model.language)
-        return Outcome(_emergency(reason, deterministic | set(model.redFlags)), "emergency_model")
+        return Outcome(
+            _emergency(reason, deterministic | set(model.redFlags)), "emergency_model", grounding
+        )
 
     if model.followUp and not turn.followUpAnswer and safe:
         follow_up = FollowUpResponse(
@@ -204,12 +264,12 @@ async def answer_turn(
             question=model.followUp.question,
             quickReplies=model.followUp.quickReplies or None,
         )
-        return Outcome(follow_up, "followUp")
+        return Outcome(follow_up, "followUp", grounding)
 
     if model.urgencyTier is None:  # ModelTurn rules this out unless off-topic
         raise InvalidModelOutputError("urgencyTier missing")
     urgency = min(model.urgencyTier, "segera", key=_URGENCY_ORDER.__getitem__)
     if deterministic or model.redFlags:
         urgency = max(urgency, _RED_FLAG_FLOOR, key=_URGENCY_ORDER.__getitem__)
-    card = _card(model, urgency, safe=safe)
-    return Outcome(card, "guidance" if safe else "guidance_fallback")
+    card = _card(model, urgency, safe=safe, retrieved=retrieved)
+    return Outcome(card, "guidance" if safe else "guidance_fallback", grounding)

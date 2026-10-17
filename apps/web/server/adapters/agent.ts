@@ -1,4 +1,4 @@
-import type { GuidanceRequest } from "@findyourdent/contracts";
+import type { GuidanceRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
 
 /**
  * Port to the agent service (services/agent). The web service is the only caller;
@@ -7,6 +7,8 @@ import type { GuidanceRequest } from "@findyourdent/contracts";
  */
 export interface AgentAdapter {
   requestGuidance(request: GuidanceRequest, options?: AgentCallOptions): Promise<unknown>;
+  /** The caller validates the body against the ShortlistReasonsResponse contract. */
+  requestShortlistReasons(request: ShortlistReasonsRequest, options?: AgentCallOptions): Promise<unknown>;
 }
 
 export interface AgentCallOptions {
@@ -26,6 +28,11 @@ export class AgentUnavailableError extends Error {
 export interface HttpAgentAdapterOptions {
   baseUrl: string;
   timeoutMs?: number;
+  /**
+   * Shorter than the Guidance timeout: the Shortlist is shown with templated reasons
+   * rather than held for Gemini (spec 02).
+   */
+  reasonsTimeoutMs?: number;
   fetch?: typeof fetch;
   /**
    * Identity token for the agent service URL. On Cloud Run the agent service only
@@ -34,37 +41,48 @@ export interface HttpAgentAdapterOptions {
   idToken?: () => Promise<string>;
 }
 
-/** Real adapter: POST {AGENT_URL}/v1/guidance. Never logs or echoes the request body. */
+/**
+ * Real adapter: POST {AGENT_URL}/v1/guidance and /v1/shortlist-reasons. Never logs or
+ * echoes the request body.
+ */
 export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentAdapter {
   const baseUrl = options.baseUrl.replace(/\/+$/, "");
   const timeoutMs = options.timeoutMs ?? 30_000;
+  const reasonsTimeoutMs = options.reasonsTimeoutMs ?? 12_000;
   const doFetch = options.fetch ?? fetch;
 
+  async function post(path: string, body: unknown, timeout: number, { requestId }: AgentCallOptions) {
+    const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
+    if (requestId) headers["x-request-id"] = requestId;
+    let response: Response;
+    try {
+      if (options.idToken) headers.authorization = `Bearer ${await options.idToken()}`;
+      response = await doFetch(`${baseUrl}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeout),
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.name : "unknown";
+      throw new AgentUnavailableError(`agent request failed: ${reason}`);
+    }
+    if (!response.ok) {
+      throw new AgentUnavailableError(`agent responded ${response.status}`, response.status);
+    }
+    try {
+      return (await response.json()) as unknown;
+    } catch {
+      throw new AgentUnavailableError("agent returned a non-JSON body", response.status);
+    }
+  }
+
   return {
-    async requestGuidance(request, { requestId } = {}) {
-      const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
-      if (requestId) headers["x-request-id"] = requestId;
-      let response: Response;
-      try {
-        if (options.idToken) headers.authorization = `Bearer ${await options.idToken()}`;
-        response = await doFetch(`${baseUrl}/v1/guidance`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(request),
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-      } catch (error) {
-        const reason = error instanceof Error ? error.name : "unknown";
-        throw new AgentUnavailableError(`agent request failed: ${reason}`);
-      }
-      if (!response.ok) {
-        throw new AgentUnavailableError(`agent responded ${response.status}`, response.status);
-      }
-      try {
-        return (await response.json()) as unknown;
-      } catch {
-        throw new AgentUnavailableError("agent returned a non-JSON body", response.status);
-      }
+    requestGuidance(request, callOptions = {}) {
+      return post("/v1/guidance", request, timeoutMs, callOptions);
+    },
+    requestShortlistReasons(request, callOptions = {}) {
+      return post("/v1/shortlist-reasons", request, reasonsTimeoutMs, callOptions);
     },
   };
 }

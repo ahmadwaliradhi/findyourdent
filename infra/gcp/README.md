@@ -23,6 +23,7 @@ ADMIN_EMAILS="a@example.com,b@example.com" infra/gcp/setup.sh
 | reCAPTCHA Enterprise site key (App Check) | `6LeFCfMtAAAAACLP7NiG2xaEClvTnRY5qqTPFdxC` (score-based; public by design) |
 | Service accounts | `fyd-web@findyourdent.iam.gserviceaccount.com`, `fyd-agent@findyourdent.iam.gserviceaccount.com` |
 | Secrets (Secret Manager, Jakarta) | `places-api-key` (API key restricted to Places API (New)), `admin-emails` (comma-separated allowlist), `share-link-secret` (random key that signs shareable Guidance links; created once by `setup.sh`, mounted on the web service as `SHARE_LINK_SECRET`; rotating it breaks links already shared), `rate-limit-salt` (web service rate-limit key hashes), `app-check-debug-token` (registered with App Check as `smoke-test`; `smoke.sh` exchanges it for an App Check token) |
+| Agent Search (grounding) | Data store `findyourdent-grounding` (global, `default_collection`, layout-based chunking, 14 source documents with `structData` title, publisher, source_url, licence, language) behind the Standard-tier search engine `findyourdent-guidance`, created in H02 |
 | Budget | `findyourdent-usd100`: IDR 1,650,000 (about USD 100) on the whole billing account, alerts at 50% and 90% |
 
 The admin allowlist is kept in Secret Manager instead of the repository because the repository is public and the addresses are personal data.
@@ -40,6 +41,19 @@ The web service (T03) reads these at start-up:
 | `TRUST_PROXY_HOPS` | Proxies in front of the service that append to `X-Forwarded-For`: 1 for Cloud Run alone (default), 2 behind Firebase Hosting. The per-IP ceiling reads the client IP this many hops from the right, so a client can't fake it |
 
 `APP_CHECK_DEBUG_TOKEN` is for local runs and CI only; production ignores it. The deployed service only accepts real App Check tokens, so the smoke test gets one by exchanging the registered `app-check-debug-token` (App Check API `exchangeDebugToken`, checked against the API discovery document on 17 October 2026). Rate limits default to spec 00 and can be overridden with `RATE_LIMIT_*` (see `apps/web/.env.example`). The `rateLimits.expiresAt` TTL policy is still a manual step (docs/data-model.md).
+
+## Agent service environment
+
+The agent service (`services/agent/src/findyourdent_agent/config.py`) reads these; `deploy.sh agent` sets the first three.
+
+| Variable | Meaning |
+| --- | --- |
+| `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global` | Gemini on Vertex AI, global endpoint (ADR-0003) |
+| `AGENT_SEARCH_SERVING_CONFIG` | Serving config Guidance searches for grounding (T06): `projects/findyourdent/locations/global/collections/default_collection/engines/findyourdent-guidance/servingConfigs/default_search`. Searched through the Discovery Engine v1 REST API as `fyd-agent`, which holds `roles/discoveryengine.user` (includes `servingConfigs.search`) |
+| `AGENT_SEARCH_MAX_RESULTS` | Source documents per Guidance, default 5 |
+| `GEMINI_ADAPTER=fake` | Local development without credentials: canned Guidance and no Agent Search call |
+
+If the search fails (5 s timeout, auth, HTTP error) or finds nothing, Guidance uses the curated knowledge files and the request log line says `"grounding": "curated"` (with a warning naming only the error class); otherwise `"grounding": "agent_search"`.
 
 ## Daily caps
 

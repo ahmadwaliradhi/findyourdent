@@ -35,11 +35,29 @@ class GeminiAdapter(Protocol):
         ...
 
 
+class AgentSearchUnavailableError(Exception):
+    """The Agent Search data store could not answer (network, auth, server error, a
+    response that does not parse). Guidance falls back to the curated knowledge files."""
+
+
+@dataclass(frozen=True, slots=True)
+class GroundingDoc:
+    """One retrieved source document and the excerpt that matched the complaint."""
+
+    title: str
+    snippet: str
+    url: str | None = None
+    publisher: str | None = None
+
+
 @runtime_checkable
 class AgentSearchAdapter(Protocol):
     """Grounding search over the Agent Search (formerly Vertex AI Search) data store."""
 
-    async def search(self, query: str, *, max_results: int = 5) -> list[dict[str, Any]]: ...
+    async def search(self, query: str, *, max_results: int = 5) -> list[GroundingDoc]:
+        """One entry per source document, best match first, at most ``max_results``.
+        Raises AgentSearchUnavailableError."""
+        ...
 
 
 @runtime_checkable
@@ -66,7 +84,9 @@ class Adapters:
 __all__ = [
     "Adapters",
     "AgentSearchAdapter",
+    "AgentSearchUnavailableError",
     "GeminiAdapter",
+    "GroundingDoc",
     "ModelQuotaExhaustedError",
     "ModelUnavailableError",
     "PlacesAdapter",

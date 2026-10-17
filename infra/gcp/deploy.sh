@@ -17,6 +17,8 @@ AGENT_SERVICE=fyd-agent
 WEB_SA="fyd-web@${PROJECT_ID}.iam.gserviceaccount.com"
 AGENT_SA="fyd-agent@${PROJECT_ID}.iam.gserviceaccount.com"
 SCHEDULER_SA_ID=fyd-scheduler
+# Guidance grounding (spec 01): the engine created for H02, data store findyourdent-grounding.
+AGENT_SEARCH_SERVING_CONFIG="projects/${PROJECT_ID}/locations/global/collections/default_collection/engines/findyourdent-guidance/servingConfigs/default_search"
 SCHEDULER_SA="${SCHEDULER_SA_ID}@${PROJECT_ID}.iam.gserviceaccount.com"
 # Judging window (spec 00): one warm agent instance from 19 October to 7 November
 # 2026 inclusive, Jakarta time; zero otherwise.
@@ -94,7 +96,7 @@ if [[ "$SERVICE" == agent ]]; then
     --image "$IMAGE" --service-account "$AGENT_SA" \
     --no-allow-unauthenticated --ingress=all \
     --cpu=1 --memory=1Gi --concurrency=40 --timeout=120 --max-instances=4 \
-    --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global" \
+    --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global,AGENT_SEARCH_SERVING_CONFIG=${AGENT_SEARCH_SERVING_CONFIG}" \
     --quiet
 
   # monitoring.sh adds the uptime check's service agent as the only other invoker.

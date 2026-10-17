@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
+
+from . import GroundingDoc
 
 
 @dataclass
@@ -46,11 +49,17 @@ class FakeGeminiAdapter:
 
 @dataclass
 class FakeAgentSearchAdapter:
-    results: list[dict[str, Any]] = field(default_factory=list)
+    """Returns ``results`` on every search, or raises ``error`` when set; ``calls``
+    records each request. Empty by default, so Guidance uses the curated sources."""
+
+    results: list[GroundingDoc] = field(default_factory=list)
+    error: Exception | None = None
     calls: list[dict[str, Any]] = field(default_factory=list)
 
-    async def search(self, query: str, *, max_results: int = 5) -> list[dict[str, Any]]:
+    async def search(self, query: str, *, max_results: int = 5) -> list[GroundingDoc]:
         self.calls.append({"query": query, "max_results": max_results})
+        if self.error:
+            raise self.error
         return self.results[:max_results]
 
 
@@ -110,10 +119,30 @@ def guidance_model_output(**overrides: Any) -> dict[str, Any]:
     return output | overrides
 
 
+def shortlist_model_output(reasons: dict[str, str]) -> dict[str, Any]:
+    """A Gemini Shortlist reasons output: one reason per placeId, in the dict's order."""
+    return {"reasons": [{"placeId": p, "reason": r} for p, r in reasons.items()]}
+
+
+def _canned_reasons(contents: list[Any]) -> dict[str, Any]:
+    """One stock reason for every Provider in the tagged data block (agents/shortlist.py)."""
+    from ..agents.shortlist import SHORTLIST_TAG
+
+    text = "".join(part.text or "" for content in contents for part in content.parts)
+    data = json.loads(text.split(f"<{SHORTLIST_TAG}>", 1)[1].split(f"</{SHORTLIST_TAG}>", 1)[0])
+    reason = {
+        "id": "Dekat dari lokasi Anda dan dapat menangani keluhan ini.",
+        "en": "Close to you and able to handle this problem.",
+    }[data["language"]]
+    return shortlist_model_output({p["placeId"]: reason for p in data["providers"]})
+
+
 @dataclass(frozen=True, slots=True)
 class CannedGeminiAdapter:
     """Local development without Google Cloud credentials (GEMINI_ADAPTER=fake):
-    every complaint gets the same deep-caries Guidance."""
+    every complaint gets the same deep-caries Guidance, and every Shortlist Provider
+    the same stock reason. The output schema tells the two calls apart, since both
+    can use the same model."""
 
     async def generate_structured(
         self,
@@ -126,4 +155,6 @@ class CannedGeminiAdapter:
         max_output_tokens: int | None = None,
         thinking_level: str | None = None,
     ) -> dict[str, Any]:
+        if "reasons" in response_schema.get("properties", {}):
+            return _canned_reasons(contents)
         return guidance_model_output()

@@ -22,9 +22,20 @@ class Settings:
     guidance_max_output_tokens: int = 4096
     # Default thinking took about 30 s per Guidance call on 17 Oct 2026, LOW about 7 s.
     guidance_thinking_level: str = "LOW"
+    shortlist_temperature: float = 0.2
+    # Five one-line reasons: a small cap, and LOW thinking keeps the Shortlist quick.
+    shortlist_max_output_tokens: int = 1024
+    shortlist_thinking_level: str = "LOW"
     moderation_timeout_seconds: float = 20.0
     # Below this, a Testimony with no rule hit is held instead of published (ADR-0004).
     moderation_publish_confidence: float = 0.8
+    # Agent Search grounding for Guidance (spec 01): the engine's serving config and
+    # how many source documents reach the prompt and the card.
+    agent_search_serving_config: str = (
+        "projects/findyourdent/locations/global/collections/default_collection"
+        "/engines/findyourdent-guidance/servingConfigs/default_search"
+    )
+    agent_search_max_results: int = 5
     google_cloud_project: str | None = None
     # ADR-0003: Gemini runs on the global endpoint; stored data stays in asia-southeast2.
     google_cloud_location: str = "global"
@@ -50,6 +61,15 @@ class Settings:
             guidance_thinking_level=os.environ.get(
                 "GUIDANCE_THINKING_LEVEL", defaults.guidance_thinking_level
             ),
+            shortlist_temperature=float(
+                os.environ.get("SHORTLIST_TEMPERATURE", defaults.shortlist_temperature)
+            ),
+            shortlist_max_output_tokens=int(
+                os.environ.get("SHORTLIST_MAX_OUTPUT_TOKENS", defaults.shortlist_max_output_tokens)
+            ),
+            shortlist_thinking_level=os.environ.get(
+                "SHORTLIST_THINKING_LEVEL", defaults.shortlist_thinking_level
+            ),
             moderation_timeout_seconds=float(
                 os.environ.get("MODERATION_TIMEOUT_SECONDS", defaults.moderation_timeout_seconds)
             ),
@@ -57,6 +77,12 @@ class Settings:
                 os.environ.get(
                     "MODERATION_PUBLISH_CONFIDENCE", defaults.moderation_publish_confidence
                 )
+            ),
+            agent_search_serving_config=os.environ.get(
+                "AGENT_SEARCH_SERVING_CONFIG", defaults.agent_search_serving_config
+            ),
+            agent_search_max_results=int(
+                os.environ.get("AGENT_SEARCH_MAX_RESULTS", defaults.agent_search_max_results)
             ),
             google_cloud_project=os.environ.get("GOOGLE_CLOUD_PROJECT") or None,
             google_cloud_location=os.environ.get(

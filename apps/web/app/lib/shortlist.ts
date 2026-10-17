@@ -33,7 +33,7 @@ export interface ShortlistProvider {
     averages?: { service: number; hygiene: number; materialsEquipment: number };
   };
   priceSignals: PriceSignal[];
-  /** Templated one-line reason; the Shortlist Gemini call replaces it (T09). */
+  /** One line from the Shortlist Gemini call (T09), else a templated reason. */
   reason: string;
 }
 

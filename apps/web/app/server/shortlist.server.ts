@@ -1,4 +1,10 @@
-import { type Guidance, REGIONS } from "@findyourdent/contracts";
+import {
+  type Guidance,
+  REGIONS,
+  type ShortlistReasonsRequest,
+  validateShortlistReasonsRequest,
+  validateShortlistReasonsResponse,
+} from "@findyourdent/contracts";
 import {
   COLLECTIONS,
   type PriceListDoc,
@@ -28,7 +34,8 @@ import { readShareToken } from "./share.server.ts";
  * Shortlist (spec 02): one Places Text Search, joined with Firestore by place_id and
  * ranked deterministically; Listed Providers within about 10 km plus a Google Maps
  * search link when the day's Places cap is used up. Google facts stay in memory.
- * The Patient's location and typed area are never logged or stored.
+ * The Patient's location and typed area are never logged or stored. One agent call
+ * then writes each card's reason (T09); the ranking alone decides order and membership.
  */
 
 export type ShortlistOutcome =
@@ -294,7 +301,7 @@ function priceSignals(joined: Joined, guidance: Guidance | null): PriceSignal[] 
   return signals;
 }
 
-/** Templated one-line reason until the Shortlist Gemini call (T09) writes one. */
+/** Templated one-line reason, shown when the Shortlist Gemini call (T09) gives none for a Provider. */
 function templatedReason(ranked: RankedProvider, request: ShortlistRequest, language: Language): string {
   const t = getI18n(language).getFixedT(language);
   const distance = ranked.distanceMeters === null ? null : formatDistance(ranked.distanceMeters, language);
@@ -347,9 +354,85 @@ function toShortlistProvider(
   };
 }
 
+/** The ranked top Providers and their facts for the agent, in rank order (spec 02). */
+function reasonsRequest(
+  providers: ShortlistProvider[],
+  ranked: RankedProvider[],
+  request: ShortlistRequest,
+  sessionId: string,
+  language: Language,
+): ShortlistReasonsRequest {
+  const fit = new Map(ranked.map((r) => [r.placeId, r.procedureFit]));
+  const category = request.guidance?.likelyCategory.code;
+  return {
+    sessionId,
+    language,
+    ...(category ? { likelyCategoryCode: category } : {}),
+    likelyProcedures: request.guidance?.likelyProcedures ?? [],
+    providers: providers.map((p) => {
+      const averages = p.testimonies.averages;
+      return {
+        placeId: p.placeId,
+        name: p.name,
+        providerType: p.providerType,
+        providerTypeSource: p.providerTypeSource,
+        rank: p.rank,
+        ...(p.distanceMeters === null ? {} : { distanceMeters: p.distanceMeters }),
+        procedureFit: fit.get(p.placeId) ?? [],
+        testimonies: {
+          count: p.testimonies.count,
+          verifiedVisitCount: p.testimonies.verifiedVisitCount,
+          ...(averages
+            ? {
+                averageService: averages.service,
+                averageHygiene: averages.hygiene,
+                averageMaterialsEquipment: averages.materialsEquipment,
+              }
+            : {}),
+        },
+        priceSignals: p.priceSignals.map(({ procedureCode, minRupiah, maxRupiah, source }) => ({
+          procedureCode,
+          minRupiah,
+          maxRupiah,
+          source,
+        })),
+      };
+    }),
+  };
+}
+
+/**
+ * Gemini's reasons by placeId, or null when the agent fails or answers outside the
+ * contract. Provider names and reasons are never logged.
+ */
+async function geminiReasons(
+  context: AppLoadContext,
+  request: ShortlistReasonsRequest,
+): Promise<Map<string, string> | null> {
+  if (!validateShortlistReasonsRequest(request)) {
+    context.logger.warn("shortlist_reasons", { outcome: "invalid_request" });
+    return null;
+  }
+  let raw: unknown;
+  try {
+    raw = await context.adapters.agent.requestShortlistReasons(request, { requestId: context.requestId });
+  } catch (error) {
+    context.logger.warn("shortlist_reasons", {
+      outcome: "agent_unavailable",
+      errorName: error instanceof Error ? error.name : "unknown",
+    });
+    return null;
+  }
+  if (!validateShortlistReasonsResponse(raw)) {
+    context.logger.warn("shortlist_reasons", { outcome: "invalid_agent_response" });
+    return null;
+  }
+  return new Map(raw.reasons.map((r) => [r.placeId, r.reason]));
+}
+
 export async function buildShortlist(
   context: AppLoadContext,
-  input: { body: unknown; language: Language },
+  input: { body: unknown; language: Language; sessionId: string },
 ): Promise<ShortlistOutcome> {
   const request = parseRequest(input.body, context.config.shareLinkSecret);
   if (!request) {
@@ -391,13 +474,25 @@ export async function buildShortlist(
     },
   );
   const byId = new Map(joined.map((j) => [j.candidate.placeId, j]));
-  const providers = ranked.map((r) => toShortlistProvider(r, byId.get(r.placeId) as Joined, request, input.language));
+  const templated = ranked.map((r) => toShortlistProvider(r, byId.get(r.placeId) as Joined, request, input.language));
+
+  // The emergency Hospital list is never held for Gemini: it keeps its templated
+  // reasons so the Patient can leave at once (spec 02, user story 27).
+  const reasons =
+    request.purpose === "shortlist" && templated.length > 0
+      ? await geminiReasons(context, reasonsRequest(templated, ranked, request, input.sessionId, input.language))
+      : null;
+  // Order and membership come from the ranking alone: a reason for a placeId the
+  // ranking did not choose is ignored, and a missing one keeps its template.
+  const providers = templated.map((p) => ({ ...p, reason: reasons?.get(p.placeId) ?? p.reason }));
+  const fromGemini = providers.filter((p) => reasons?.has(p.placeId)).length;
 
   context.logger.info("shortlist", {
     outcome: result.ok ? "ok" : `fallback_${result.reason}`,
     purpose: request.purpose,
     source,
     count: providers.length,
+    reasons: fromGemini === 0 ? "template" : fromGemini === providers.length ? "gemini" : "partial",
   });
   return {
     ok: true,
