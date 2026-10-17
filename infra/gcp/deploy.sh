@@ -41,11 +41,14 @@ REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
 log() { printf '\n==> %s\n' "$*"; }
 skip() { printf '    (exists) %s\n' "$*"; }
 
+# URL of a Cloud Run service, or empty when it is not deployed yet.
 service_url() {
-  gcloud run services describe "$1" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)'
+  if gcloud run services describe "$1" --project "$PROJECT_ID" --region "$REGION" >/dev/null 2>&1; then
+    gcloud run services describe "$1" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)'
+  fi
 }
 
-invoker() {
+grant_invoker() {
   gcloud run services add-iam-policy-binding "$1" --project "$PROJECT_ID" --region "$REGION" \
     --member="$2" --role=roles/run.invoker >/dev/null
 }
@@ -81,9 +84,10 @@ else
 fi
 
 # 3. Service --------------------------------------------------------------------------
-# Request bodies never reach Cloud Logging: Cloud Run's request log records only
-# method, URL, status, latency and sizes, and both services log request ids and
-# outcome codes only (spec 00).
+# Request bodies never reach Cloud Logging: Cloud Run's request log is an HttpRequest
+# entry (method, URL, status, latency, sizes, user agent, remote IP; see
+# https://docs.cloud.google.com/run/docs/logging#request-logs), and both services log
+# request ids and outcome codes only (spec 00).
 if [[ "$SERVICE" == agent ]]; then
   log "Cloud Run ${AGENT_SERVICE}"
   gcloud run deploy "$AGENT_SERVICE" --project "$PROJECT_ID" --region "$REGION" \
@@ -93,11 +97,9 @@ if [[ "$SERVICE" == agent ]]; then
     --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global" \
     --quiet
 
-  log "Only fyd-web and the uptime checks may call ${AGENT_SERVICE}"
-  invoker "$AGENT_SERVICE" "serviceAccount:${WEB_SA}"
-  PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
-  # The uptime check's identity token (infra/gcp/monitoring.sh) is minted for this agent.
-  invoker "$AGENT_SERVICE" "serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-monitoring-notification.iam.gserviceaccount.com"
+  # monitoring.sh adds the uptime check's service agent as the only other invoker.
+  log "Only fyd-web may call ${AGENT_SERVICE}"
+  grant_invoker "$AGENT_SERVICE" "serviceAccount:${WEB_SA}"
 
   # Warm instance: a service-level minimum takes effect without a new revision.
   # Cloud Scheduler flips it at the window edges; this sets the value for today

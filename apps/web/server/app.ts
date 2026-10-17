@@ -18,7 +18,8 @@ const TRACE_ID = /^[0-9a-f]{32}$/i;
 
 /**
  * The trace id Cloud Run puts on every request (X-Cloud-Trace-Context, or W3C
- * traceparent), so our log lines join its request log; a random id otherwise.
+ * traceparent), so a search for it finds both our lines and Cloud Run's request
+ * log entry; a random id otherwise.
  */
 function requestIdOf(req: express.Request): string {
   const cloud = req.get("x-cloud-trace-context")?.split("/")[0];

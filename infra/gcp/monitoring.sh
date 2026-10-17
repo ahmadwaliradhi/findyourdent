@@ -31,9 +31,24 @@ find_named() {
   gapi GET "$1" | jq -r --arg key "$2" --arg n "$3" '[.[$key][]? | select(.displayName == $n)][0].name // empty'
 }
 
+if ! gcloud run services describe fyd-agent --project "$PROJECT_ID" --region "$REGION" >/dev/null 2>&1; then
+  echo "deploy the agent first: infra/gcp/deploy.sh agent" >&2
+  exit 1
+fi
 AGENT_HOST=$(gcloud run services describe fyd-agent --project "$PROJECT_ID" --region "$REGION" \
   --format='value(status.url)' | sed -E 's#^https://##')
-[[ -n "$AGENT_HOST" ]] || { echo "deploy the agent first: infra/gcp/deploy.sh agent" >&2; exit 1; }
+
+# 0. Uptime check identity ----------------------------------------------------------------
+# An uptime check with service agent authentication sends an identity token for the
+# Monitoring service agent, so that agent must be a Cloud Run invoker of fyd-agent
+# (https://docs.cloud.google.com/monitoring/uptime-checks#create). The service agent
+# only exists once created, which a new project may not have done yet.
+log "Monitoring service agent may call fyd-agent"
+gcloud beta services identity create --service=monitoring.googleapis.com --project "$PROJECT_ID" >/dev/null
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+gcloud run services add-iam-policy-binding fyd-agent --project "$PROJECT_ID" --region "$REGION" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-monitoring-notification.iam.gserviceaccount.com" \
+  --role=roles/run.invoker >/dev/null
 
 # 1. Email channels ------------------------------------------------------------------
 log "Notification channels (admin-emails)"
@@ -57,8 +72,9 @@ done
 ((${#CHANNELS[@]} > 0)) || { echo "admin-emails is empty: no one would get the alert" >&2; exit 1; }
 
 # 2. Uptime checks ---------------------------------------------------------------------
-# Every minute from three regions (the minimum). About 260,000 runs a month, inside
-# the free 1,000,000.
+# Every minute from three regions, the minimum an uptime check allows
+# (https://docs.cloud.google.com/monitoring/uptime-checks). About 260,000 runs a
+# month; check the free allowance on https://cloud.google.com/stackdriver/pricing.
 # uptime_check <display name> <host> <identity token: true|false>
 uptime_check() {
   local display="$1" host="$2" oidc="$3" body name
@@ -77,8 +93,9 @@ uptime_check() {
     name=$(gapi POST "${MON}/uptimeCheckConfigs" "$body" | jq -r .name)
     echo "    created ${display}" >&2
   else
-    # The monitored resource cannot change after creation; everything else converges.
-    gapi PATCH "https://monitoring.googleapis.com/v3/${name}?updateMask=httpCheck,contentMatchers,period,timeout,selectedRegions" \
+    # Only these fields can be updated; the monitored resource and period stay as
+    # created (https://docs.cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.uptimeCheckConfigs/patch).
+    gapi PATCH "https://monitoring.googleapis.com/v3/${name}?updateMask=httpCheck,contentMatchers,timeout,selectedRegions" \
       "$body" >/dev/null
     echo "    (exists, updated) ${display}" >&2
   fi

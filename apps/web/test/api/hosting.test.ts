@@ -66,3 +66,24 @@ describe("health route", () => {
     expect(await response.json()).toEqual({ status: "ok" });
   });
 });
+
+describe("Guidance session id", () => {
+  it("is replaced after 12 hours even when the remembered language keeps the cookie alive", async () => {
+    // What a browser holds a day after toggling to English: the cookie lasts a year for
+    // the language, but the session id in it must not (spec 01: opaque, short-lived).
+    const dayOld = Date.now() - 24 * 60 * 60 * 1000;
+    const state = { sid: "sess-old-0001-abcd", sidAt: dayOld, lang: "en" };
+    const cookie = `__session=${encodeURIComponent(Buffer.from(JSON.stringify(state)).toString("base64"))}`;
+
+    const response = await server.post(
+      "/api/guidance",
+      { complaintText: "Gigi ngilu kalau minum dingin", language: "en" },
+      { headers: { cookie } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(server.fakes.agent.calls[0]?.sessionId).not.toBe("sess-old-0001-abcd");
+    const page = await fetch(new URL("/", server.baseUrl), { headers: { cookie: cookiePair(response) } });
+    expect(await page.text()).toMatch(/<html[^>]*lang="en"/);
+  });
+});

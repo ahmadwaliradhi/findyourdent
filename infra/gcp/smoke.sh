@@ -32,9 +32,13 @@ session_cookie() {
   grep -i '^set-cookie: __session=' | head -1 | sed -E 's/^[Ss]et-[Cc]ookie: ([^;]*).*/\1/' | tr -d '\r'
 }
 
+# A non-JSON body (an error page) is a failed check, not a jq error.
 health_ok() { [[ "$(jq -r .status <<<"$1" 2>/dev/null)" == ok ]]; }
 
 echo "Smoke test: ${BASE_URL} (agent ${AGENT_URL})"
+
+# Every curl below ends in `|| true` so one failed request is reported by `check`
+# and the remaining checks still run; the script exits 1 at the end if any failed.
 
 web_health=$(curl -sS --max-time 30 "${BASE_URL}/health" || true)
 check "web /health" health_ok "$web_health"
@@ -61,6 +65,7 @@ check "agent /health with an identity token" health_ok "$agent_health"
 guidance=$(curl -sS --max-time 60 -H 'Content-Type: application/json' \
   -d "$(jq -nc '{complaintText: "Uji asap: gigi ngilu", language: "id"}')" \
   "${BASE_URL}/api/guidance" || true)
+# When App Check guards /api/guidance (spec 00), this check needs a debug token.
 check "web reaches the agent with its identity token (Guidance round trip)" \
   jq -e '.kind == "guidance" or .kind == "followUp" or .kind == "emergency"' <<<"$guidance"
 

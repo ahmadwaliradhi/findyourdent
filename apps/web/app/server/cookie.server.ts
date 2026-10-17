@@ -9,6 +9,8 @@ import { isLanguage, type Language } from "~/i18n/config";
 export interface BrowserState {
   /** Opaque Guidance session id (spec 01), not linked to any account. */
   sid?: string;
+  /** When sid was issued (ms since epoch); it expires on its own, not with the cookie. */
+  sidAt?: number;
   /** Language toggle (spec 00). */
   lang?: Language;
 }
@@ -25,9 +27,10 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 export async function readBrowserState(request: Request): Promise<BrowserState> {
   const value: unknown = await cookie.parse(request.headers.get("cookie"));
   if (typeof value !== "object" || value === null) return {};
-  const { sid, lang } = value as Record<string, unknown>;
+  const { sid, sidAt, lang } = value as Record<string, unknown>;
   return {
     ...(typeof sid === "string" ? { sid } : {}),
+    ...(typeof sidAt === "number" ? { sidAt } : {}),
     ...(isLanguage(lang) ? { lang } : {}),
   };
 }
