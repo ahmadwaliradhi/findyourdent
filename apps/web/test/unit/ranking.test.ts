@@ -50,6 +50,22 @@ describe("Shortlist ranking", () => {
     expect(order(ranked)).toEqual(["hospital-far", "klinik-near"]);
   });
 
+  it("keeps procedure fit first: a nearer, better-rated Klinik does not outrank a Hospital for a surgical referral", () => {
+    const ranked = rankProviders(
+      [
+        candidate("klinik-near-loved", { testimonies: rated(12, 4.9, 5), distanceMeters: 200 }),
+        candidate("hospital-far-average", {
+          providerType: "hospital",
+          testimonies: rated(3, 2.5),
+          distanceMeters: 8000,
+        }),
+      ],
+      WISDOM_TOOTH_SURGERY,
+    );
+
+    expect(order(ranked)).toEqual(["hospital-far-average", "klinik-near-loved"]);
+  });
+
   it("counts a Provider's listed services as procedure fit", () => {
     const ranked = rankProviders(
       [

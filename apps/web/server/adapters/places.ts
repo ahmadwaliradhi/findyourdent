@@ -55,15 +55,16 @@ export const SHORTLIST_SEARCH_FIELD_MASK = [
   "places.googleMapsUri",
 ].join(",");
 
-/** Adapter-side daily caps per method (spec 02, infra/gcp/README.md). */
-export const DAILY_CAPS: Record<PlacesMethod, number> = {
-  shortlistSearch: 160,
-  providerGoogleBlock: 50,
-  googleReviews: 33,
-  coordinates: 300,
-};
+/**
+ * Adapter-side daily cap for Text Search (spec 02), matching the project quota
+ * `SearchTextRequestPerDayPerProject` in infra/gcp/README.md.
+ */
+export const SHORTLIST_SEARCH_DAILY_CAP = 160;
 
-/** Shortlist searches stop this many short of the cap, so emergency Hospital searches still get through. */
+/**
+ * Shortlist searches stop this many short of the cap, so emergency Hospital searches
+ * (which share it) are served first: about one in eight of the day's searches.
+ */
 export const EMERGENCY_RESERVE = 20;
 
 const TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
@@ -105,7 +106,7 @@ export function createGooglePlacesAdapter(options: GooglePlacesAdapterOptions): 
   const doFetch = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? 10_000;
   const method: PlacesMethod = "shortlistSearch";
-  const cap = DAILY_CAPS[method];
+  const cap = SHORTLIST_SEARCH_DAILY_CAP;
 
   return {
     async searchText(search) {

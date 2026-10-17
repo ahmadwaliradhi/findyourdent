@@ -185,6 +185,17 @@ describe("POST /api/shortlist", () => {
     expect(server.fakes.places.calls[0]).toMatchObject({ includedType: "hospital" });
   });
 
+  it("searches Hospitals when any likely procedure is a surgical referral", async () => {
+    const mixed: Guidance = {
+      ...WISDOM_TOOTH_GUIDANCE,
+      likelyProcedures: ["tooth_extraction", "wisdom_tooth_surgery"],
+    };
+
+    await shortlist({ purpose: "shortlist", guidanceToken: tokenFor(mixed), location: GUBENG });
+
+    expect(server.fakes.places.calls[0]).toMatchObject({ includedType: "hospital" });
+  });
+
   it("lists up to five Providers with distance, type marked as estimated, Testimonies, prices and a reason", async () => {
     server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG, GOOGLE_HOSPITAL]);
     await seedProviders(

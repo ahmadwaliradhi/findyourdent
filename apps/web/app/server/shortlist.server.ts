@@ -14,7 +14,14 @@ import { procedureLabel } from "~/lib/procedures";
 import type { PriceSignal, ShortlistProvider, ShortlistResponse } from "~/lib/shortlist";
 import type { LatLng, PlaceSummary, TextSearch } from "../../server/adapters/places.ts";
 import { jakartaDate } from "../../server/quota.ts";
-import { HOSPITAL_PROCEDURES, type RankedProvider, type RankingCandidate, rankProviders } from "./ranking.ts";
+import {
+  HOSPITAL_PROCEDURES,
+  isDiagnostic,
+  meanRating,
+  type RankedProvider,
+  type RankingCandidate,
+  rankProviders,
+} from "./ranking.ts";
 import { readShareToken } from "./share.server.ts";
 
 /**
@@ -38,6 +45,8 @@ interface ShortlistRequest {
 }
 
 const SEARCH_RADIUS_METERS = 5000;
+/** A median price paid is shown only with at least this many Testimony prices (spec 02). */
+const MIN_PRICES_FOR_MEDIAN = 2;
 const FALLBACK_RADIUS_METERS = 10_000;
 const FALLBACK_LIMIT = 200;
 const MAX_AREA_LENGTH = 100;
@@ -79,8 +88,7 @@ function parseRequest(body: unknown, shareLinkSecret: string): ShortlistRequest 
 /** Specialist and surgical referrals go to a Hospital search; everything else to dentists (spec 02). */
 function searchFor(request: ShortlistRequest): { base: string; includedType: TextSearch["includedType"] } {
   if (request.purpose === "emergency") return { base: "IGD rumah sakit", includedType: "hospital" };
-  const treatments = (request.guidance?.likelyProcedures ?? []).filter((code) => !code.startsWith("dental_xray"));
-  const referral = treatments.length > 0 && treatments.every((code) => HOSPITAL_PROCEDURES.has(code));
+  const referral = (request.guidance?.likelyProcedures ?? []).some((code) => HOSPITAL_PROCEDURES.has(code));
   return referral
     ? { base: "poli gigi rumah sakit", includedType: "hospital" }
     : { base: "dokter gigi", includedType: "dentist" };
@@ -214,7 +222,7 @@ function representativePrices(provider: ProviderDoc | undefined, priceList: Pric
     if (row.procedureCode) prices[row.procedureCode] = (row.minRupiah + row.maxRupiah) / 2;
   }
   for (const [code, aggregate] of Object.entries(provider?.aggregates.procedurePrices ?? {})) {
-    if (aggregate.count >= 2) prices[code] = aggregate.medianRupiah;
+    if (aggregate.count >= MIN_PRICES_FOR_MEDIAN) prices[code] = aggregate.medianRupiah;
   }
   return prices;
 }
@@ -257,7 +265,7 @@ function priceSignals(joined: Joined, guidance: Guidance | null): PriceSignal[] 
   for (const estimate of guidance?.costEstimate ?? []) {
     const code = estimate.procedureCode;
     const paid = joined.provider?.aggregates.procedurePrices[code];
-    if (paid && paid.count >= 2 && joined.provider) {
+    if (paid && paid.count >= MIN_PRICES_FOR_MEDIAN && joined.provider) {
       signals.push({
         procedureCode: code,
         source: "testimonies",
@@ -302,20 +310,20 @@ function templatedReason(ranked: RankedProvider, request: ShortlistRequest, lang
   }
   const { count, averages } = ranked.testimonies;
   if (count > 0 && averages) {
-    const score = (averages.service + averages.hygiene + averages.materialsEquipment) / 3;
+    const score = meanRating(averages);
     return t("shortlist.reason.testimonies", {
       score: score.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1 }),
       count,
     });
   }
   if (distance) return t("shortlist.reason.distance", { distance });
-  const procedure = ranked.procedureFit.find((code) => !code.startsWith("dental_xray")) ?? ranked.procedureFit[0];
+  const procedure = ranked.procedureFit.find((code) => !isDiagnostic(code)) ?? ranked.procedureFit[0];
   return procedure
     ? t("shortlist.reason.procedure", { procedure: procedureLabel(procedure, language) })
     : t("shortlist.reason.generic");
 }
 
-function card(
+function toShortlistProvider(
   ranked: RankedProvider,
   joined: Joined,
   request: ShortlistRequest,
@@ -383,7 +391,7 @@ export async function buildShortlist(
     },
   );
   const byId = new Map(joined.map((j) => [j.candidate.placeId, j]));
-  const providers = ranked.map((r) => card(r, byId.get(r.placeId) as Joined, request, input.language));
+  const providers = ranked.map((r) => toShortlistProvider(r, byId.get(r.placeId) as Joined, request, input.language));
 
   context.logger.info("shortlist", {
     outcome: result.ok ? "ok" : `fallback_${result.reason}`,

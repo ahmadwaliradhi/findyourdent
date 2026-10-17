@@ -128,13 +128,13 @@ export function ShortlistPanel(
             {t("shortlist.error")}
           </p>
         )}
-        {state.phase === "done" && <Results result={state.result} language={language} />}
+        {state.phase === "done" && <ShortlistProviders result={state.result} language={language} />}
       </div>
     </section>
   );
 }
 
-function Results({ result, language }: { result: ShortlistResponse; language: Language }) {
+function ShortlistProviders({ result, language }: { result: ShortlistResponse; language: Language }) {
   const { t } = useTranslation();
   return (
     <>
