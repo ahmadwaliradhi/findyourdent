@@ -11,7 +11,15 @@ import logging
 import sys
 from datetime import UTC, datetime
 
-_ALLOWED_EXTRA = ("request_id", "method", "path", "status", "outcome", "duration_ms")
+_ALLOWED_EXTRA = (
+    "request_id",
+    "method",
+    "path",
+    "status",
+    "outcome",
+    "grounding",
+    "duration_ms",
+)
 
 
 class JsonFormatter(logging.Formatter):

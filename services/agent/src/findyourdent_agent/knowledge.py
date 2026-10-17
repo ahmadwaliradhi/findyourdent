@@ -2,7 +2,8 @@
 
 The model never writes the Cost Estimate, the BPJS answer, the sources or the
 disclaimer: they come from ``knowledge/*.json`` so a reviewer can correct them without
-touching code, and grounding stays on these files until Agent Search lands (T06).
+touching code. Agent Search (T06) adds retrieved documents to the sources; these files
+still ground the card on their own when the data store is unavailable.
 """
 
 from __future__ import annotations

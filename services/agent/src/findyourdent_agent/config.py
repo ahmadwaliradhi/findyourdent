@@ -25,6 +25,13 @@ class Settings:
     moderation_timeout_seconds: float = 20.0
     # Below this, a Testimony with no rule hit is held instead of published (ADR-0004).
     moderation_publish_confidence: float = 0.8
+    # Agent Search grounding for Guidance (spec 01): the engine's serving config and
+    # how many source documents reach the prompt and the card.
+    agent_search_serving_config: str = (
+        "projects/findyourdent/locations/global/collections/default_collection"
+        "/engines/findyourdent-guidance/servingConfigs/default_search"
+    )
+    agent_search_max_results: int = 5
     google_cloud_project: str | None = None
     # ADR-0003: Gemini runs on the global endpoint; stored data stays in asia-southeast2.
     google_cloud_location: str = "global"
@@ -57,6 +64,12 @@ class Settings:
                 os.environ.get(
                     "MODERATION_PUBLISH_CONFIDENCE", defaults.moderation_publish_confidence
                 )
+            ),
+            agent_search_serving_config=os.environ.get(
+                "AGENT_SEARCH_SERVING_CONFIG", defaults.agent_search_serving_config
+            ),
+            agent_search_max_results=int(
+                os.environ.get("AGENT_SEARCH_MAX_RESULTS", defaults.agent_search_max_results)
             ),
             google_cloud_project=os.environ.get("GOOGLE_CLOUD_PROJECT") or None,
             google_cloud_location=os.environ.get(

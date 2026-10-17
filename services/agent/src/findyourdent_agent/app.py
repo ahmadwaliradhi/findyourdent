@@ -76,17 +76,18 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             response.headers[REQUEST_ID_HEADER] = request_id
             return response
         finally:
-            log.info(
-                "request",
-                extra={
-                    "request_id": request_id,
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status": status,
-                    "outcome": getattr(request.state, "outcome", "error"),
-                    "duration_ms": round((time.perf_counter() - started) * 1000, 1),
-                },
-            )
+            extra = {
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status": status,
+                "outcome": getattr(request.state, "outcome", "error"),
+                "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+            }
+            # Guidance only: whether Agent Search or the curated files grounded it.
+            if grounding := getattr(request.state, "grounding", None):
+                extra["grounding"] = grounding
+            log.info("request", extra=extra)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -112,7 +113,11 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
     async def guidance(body: GuidanceRequest, request: Request) -> Response:
         try:
             result = await answer_turn(
-                body.root, gemini=adapters.gemini, red_flags=red_flags, settings=settings
+                body.root,
+                gemini=adapters.gemini,
+                agent_search=adapters.agent_search,
+                red_flags=red_flags,
+                settings=settings,
             )
         except AudioNotSupportedError:
             return _error(request, 501, "audio_not_supported")
@@ -122,6 +127,7 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             log.error("gemini unavailable: %s", type(error).__name__)
             return _error(request, 503, "model_unavailable")
         request.state.outcome = result.outcome
+        request.state.grounding = result.grounding
         return JSONResponse(
             GuidanceResponse(root=result.response).model_dump(mode="json", exclude_none=True)
         )

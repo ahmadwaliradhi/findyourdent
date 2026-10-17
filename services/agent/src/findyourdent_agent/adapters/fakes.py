@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import GroundingDoc
+
 
 @dataclass
 class FakeGeminiAdapter:
@@ -46,11 +48,17 @@ class FakeGeminiAdapter:
 
 @dataclass
 class FakeAgentSearchAdapter:
-    results: list[dict[str, Any]] = field(default_factory=list)
+    """Returns ``results`` on every search, or raises ``error`` when set; ``calls``
+    records each request. Empty by default, so Guidance uses the curated sources."""
+
+    results: list[GroundingDoc] = field(default_factory=list)
+    error: Exception | None = None
     calls: list[dict[str, Any]] = field(default_factory=list)
 
-    async def search(self, query: str, *, max_results: int = 5) -> list[dict[str, Any]]:
+    async def search(self, query: str, *, max_results: int = 5) -> list[GroundingDoc]:
         self.calls.append({"query": query, "max_results": max_results})
+        if self.error:
+            raise self.error
         return self.results[:max_results]
 
 

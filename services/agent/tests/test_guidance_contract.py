@@ -55,9 +55,9 @@ def test_complaint_returns_guidance_card_matching_the_contract(
     assert set(guidance["likelyProcedures"]) <= known_codes
     assert {c["procedureCode"] for c in guidance["costEstimate"]} <= known_codes
 
-    # One Gemini call per Guidance; grounding and Places are not called yet (T06, spec 02).
+    # One grounding search and one Gemini call per Guidance; Places is not called (spec 02).
+    assert len(fake_agent_search.calls) == 1
     assert len(fake_gemini.calls) == 1
-    assert fake_agent_search.calls == []
     assert fake_places.calls == []
 
 

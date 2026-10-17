@@ -4,17 +4,29 @@ still raising NotImplementedError are placeholders.
 
 from __future__ import annotations
 
+import asyncio
+import html
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
+import google.auth
+import google.auth.exceptions
+import google.auth.transport.requests
 import httpx
 from google import genai
 from google.genai import errors, types
 
 from ..config import Settings
-from . import Adapters, ModelQuotaExhaustedError, ModelUnavailableError
-from .fakes import CannedGeminiAdapter
+from . import (
+    Adapters,
+    AgentSearchUnavailableError,
+    GroundingDoc,
+    ModelQuotaExhaustedError,
+    ModelUnavailableError,
+)
+from .fakes import CannedGeminiAdapter, FakeAgentSearchAdapter
 
 # Output tokens have no daily quota and thinking tokens count as output, so a call
 # that names no cap still gets one (infra/gcp/README.md).
@@ -86,12 +98,118 @@ class GoogleGeminiAdapter:
         return parsed
 
 
-@dataclass(frozen=True, slots=True)
-class VertexAgentSearchAdapter:
-    settings: Settings
+_DISCOVERY_ENGINE = "https://discoveryengine.googleapis.com/v1"
+_CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+# Short: grounding is optional and Gemini still has to answer within the web
+# service's 30 s agent timeout.
+_SEARCH_TIMEOUT_SECONDS = 5.0
+# Enough excerpt to ground an explanation without growing every prompt.
+_SNIPPET_CHARS = 800
+_TAGS = re.compile(r"<[^>]+>")
 
-    async def search(self, query: str, *, max_results: int = 5) -> list[dict[str, Any]]:
-        raise NotImplementedError("Agent Search grounding lands in a later ticket (spec 01)")
+
+def _clean(text: str) -> str:
+    """Search snippets mark the match with <b> tags and HTML entities."""
+    return " ".join(html.unescape(_TAGS.sub("", text)).split())
+
+
+def _public_url(value: Any) -> str | None:
+    # gs:// links point into the private source bucket, not at a page a Patient can open.
+    return value if isinstance(value, str) and value.startswith("https://") else None
+
+
+def _grounding_doc(result: dict[str, Any]) -> GroundingDoc | None:
+    """One search result as a source document. The data store holds layout-chunked
+    PDFs, so results are chunks; document results (with Google's derived title, link
+    and snippets) are read too, in case the engine answers in document mode."""
+    if chunk := result.get("chunk"):
+        metadata = chunk.get("documentMetadata") or {}
+        struct = metadata.get("structData") or {}
+        title = struct.get("title") or metadata.get("title")
+        url = struct.get("source_url") or metadata.get("uri")
+        snippet = chunk.get("content") or ""
+    else:
+        document = result.get("document") or {}
+        struct = document.get("structData") or {}
+        derived = document.get("derivedStructData") or {}
+        title = struct.get("title") or derived.get("title")
+        url = struct.get("source_url") or derived.get("link")
+        snippets = derived.get("snippets") or []
+        snippet = " ".join(s.get("snippet", "") for s in snippets if isinstance(s, dict))
+    snippet = _clean(snippet)[:_SNIPPET_CHARS]
+    if not title or not snippet:
+        return None
+    publisher = struct.get("publisher")
+    return GroundingDoc(
+        title=_clean(str(title)),
+        snippet=snippet,
+        url=_public_url(url),
+        publisher=publisher if isinstance(publisher, str) and publisher else None,
+    )
+
+
+@dataclass
+class VertexAgentSearchAdapter:
+    """Agent Search (formerly Vertex AI Search) through the Discovery Engine v1 REST
+    ``servingConfigs:search`` method, with the service account's default credentials.
+
+    Every failure becomes AgentSearchUnavailableError carrying a status or class name
+    only, never the query, and Guidance falls back to the curated knowledge files.
+    """
+
+    settings: Settings
+    transport: httpx.AsyncBaseTransport | None = field(default=None, repr=False)
+    credentials: Any = field(default=None, repr=False)
+
+    async def _token(self) -> str:
+        # Loaded on first use so the service starts without credentials (tests, local
+        # dev); refreshing does blocking I/O, so it runs off the event loop.
+        if self.credentials is None:
+            self.credentials, _ = await asyncio.to_thread(
+                google.auth.default, scopes=[_CLOUD_PLATFORM_SCOPE]
+            )
+        if not self.credentials.valid:
+            await asyncio.to_thread(
+                self.credentials.refresh, google.auth.transport.requests.Request()
+            )
+        return str(self.credentials.token)
+
+    async def search(self, query: str, *, max_results: int = 5) -> list[GroundingDoc]:
+        url = f"{_DISCOVERY_ENGINE}/{self.settings.agent_search_serving_config}:search"
+        body = {
+            "query": query,
+            # Several chunks can come from one document (Permenkes 3/2023 alone has 8
+            # parts), so ask for more results than documents.
+            "pageSize": max_results * 3,
+            "contentSearchSpec": {"searchResultMode": "CHUNKS"},
+        }
+        try:
+            headers = {"Authorization": f"Bearer {await self._token()}"}
+            async with httpx.AsyncClient(
+                transport=self.transport, timeout=_SEARCH_TIMEOUT_SECONDS
+            ) as client:
+                response = await client.post(url, json=body, headers=headers)
+            if response.is_error:
+                # The status only: an error body can echo the query.
+                raise AgentSearchUnavailableError(f"agent search {response.status_code}")
+            results = response.json().get("results", [])
+            if not isinstance(results, list):
+                raise AgentSearchUnavailableError("agent search returned no result list")
+            docs: dict[str, GroundingDoc] = {}
+            for result in results:
+                doc = _grounding_doc(result) if isinstance(result, dict) else None
+                if doc and (key := doc.url or doc.title.lower()) not in docs:
+                    docs[key] = doc
+        except AgentSearchUnavailableError:
+            raise
+        except (
+            httpx.HTTPError,
+            ValueError,
+            AttributeError,
+            google.auth.exceptions.GoogleAuthError,
+        ) as error:
+            raise AgentSearchUnavailableError(f"agent search {type(error).__name__}") from None
+        return list(docs.values())[:max_results]
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,9 +228,16 @@ class GooglePlacesAdapter:
 
 
 def production_adapters(settings: Settings) -> Adapters:
-    gemini = CannedGeminiAdapter() if settings.gemini_adapter == "fake" else None
+    if settings.gemini_adapter == "fake":
+        # Local development without credentials: no documents, so Guidance is grounded
+        # in the curated knowledge files.
+        return Adapters(
+            gemini=CannedGeminiAdapter(),
+            agent_search=FakeAgentSearchAdapter(),
+            places=GooglePlacesAdapter(settings),
+        )
     return Adapters(
-        gemini=gemini or GoogleGeminiAdapter(settings),
+        gemini=GoogleGeminiAdapter(settings),
         agent_search=VertexAgentSearchAdapter(settings),
         places=GooglePlacesAdapter(settings),
     )
