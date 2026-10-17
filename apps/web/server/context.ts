@@ -46,8 +46,6 @@ export const DEFAULT_RATE_LIMITS: RateLimits = {
   ipPerHour: 300,
 };
 
-export type TestimonyModerationSwitch = "publish" | "hold";
-
 /** Everything server code reaches through React Router's load context. */
 export interface WebContext {
   adapters: {
@@ -83,12 +81,6 @@ export interface WebContext {
     firebaseWeb: PublicFirebaseConfig;
     /** Signs shareable Guidance links (app/server/share.server.ts). */
     shareLinkSecret: string;
-    /**
-     * Temporary Moderation switch until T13 wires the agent's Moderation endpoint
-     * into posting: "publish" publishes every Testimony, "hold" holds every one for
-     * an admin. Production is always "hold". TESTIMONY_MODERATION
-     */
-    testimonyModeration: TestimonyModerationSwitch;
     /** Share of auto-published Testimonies sampled for the admin spot check (spec 03: 10%). */
     spotCheckRate: number;
   };
@@ -142,8 +134,6 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
         .filter(Boolean),
       firebaseWeb: firebaseWebFromEnv(env, production, firebase?.projectId ?? null),
       shareLinkSecret,
-      // Production holds everything until T13; elsewhere publish unless told to hold.
-      testimonyModeration: production || env.TESTIMONY_MODERATION === "hold" ? "hold" : "publish",
       spotCheckRate: SPOT_CHECK_RATE,
     },
   };

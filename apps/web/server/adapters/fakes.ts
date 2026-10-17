@@ -1,4 +1,11 @@
-import type { GuidanceRequest, ShortlistReasonsRequest, ShortlistReasonsResponse } from "@findyourdent/contracts";
+import type {
+  GuidanceRequest,
+  ModerationDecision,
+  ModerationRequest,
+  ShortlistReasonsRequest,
+  ShortlistReasonsResponse,
+} from "@findyourdent/contracts";
+import { MAX_AUTHOR_FIX_ROUNDS } from "../../app/lib/testimony.ts";
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
@@ -7,6 +14,7 @@ import type {
   AutocompleteResult,
   AutocompleteSuggestion,
   CoordinatesResult,
+  DisplayNameResult,
   GoogleBlock,
   GoogleBlockResult,
   GoogleReview,
@@ -68,9 +76,46 @@ export function stubShortlistReasons(request: ShortlistReasonsRequest): Shortlis
   return { reasons: request.providers.map((p) => ({ placeId: p.placeId, reason })) };
 }
 
+/** Indonesian mobile numbers ("0812-3456-7890", "+62 812 3456 7890"): what the stub flags. */
+const STUB_PHONE_NUMBER = /(?:\+62|0)\s?8\d(?:[\s-]?\d){6,10}/;
+
+/**
+ * A stub Moderation decision, valid against moderation-decision.schema.json: an
+ * Indonesian mobile number is an R1 authorFix (a hold after three rounds), anything
+ * else publishes. A Proof of Visit is always accepted. Lets local runs and browser
+ * tests walk the fix-before-submit loop without Gemini.
+ */
+export function stubModeration(request: ModerationRequest): ModerationDecision {
+  const en = request.language === "en";
+  const proofOfVisit = request.proofOfVisit ? "accepted" : "notProvided";
+  const phone = STUB_PHONE_NUMBER.exec(request.text);
+  if (!phone) {
+    const authorMessage = en ? "Thank you! Your Testimony is live." : "Terima kasih! Testimoni Anda sudah tayang.";
+    return { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.95, authorMessage, proofOfVisit };
+  }
+  const span = { start: phone.index, end: phone.index + phone[0].length, text: phone[0], ruleCode: "r1_personal_data" };
+  const fixable = (request.authorFixRound ?? 0) < MAX_AUTHOR_FIX_ROUNDS;
+  return {
+    decision: fixable ? "authorFix" : "hold",
+    ruleCodes: ["r1_personal_data"],
+    flaggedSpans: [span] as ModerationDecision["flaggedSpans"],
+    confidence: 0.9,
+    authorMessage: en
+      ? "Please remove the phone number before sending."
+      : "Mohon hapus nomor telepon sebelum mengirim.",
+    proofOfVisit,
+  };
+}
+
 export interface FakeAgentAdapter extends AgentAdapter {
   readonly calls: GuidanceRequest[];
   readonly reasonsCalls: ShortlistReasonsRequest[];
+  readonly moderationCalls: ModerationRequest[];
+  /**
+   * Next value returned (or thrown, if an Error) by requestModeration, until changed;
+   * the default is `stubModeration`.
+   */
+  respondToModerationWith(response: unknown): void;
   /** Next value returned (or thrown, if an Error) by requestGuidance. */
   respondWith(response: unknown): void;
   /** Next value returned (or thrown, if an Error) by requestShortlistReasons; the default is stub reasons. */
@@ -80,11 +125,22 @@ export interface FakeAgentAdapter extends AgentAdapter {
 export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE): FakeAgentAdapter {
   let next: unknown = initial;
   let nextReasons: unknown;
+  let nextModeration: unknown;
   const calls: GuidanceRequest[] = [];
   const reasonsCalls: ShortlistReasonsRequest[] = [];
+  const moderationCalls: ModerationRequest[] = [];
   return {
     calls,
     reasonsCalls,
+    moderationCalls,
+    respondToModerationWith(response) {
+      nextModeration = response;
+    },
+    async requestModeration(request) {
+      moderationCalls.push(structuredClone(request));
+      if (nextModeration instanceof Error) throw nextModeration;
+      return nextModeration === undefined ? stubModeration(request) : structuredClone(nextModeration);
+    },
     respondWith(response) {
       next = response;
     },
@@ -123,6 +179,10 @@ export interface FakePlacesAdapter extends PlacesAdapter {
   readonly coordinatesCalls: string[];
   /** Next coordinates answer. Defaults to a point in Jakarta. */
   respondWithCoordinates(answer: CoordinatesResult): void;
+  /** Google-name lookups for Moderation, in order. */
+  readonly displayNameCalls: PlaceDetailsRequest[];
+  /** Next Google name for Moderation. Defaults to "Fake Google Place". */
+  respondWithDisplayName(answer: DisplayNameResult): void;
 }
 
 export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlacesAdapter {
@@ -131,6 +191,8 @@ export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlace
   let nextReviews: GoogleReviewsResult = { ok: true, reviews: [] };
   let nextSuggestions: AutocompleteResult = { ok: true, suggestions: [] };
   let nextCoordinates: CoordinatesResult = { ok: true, location: { lat: -6.1754, lng: 106.8272 } };
+  let nextDisplayName: DisplayNameResult = { ok: true, displayName: "Fake Google Place" };
+  const displayNameCalls: PlaceDetailsRequest[] = [];
   const calls: TextSearch[] = [];
   const detailsCalls: FakePlacesAdapter["detailsCalls"] = [];
   const autocompleteCalls: AutocompleteRequest[] = [];
@@ -140,6 +202,14 @@ export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlace
     detailsCalls,
     autocompleteCalls,
     coordinatesCalls,
+    displayNameCalls,
+    respondWithDisplayName(answer) {
+      nextDisplayName = answer;
+    },
+    async getDisplayName(request) {
+      displayNameCalls.push(structuredClone(request));
+      return structuredClone(nextDisplayName);
+    },
     respondWithSuggestions(answer) {
       nextSuggestions = Array.isArray(answer) ? { ok: true, suggestions: answer } : answer;
     },
@@ -294,6 +364,10 @@ export function createFakeSamplePlacesAdapter(): PlacesAdapter {
         }),
       );
       return { ok: true, suggestions };
+    },
+    async getDisplayName({ placeId }) {
+      const place = known.get(placeId);
+      return place ? { ok: true, displayName: place.displayName } : { ok: false, reason: "not_found" };
     },
     async getCoordinates(placeId) {
       const location = known.get(placeId)?.location;

@@ -496,10 +496,24 @@
       "publishedBody": "Thank you. Your Testimony now helps other patients choose.",
       "viewProvider": "See it on the practice page",
       "reviewTitle": "Your Testimony is being reviewed",
-      "reviewBody": "The FindYourDent team is checking your Testimony, usually within 24 hours. You can follow its status in My Testimonies.",
-      "fixTitle": "Your Testimony needs a small fix",
-      "fixBody": "Open My Testimonies to see what to change.",
-      "editReviewBody": "Your changes are being reviewed. The previous version stays visible until then."
+      "verifiedVisit": "Your proof of visit matched, so this Testimony shows Verified visit. We have deleted the file.",
+      "proofNotVerified": "We could not match your proof of visit, so this Testimony shows without Verified visit. We have deleted the file.",
+      "editReviewNote": "The previous version stays visible until then.",
+      "ownHealthDataNote": "You shared your own health details. They show in your Testimony, and you can change them any time in My Testimonies."
+    },
+    "fix": {
+      "title": "A small fix before it is sent",
+      "intro": "Your Testimony has not been sent yet. Change the marked parts, then press Send again.",
+      "flagged": "Sentences to change",
+      "reasons": {
+        "r1_personal_data": "It has personal data, such as a phone number, email, address, ID number or the full name of another patient or staff member. Please remove it.",
+        "r4_not_first_hand": "It reads like an advert, a link, a promo code or someone else's story. Tell your own experience.",
+        "r5_medical_advice": "It reads like medical advice to readers, such as a medicine and its dose. Tell only what happened to you.",
+        "r6_wrong_provider": "It seems to be about another place, or the name you typed does not match the place you picked. Please check.",
+        "other": "This part needs a change."
+      },
+      "roundsLeft": "Fixes left before the FindYourDent team reviews it instead: {{count}}.",
+      "lastRound": "If the next send still needs a fix, the FindYourDent team reviews it, usually within 24 hours."
     }
   },
   "providerFields": {
@@ -580,7 +594,22 @@
     },
     "moderation": {
       "published": "Thank you! Your Testimony is now live.",
-      "held": "Thank you! The FindYourDent team is reviewing your Testimony, usually within 24 hours."
+      "held": "Thank you! The FindYourDent team is reviewing your Testimony, usually within 24 hours.",
+      "holdReasons": {
+        "accusation": "Your Testimony states an accusation (such as fraud or malpractice) as fact, so our team needs to read it first.",
+        "namedPerson": "Your Testimony makes a complaint that names a person, so our team needs to read it first.",
+        "harassment": "Your Testimony may contain abusive words, threats or hate speech.",
+        "conflictOfInterest": "Your Testimony reads as if written by the owner, staff or a competitor of this place.",
+        "othersHealthData": "Your Testimony mentions someone else's health details.",
+        "manipulation": "Part of your Testimony's text does not read as an account of a visit.",
+        "photo": "A photo needs a check: photos may show only the practice, with no faces or documents.",
+        "fixRoundsUsed": "After three rounds of fixes, part of it still needs a check.",
+        "needsCheck": "Part of it needs a check by our team, such as personal data or medical advice.",
+        "unsure": "Our automatic check was not sure enough to publish it straight away.",
+        "checkFailed": "Our automatic check could not finish.",
+        "withAdmin": "This Testimony is already with our team, so your changes are reviewed too."
+      },
+      "holdTarget": "The FindYourDent team will decide within 24 hours."
     }
   },
   "myTestimonies": {

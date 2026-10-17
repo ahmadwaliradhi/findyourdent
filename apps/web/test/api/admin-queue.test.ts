@@ -1,6 +1,7 @@
 // Testimony reports and the admin queue (spec 03, T14) through the web API:
 // hide-on-report, admin-only actions, the adminActions log, the 10% spot-check
 // sample, and aggregates and counters on removal.
+import type { ModerationDecision } from "@findyourdent/contracts";
 import {
   type AdminActionDoc,
   COLLECTIONS,
@@ -12,7 +13,7 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AdminActionRequest, AdminQueueResponse } from "../../app/lib/admin-queue.ts";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
-import type { TestimonySubmission, TestimonySubmitResponse } from "../../app/lib/testimony.ts";
+import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -56,8 +57,20 @@ async function postTestimony(email: string, overrides: Partial<TestimonySubmissi
     body: form,
   });
   if (response.status !== 201) throw new Error(`create failed: ${response.status} ${await response.text()}`);
-  return ((await response.json()) as TestimonySubmitResponse).testimonyId;
+  return ((await response.json()) as TestimonyStoredResponse).testimonyId;
 }
+
+/** What the fake agent's Moderation answers: hold for the admin, or publish. */
+const HOLD: ModerationDecision = {
+  decision: "hold",
+  ruleCodes: ["low_confidence"],
+  flaggedSpans: [],
+  confidence: 0.5,
+  authorMessage: "Testimoni Anda ditinjau tim.",
+  proofOfVisit: "notProvided",
+};
+const PUBLISH: ModerationDecision = { ...HOLD, decision: "publish", ruleCodes: [], confidence: 0.95 };
+const moderateWith = (decision: ModerationDecision) => server.fakes.agent.respondToModerationWith(decision);
 
 const report = (testimonyId: string, body: unknown, init: { cookie?: string; appCheck?: boolean } = {}) =>
   server.post(`/api/testimonies/${testimonyId}/reports`, body, {
@@ -135,7 +148,7 @@ describe("POST /api/testimonies/:id/reports: other cases", () => {
     expect((await report(id, { category: "boring" })).status).toBe(400);
     expect((await report(id, { category: "spam" }, { appCheck: false })).status).toBe(401);
 
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const held = await postTestimony("lain@example.com", { placeId: "ChIJ-lain" });
     expect((await report(held, { category: "spam" })).status).toBe(404);
     expect((await report("does-not-exist", { category: "spam" })).status).toBe(404);
@@ -181,7 +194,7 @@ describe("admin API: who may use it", () => {
 
 describe("admin queue", () => {
   it("shows a held Testimony with its rule codes, history and the 24-hour target", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const id = await postTestimony("pasien@example.com");
     const { items } = await queue(await adminCookie());
 
@@ -248,13 +261,13 @@ describe("admin queue: nothing gets stuck", () => {
   });
 
   it("samples only Testimonies that Moderation actually published", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const id = await postTestimony("pasien@example.com");
     const cookie = await adminCookie();
     await act(cookie, { action: "reject", subjectId: id, reason: "Tuduhan tanpa bukti." });
 
     // Moderation now says publish, but an edit of a rejected Testimony stays with the admin.
-    server.setTestimonyModeration("publish");
+    moderateWith(PUBLISH);
     server.setSpotCheckRate(1);
     const author = await server.signInWithGoogle("pasien@example.com");
     const form = new FormData();
@@ -273,7 +286,7 @@ describe("admin queue: nothing gets stuck", () => {
 
 describe("admin actions on a held Testimony", () => {
   it("publishes it, makes the place Listed, counts it and logs who, when and why", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const id = await postTestimony("pasien@example.com");
     const cookie = await adminCookie();
 
@@ -300,7 +313,7 @@ describe("admin actions on a held Testimony", () => {
   });
 
   it("rejects only with a reason, which the author sees", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const id = await postTestimony("pasien@example.com");
     const cookie = await adminCookie();
 
@@ -315,7 +328,7 @@ describe("admin actions on a held Testimony", () => {
   });
 
   it("sends it back to the author with a reason", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const id = await postTestimony("pasien@example.com");
     const response = await act(await adminCookie(), {
       action: "sendBackToAuthor",
@@ -327,7 +340,7 @@ describe("admin actions on a held Testimony", () => {
   });
 
   it("refuses a move the state machine does not allow", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const id = await postTestimony("pasien@example.com");
     const response = await act(await adminCookie(), { action: "hide", subjectId: id, reason: "Coba." });
     expect(response.status).toBe(409);
@@ -390,7 +403,7 @@ describe("admin actions on a published or reported Testimony", () => {
 describe("admin actions on a held edit of a published Testimony", () => {
   it("publishes the edit over the public version", async () => {
     const id = await postTestimony("pasien@example.com");
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const cookie = await server.signInWithGoogle("pasien@example.com");
     const form = new FormData();
     form.set("testimony", JSON.stringify(submission({ text: "Versi baru." })));
@@ -439,7 +452,7 @@ describe("name corrections", () => {
 
 describe("admin page", () => {
   it("renders the queue with Gemini's rule codes, the target and the actions", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     await postTestimony("pasien@example.com");
     const response = await server.get("/admin", { headers: { cookie: await adminCookie() } });
     expect(response.status).toBe(200);

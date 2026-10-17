@@ -1,6 +1,7 @@
 // Shared by the posting form (browser) and the Testimony web API (server), spec 03.
 // Plain types and limits only, so it stays light in the browser bundle.
-import type { AspectRatings, RegionRef, TestimonyStatus, YearMonth } from "@findyourdent/contracts/firestore";
+import type { FlaggedSpan, ModerationRuleCode } from "@findyourdent/contracts";
+import type { AspectRatings, RegionRef, YearMonth } from "@findyourdent/contracts/firestore";
 
 export const TESTIMONY_LIMITS = {
   /** Technical cap; there is no product limit on length. */
@@ -56,11 +57,61 @@ export interface TestimonySubmission {
 /** Multipart field names of the submit body. */
 export const SUBMISSION_FIELDS = { json: "testimony", photos: "photos", proof: "proof" } as const;
 
-/** 200/201 body of create and edit. */
-export interface TestimonySubmitResponse {
+/** After this many authorFix rounds the Testimony is held for the team instead (spec 03). */
+export const MAX_AUTHOR_FIX_ROUNDS = 3;
+
+/** The rules the author can fix before submitting (spec 03); every other rule holds. */
+export const AUTHOR_FIXABLE_RULES = [
+  "r1_personal_data",
+  "r4_not_first_hand",
+  "r5_medical_advice",
+  "r6_wrong_provider",
+] as const satisfies readonly ModerationRuleCode[];
+export type AuthorFixableRule = (typeof AUTHOR_FIXABLE_RULES)[number];
+
+export function isAuthorFixable(code: string): code is AuthorFixableRule {
+  return (AUTHOR_FIXABLE_RULES as readonly string[]).includes(code);
+}
+
+/** 201 (create) or 200 (edit) body: Moderation decided and the Testimony was stored. */
+export interface TestimonyStoredResponse {
   testimonyId: string;
   /** The state the Testimony (or, for an edit of a published one, its pending revision) is now in. */
-  status: TestimonyStatus;
+  status: "published" | "held";
+  /** For the author: on held, the plain reason and the 24-hour target. */
+  message: string;
+  /** Whether the Testimony shows Kunjungan terbukti. */
+  verifiedVisit: boolean;
+  /** The author shared their own health details: a gentle note only, never a hold (R8). */
+  ownHealthDataWarning?: boolean;
+}
+
+/**
+ * 200 body when Moderation found something the author can fix (spec 03). Nothing was
+ * stored: the author edits and sends the whole form again.
+ */
+export interface TestimonyAuthorFixResponse {
+  status: "needsAuthorFix";
+  /** Edit only: the Testimony, unchanged. */
+  testimonyId?: string;
+  /** Moderation's author-facing message, in the author's language. */
+  message: string;
+  /** The text as it was screened (trimmed); the span offsets point into it. */
+  text: string;
+  /** Every rule that fired; a rule with no span (R6 on the typed name) still needs a fix. */
+  ruleCodes: ModerationRuleCode[];
+  /** UTF-16 offsets into `text`. */
+  flaggedSpans: FlaggedSpan[];
+  /** Fix rounds left before the next authorFix holds the Testimony for the team. */
+  roundsLeft: number;
+}
+
+export type TestimonySubmitResponse = TestimonyStoredResponse | TestimonyAuthorFixResponse;
+
+/** 200 body of delete. */
+export interface TestimonyDeleteResponse {
+  testimonyId: string;
+  status: "deleted";
 }
 
 /** Error body of every Testimony API route. */

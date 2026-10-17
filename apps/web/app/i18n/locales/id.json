@@ -496,10 +496,24 @@
       "publishedBody": "Terima kasih. Testimoni Anda sekarang membantu pasien lain memilih.",
       "viewProvider": "Lihat di halaman tempat",
       "reviewTitle": "Testimoni Anda sedang ditinjau",
-      "reviewBody": "Tim FindYourDent memeriksa Testimoni Anda, biasanya dalam 24 jam. Statusnya bisa Anda lihat di Testimoni saya.",
-      "fixTitle": "Testimoni Anda perlu sedikit perbaikan",
-      "fixBody": "Buka Testimoni saya untuk melihat bagian yang perlu diubah.",
-      "editReviewBody": "Perubahan Anda sedang ditinjau. Versi sebelumnya tetap tampil sampai selesai."
+      "verifiedVisit": "Bukti kunjungan Anda cocok, jadi Testimoni ini ditandai Kunjungan terbukti. File buktinya sudah kami hapus.",
+      "proofNotVerified": "Bukti kunjungan Anda belum bisa kami cocokkan, jadi Testimoni ini tampil tanpa tanda Kunjungan terbukti. File buktinya sudah kami hapus.",
+      "editReviewNote": "Versi sebelumnya tetap tampil sampai selesai.",
+      "ownHealthDataNote": "Anda menulis detail kesehatan Anda sendiri. Detail itu ikut tampil di Testimoni, dan bisa Anda ubah kapan saja lewat Testimoni saya."
+    },
+    "fix": {
+      "title": "Sedikit perbaikan sebelum terkirim",
+      "intro": "Testimoni Anda belum terkirim. Ubah bagian yang ditandai, lalu tekan Kirim lagi.",
+      "flagged": "Kalimat yang perlu diubah",
+      "reasons": {
+        "r1_personal_data": "Berisi data pribadi, seperti nomor telepon, email, alamat, nomor identitas atau nama lengkap pasien atau staf lain. Hapus bagian ini.",
+        "r4_not_first_hand": "Terbaca seperti iklan, tautan, kode promo atau cerita dari orang lain. Ceritakan pengalaman Anda sendiri.",
+        "r5_medical_advice": "Terbaca seperti saran medis untuk pembaca, misalnya nama obat dan dosisnya. Ceritakan apa yang Anda alami saja.",
+        "r6_wrong_provider": "Sepertinya membahas tempat lain, atau nama tempat yang Anda ketik tidak cocok dengan tempat yang dipilih. Periksa lagi.",
+        "other": "Bagian ini perlu diubah."
+      },
+      "roundsLeft": "Anda masih bisa memperbaiki {{count}} kali lagi. Setelah itu, tim FindYourDent yang meninjaunya.",
+      "lastRound": "Jika kiriman berikutnya masih perlu perbaikan, tim FindYourDent yang meninjaunya, biasanya dalam 24 jam."
     }
   },
   "providerFields": {
@@ -580,7 +594,22 @@
     },
     "moderation": {
       "published": "Terima kasih! Testimoni Anda sudah tayang.",
-      "held": "Terima kasih! Testimoni Anda sedang ditinjau tim FindYourDent, biasanya dalam 24 jam."
+      "held": "Terima kasih! Testimoni Anda sedang ditinjau tim FindYourDent, biasanya dalam 24 jam.",
+      "holdReasons": {
+        "accusation": "Testimoni Anda menyebut tuduhan (misalnya penipuan atau malapraktik) sebagai fakta, jadi tim kami perlu membacanya dulu.",
+        "namedPerson": "Testimoni Anda menyampaikan keluhan yang menyebut nama seseorang, jadi tim kami perlu membacanya dulu.",
+        "harassment": "Testimoni Anda mungkin berisi kata kasar, ancaman atau ujaran kebencian.",
+        "conflictOfInterest": "Testimoni Anda terdengar seperti ditulis oleh pemilik, staf atau pesaing tempat ini.",
+        "othersHealthData": "Testimoni Anda menyebut data kesehatan orang lain.",
+        "manipulation": "Sebagian teks Testimoni Anda tidak terbaca sebagai cerita kunjungan.",
+        "photo": "Ada foto yang perlu dicek: foto hanya boleh menunjukkan tempat praktik, tanpa wajah atau dokumen.",
+        "fixRoundsUsed": "Setelah tiga kali perbaikan, masih ada bagian yang perlu dicek.",
+        "needsCheck": "Ada bagian yang perlu dicek tim kami, misalnya data pribadi atau saran medis.",
+        "unsure": "Pemeriksaan otomatis kami belum cukup yakin untuk langsung menayangkannya.",
+        "checkFailed": "Pemeriksaan otomatis kami belum bisa menyelesaikannya.",
+        "withAdmin": "Testimoni ini sedang ditangani tim kami, jadi perubahan Anda ikut ditinjau."
+      },
+      "holdTarget": "Tim FindYourDent akan memutuskan dalam 24 jam."
     }
   },
   "myTestimonies": {
