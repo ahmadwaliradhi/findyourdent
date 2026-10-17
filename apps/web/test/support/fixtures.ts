@@ -1,6 +1,7 @@
 // Emulator fixture data that follows the Firestore data model (packages/contracts/src/firestore.ts).
 import { COLLECTIONS, type ProviderDoc, type TestimonyDoc } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
+import { normalizeName } from "../../app/lib/normalize-name.ts";
 
 type Writable<T> = {
   [K in keyof T]: NonNullable<T[K]> extends { toDate(): Date } ? Date | Extract<T[K], undefined> : T[K];
@@ -10,15 +11,8 @@ export type TestimonyFixture = Writable<TestimonyDoc>;
 
 let sequence = 0;
 
-/** Lower-cased, accents and punctuation stripped, single spaces. */
-export function normalizeForFixture(name: string): string {
-  return name
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
-}
+/** The app's own name normalisation, so fixtures match what the directory searches. */
+export const normalizeForFixture = normalizeName;
 
 /** Writes a Listed Provider (document id = placeId) and returns it. */
 export async function seedProvider(

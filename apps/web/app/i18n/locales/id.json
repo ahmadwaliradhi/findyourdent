@@ -140,5 +140,132 @@
     "metaDescription": "Panduan gigi FindYourDent yang dibagikan kepada Anda.",
     "intro": "Seseorang membagikan panduan FindYourDent ini kepada Anda. Panduan ini tidak memuat keluhan aslinya.",
     "cta": "Tulis keluhan Anda sendiri"
+  },
+  "feed": {
+    "title": "Testimoni terbaru",
+    "intro": "Pengalaman nyata Pasien di klinik, praktik dokter gigi dan rumah sakit, ditulis dengan kata-kata mereka sendiri.",
+    "titleIn": "Testimoni dokter gigi di {{area}}",
+    "metaTitle": "Testimoni dokter gigi di {{area}} | FindYourDent",
+    "metaDescription": "Baca pengalaman nyata Pasien dokter gigi di {{area}}: pelayanan, kebersihan, bahan dan peralatan, serta biaya yang dibayar.",
+    "loadMore": "Muat lebih banyak",
+    "loading": "Memuat…",
+    "loadError": "Testimoni berikutnya gagal dimuat. Silakan coba lagi.",
+    "emptyTitle": "Belum ada Testimoni untuk pilihan ini",
+    "emptyBody": "Pernah ke dokter gigi di sini? Jadilah yang pertama bercerita dan bantu Pasien lain memilih.",
+    "writeCta": "Ceritakan pengalamanmu",
+    "card": {
+      "ratingsLabel": "Penilaian",
+      "score": "{{score}} dari 5",
+      "aspects": {
+        "service": "Pelayanan",
+        "hygiene": "Kebersihan",
+        "materialsEquipment": "Bahan dan peralatan"
+      },
+      "verified": "Kunjungan terbukti",
+      "visitMonth": "Kunjungan {{month}}",
+      "procedure": "Tindakan",
+      "price": "Biaya dibayar",
+      "byline": "oleh {{name}}",
+      "readMore": "Baca Testimoni lengkap"
+    }
+  },
+  "filters": {
+    "title": "Saring",
+    "province": "Provinsi",
+    "allProvinces": "Semua provinsi",
+    "regency": "Kota/kabupaten",
+    "allRegencies": "Semua kota/kabupaten",
+    "chooseProvinceFirst": "Pilih provinsi dulu",
+    "district": "Kode kecamatan",
+    "districtHint": "Opsional, kode Kemendagri, contoh 31.71.01.",
+    "procedure": "Tindakan",
+    "allProcedures": "Semua tindakan",
+    "providerType": "Jenis tempat",
+    "allProviderTypes": "Semua jenis",
+    "providerTypes": {
+      "klinik": "Klinik",
+      "privateDentist": "Praktik mandiri dokter gigi",
+      "hospital": "Rumah sakit"
+    },
+    "verifiedOnly": "Hanya Kunjungan terbukti",
+    "apply": "Terapkan",
+    "reset": "Hapus saringan"
+  },
+  "directory": {
+    "metaTitle": "Direktori dokter gigi dan klinik gigi | FindYourDent",
+    "metaTitleArea": "Direktori dokter gigi dan klinik gigi di {{area}} | FindYourDent",
+    "metaDescription": "Bandingkan klinik gigi, dokter gigi praktik pribadi dan rumah sakit yang sudah diulas pasien di FindYourDent: skor pelayanan, kebersihan, bahan dan alat, serta Kunjungan terbukti.",
+    "metaDescriptionArea": "Bandingkan klinik gigi, dokter gigi praktik pribadi dan rumah sakit di {{area}} yang sudah diulas pasien di FindYourDent: skor pelayanan, kebersihan, bahan dan alat, serta Kunjungan terbukti.",
+    "title": "Direktori tempat perawatan gigi",
+    "titleArea": "Tempat perawatan gigi di {{area}}",
+    "intro": "Klinik, dokter gigi praktik pribadi dan rumah sakit yang sudah diceritakan pasien di FindYourDent.",
+    "searchLabel": "Cari nama tempat",
+    "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
+    "sortLabel": "Urutkan",
+    "sort": {
+      "testimoni": "Testimoni terbanyak",
+      "skor": "Skor tertinggi",
+      "jarak": "Jarak terdekat"
+    },
+    "sortHint": "Jarak dihitung di perangkatmu. Lokasimu tidak dikirim ke FindYourDent.",
+    "resultsHeading": "Hasil",
+    "resultCount": "{{count}} tempat",
+    "resultCapped": "Menampilkan {{count}} tempat pertama. Persempit dengan filter atau pencarian nama.",
+    "inferred": "perkiraan",
+    "claimed": "Diklaim pemilik",
+    "aspects": {
+      "service": "Pelayanan",
+      "hygiene": "Kebersihan",
+      "materialsEquipment": "Bahan dan alat"
+    },
+    "score": "Skor {{score}}",
+    "noRatings": "Belum ada skor",
+    "testimonies": "{{count}} testimoni",
+    "verifiedVisits": "{{count}} Kunjungan terbukti",
+    "distance": "{{km}} km",
+    "noLocation": "Jarak tidak tersedia",
+    "locating": "Mencari lokasimu...",
+    "locationDenied": "Lokasimu tidak bisa dipakai, jadi daftar diurutkan menurut jumlah testimoni. Izinkan akses lokasi di browser untuk mengurutkan menurut jarak.",
+    "locationUnsupported": "Browser ini tidak bisa membagikan lokasi, jadi daftar diurutkan menurut jumlah testimoni.",
+    "locationReady": "Diurutkan dari yang terdekat dengan lokasimu.",
+    "emptyTitle": "Belum ada tempat yang cocok",
+    "emptyBody": "Belum ada pasien yang menulis tentang tempat dengan filter ini. Jadilah yang pertama.",
+    "emptyCta": "Ceritakan pengalamanmu"
+  },
+  "impact": {
+    "title": "Dampak FindYourDent",
+    "testimoniesPublished": "Testimoni",
+    "kotaCovered": "Kota/kabupaten",
+    "verifiedVisits": "Kunjungan terbukti",
+    "listedProviders": "Tempat terdaftar",
+    "guidanceSessionsCompleted": "Sesi panduan"
+  },
+  "provider": {
+    "title": "{{name}}, {{area}}",
+    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni.",
+    "metaDescriptionNoScores": "{{name}} di {{area}}. Baca testimoni pasien dan ceritakan pengalamanmu di FindYourDent.",
+    "type": {
+      "klinik": "Klinik",
+      "privateDentist": "Dokter gigi praktik mandiri",
+      "hospital": "Rumah sakit"
+    },
+    "typeInferred": "perkiraan",
+    "claimed": "Diklaim pemilik",
+    "aspectsTitle": "Penilaian pasien",
+    "aspects": {
+      "service": "Pelayanan",
+      "hygiene": "Kebersihan",
+      "materialsEquipment": "Bahan dan alat"
+    },
+    "noScores": "Belum ada penilaian.",
+    "testimonyCount": "{{count}} testimoni",
+    "verifiedVisitCount": "{{count}} kunjungan terbukti",
+    "testimoniesTitle": "Testimoni pasien",
+    "noTestimonies": "Belum ada testimoni yang terbit untuk tempat ini.",
+    "verifiedVisit": "Kunjungan terbukti",
+    "visitMonth": "Berkunjung {{month}}",
+    "procedure": "Tindakan: {{procedure}}",
+    "pricePaid": "Biaya: {{price}}",
+    "ratingsLabel": "Penilaian {{name}}"
   }
 }
