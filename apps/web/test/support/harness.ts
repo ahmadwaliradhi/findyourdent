@@ -16,12 +16,7 @@ import {
   type FakePlacesAdapter,
 } from "../../server/adapters/fakes.ts";
 import { createApp } from "../../server/app.ts";
-import {
-  type BaseContext,
-  DEFAULT_RATE_LIMITS,
-  type RateLimits,
-  type TestimonyModerationSwitch,
-} from "../../server/context.ts";
+import { type BaseContext, DEFAULT_RATE_LIMITS, type RateLimits } from "../../server/context.ts";
 import { type Bucket, initFirebaseAdmin } from "../../server/firebase.ts";
 import type { LogFields, Logger } from "../../server/logger.ts";
 import { createFirestoreRateLimiter } from "../../server/rate-limit.ts";
@@ -55,8 +50,6 @@ export interface TestServer {
   clock: { advance(seconds: number): void };
   /** Override rate limits until the next reset. */
   setLimits(limits: Partial<RateLimits>): void;
-  /** The temporary Moderation switch until the next reset (default "publish"). */
-  setTestimonyModeration(value: TestimonyModerationSwitch): void;
   /** Fresh fakes, empty logs, default limits, empty emulator Firestore, Auth and uploads bucket. */
   reset(): Promise<void>;
   /** A Firebase ID token from the Auth emulator, as the browser gets right after signing in. */
@@ -161,7 +154,6 @@ export async function startTestServer(): Promise<TestServer> {
 
   let nowMs = Date.now();
   let limits = { ...DEFAULT_RATE_LIMITS };
-  let testimonyModeration: TestimonyModerationSwitch = "publish";
   const rateLimiter = createFirestoreRateLimiter(firebase.firestore, { salt: "test-salt", now: () => nowMs });
 
   const context = (): BaseContext => ({
@@ -177,7 +169,6 @@ export async function startTestServer(): Promise<TestServer> {
       adminEmails: ADMIN_EMAILS,
       firebaseWeb: NO_FIREBASE,
       shareLinkSecret: "test-share-link-secret",
-      testimonyModeration,
     },
   });
 
@@ -214,7 +205,6 @@ export async function startTestServer(): Promise<TestServer> {
       defaultToken = fakes.appCheck.issueToken();
       nowMs = Date.now();
       limits = { ...DEFAULT_RATE_LIMITS };
-      testimonyModeration = "publish";
       logs.length = 0;
       await clearEmulators(firebase.projectId, firebase.uploads);
     },
@@ -225,9 +215,6 @@ export async function startTestServer(): Promise<TestServer> {
     },
     setLimits(overrides) {
       limits = { ...limits, ...overrides };
-    },
-    setTestimonyModeration(value) {
-      testimonyModeration = value;
     },
     emulatorIdToken,
     async signInWithGoogle(email) {
