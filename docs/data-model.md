@@ -43,9 +43,9 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `authorUid`, `displayName` | Uid is never shown; display name defaults to first name plus initial. |
 | `ratings` | `service`, `hygiene`, `materialsEquipment`, each 1 to 5. |
 | `text`, `visitMonth`, `procedureCode`, `pricePaidRupiah`, `photoPaths` | Text up to 10,000 characters; up to four photos, EXIF stripped. |
-| `status` | `submitted`, `published`, `needsAuthorFix`, `held`, `rejected`, `hidden`, `removed`, `deleted` (state machine in spec 03). |
+| `status` | `submitted`, `published`, `needsAuthorFix`, `held`, `rejected`, `hidden`, `removed`, `deleted` (state machine in spec 03). Moderation's authorFix stores nothing, so `needsAuthorFix` comes only from the admin queue's "send back to the author". |
 | `verifiedVisit`, `proofOfVisit` | Kunjungan terbukti and the check result with its date. The Proof of Visit file itself is deleted right after the check. |
-| `authorFixRounds` | Held after three rounds. |
+| `authorFixRounds` | authorFix rounds used before this version was stored (the next authorFix after three is held). An authorFix itself stores nothing on the Testimony; the count waits in `counters` meanwhile. |
 | `pendingRevision` | Edit of a published Testimony under Moderation; the public fields stay visible until it is decided. |
 | `reply` | The claimed Provider's one public reply, with its own Moderation status. |
 | `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply are removed. |
@@ -66,15 +66,15 @@ Owner-confirmed price lists (spec 05). Only confirmed rows are stored (`procedur
 
 ### `moderationDecisions`
 
-One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `proofOfVisit` result, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample). It never stores the moderated text or images. Type `ModerationDecisionDoc`.
+One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `proofOfVisit` result, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). It never stores the moderated text or images. Type `ModerationDecisionDoc`.
 
 ### `nameCorrections`
 
-"Sarankan koreksi" suggestions on a Listed Provider's first-party name or Region (spec 03), made by a signed-in user from the Testimony form. Each stores the `placeId`, the suggested name and/or Region (at least one), the current values at suggestion time, the suggester's uid, a status (`open`, `applied`, `dismissed`) and who resolved it when. Suggestions land in the admin queue; the Provider changes only when an admin applies one (`applyNameCorrection` in `adminActions`). Type `NameCorrectionDoc`. The link and form arrive with T11, the admin review with T14.
+"Sarankan koreksi" suggestions on a Listed Provider's first-party name or Region (spec 03), made by a signed-in user from the Testimony form. Each stores the `placeId`, the suggested name and/or Region (at least one), the current values at suggestion time, the suggester's uid, a status (`open`, `applied`, `dismissed`) and who resolved it when. Suggestions land in the admin queue; the Provider changes only when an admin applies one (`applyNameCorrection` in `adminActions`). Type `NameCorrectionDoc`. Applying one changes the Provider's name and Region and the Region copied onto its Testimonies.
 
 ### `adminActions`
 
-Append-only audit log of every admin action (publish, reject, send back to the author, hide, remove, dismiss report, approve, reject or revoke a Claim, apply or dismiss a name correction, confirm a spot check), with the admin's email and uid, subject, reason and status change. Type `AdminActionDoc`.
+Append-only audit log of every admin action (publish, reject, send back to the author, hide, remove, dismiss report, approve, reject or revoke a Claim, apply or dismiss a name correction, confirm a spot check), with the admin's email and uid, subject, reason and status change. Reasons are required to reject, send back, hide or remove; the author sees the reason on reject, send back and remove. Type `AdminActionDoc`.
 
 ### `counters`
 
@@ -82,6 +82,7 @@ Single-value counters (`{ value, updatedAt, expiresAt? }`), incremented with `Fi
 
 - Impact counters (spec 04), ids in `IMPACT_COUNTERS`: `impact.testimoniesPublished`, `impact.listedProviders`, `impact.guidanceSessionsCompleted`, `impact.verifiedVisits`. The Listed Provider count and the distinct kota/kabupaten count are computed from `providers` when read, so `impact.listedProviders` is not written.
 - Daily paid-API usage for the adapter-side caps (spec 02): `quota.places.<method>.<YYYY-MM-DD>` and `quota.gemini.<model>.<YYYY-MM-DD>`, Asia/Jakarta date, built with `dailyQuotaCounterId`. `expiresAt` lets a Firestore TTL policy delete old days.
+- Fix-before-submit rounds (spec 03): `authorFix.<uid>.<placeId>`, built with `authorFixCounterId`. Counts the authorFix answers a Patient has had on their Testimony for one place, since nothing else is stored for them; deleted when a submission is stored, else gone 30 days later through `expiresAt`.
 
 ### `rateLimits`
 

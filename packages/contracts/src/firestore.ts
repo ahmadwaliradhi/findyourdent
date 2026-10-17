@@ -300,6 +300,8 @@ export interface ModerationDecisionDoc {
   model: string;
   /** Part of the 10% admin spot-check sample. */
   spotCheck: boolean;
+  /** Sampled decisions only: false until an admin confirms the spot check. */
+  spotCheckConfirmed?: boolean;
   decidedAt: Timestamp;
 }
 
@@ -343,7 +345,15 @@ export type AdminActionType =
 /** Append-only audit log of every admin decision. */
 export interface AdminActionDoc {
   action: AdminActionType;
-  subjectType: "testimony" | "reply" | "testimonyReport" | "claim" | "provider" | "providerFacts" | "nameCorrection";
+  subjectType:
+    | "testimony"
+    | "reply"
+    | "testimonyReport"
+    | "claim"
+    | "provider"
+    | "providerFacts"
+    | "nameCorrection"
+    | "moderationDecision";
   subjectId: string;
   placeId?: PlaceId;
   /** Allowlisted admin email. */
@@ -365,11 +375,26 @@ export const IMPACT_COUNTERS = {
   verifiedVisits: "impact.verifiedVisits",
 } as const;
 
-export type PlacesMethod = "shortlistSearch" | "providerGoogleBlock" | "googleReviews" | "coordinates" | "autocomplete";
+export type PlacesMethod =
+  | "shortlistSearch"
+  | "providerGoogleBlock"
+  | "googleReviews"
+  | "coordinates"
+  | "autocomplete"
+  | "moderationName";
 
 /** Daily paid-API usage counter id, e.g. `quota.places.shortlistSearch.2026-10-20` (Asia/Jakarta date). */
 export function dailyQuotaCounterId(api: "places" | "gemini", method: string, jakartaDate: string): string {
   return `quota.${api}.${method}.${jakartaDate}`;
+}
+
+/**
+ * authorFix rounds a Patient has used on their Testimony for one place, e.g.
+ * `authorFix.<uid>.<placeId>`. Kept here rather than on a Testimony, because an
+ * authorFix stores no submitted record (spec 03); deleted once one is stored.
+ */
+export function authorFixCounterId(uid: Uid, placeId: PlaceId): string {
+  return `authorFix.${uid}.${placeId}`;
 }
 
 export interface CounterDoc {

@@ -3,6 +3,7 @@ import {
   type AutocompleteRequest,
   COORDINATES_DAILY_CAP,
   createGooglePlacesAdapter,
+  MODERATION_NAME_DAILY_CAP,
   type TextSearch,
 } from "../../server/adapters/places.ts";
 import { createMemoryDailyQuota } from "../../server/quota.ts";
@@ -505,6 +506,44 @@ describe("Places adapter: coordinates for a new Listed Provider", () => {
 
     expect(exhausted).toEqual({ ok: false, reason: "cap_reached" });
     expect(unknown).toEqual({ ok: false, reason: "not_found" });
+    expect(empty).toEqual({ ok: false, reason: "unavailable" });
+  });
+});
+
+describe("Places adapter: Google's name for Moderation", () => {
+  it("sends one Place Details call with the field mask `displayName` only, in the author's language", async () => {
+    const places = fakePlaces(() => Response.json({ displayName: { text: "Klinik Gigi Senyum Gubeng" } }));
+
+    const result = await adapterWith(places).getDisplayName({ placeId: "ChIJ-gubeng-dental", language: "id" });
+
+    expect(places.seen).toHaveLength(1);
+    const [call] = places.seen;
+    expect(call?.method).toBe("GET");
+    expect(call?.url.startsWith("https://places.googleapis.com/v1/places/ChIJ-gubeng-dental?languageCode=id")).toBe(
+      true,
+    );
+    expect(call?.headers.get("x-goog-fieldmask")).toBe("displayName");
+    expect(result).toEqual({ ok: true, displayName: "Klinik Gigi Senyum Gubeng" });
+  });
+
+  it("stops at its own small daily cap, so the Provider page keeps most of the shared Place Details quota", async () => {
+    const places = fakePlaces(() => Response.json({ displayName: { text: "Klinik" } }));
+    const adapter = adapterWith(places);
+
+    for (let i = 0; i < MODERATION_NAME_DAILY_CAP; i++) await adapter.getDisplayName({ placeId: "p", language: "id" });
+    const over = await adapter.getDisplayName({ placeId: "p", language: "id" });
+
+    expect(MODERATION_NAME_DAILY_CAP).toBeLessThanOrEqual(20);
+    expect(places.seen).toHaveLength(MODERATION_NAME_DAILY_CAP);
+    expect(over).toEqual({ ok: false, reason: "cap_reached" });
+  });
+
+  it("treats an answer without a name as unavailable", async () => {
+    const empty = await adapterWith(fakePlaces(() => Response.json({}))).getDisplayName({
+      placeId: "p",
+      language: "id",
+    });
+
     expect(empty).toEqual({ ok: false, reason: "unavailable" });
   });
 });

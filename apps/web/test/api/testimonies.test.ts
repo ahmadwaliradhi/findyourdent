@@ -1,6 +1,8 @@
-// Posting a Testimony (spec 03, T11) through the web API: sign-in and protection,
-// validation, the one-per-Provider rule, the Moderation switch, Listed Provider
-// creation, aggregates, and that Google's name is never stored.
+// Posting a Testimony (spec 03, T11 and T13) through the web API: sign-in and
+// protection, validation, the one-per-Provider rule, every Moderation decision path
+// (fix-before-submit, holds, Kunjungan terbukti), Listed Provider creation,
+// aggregates, and that Google's name is never stored.
+import type { ModerationDecision } from "@findyourdent/contracts";
 import {
   COLLECTIONS,
   IMPACT_COUNTERS,
@@ -12,7 +14,13 @@ import { getAuth } from "firebase-admin/auth";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
-import type { TestimonyApiError, TestimonySubmission, TestimonySubmitResponse } from "../../app/lib/testimony.ts";
+import type {
+  TestimonyApiError,
+  TestimonyAuthorFixResponse,
+  TestimonyStoredResponse,
+  TestimonySubmission,
+} from "../../app/lib/testimony.ts";
+import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -78,11 +86,43 @@ const edit = (id: string, body: unknown, options?: SendOptions) => send(`/api/te
 const remove = (id: string, options: SendOptions = {}) =>
   send(`/api/testimonies/${id}`, undefined, { ...options, method: "DELETE" });
 
-async function createOk(body: unknown, options: SendOptions): Promise<TestimonySubmitResponse> {
+async function createOk(body: unknown, options: SendOptions): Promise<TestimonyStoredResponse> {
   const response = await create(body, options);
   if (response.status !== 201) throw new Error(`create failed: ${response.status} ${await response.text()}`);
-  return (await response.json()) as TestimonySubmitResponse;
+  return (await response.json()) as TestimonyStoredResponse;
 }
+
+const PUBLISH: ModerationDecision = {
+  decision: "publish",
+  ruleCodes: [],
+  flaggedSpans: [],
+  confidence: 0.95,
+  authorMessage: "Terima kasih!",
+  proofOfVisit: "notProvided",
+};
+
+const HOLD: ModerationDecision = {
+  decision: "hold",
+  ruleCodes: ["r2_accusation_as_fact"],
+  flaggedSpans: [],
+  confidence: 0.9,
+  authorMessage: "Testimoni Anda ditinjau tim.",
+  proofOfVisit: "notProvided",
+};
+
+const PHONE_TEXT = "Dokternya sabar. Hubungi saja 0812-3456-7890 untuk janji. Ruangannya bersih.";
+
+/** An R1 authorFix flagging the phone number in PHONE_TEXT. */
+const AUTHOR_FIX: ModerationDecision = {
+  decision: "authorFix",
+  ruleCodes: ["r1_personal_data"],
+  flaggedSpans: [{ start: 30, end: 44, text: "0812-3456-7890", ruleCode: "r1_personal_data" }],
+  confidence: 0.9,
+  authorMessage: "Mohon hapus nomor telepon sebelum mengirim.",
+  proofOfVisit: "notProvided",
+};
+
+const moderateWith = (decision: unknown) => server.fakes.agent.respondToModerationWith(decision);
 
 async function signIn(email: string): Promise<{ cookie: string; uid: string }> {
   const cookie = await server.signInWithGoogle(email);
@@ -245,7 +285,7 @@ describe("POST /api/testimonies: validation", () => {
   });
 });
 
-describe("Moderation switch: publish", () => {
+describe("Moderation: publish", () => {
   it("publishes and makes the place a Listed Provider with the typed name, Region and coordinates", async () => {
     const { cookie, uid } = await signIn("pasien@example.com");
     const { testimonyId, status } = await createOk(submission(), { cookie });
@@ -303,7 +343,7 @@ describe("Moderation switch: publish", () => {
       placeId: NEW_PLACE,
       decision: "publish",
       ruleCodes: [],
-      model: "switch",
+      model: "gemini-3.5-flash-lite",
     });
   });
 
@@ -363,9 +403,9 @@ describe("Moderation switch: publish", () => {
   });
 });
 
-describe("Moderation switch: hold", () => {
+describe("Moderation: hold", () => {
   it("holds the Testimony, keeps the typed name on it and creates no Listed Provider", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId, status } = await createOk(submission(), { cookie });
     expect(status).toBe("held");
@@ -382,34 +422,279 @@ describe("Moderation switch: hold", () => {
         .doc(stored.moderationDecisionId ?? "-")
         .get()
     ).data() as ModerationDecisionDoc;
-    expect(decision).toMatchObject({ decision: "hold", ruleCodes: ["low_confidence"], model: "switch" });
+    expect(decision).toMatchObject({
+      decision: "hold",
+      ruleCodes: ["r2_accusation_as_fact"],
+      model: "gemini-3.5-flash-lite",
+    });
   });
 
   it("keeps an edited held Testimony held for the admin even when Moderation would publish", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await createOk(submission(), { cookie });
-    server.setTestimonyModeration("publish");
+    moderateWith(PUBLISH);
     const response = await edit(testimonyId, submission({ providerName: undefined, region: undefined }), { cookie });
     expect(response.status).toBe(200);
-    expect(((await response.json()) as TestimonySubmitResponse).status).toBe("held");
+    expect(((await response.json()) as TestimonyStoredResponse).status).toBe("held");
     expect(await provider(NEW_PLACE)).toBeUndefined();
     expect((await testimony(testimonyId)).proposedProviderName).toBe("Klinik Gigi Ceria");
   });
 
   it("publishes a fixed Testimony, creating the Listed Provider then", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await createOk(submission(), { cookie });
-    // Sent back for a fix, as Moderation (T13) or the admin queue (T14) would.
+    // Sent back to the author by the admin queue (T14).
     await server.firestore.collection(COLLECTIONS.testimonies).doc(testimonyId).update({ status: "needsAuthorFix" });
-    server.setTestimonyModeration("publish");
+    moderateWith(PUBLISH);
     const response = await edit(testimonyId, submission({ providerName: undefined, region: undefined }), { cookie });
     expect(response.status).toBe(200);
-    expect(((await response.json()) as TestimonySubmitResponse).status).toBe("published");
+    expect(((await response.json()) as TestimonyStoredResponse).status).toBe("published");
     expect((await provider(NEW_PLACE))?.name).toBe("Klinik Gigi Ceria");
     expect((await testimony(testimonyId)).proposedProviderName).toBeUndefined();
     expect(await counter("testimoniesPublished")).toBe(1);
+  });
+});
+
+async function decisionOf(id: string | undefined): Promise<ModerationDecisionDoc> {
+  const snapshot = await server.firestore
+    .collection(COLLECTIONS.moderationDecisions)
+    .doc(id ?? "-")
+    .get();
+  return snapshot.data() as ModerationDecisionDoc;
+}
+
+describe("Moderation: what the agent is asked", () => {
+  it("sends the text, Google's live name, the typed name, the photos and the Proof of Visit, but no star ratings", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    await createOk(submission(), {
+      cookie,
+      photos: [await photo()],
+      proof: { bytes: await photo(), type: "image/jpeg" },
+    });
+
+    expect(server.fakes.places.displayNameCalls).toEqual([{ placeId: NEW_PLACE, language: "id" }]);
+    const [request] = server.fakes.agent.moderationCalls;
+    expect(request).toMatchObject({
+      subjectType: "testimony",
+      language: "id",
+      text: submission().text,
+      typedProviderName: "Klinik Gigi Ceria",
+      googleDisplayName: "Fake Google Place",
+      visitMonth: "2026-09",
+      procedureCode: "scaling",
+      authorFixRound: 0,
+      proofOfVisit: { mimeType: "image/jpeg" },
+    });
+    expect(request?.photos).toHaveLength(1);
+    expect(request?.photos?.[0]?.mimeType).toBe("image/jpeg");
+    const sent = Buffer.from(request?.photos?.[0]?.dataBase64 ?? "", "base64");
+    expect((await sharp(sent).metadata()).width).toBe(640);
+    expect(JSON.stringify(request)).not.toContain("ratings");
+  });
+
+  it("still screens on the typed name when Google's name is unavailable", async () => {
+    server.fakes.places.respondWithDisplayName({ ok: false, reason: "cap_reached" });
+    const { cookie } = await signIn("pasien@example.com");
+    const { status } = await createOk(submission(), { cookie });
+
+    expect(status).toBe("published");
+    expect(server.fakes.agent.moderationCalls[0]?.googleDisplayName).toBeUndefined();
+    expect(server.fakes.agent.moderationCalls[0]?.typedProviderName).toBe("Klinik Gigi Ceria");
+  });
+});
+
+describe("Moderation: fix before submit", () => {
+  it("returns the flagged spans and message without storing anything, then publishes the fixed text", async () => {
+    moderateWith(AUTHOR_FIX);
+    const { cookie } = await signIn("pasien@example.com");
+    // Leading blank lines are trimmed before Moderation; the answer says what was screened.
+    const response = await create(submission({ text: `\n  ${PHONE_TEXT}` }), {
+      cookie,
+      photos: [await photo()],
+      proof: { bytes: await photo(), type: "image/jpeg" },
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as TestimonyAuthorFixResponse;
+    expect(body).toEqual({
+      status: "needsAuthorFix",
+      message: "Mohon hapus nomor telepon sebelum mengirim.",
+      text: PHONE_TEXT,
+      ruleCodes: ["r1_personal_data"],
+      flaggedSpans: AUTHOR_FIX.flaggedSpans,
+      roundsLeft: 2,
+    });
+    expect(await count(COLLECTIONS.testimonies)).toBe(0);
+    expect(await count(COLLECTIONS.moderationDecisions)).toBe(0);
+    expect(await storedObjects()).toEqual([]);
+    expect(await wholeFirestore()).not.toContain("0812-3456-7890");
+
+    moderateWith(PUBLISH);
+    const fixed = await createOk(submission({ text: "Dokternya sabar. Ruangannya bersih." }), { cookie });
+    expect(fixed.status).toBe("published");
+    expect(server.fakes.agent.moderationCalls[1]?.authorFixRound).toBe(1);
+    expect((await testimony(fixed.testimonyId)).authorFixRounds).toBe(1);
+  });
+
+  it("holds the Testimony for the team after three rounds of fixes", async () => {
+    // The agent holds at round three itself; the web service does not rely on it.
+    moderateWith(AUTHOR_FIX);
+    const { cookie } = await signIn("pasien@example.com");
+    const rounds: number[] = [];
+    for (let round = 0; round < 3; round++) {
+      const response = await create(submission({ text: PHONE_TEXT }), { cookie });
+      expect(response.status).toBe(200);
+      rounds.push(((await response.json()) as TestimonyAuthorFixResponse).roundsLeft);
+    }
+    expect(rounds).toEqual([2, 1, 0]);
+
+    const held = await createOk(submission({ text: PHONE_TEXT }), { cookie });
+    expect(held.status).toBe("held");
+    expect(server.fakes.agent.moderationCalls.map((call) => call.authorFixRound)).toEqual([0, 1, 2, 3]);
+    const stored = await testimony(held.testimonyId);
+    expect(stored).toMatchObject({ status: "held", authorFixRounds: 3 });
+    expect(await decisionOf(stored.moderationDecisionId)).toMatchObject({
+      decision: "hold",
+      ruleCodes: ["r1_personal_data"],
+    });
+  });
+
+  it("leaves a published Testimony as it was when an edit needs a fix", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const { testimonyId } = await createOk(submission(), { cookie });
+    moderateWith(AUTHOR_FIX);
+    const response = await edit(testimonyId, submission({ text: PHONE_TEXT }), { cookie, photos: [await photo()] });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()) as TestimonyAuthorFixResponse).toMatchObject({
+      status: "needsAuthorFix",
+      testimonyId,
+      roundsLeft: 2,
+    });
+    const stored = await testimony(testimonyId);
+    expect(stored).toMatchObject({ status: "published", text: submission().text });
+    expect(stored.pendingRevision).toBeUndefined();
+    expect(await storedObjects(`testimonies/${testimonyId}/`)).toEqual([]);
+  });
+});
+
+describe("Moderation: holds", () => {
+  it("tells the author the plain reason and the 24-hour target", async () => {
+    moderateWith(HOLD);
+    const { cookie } = await signIn("pasien@example.com");
+    const held = await createOk(submission(), { cookie });
+
+    expect(held.status).toBe("held");
+    expect(held.message).toContain("tuduhan");
+    expect(held.message).toContain("24 jam");
+  });
+
+  it("tells a low-confidence hold, a photo hold and a first-round fixable hold apart", async () => {
+    const reasons = async (decision: ModerationDecision, placeId: string) => {
+      moderateWith(decision);
+      const { cookie } = await signIn(`pasien.${placeId}@example.com`);
+      return (await createOk(submission({ placeId }), { cookie })).message;
+    };
+    const unsure = await reasons({ ...HOLD, ruleCodes: ["low_confidence"] }, "ChIJ-place-unsure");
+    const photoHeld = await reasons(
+      {
+        ...HOLD,
+        ruleCodes: ["photo_not_clinic_setting"],
+        flaggedPhotos: [{ photoIndex: 0, ruleCode: "photo_not_clinic_setting" }],
+      },
+      "ChIJ-place-photo",
+    );
+    // Held at once beside a hold rule: no fix rounds were used, so none are mentioned.
+    const firstRound = await reasons(
+      { ...HOLD, ruleCodes: ["r1_personal_data", "r2_accusation_as_fact"] },
+      "ChIJ-place-r1",
+    );
+
+    expect(unsure).toContain("belum cukup yakin");
+    expect(photoHeld).toContain("foto");
+    expect(firstRound).toContain("tuduhan");
+    expect(firstRound).toContain("data pribadi");
+    expect(firstRound).not.toContain("tiga kali");
+    for (const message of [unsure, photoHeld, firstRound]) expect(message).toContain("24 jam");
+  });
+
+  it("holds as a model error, without Kunjungan terbukti, when the agent refuses the call, and still deletes the Proof", async () => {
+    moderateWith(new AgentUnavailableError("agent responded 422", 422));
+    const { cookie } = await signIn("pasien@example.com");
+    const held = await createOk(submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
+
+    expect(held).toMatchObject({ status: "held", verifiedVisit: false });
+    expect(held.message).toContain("24 jam");
+    const stored = await testimony(held.testimonyId);
+    expect(stored.verifiedVisit).toBe(false);
+    expect(stored.proofOfVisit).toBeUndefined();
+    expect(await decisionOf(stored.moderationDecisionId)).toMatchObject({
+      decision: "hold",
+      ruleCodes: ["model_error"],
+      model: "fallback",
+    });
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect(await count(COLLECTIONS.providers)).toBe(0);
+  });
+
+  it("holds as a model error when the agent's answer is not a valid decision", async () => {
+    moderateWith({ decision: "publish" });
+    const { cookie } = await signIn("pasien@example.com");
+    const held = await createOk(submission(), { cookie });
+
+    expect(held.status).toBe("held");
+    const stored = await testimony(held.testimonyId);
+    expect((await decisionOf(stored.moderationDecisionId)).ruleCodes).toEqual(["model_error"]);
+  });
+});
+
+describe("Moderation: the author's own health details", () => {
+  it("publishes with a gentle note, never a hold", async () => {
+    moderateWith({ ...PUBLISH, ownHealthDataWarning: true });
+    const { cookie } = await signIn("pasien@example.com");
+    const published = await createOk(submission(), { cookie });
+
+    expect(published).toMatchObject({ status: "published", ownHealthDataWarning: true });
+  });
+});
+
+describe("Moderation: Proof of Visit", () => {
+  it("marks Kunjungan terbukti on an accepted Proof, keeps only the result and date, and deletes the file", async () => {
+    moderateWith({ ...PUBLISH, proofOfVisit: "accepted" });
+    const { cookie } = await signIn("pasien@example.com");
+    const published = await createOk(submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
+
+    expect(published).toMatchObject({ status: "published", verifiedVisit: true });
+    const stored = await testimony(published.testimonyId);
+    expect(stored.verifiedVisit).toBe(true);
+    expect(stored.proofOfVisit?.result).toBe("accepted");
+    expect(stored.proofOfVisit?.checkedAt).toBeDefined();
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect((await provider(NEW_PLACE))?.aggregates.verifiedVisitCount).toBe(1);
+  });
+
+  it("publishes without the mark when the Proof is rejected, and deletes the file", async () => {
+    moderateWith({ ...PUBLISH, proofOfVisit: "rejected" });
+    const { cookie } = await signIn("pasien@example.com");
+    const published = await createOk(submission(), {
+      cookie,
+      proof: { bytes: Buffer.from("%PDF-1.4\n%%EOF\n"), type: "application/pdf" },
+    });
+
+    expect(published).toMatchObject({ status: "published", verifiedVisit: false });
+    expect((await testimony(published.testimonyId)).proofOfVisit?.result).toBe("rejected");
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+  });
+
+  it("deletes the Proof file when the Testimony needs a fix", async () => {
+    moderateWith(AUTHOR_FIX);
+    const { cookie } = await signIn("pasien@example.com");
+    await create(submission({ text: PHONE_TEXT }), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
+
+    expect(server.fakes.agent.moderationCalls[0]?.proofOfVisit).toBeDefined();
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
   });
 });
 
@@ -426,7 +711,7 @@ describe("one Testimony per Patient per Provider", () => {
   });
 
   it("refuses even while the first one is held", async () => {
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await createOk(submission(), { cookie });
     const again = await create(submission(), { cookie });
@@ -459,8 +744,6 @@ describe("photos and Proof of Visit", () => {
     const [bytes] = await server.uploads.file(stored.photoPaths[0] as string).download();
     expect((await sharp(bytes).metadata()).exif).toBeUndefined();
     expect(await storedObjects("proof-of-visit/")).toEqual([]);
-    expect(stored.verifiedVisit).toBe(false);
-    expect(stored.proofOfVisit).toBeUndefined();
   });
 
   it("refuses a file that is not an image", async () => {
@@ -477,10 +760,10 @@ describe("editing", () => {
   it("keeps the published version public while an edit is held", async () => {
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await createOk(submission(), { cookie });
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     const response = await edit(testimonyId, submission({ text: "Versi baru yang ditahan." }), { cookie });
     expect(response.status).toBe(200);
-    expect((await response.json()) as TestimonySubmitResponse).toEqual({ testimonyId, status: "held" });
+    expect((await response.json()) as TestimonyStoredResponse).toMatchObject({ testimonyId, status: "held" });
 
     const stored = await testimony(testimonyId);
     expect(stored.status).toBe("published");
@@ -499,9 +782,9 @@ describe("editing", () => {
   it("replaces the published content and the aggregates when the edit is published", async () => {
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await createOk(submission(), { cookie });
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     await edit(testimonyId, submission({ text: "Ditahan dulu." }), { cookie });
-    server.setTestimonyModeration("publish");
+    moderateWith(PUBLISH);
     const response = await edit(
       testimonyId,
       submission({
@@ -511,7 +794,7 @@ describe("editing", () => {
       }),
       { cookie },
     );
-    expect(((await response.json()) as TestimonySubmitResponse).status).toBe("published");
+    expect(((await response.json()) as TestimonyStoredResponse).status).toBe("published");
 
     const stored = await testimony(testimonyId);
     expect(stored).toMatchObject({ status: "published", text: "Versi baru." });
@@ -628,7 +911,7 @@ describe("author delete", () => {
   it("removes a pending edit and its photos too", async () => {
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await createOk(submission(), { cookie });
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     await edit(testimonyId, submission({ text: "Revisi." }), { cookie, photos: [await photo()] });
     expect((await storedObjects(`testimonies/${testimonyId}/`)).length).toBe(1);
     await remove(testimonyId, { cookie });
@@ -647,6 +930,12 @@ describe("Google's name", () => {
     const second = await signIn("kedua@example.com");
     await createOk(submission({ providerName: "Nama Kedua" }), { cookie: second.cookie });
 
+    // Moderation was given it in memory, three times.
+    expect(server.fakes.agent.moderationCalls.map((call) => call.googleDisplayName)).toEqual([
+      "Fake Google Place",
+      "Fake Google Place",
+      "Fake Google Place",
+    ]);
     expect(await wholeFirestore()).not.toContain("Fake Google Place");
     expect(server.fakes.places.detailsCalls).toEqual([]);
   });
@@ -662,7 +951,7 @@ describe("'Testimoni saya'", () => {
   it("lists the author's Testimonies with the Provider name and plain status, not deleted ones", async () => {
     const { cookie } = await signIn("pasien@example.com");
     await createOk(submission(), { cookie });
-    server.setTestimonyModeration("hold");
+    moderateWith(HOLD);
     await createOk(submission({ placeId: "ChIJ-held-place", providerName: "Klinik Ditahan" }), { cookie });
     const { testimonyId: gone } = await createOk(
       submission({ placeId: "ChIJ-gone-place", providerName: "Klinik Dihapus" }),

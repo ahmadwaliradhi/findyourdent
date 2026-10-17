@@ -107,6 +107,9 @@ export type AutocompleteResult =
 
 export type CoordinatesResult = { ok: true; location: LatLng } | PlaceDetailsFailure;
 
+/** Google's live name for a place: held in memory for Moderation only, never stored. */
+export type DisplayNameResult = { ok: true; displayName: string } | PlaceDetailsFailure;
+
 export interface PlacesAdapter {
   searchText(search: TextSearch): Promise<TextSearchResult>;
   /**
@@ -119,6 +122,12 @@ export interface PlacesAdapter {
    * Provider. Counted against the `coordinates` daily cap.
    */
   getCoordinates(placeId: string): Promise<CoordinatesResult>;
+  /**
+   * Place Details, `displayName` only (Pro tier): Google's live name, passed to
+   * Moderation in memory for rule R6 and the Proof of Visit match. Counted against
+   * the `moderationName` daily cap.
+   */
+  getDisplayName(request: PlaceDetailsRequest): Promise<DisplayNameResult>;
   /** Place Details, Enterprise tier: one call per Provider page view, asked for by the browser. */
   getGoogleBlock(request: PlaceDetailsRequest): Promise<GoogleBlockResult>;
   /** Place Details with only the reviews field: only when the Patient taps "Lihat ulasan Google". */
@@ -196,6 +205,16 @@ export const AUTOCOMPLETE_DAILY_CAP = 300;
  * Provider is created without coordinates, and the daily coordinate refresh fills them in.
  */
 export const COORDINATES_DAILY_CAP = 10;
+
+/** Place Details, Pro tier: Google's name only, for Moderation (spec 03). */
+export const MODERATION_NAME_FIELD_MASK = "displayName";
+
+/**
+ * Google's name for Moderation is a Get Place call too, on the same shared 83-a-day
+ * cap. Each Testimony submission makes one (the per-account limit is five a day);
+ * past this cap, Moderation runs on the typed name alone.
+ */
+export const MODERATION_NAME_DAILY_CAP = 15;
 
 const TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places/";
@@ -478,6 +497,17 @@ export function createGooglePlacesAdapter(options: GooglePlacesAdapterOptions): 
       const { latitude, longitude } = result.place.location ?? {};
       if (typeof latitude !== "number" || typeof longitude !== "number") return { ok: false, reason: "unavailable" };
       return { ok: true, location: { lat: latitude, lng: longitude } };
+    },
+    async getDisplayName(request) {
+      const result = await placeDetails(
+        "moderationName",
+        MODERATION_NAME_DAILY_CAP,
+        MODERATION_NAME_FIELD_MASK,
+        request,
+      );
+      if (!result.ok) return result;
+      const displayName = result.place.displayName?.text?.trim();
+      return displayName ? { ok: true, displayName } : { ok: false, reason: "unavailable" };
     },
   };
 }
