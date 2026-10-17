@@ -10,7 +10,7 @@ Nothing in this document is application code. Steps 3 to 8 start only after the 
 |---|---|---|
 | Eligibility | Registration closed 11 October, team formation closed 14 October (aibuildercup.com index and FAQ). Teams of 2 to 4, all 21+, all working professionals, all in JAPAC. "If any member of a team is a student, the entire team will be disqualified." | The team already exists on the Hack2skill dashboard with 2 to 4 members, and every member meets all three conditions. If the team was not formed by 14 October there is no submission path and all work below stops. |
 | Deadline time | "Prototype submission deadline: Oct 18, 2026." No time zone published. Hack2skill is India-based, so the cut-off could be 23:59 IST (01:29 WIB Monday) or earlier. | Log in to the Hack2skill dashboard tonight and record the countdown timer. If it ends before Sunday 12:00 WIB, apply the kill criteria in risk 2. |
-| Fresh code | Repository initial commit is 16 October 2026 09:24 WIB, inside the 7 September to 18 October window. The domain and the idea predate the hackathon; the code does not. | Say so in the deck in one line. |
+| Fresh code | Repository initial commit is 16 October 2026 09:24 WIB, inside the 7 September to 18 October window. The idea predates the hackathon; the code does not, and findyourdent.com was registered on 17 October 2026 (whois). | Say so in the deck in one line. |
 
 ## 1. Challenge
 
