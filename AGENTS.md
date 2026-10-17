@@ -2,6 +2,8 @@
 
 Dentistry platform for Indonesia, built for the AI Builder Cup 2026. Specs live in `docs/specs/`, decisions in `docs/adr/`, vocabulary in `GLOSSARY.md`.
 
+Google Cloud project `findyourdent` (asia-southeast2): resources, secret names, quota caps and manual steps are in `infra/gcp/README.md`.
+
 ## Agent skills
 
 ### Issue tracker

@@ -12,7 +12,7 @@
 # printed at the end as console instructions.
 set -euo pipefail
 
-PROJECT_ID="${PROJECT_ID:-findmydent}"
+PROJECT_ID="${PROJECT_ID:-findyourdent}"
 BILLING_ACCOUNT="${BILLING_ACCOUNT:-019521-D61E16-A0C8A3}"
 REGION="${REGION:-asia-southeast2}"
 BUCKET="${BUCKET:-${PROJECT_ID}-uploads}"
