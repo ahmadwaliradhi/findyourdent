@@ -3,6 +3,7 @@ import { COLLECTIONS, type ProviderDoc } from "@findyourdent/contracts/firestore
 import { Timestamp } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { shareToken } from "../../app/server/share.server.ts";
+import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
 import type { PlaceSummary } from "../../server/adapters/places.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
@@ -377,5 +378,137 @@ describe("POST /api/shortlist", () => {
     const logs = server.logs.join("\n");
     expect(logs).not.toContain("Gubeng");
     expect(logs).not.toContain(String(GUBENG.lat));
+  });
+});
+
+describe("POST /api/shortlist reasons (T09)", () => {
+  /** The clinic leads on Testimonies, then the Hospital, then the private dentist (see the ranking test above). */
+  async function seedRankedThree() {
+    server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG, GOOGLE_HOSPITAL]);
+    await seedProviders(
+      listedProvider(GOOGLE_CLINIC.placeId, {
+        name: "Klinik Senyum Gubeng",
+        aggregates: {
+          testimonyCount: 6,
+          verifiedVisitCount: 2,
+          averages: { service: 4.6, hygiene: 4.8, materialsEquipment: 4.5 },
+          procedurePrices: {
+            root_canal_treatment: { count: 3, medianRupiah: 1_200_000, minRupiah: 900_000, maxRupiah: 1_500_000 },
+          },
+        },
+      }),
+    );
+  }
+  const RANKED = [GOOGLE_CLINIC.placeId, GOOGLE_HOSPITAL.placeId, GOOGLE_DRG.placeId];
+  const GEMINI: Record<string, string> = {
+    [GOOGLE_CLINIC.placeId]: "Gemini: kebersihan dinilai tinggi oleh enam pasien.",
+    [GOOGLE_HOSPITAL.placeId]: "Gemini: rumah sakit dengan poli gigi.",
+    [GOOGLE_DRG.placeId]: "Gemini: praktik dokter gigi pribadi di dekat Anda.",
+  };
+  const reasonsFor = (placeIds: string[]) => ({
+    reasons: placeIds.map((placeId) => ({ placeId, reason: GEMINI[placeId] ?? `Gemini: ${placeId}` })),
+  });
+  const request = () => ({ purpose: "shortlist", guidanceToken: tokenFor(ROOT_CANAL_GUIDANCE), location: GUBENG });
+
+  it("shows Gemini's reason on each card, asked with the ranked top Providers and their facts", async () => {
+    await seedRankedThree();
+    server.fakes.agent.respondToReasonsWith(reasonsFor(RANKED));
+
+    const { body } = await shortlist(request());
+
+    expect(body.providers.map((p) => [p.placeId, p.reason])).toEqual(RANKED.map((id) => [id, GEMINI[id]]));
+    expect(server.fakes.agent.reasonsCalls).toHaveLength(1);
+    const sent = server.fakes.agent.reasonsCalls[0];
+    expect(sent).toMatchObject({
+      language: "id",
+      likelyCategoryCode: "deep_caries_or_pulpitis",
+      likelyProcedures: ["root_canal_treatment", "dental_xray_periapical"],
+    });
+    expect(sent?.sessionId.length).toBeGreaterThanOrEqual(8);
+    expect(sent?.providers.map((p) => [p.rank, p.placeId])).toEqual(RANKED.map((id, i) => [i + 1, id]));
+    expect(sent?.providers[0]).toMatchObject({
+      name: "Klinik Senyum Gubeng",
+      providerType: "klinik",
+      providerTypeSource: "inferred",
+      procedureFit: expect.arrayContaining(["root_canal_treatment"]),
+      testimonies: {
+        count: 6,
+        verifiedVisitCount: 2,
+        averageService: 4.6,
+        averageHygiene: 4.8,
+        averageMaterialsEquipment: 4.5,
+      },
+      priceSignals: [
+        { procedureCode: "root_canal_treatment", source: "testimonies", minRupiah: 1_200_000, maxRupiah: 1_200_000 },
+        { procedureCode: "root_canal_treatment", source: "costEstimate", minRupiah: 800_000, maxRupiah: 3_500_000 },
+      ],
+    });
+    expect(sent?.providers[0]?.distanceMeters).toBeGreaterThan(400);
+  });
+
+  it("falls back to the templated reasons when the agent fails", async () => {
+    await seedRankedThree();
+    server.fakes.agent.respondToReasonsWith(new AgentUnavailableError("agent responded 503", 503));
+
+    const { response, body } = await shortlist(request());
+
+    expect(response.status).toBe(200);
+    expect(body.providers.map((p) => p.placeId)).toEqual(RANKED);
+    expect(body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 6 pasien");
+    for (const provider of body.providers) expect(provider.reason).not.toMatch(/^Gemini/);
+  });
+
+  it("falls back to the templated reasons when the agent's answer breaks the contract", async () => {
+    await seedRankedThree();
+    server.fakes.agent.respondToReasonsWith({ reasons: [{ placeId: GOOGLE_CLINIC.placeId, reason: "" }] });
+
+    const { body } = await shortlist(request());
+
+    expect(body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 6 pasien");
+  });
+
+  it("never lets the agent reorder, add or drop a Provider", async () => {
+    await seedRankedThree();
+    // Reversed, the Hospital missing, and one Provider the ranking never chose.
+    server.fakes.agent.respondToReasonsWith(
+      reasonsFor([GOOGLE_DRG.placeId, "place-not-in-the-shortlist", GOOGLE_CLINIC.placeId]),
+    );
+
+    const { body } = await shortlist(request());
+
+    expect(body.providers.map((p) => p.placeId)).toEqual(RANKED);
+    expect(body.providers[0]?.reason).toBe(GEMINI[GOOGLE_CLINIC.placeId]);
+    expect(body.providers[1]?.reason).not.toMatch(/^Gemini/);
+    expect(body.providers[1]?.reason).not.toBe("");
+    expect(body.providers[2]?.reason).toBe(GEMINI[GOOGLE_DRG.placeId]);
+  });
+
+  it("does not hold the emergency Hospital list for Gemini", async () => {
+    server.fakes.places.respondWith([GOOGLE_HOSPITAL]);
+
+    const { body } = await shortlist({ purpose: "emergency", location: GUBENG });
+
+    expect(server.fakes.agent.reasonsCalls).toEqual([]);
+    expect(body.providers[0]?.reason).toMatch(/^Rumah sakit dengan IGD/);
+  });
+
+  it("does not call the agent when there is no Provider to explain", async () => {
+    server.fakes.places.respondWith([]);
+
+    await shortlist(request());
+
+    expect(server.fakes.agent.reasonsCalls).toEqual([]);
+  });
+
+  it("logs only where the reasons came from, never a Provider name or a reason", async () => {
+    await seedRankedThree();
+    server.fakes.agent.respondToReasonsWith(reasonsFor(RANKED));
+
+    await shortlist(request());
+
+    const logs = server.logs.join("\n");
+    expect(logs).toContain('"reasons":"gemini"');
+    expect(logs).not.toContain("Klinik Senyum Gubeng");
+    expect(logs).not.toContain("Gemini:");
   });
 });
