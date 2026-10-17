@@ -19,6 +19,8 @@ Complaint text stays in memory for the length of the request. Nothing here logs 
 
 from __future__ import annotations
 
+import base64
+import binascii
 import logging
 import re
 from dataclasses import dataclass
@@ -30,6 +32,7 @@ from .adapters import AgentSearchAdapter, GeminiAdapter, GroundingDoc, ModelUnav
 from .agents.guidance import (
     ModelTurn,
     UrgencyTier,
+    VoiceNote,
     guidance_contents,
     guidance_instruction,
     model_response_schema,
@@ -75,8 +78,12 @@ class InvalidModelOutputError(ModelUnavailableError):
     """Gemini returned JSON that does not match the ModelTurn schema."""
 
 
-class AudioNotSupportedError(Exception):
-    """Voice notes land with T07; this ticket handles typed complaints."""
+class InvalidAudioError(ValueError):
+    """The voice note is not valid base64."""
+
+
+class NoSpeechError(Exception):
+    """Gemini heard no speech in the voice note: the Patient is asked to record again."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +94,16 @@ class Outcome:
     guidance or guidance_fallback."""
     grounding: str | None = None
     """Logged with the outcome when Gemini was called: agent_search or curated."""
+
+
+def _voice_note(turn: GuidanceTurn) -> VoiceNote | None:
+    if turn.audio is None or turn.complaintText is not None:
+        return None
+    try:
+        data = base64.b64decode(turn.audio.dataBase64, validate=True)
+    except binascii.Error:
+        raise InvalidAudioError from None
+    return VoiceNote(data=data, mime_type=turn.audio.mimeType)
 
 
 @cache
@@ -205,6 +222,10 @@ def _card(
     return GuidanceCardResponse(kind="guidance", guidance=guidance)
 
 
+def _with_transcript(response: Response, transcript: str | None) -> Response:
+    return response.model_copy(update={"transcript": transcript}) if transcript else response
+
+
 async def answer_turn(
     turn: GuidanceTurn,
     *,
@@ -213,24 +234,31 @@ async def answer_turn(
     red_flags: RedFlagMatcher,
     settings: Settings,
 ) -> Outcome:
+    """One turn. A voice note is heard by Gemini in the Guidance call itself, so its
+    Emergency Escalation and injection checks run on the transcript Gemini returns;
+    the transcript goes back with whatever the Patient receives."""
+    voice = _voice_note(turn)
     texts = (turn.complaintText, turn.followUpAnswer)
     emergency = red_flags.check(*texts, language=turn.language)
     if emergency:
         return Outcome(emergency, "emergency")
-    if turn.complaintText is None:
-        raise AudioNotSupportedError
     # The question is model text echoed back by the browser, so it is checked for
     # injection like Patient text, but not for red flags it may only ask about.
     if any(is_injection(t) for t in (*texts, turn.followUpQuestion) if t):
         return Outcome(_redirect(turn.language), "redirect")
 
-    retrieved = await _retrieve(agent_search, turn.complaintText, settings)
+    # A voice note has no text to search with before Gemini hears it, so the curated
+    # knowledge files ground it; a corrected transcript sent back as text is searched.
+    complaint = voice or turn.complaintText
+    if complaint is None:  # GuidanceRequest rules this out
+        raise TypeError("a Guidance turn needs complaintText or audio")
+    retrieved = [] if voice else await _retrieve(agent_search, complaint, settings)
     grounding = "agent_search" if retrieved else "curated"
     raw = await gemini.generate_structured(
         model=settings.guidance_model,
         instruction=guidance_instruction(),
         contents=guidance_contents(
-            turn.complaintText, turn.followUpAnswer, turn.followUpQuestion, retrieved
+            complaint, turn.followUpAnswer, turn.followUpQuestion, retrieved
         ),
         response_schema=model_response_schema(),
         temperature=settings.guidance_temperature,
@@ -243,8 +271,39 @@ async def answer_turn(
         # Never chain the error: its message can quote model text.
         raise InvalidModelOutputError(f"{error.error_count()} validation errors") from None
 
+    transcript = None
+    if voice:
+        transcript = (model.transcript or "").strip()
+        if not transcript:
+            # The model's own red flags still escalate a voice note it could not make out.
+            if model.urgencyTier == "darurat" and model.redFlags:
+                result = _judge(turn, model, (), red_flags=red_flags, retrieved=[])
+                return Outcome(result.response, result.outcome, grounding)
+            raise NoSpeechError
+        texts = (transcript, turn.followUpAnswer)  # what the Patient said, as if typed
+        heard = red_flags.check(*texts, language=model.language)
+        if heard:
+            return Outcome(_with_transcript(heard, transcript), "emergency")
+        if is_injection(transcript):
+            return Outcome(
+                _with_transcript(_redirect(model.language), transcript), "redirect", grounding
+            )
+    result = _judge(turn, model, texts, red_flags=red_flags, retrieved=retrieved)
+    return Outcome(_with_transcript(result.response, transcript), result.outcome, grounding)
+
+
+def _judge(
+    turn: GuidanceTurn,
+    model: ModelTurn,
+    texts: tuple[str | None, ...],
+    *,
+    red_flags: RedFlagMatcher,
+    retrieved: list[GroundingDoc],
+) -> Outcome:
+    """The Patient's response from a validated model turn: ``texts`` are what the
+    Patient typed or said."""
     if model.offTopic:
-        return Outcome(_redirect(model.language), "redirect", grounding)
+        return Outcome(_redirect(model.language), "redirect")
 
     patient_texts = [t for t in texts if t]
     safe = not any(
@@ -255,9 +314,7 @@ async def answer_turn(
     if model.urgencyTier == "darurat" and (deterministic or model.redFlags):
         reason = model.emergencyReason if safe and model.emergencyReason else None
         reason = reason or guidance_safety().emergencyReason(model.language)
-        return Outcome(
-            _emergency(reason, deterministic | set(model.redFlags)), "emergency_model", grounding
-        )
+        return Outcome(_emergency(reason, deterministic | set(model.redFlags)), "emergency_model")
 
     if model.followUp and not turn.followUpAnswer and safe:
         follow_up = FollowUpResponse(
@@ -265,7 +322,7 @@ async def answer_turn(
             question=model.followUp.question,
             quickReplies=model.followUp.quickReplies or None,
         )
-        return Outcome(follow_up, "followUp", grounding)
+        return Outcome(follow_up, "followUp")
 
     if model.urgencyTier is None:  # ModelTurn rules this out unless off-topic
         raise InvalidModelOutputError("urgencyTier missing")
@@ -273,4 +330,4 @@ async def answer_turn(
     if deterministic or model.redFlags:
         urgency = max(urgency, _RED_FLAG_FLOOR, key=_URGENCY_ORDER.__getitem__)
     card = _card(model, urgency, safe=safe, retrieved=retrieved)
-    return Outcome(card, "guidance" if safe else "guidance_fallback", grounding)
+    return Outcome(card, "guidance" if safe else "guidance_fallback")

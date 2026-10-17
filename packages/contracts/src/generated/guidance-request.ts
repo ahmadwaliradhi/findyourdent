@@ -19,6 +19,9 @@ export interface GuidanceRequest {
    */
   audio?: {
     mimeType: "audio/webm" | "audio/ogg" | "audio/mp4" | "audio/mpeg" | "audio/wav";
+    /**
+     * Base64 of the recording. At most 2,800,000 characters (about 2 MB): 60 seconds of 16 kHz mono WAV, and well above 60 seconds of Opus or AAC.
+     */
     dataBase64: string;
   };
   /**

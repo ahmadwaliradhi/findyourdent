@@ -8,6 +8,7 @@ import { ListingFiltersForm } from "~/components/listing-filters-form";
 import { TestimonyCard } from "~/components/testimony-card";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
+import { VoiceRecorder } from "~/components/voice-recorder";
 import { getI18n } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_FIELD } from "~/lib/app-check";
@@ -18,7 +19,7 @@ import { type ListingFilters, listingFiltersToParams, parseListingFilters } from
 import { provinceName, regionLabel } from "~/lib/regions";
 import { openGraphMeta } from "~/lib/seo";
 import { loadFeedPage } from "~/server/feed.server";
-import { requestGuidance } from "~/server/guidance.server";
+import { guidanceBodyTooLarge, requestGuidance } from "~/server/guidance.server";
 import { readImpactCounter } from "~/server/impact.server";
 import { guidanceRoute, protectPaidRequest, setRetryAfter } from "~/server/protection.server";
 import { getOrCreateSessionId } from "~/server/session.server";
@@ -77,8 +78,17 @@ export function shouldRevalidate({ formMethod, defaultShouldRevalidate }: Should
 
 /** Form submission from the home page; the browser never calls the agent itself. */
 export async function action({ request, context }: Route.ActionArgs) {
+  if (guidanceBodyTooLarge(request)) {
+    // The body is left unread, so the connection cannot carry another request.
+    return data(
+      { complaintText: "", error: "audio_too_large" as const, response: null, share: null },
+      { status: 413, headers: { Connection: "close" } },
+    );
+  }
   const form = await request.formData();
   const complaintText = form.get("complaintText");
+  // A voice note from the record button; never stored, only forwarded to the agent.
+  const audio = form.get("audio");
   const followUpQuestion = form.get("followUpQuestion");
   const followUpAnswer = form.get("followUpAnswer");
   // The complaint is echoed back only so the Patient's own form keeps it; it is never stored.
@@ -106,6 +116,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     sessionId: session.sessionId,
     language,
     complaintText,
+    audio,
     followUpQuestion,
     followUpAnswer,
   });
@@ -122,7 +133,8 @@ export async function action({ request, context }: Route.ActionArgs) {
     response.kind === "guidance"
       ? { path: sharePath(response.guidance, context.config.shareLinkSecret), origin: new URL(request.url).origin }
       : null;
-  return data({ complaintText: echoed, error: null, response, share }, { headers });
+  // What the agent heard fills the complaint box, so the Patient can fix a misheard word and send it as text.
+  return data({ complaintText: response.transcript ?? echoed, error: null, response, share }, { headers });
 }
 
 export default function Home({ actionData, loaderData }: Route.ComponentProps) {
@@ -130,6 +142,8 @@ export default function Home({ actionData, loaderData }: Route.ComponentProps) {
   const navigation = useNavigation();
   // Fetching the App Check token counts as pending too, so a second tap cannot send a second request.
   const [preparing, setPreparing] = useState(false);
+  // A typed submit mid-recording would race the voice note, so it waits.
+  const [recording, setRecording] = useState(false);
   const pending = preparing || (navigation.state === "submitting" && navigation.formAction === "/?index");
   const submit = useSubmit();
   const firebase = useFirebaseConfig();
@@ -138,18 +152,32 @@ export default function Home({ actionData, loaderData }: Route.ComponentProps) {
   useEffect(() => setHydrated(true), []);
 
   // Guidance can call Gemini, so the server wants an App Check token with every submit.
-  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (pending) return;
-    const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
+  const send = (formData: FormData, encType: "application/x-www-form-urlencoded" | "multipart/form-data") => {
     setPreparing(true);
     void getAppCheckToken(firebase)
       .catch(() => "")
       .then((token) => {
         formData.set(APP_CHECK_FIELD, token);
         setPreparing(false);
-        void submit(formData, { method: "post" });
+        void submit(formData, { method: "post", encType });
       });
+  };
+
+  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending) return;
+    send(
+      new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter),
+      "application/x-www-form-urlencoded",
+    );
+  };
+
+  // The voice note alone: the agent hears it, and what it heard comes back to correct.
+  const onRecorded = (audio: Blob) => {
+    if (pending) return;
+    const formData = new FormData();
+    formData.set("audio", audio, "voice-note");
+    send(formData, "multipart/form-data");
   };
 
   return (
@@ -172,6 +200,8 @@ export default function Home({ actionData, loaderData }: Route.ComponentProps) {
             {t("home.complaintLabel")}
           </label>
           <Textarea
+            // Remounts with each answer, so a voice note's transcript replaces what the box held.
+            key={actionData?.complaintText ?? ""}
             id="complaintText"
             name="complaintText"
             required
@@ -184,9 +214,15 @@ export default function Home({ actionData, loaderData }: Route.ComponentProps) {
             {t("home.complaintHint")}
           </p>
         </div>
-        <Button type="submit" size="lg" disabled={pending || !hydrated} className="w-full sm:w-auto sm:self-start">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={pending || recording || !hydrated}
+          className="w-full sm:w-auto sm:self-start"
+        >
           {pending ? t("home.submitting") : t("home.submit")}
         </Button>
+        <VoiceRecorder disabled={pending || !hydrated} onRecorded={onRecorded} onRecordingChange={setRecording} />
 
         <div aria-live="polite" className="flex flex-col gap-3">
           {actionData?.error && (

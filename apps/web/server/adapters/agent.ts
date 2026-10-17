@@ -18,10 +18,23 @@ export interface AgentCallOptions {
 
 export class AgentUnavailableError extends Error {
   readonly status: number | undefined;
-  constructor(message: string, status?: number) {
+  /** The agent's own error code, such as "no_speech", when its body carried one. */
+  readonly code: string | undefined;
+  constructor(message: string, status?: number, code?: string) {
     super(message);
     this.name = "AgentUnavailableError";
     this.status = status;
+    this.code = code;
+  }
+}
+
+/** The { error } code of an agent error body. The body never carries Patient text. */
+async function errorCode(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as { error?: unknown };
+    return typeof body.error === "string" ? body.error : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -68,7 +81,7 @@ export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentA
       throw new AgentUnavailableError(`agent request failed: ${reason}`);
     }
     if (!response.ok) {
-      throw new AgentUnavailableError(`agent responded ${response.status}`, response.status);
+      throw new AgentUnavailableError(`agent responded ${response.status}`, response.status, await errorCode(response));
     }
     try {
       return (await response.json()) as unknown;

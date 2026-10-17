@@ -110,4 +110,14 @@ describe("GuidanceRequest", () => {
   it("requires complaintText or audio", () => {
     expect(validateGuidanceRequest({ sessionId: "sess-12345678", language: "id" })).toBe(false);
   });
+
+  it("accepts a voice note up to about 2 MB and refuses a longer one", () => {
+    const voice = (dataBase64: string) => ({
+      sessionId: "sess-12345678",
+      language: "id",
+      audio: { mimeType: "audio/webm", dataBase64 },
+    });
+    expect(validateGuidanceRequest(voice("A".repeat(2_800_000)))).toBe(true);
+    expect(validateGuidanceRequest(voice("A".repeat(2_800_001)))).toBe(false);
+  });
 });

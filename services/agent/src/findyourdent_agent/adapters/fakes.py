@@ -137,12 +137,15 @@ def _canned_reasons(contents: list[Any]) -> dict[str, Any]:
     return shortlist_model_output({p["placeId"]: reason for p in data["providers"]})
 
 
+_CANNED_TRANSCRIPT = "Transkrip contoh: suara tidak dikirim ke Gemini saat GEMINI_ADAPTER=fake."
+
+
 @dataclass(frozen=True, slots=True)
 class CannedGeminiAdapter:
     """Local development without Google Cloud credentials (GEMINI_ADAPTER=fake):
-    every complaint gets the same deep-caries Guidance, and every Shortlist Provider
-    the same stock reason. The output schema tells the two calls apart, since both
-    can use the same model."""
+    every complaint gets the same deep-caries Guidance (a voice note with a stock
+    transcript), and every Shortlist Provider the same stock reason. The output schema
+    tells the two calls apart, since both can use the same model."""
 
     async def generate_structured(
         self,
@@ -157,4 +160,5 @@ class CannedGeminiAdapter:
     ) -> dict[str, Any]:
         if "reasons" in response_schema.get("properties", {}):
             return _canned_reasons(contents)
-        return guidance_model_output()
+        voice = any(part.inline_data for content in contents for part in content.parts)
+        return guidance_model_output(transcript=_CANNED_TRANSCRIPT if voice else None)
