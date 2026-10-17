@@ -117,6 +117,8 @@ if [[ "$SERVICE" == agent ]]; then
   gcloud iam service-accounts add-iam-policy-binding "$AGENT_SA" --project "$PROJECT_ID" \
     --member="serviceAccount:${SCHEDULER_SA}" --role=roles/iam.serviceAccountUser >/dev/null
 
+  # Cloud Scheduler cannot send PATCH; Google APIs accept POST with this override
+  # (checked against run.googleapis.com on 17 October 2026).
   SERVICE_API="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/services/${AGENT_SERVICE}?updateMask=scaling.minInstanceCount"
   # warm_job <name> <cron in Asia/Jakarta> <min instances>
   warm_job() {
@@ -125,8 +127,8 @@ if [[ "$SERVICE" == agent ]]; then
       verb=update headers=--update-headers
     fi
     gcloud scheduler jobs "$verb" http "$1" --project "$PROJECT_ID" --location "$REGION" \
-      --schedule="$2" --time-zone=Asia/Jakarta --http-method=PATCH --uri="$SERVICE_API" \
-      "${headers}=Content-Type=application/json" \
+      --schedule="$2" --time-zone=Asia/Jakarta --http-method=POST --uri="$SERVICE_API" \
+      "${headers}=Content-Type=application/json,X-HTTP-Method-Override=PATCH" \
       --message-body="$(jq -nc --argjson n "$3" '{scaling: {minInstanceCount: $n}}')" \
       --oauth-service-account-email="$SCHEDULER_SA" \
       --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
