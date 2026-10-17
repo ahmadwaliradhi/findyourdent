@@ -19,7 +19,7 @@ scored on the card. Every response is then checked by two judges:
 Writes results/<date>-<model>.json (or -tuning.json) with the gates, every flagged
 output for manual review, each response, and an ADK EvalSetResult. Labels are never
 changed after a run: a label change needs a new dated research note and a re-run.
-About 2 Guidance calls and 2 judge calls per case.
+About 1.2 Guidance calls, one judge call and one Gen AI evaluation call per case.
 """
 
 from __future__ import annotations
