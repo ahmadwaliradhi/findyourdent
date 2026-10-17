@@ -1,4 +1,9 @@
-import type { GuidanceRequest, ModerationRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
+import type {
+  GuidanceRequest,
+  ModerationRequest,
+  PriceListExtractionRequest,
+  ShortlistReasonsRequest,
+} from "@findyourdent/contracts";
 
 /**
  * Port to the agent service (services/agent). The web service is the only caller;
@@ -14,6 +19,11 @@ export interface AgentAdapter {
    * non-200, a 422 for a broken attachment included, throws: never publish on it.
    */
   requestModeration(request: ModerationRequest, options?: AgentCallOptions): Promise<unknown>;
+  /**
+   * The caller validates the body against the PriceListExtractionResponse contract.
+   * A failed read is a 200 with kind "failed"; any non-200 throws.
+   */
+  requestPriceListExtraction(request: PriceListExtractionRequest, options?: AgentCallOptions): Promise<unknown>;
 }
 
 export interface AgentCallOptions {
@@ -53,6 +63,8 @@ export interface HttpAgentAdapterOptions {
   reasonsTimeoutMs?: number;
   /** Longer than the agent's own 20 s model timeout, so its hold arrives rather than ours. */
   moderationTimeoutMs?: number;
+  /** Longer than the agent's own 60 s model timeout, so its retry message arrives rather than ours. */
+  extractionTimeoutMs?: number;
   fetch?: typeof fetch;
   /**
    * Identity token for the agent service URL. On Cloud Run the agent service only
@@ -62,7 +74,8 @@ export interface HttpAgentAdapterOptions {
 }
 
 /**
- * Real adapter: POST {AGENT_URL}/v1/guidance, /v1/shortlist-reasons and /v1/moderation.
+ * Real adapter: POST {AGENT_URL}/v1/guidance, /v1/shortlist-reasons, /v1/moderation and
+ * /v1/price-list-extraction.
  * Never logs or echoes the request body.
  */
 export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentAdapter {
@@ -70,6 +83,7 @@ export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentA
   const timeoutMs = options.timeoutMs ?? 30_000;
   const reasonsTimeoutMs = options.reasonsTimeoutMs ?? 12_000;
   const moderationTimeoutMs = options.moderationTimeoutMs ?? 25_000;
+  const extractionTimeoutMs = options.extractionTimeoutMs ?? 75_000;
   const doFetch = options.fetch ?? fetch;
 
   async function post(path: string, body: unknown, timeout: number, { requestId }: AgentCallOptions) {
@@ -107,6 +121,9 @@ export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentA
     },
     requestModeration(request, callOptions = {}) {
       return post("/v1/moderation", request, moderationTimeoutMs, callOptions);
+    },
+    requestPriceListExtraction(request, callOptions = {}) {
+      return post("/v1/price-list-extraction", request, extractionTimeoutMs, callOptions);
     },
   };
 }

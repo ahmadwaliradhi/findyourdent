@@ -391,7 +391,10 @@
     "claimCta": "Klaim halaman ini",
     "ownerHint": "Pemilik tempat ini?",
     "manageCta": "Kelola halaman",
-    "services": "Layanan: {{services}}"
+    "services": "Layanan: {{services}}",
+    "priceListTitle": "Daftar harga dari pemilik",
+    "priceListConfirmed": "Dikonfirmasi pemilik {{date}}",
+    "possiblyOutdated": "mungkin sudah berubah"
   },
   "shortlist": {
     "reason": {
@@ -437,7 +440,8 @@
       "costEstimate": "Perkiraan biaya"
     },
     "asOf": "per {{date}}",
-    "error": "Pencarian dokter gigi gagal. Silakan coba lagi."
+    "error": "Pencarian dokter gigi gagal. Silakan coba lagi.",
+    "possiblyOutdated": "mungkin sudah berubah"
   },
   "testimonyForm": {
     "metaTitle": "Ceritakan pengalaman Anda",
@@ -795,6 +799,58 @@
         "held": "Ditinjau tim",
         "rejected": "Ditolak"
       }
+    },
+    "priceListCta": "Unggah daftar harga"
+  },
+  "priceListApi": {
+    "errors": {
+      "sign_in_required": "Masuk dengan Google dulu untuk mengunggah daftar harga.",
+      "invalid_file": "Unggah satu PDF atau satu sampai lima foto (JPEG, PNG atau WebP), masing-masing maksimal 10 MB.",
+      "invalid_rows": "Ada baris yang perlu diperbaiki: isi nama tindakan, satuan, dan harga dalam rupiah, dengan harga terendah tidak melebihi harga tertinggi.",
+      "not_owner": "Hanya pemilik yang klaimnya sudah disetujui yang dapat mengelola daftar harga tempat ini.",
+      "not_found": "Daftar harga ini tidak ditemukan atau sudah dikonfirmasi. Unggah lagi.",
+      "unavailable": "Layanan sedang tidak tersedia. Silakan coba lagi nanti."
+    },
+    "retry": "Daftar harga belum bisa dibaca. Coba unggah lagi dengan foto yang lebih jelas dan terang, atau berkas PDF.",
+    "confirmed": "Daftar harga Anda sudah tayang di halaman tempat dan di Shortlist."
+  },
+  "priceList": {
+    "metaTitle": "Daftar harga",
+    "title": "Daftar harga",
+    "intro": "Unggah daftar harga praktik Anda sebagai satu PDF atau hingga lima foto. Gemini membacanya menjadi baris harga, lalu Anda memeriksa dan memperbaikinya sebelum tayang.",
+    "privacy": "Berkas asli disimpan secara privat selama 30 hari untuk keperluan sengketa, lalu dihapus. Hanya baris yang Anda konfirmasi yang ditampilkan.",
+    "signIn": "Masuk dengan Google untuk mengunggah daftar harga.",
+    "notOwner": "Hanya pemilik yang klaimnya sudah disetujui yang dapat mengunggah daftar harga.",
+    "toClaim": "Ke halaman klaim",
+    "current": "Daftar harga yang tayang dikonfirmasi {{date}}. Daftar baru akan menggantikannya.",
+    "pickFiles": "PDF atau foto daftar harga",
+    "read": "Baca daftar harga",
+    "reading": "Sedang membaca daftar harga…",
+    "original": "Dokumen asli",
+    "reviewTitle": "Periksa baris harga",
+    "reviewHint": "Baris bertanda \"Perlu dicek\" kurang yakin terbaca. Periksa nama tindakan, harga, dan satuan sebelum mengonfirmasi.",
+    "lowConfidence": "Perlu dicek",
+    "procedureText": "Tindakan",
+    "procedureCode": "Jenis tindakan",
+    "noCode": "Lainnya",
+    "minRupiah": "Harga terendah (Rp)",
+    "maxRupiah": "Harga tertinggi (Rp)",
+    "unit": "Satuan",
+    "notes": "Catatan",
+    "deleteRow": "Hapus baris",
+    "addRow": "Tambah baris",
+    "rowInvalid": "Isi nama tindakan dan harga; harga terendah tidak boleh melebihi harga tertinggi.",
+    "noRows": "Tambahkan setidaknya satu baris.",
+    "confirm": "Konfirmasi dan tayangkan",
+    "confirming": "Menyimpan…",
+    "startOver": "Unggah ulang",
+    "viewPage": "Lihat halaman tempat",
+    "error": "Terjadi kesalahan. Silakan coba lagi.",
+    "units": {
+      "per_tooth": "per gigi",
+      "per_jaw": "per rahang",
+      "per_visit": "per kunjungan",
+      "per_package": "per paket"
     }
   }
 }

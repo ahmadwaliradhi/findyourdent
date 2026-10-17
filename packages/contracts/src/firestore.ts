@@ -283,20 +283,29 @@ export interface PriceListRow {
   notes?: string;
 }
 
-/** Only confirmed rows are stored. A newer confirmed list replaces the current one. */
+/**
+ * Only confirmed rows are stored. An upload is a `draft` with no rows until the owner
+ * confirms it; the confirmed list becomes `current` and the previous one `replaced`.
+ */
 export interface PriceListDoc {
   placeId: PlaceId;
+  /** The approved Claim it was uploaded under; shown only while that Claim is the place's current one. */
   claimId: string;
   uploadedBy: Uid;
   /** Shown as "Daftar harga dari pemilik". */
   source: "ownerPriceList";
-  status: "current" | "replaced";
+  status: "draft" | "current" | "replaced";
+  /** Empty while `draft`. */
   rows: PriceListRow[];
   uploadedAt: Timestamp;
-  /** Shown to Patients; older than 12 months shows "mungkin sudah berubah". */
-  confirmedAt: Timestamp;
-  /** Private original kept 30 days for disputes, then deleted. */
-  originalDocumentPath?: string;
+  /** Shown to Patients; older than 12 months shows "mungkin sudah berubah". Absent while `draft`. */
+  confirmedAt?: Timestamp;
+  /**
+   * Private originals (`priceLists/{priceListId}/original-*`, one PDF or up to five
+   * EXIF-stripped photos) kept 30 days for disputes, then deleted by the bucket's
+   * lifecycle rule.
+   */
+  originalDocumentPaths?: string[];
   originalDeleteAfter?: Timestamp;
 }
 

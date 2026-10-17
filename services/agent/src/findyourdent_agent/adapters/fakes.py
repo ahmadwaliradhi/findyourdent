@@ -137,6 +137,38 @@ def _canned_reasons(contents: list[Any]) -> dict[str, Any]:
     return shortlist_model_output({p["placeId"]: reason for p in data["providers"]})
 
 
+def price_list_model_output() -> dict[str, Any]:
+    """A Gemini Price List output: three rows, one of them read with low confidence."""
+    return {
+        "rows": [
+            {
+                "procedureCode": "scaling",
+                "procedureText": "Scaling (pembersihan karang gigi)",
+                "minRupiah": 300_000,
+                "maxRupiah": 300_000,
+                "unit": "per_visit",
+                "confidence": 0.95,
+            },
+            {
+                "procedureCode": "tooth_filling",
+                "procedureText": "Tambal gigi komposit",
+                "minRupiah": 250_000,
+                "maxRupiah": 450_000,
+                "unit": "per_tooth",
+                "notes": "Tergantung luas lubang",
+                "confidence": 0.9,
+            },
+            {
+                "procedureText": "Bleaching",
+                "minRupiah": 1_500_000,
+                "maxRupiah": 2_500_000,
+                "unit": "per_package",
+                "confidence": 0.45,
+            },
+        ]
+    }
+
+
 _CANNED_TRANSCRIPT = "Transkrip contoh: suara tidak dikirim ke Gemini saat GEMINI_ADAPTER=fake."
 
 
@@ -144,7 +176,8 @@ _CANNED_TRANSCRIPT = "Transkrip contoh: suara tidak dikirim ke Gemini saat GEMIN
 class CannedGeminiAdapter:
     """Local development without Google Cloud credentials (GEMINI_ADAPTER=fake):
     every complaint gets the same deep-caries Guidance (a voice note with a stock
-    transcript), and every Shortlist Provider the same stock reason. The output schema
+    transcript), every Shortlist Provider the same stock reason, and every price list
+    the same three rows. The output schema
     tells the two calls apart, since both can use the same model."""
 
     async def generate_structured(
@@ -160,5 +193,7 @@ class CannedGeminiAdapter:
     ) -> dict[str, Any]:
         if "reasons" in response_schema.get("properties", {}):
             return _canned_reasons(contents)
+        if "rows" in response_schema.get("properties", {}):
+            return price_list_model_output()
         voice = any(part.inline_data for content in contents for part in content.parts)
         return guidance_model_output(transcript=_CANNED_TRANSCRIPT if voice else None)

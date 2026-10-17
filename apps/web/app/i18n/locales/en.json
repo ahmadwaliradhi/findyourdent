@@ -391,7 +391,10 @@
     "claimCta": "Claim this page",
     "ownerHint": "Own this practice?",
     "manageCta": "Manage page",
-    "services": "Services: {{services}}"
+    "services": "Services: {{services}}",
+    "priceListTitle": "Owner's price list",
+    "priceListConfirmed": "Confirmed by the owner on {{date}}",
+    "possiblyOutdated": "may have changed"
   },
   "shortlist": {
     "reason": {
@@ -437,7 +440,8 @@
       "costEstimate": "Cost estimate"
     },
     "asOf": "as of {{date}}",
-    "error": "The dentist search failed. Please try again."
+    "error": "The dentist search failed. Please try again.",
+    "possiblyOutdated": "may have changed"
   },
   "testimonyForm": {
     "metaTitle": "Share your experience",
@@ -795,6 +799,58 @@
         "held": "Under team review",
         "rejected": "Rejected"
       }
+    },
+    "priceListCta": "Upload a price list"
+  },
+  "priceListApi": {
+    "errors": {
+      "sign_in_required": "Sign in with Google first to upload a price list.",
+      "invalid_file": "Upload one PDF or one to five photos (JPEG, PNG or WebP), each at most 10 MB.",
+      "invalid_rows": "Some rows need fixing: fill in the procedure, unit and prices in rupiah, with the lowest price no higher than the highest.",
+      "not_owner": "Only an owner whose Claim was approved can manage this place's price list.",
+      "not_found": "This price list was not found or is already confirmed. Upload it again.",
+      "unavailable": "The service is unavailable right now. Please try again later."
+    },
+    "retry": "We could not read the price list. Try again with a sharper, brighter photo, or a PDF.",
+    "confirmed": "Your price list is now shown on your page and in Shortlists."
+  },
+  "priceList": {
+    "metaTitle": "Price list",
+    "title": "Price list",
+    "intro": "Upload your practice's price list as one PDF or up to five photos. Gemini reads it into price rows, then you check and correct them before they are shown.",
+    "privacy": "The original file is kept privately for 30 days in case of disputes, then deleted. Only the rows you confirm are shown.",
+    "signIn": "Sign in with Google to upload a price list.",
+    "notOwner": "Only an owner whose Claim was approved can upload a price list.",
+    "toClaim": "Go to the Claim page",
+    "current": "The price list on show was confirmed on {{date}}. A new list replaces it.",
+    "pickFiles": "Price list PDF or photos",
+    "read": "Read the price list",
+    "reading": "Reading the price list…",
+    "original": "Original document",
+    "reviewTitle": "Check the price rows",
+    "reviewHint": "Rows marked \"Check this\" were read with less confidence. Check the procedure, prices and unit before confirming.",
+    "lowConfidence": "Check this",
+    "procedureText": "Procedure",
+    "procedureCode": "Procedure type",
+    "noCode": "Other",
+    "minRupiah": "Lowest price (Rp)",
+    "maxRupiah": "Highest price (Rp)",
+    "unit": "Unit",
+    "notes": "Notes",
+    "deleteRow": "Delete row",
+    "addRow": "Add a row",
+    "rowInvalid": "Fill in the procedure and prices; the lowest price cannot be higher than the highest.",
+    "noRows": "Add at least one row.",
+    "confirm": "Confirm and publish",
+    "confirming": "Saving…",
+    "startOver": "Upload again",
+    "viewPage": "View the place page",
+    "error": "Something went wrong. Please try again.",
+    "units": {
+      "per_tooth": "per tooth",
+      "per_jaw": "per jaw",
+      "per_visit": "per visit",
+      "per_package": "per package"
     }
   }
 }

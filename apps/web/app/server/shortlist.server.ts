@@ -7,7 +7,6 @@ import {
 } from "@findyourdent/contracts";
 import {
   COLLECTIONS,
-  type PriceListDoc,
   type ProcedureCode,
   type ProviderDoc,
   type ProviderType,
@@ -21,6 +20,7 @@ import { overallAverage } from "~/lib/scores";
 import type { PriceSignal, ShortlistProvider, ShortlistResponse } from "~/lib/shortlist";
 import type { LatLng, PlaceSummary, TextSearch } from "../../server/adapters/places.ts";
 import { jakartaDate } from "../../server/quota.ts";
+import { type ConfirmedPriceList, currentPriceLists, publicPriceList } from "./price-lists.server.ts";
 import {
   HOSPITAL_PROCEDURES,
   isDiagnostic,
@@ -152,7 +152,7 @@ function regencyCodesIn(area: string): string[] {
 
 interface Facts {
   providers: Map<string, ProviderDoc>;
-  priceLists: Map<string, PriceListDoc>;
+  priceLists: Map<string, ConfirmedPriceList>;
 }
 
 async function readFacts(context: AppLoadContext, placeIds: string[]): Promise<Facts> {
@@ -167,20 +167,8 @@ async function readFacts(context: AppLoadContext, placeIds: string[]): Promise<F
 }
 
 async function addPriceLists(context: AppLoadContext, facts: Facts): Promise<void> {
-  const claimed = [...facts.providers.values()].filter((p) => p.claimStatus === "claimed").map((p) => p.placeId);
-  if (!context.firestore || claimed.length === 0) return;
-  // `in` takes at most 30 values; a Shortlist joins at most 20 search results.
-  for (let i = 0; i < claimed.length; i += 30) {
-    const snapshot = await context.firestore
-      .collection(COLLECTIONS.priceLists)
-      .where("placeId", "in", claimed.slice(i, i + 30))
-      .where("status", "==", "current")
-      .get();
-    for (const doc of snapshot.docs) {
-      const list = doc.data() as PriceListDoc;
-      facts.priceLists.set(list.placeId, list);
-    }
-  }
+  if (!context.firestore) return;
+  facts.priceLists = await currentPriceLists(context.firestore, [...facts.providers.values()]);
 }
 
 async function readNearbyListed(context: AppLoadContext, where: Where): Promise<Facts> {
@@ -221,10 +209,10 @@ interface Joined {
   formattedAddress?: string;
   googleMapsUri: string;
   provider?: ProviderDoc;
-  priceList?: PriceListDoc;
+  priceList?: ConfirmedPriceList;
 }
 
-function representativePrices(provider: ProviderDoc | undefined, priceList: PriceListDoc | undefined) {
+function representativePrices(provider: ProviderDoc | undefined, priceList: ConfirmedPriceList | undefined) {
   const prices: Partial<Record<ProcedureCode, number>> = {};
   for (const row of priceList?.rows ?? []) {
     if (row.procedureCode) prices[row.procedureCode] = (row.minRupiah + row.maxRupiah) / 2;
@@ -290,6 +278,7 @@ function priceSignals(joined: Joined, guidance: Guidance | null): PriceSignal[] 
         minRupiah: row.minRupiah,
         maxRupiah: row.maxRupiah,
         asOf: dateOf(joined.priceList.confirmedAt),
+        ...(publicPriceList(joined.priceList).possiblyOutdated ? { possiblyOutdated: true } : {}),
       });
     }
     signals.push({

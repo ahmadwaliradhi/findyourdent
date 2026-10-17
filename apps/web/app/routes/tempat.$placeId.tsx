@@ -12,6 +12,7 @@ import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatRupiah, formatScore, formatVisitMonth } from "~/lib/format";
 import { fetchGoogleRoute } from "~/lib/google-routes";
 import { providerPath } from "~/lib/paths";
+import type { PublicPriceList } from "~/lib/price-lists";
 import { procedureLabel } from "~/lib/procedures";
 import type { GoogleBlockResponse, ProviderGoogleBlock } from "~/lib/provider";
 import { openGraphMeta, SITE_NAME } from "~/lib/seo";
@@ -148,6 +149,8 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
 
       {provider && provider.priceSignals.length > 0 && <Prices signals={provider.priceSignals} language={language} />}
 
+      {provider?.priceList && <OwnerPriceList list={provider.priceList} language={language} />}
+
       {provider?.owner && (
         <section className="flex flex-col gap-1 text-sm">
           <h2 className="text-lg font-semibold">{t("provider.ownerTitle")}</h2>
@@ -262,6 +265,41 @@ function Prices({ signals, language }: { signals: PriceSignal[]; language: Langu
               ({t(`shortlist.priceSource.${signal.source}`)}
               {signal.asOf ? `, ${t("shortlist.asOf", { date: signal.asOf })}` : ""})
             </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function OwnerPriceList({ list, language }: { list: PublicPriceList; language: Language }) {
+  const { t } = useTranslation();
+  return (
+    <section className="flex flex-col gap-2" data-testid="owner-price-list">
+      <h2 className="text-lg font-semibold">{t("provider.priceListTitle")}</h2>
+      <p className="text-sm text-muted-foreground">
+        {t("provider.priceListConfirmed", { date: list.confirmedAt })}
+        {list.possiblyOutdated && (
+          <>
+            {" · "}
+            <span className="font-medium text-foreground">{t("provider.possiblyOutdated")}</span>
+          </>
+        )}
+      </p>
+      <ul className="flex flex-col gap-2 text-sm">
+        {list.rows.map((row, index) => (
+          // Rows have no id; the list is replaced as a whole, never reordered in place.
+          // biome-ignore lint/suspicious/noArrayIndexKey: see above
+          <li key={index}>
+            <span className="font-medium">{row.procedureText}: </span>
+            {row.minRupiah === row.maxRupiah
+              ? formatRupiah(row.minRupiah, language)
+              : t("card.guidance.costRange", {
+                  min: formatRupiah(row.minRupiah, language),
+                  max: formatRupiah(row.maxRupiah, language),
+                })}{" "}
+            <span className="text-muted-foreground">{t(`priceList.units.${row.unit}`)}</span>
+            {row.notes && <p className="text-muted-foreground">{row.notes}</p>}
           </li>
         ))}
       </ul>
