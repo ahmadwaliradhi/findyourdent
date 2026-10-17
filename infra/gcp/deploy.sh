@@ -157,7 +157,7 @@ gcloud run deploy "$WEB_SERVICE" --project "$PROJECT_ID" --region "$REGION" \
   --allow-unauthenticated --ingress=all \
   --cpu=1 --memory=512Mi --concurrency=80 --timeout=60 --min-instances=0 --max-instances=4 \
   --set-env-vars="AGENT_URL=${AGENT_URL},AGENT_AUTH=id_token,FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
-  --set-secrets="PLACES_API_KEY=places-api-key:latest,ADMIN_EMAILS=admin-emails:latest" \
+  --set-secrets="PLACES_API_KEY=places-api-key:latest,ADMIN_EMAILS=admin-emails:latest,SHARE_LINK_SECRET=share-link-secret:latest" \
   --quiet
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).

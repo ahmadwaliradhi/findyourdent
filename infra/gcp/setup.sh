@@ -261,6 +261,25 @@ fi
 gcloud secrets add-iam-policy-binding admin-emails --project "$PROJECT_ID" \
   --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
 
+# 8b. Share-link signing key ------------------------------------------------------
+# Signs shareable Guidance links (apps/web/app/server/share.server.ts). Every web
+# instance must use the same key, or a link opened on another instance 404s.
+# Generated once; rotating it breaks every link already shared.
+log "Secret share-link-secret"
+if ! gcloud secrets describe share-link-secret --project "$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud secrets create share-link-secret --project "$PROJECT_ID" \
+    --replication-policy=user-managed --locations="$REGION"
+fi
+if [[ -n "$(gcloud secrets versions list share-link-secret --project "$PROJECT_ID" \
+       --filter='state=ENABLED' --limit=1 --format='value(name)')" ]]; then
+  skip "secret share-link-secret has a version"
+else
+  openssl rand -base64 32 | tr -d '\n' \
+    | gcloud secrets versions add share-link-secret --project "$PROJECT_ID" --data-file=-
+fi
+gcloud secrets add-iam-policy-binding share-link-secret --project "$PROJECT_ID" \
+  --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
+
 # 9. Budget ---------------------------------------------------------------------
 log "Budget ${BUDGET_NAME} (${BUDGET_AMOUNT}, 50% and 90%)"
 budgets=$(gcloud billing budgets list --billing-account="$BILLING_ACCOUNT" --format='value(displayName)')

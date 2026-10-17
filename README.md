@@ -52,7 +52,7 @@ Copy `.env.example` files where a service has one. No real Google key is needed 
 
 The browser never calls the agent service, Places or Gemini; the web service calls the agent server-side.
 
-The agent service calls Gemini on Vertex AI with Application Default Credentials (`gcloud auth application-default login`, then `GOOGLE_CLOUD_PROJECT=findyourdent`). Without Google Cloud access, run it with `GEMINI_ADAPTER=fake` and every complaint gets the same canned Guidance. In production the web service needs `SHARE_LINK_SECRET` to sign shareable Guidance links; locally it makes a random one per process.
+The agent service calls Gemini on Vertex AI with Application Default Credentials (`gcloud auth application-default login`, then `GOOGLE_CLOUD_PROJECT=findyourdent`). Without Google Cloud access, run it with `GEMINI_ADAPTER=fake` and every complaint gets the same canned Guidance. Shareable Guidance links are signed with `SHARE_LINK_SECRET`: in production it comes from the `share-link-secret` secret (`infra/gcp/setup.sh` creates it, `deploy.sh` mounts it); locally the web service makes a random one per process.
 
 ## Test seams
 
