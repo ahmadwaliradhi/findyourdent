@@ -16,6 +16,7 @@ from .config import Settings
 from .contracts.guidance_request import GuidanceRequest
 from .contracts.guidance_response import GuidanceResponse
 from .data import procedure_codes
+from .escalation import default_matcher
 from .stub import PROCEDURES, stub_guidance
 
 log = logging.getLogger("findyourdent_agent")
@@ -41,6 +42,7 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         docs_url=None,
         redoc_url=None,
     )
+    red_flags = default_matcher()
     app.state.adapters = adapters
     app.state.settings = settings
 
@@ -91,8 +93,13 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         response_model_exclude_none=True,
     )
     async def guidance(body: GuidanceRequest, request: Request) -> GuidanceResponse:
-        # Walking skeleton: fixed card, no model, Agent Search or Places call.
-        card = stub_guidance(body.root.language)
+        turn = body.root
+        # Emergency Escalation runs first and without any model call (spec 01). A voice
+        # note has no text to check here; the model layer covers it once Gemini lands.
+        # Otherwise, walking skeleton: fixed card, no model, Agent Search or Places call.
+        card = red_flags.check(
+            turn.complaintText, turn.followUpAnswer, language=turn.language
+        ) or stub_guidance(turn.language)
         request.state.outcome = card.kind
         return GuidanceResponse(root=card)
 
