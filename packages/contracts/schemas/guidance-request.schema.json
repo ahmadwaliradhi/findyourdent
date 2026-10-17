@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/guidance-request.schema.json",
+  "title": "GuidanceRequest",
+  "description": "Web service to agent service: one Patient turn of the Guidance flow (spec 01). Never logged or stored.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sessionId", "language"],
+  "anyOf": [{ "required": ["complaintText"] }, { "required": ["audio"] }],
+  "properties": {
+    "sessionId": {
+      "description": "Opaque session id, not linked to any account.",
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "language": {
+      "description": "UI language from the toggle. The agent answers in the language of the complaint.",
+      "type": "string",
+      "enum": ["id", "en"]
+    },
+    "complaintText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "audio": {
+      "description": "Voice note of up to 60 seconds, forwarded to Gemini as native audio. Never stored.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mimeType", "dataBase64"],
+      "properties": {
+        "mimeType": {
+          "type": "string",
+          "enum": ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav"]
+        },
+        "dataBase64": { "type": "string", "minLength": 1 }
+      }
+    },
+    "followUpAnswer": {
+      "description": "Answer to the one followUp question, if the previous response asked one.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    }
+  }
+}

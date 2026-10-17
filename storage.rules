@@ -1,0 +1,9 @@
+rules_version = '2';
+// Uploads go through the web service (EXIF stripped with sharp), never direct.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
