@@ -60,6 +60,7 @@ import {
 } from "./testimony-media.server.ts";
 import {
   buildModerationRequest,
+  isSpotCheck,
   type ModerationOutcome,
   moderateTestimony,
   moderationDecisionDoc,
@@ -100,7 +101,7 @@ async function errorResponse(
 
 const testimonies = (firestore: Firestore) => firestore.collection(COLLECTIONS.testimonies);
 const providers = (firestore: Firestore) => firestore.collection(COLLECTIONS.providers);
-const publishedOf = (firestore: Firestore, placeId: string) =>
+export const publishedOf = (firestore: Firestore, placeId: string) =>
   testimonies(firestore).where("placeId", "==", placeId).where("status", "==", "published");
 
 interface Writer {
@@ -196,14 +197,14 @@ function proofRecord(outcome: ModerationOutcome, now: Timestamp): Pick<Testimony
 }
 
 /** Coordinates for a new Listed Provider (Essentials Place Details). On failure it is listed without them. */
-async function coordinatesFor(context: AppLoadContext, placeId: string): Promise<LatLng | null> {
+export async function coordinatesFor(context: AppLoadContext, placeId: string): Promise<LatLng | null> {
   const result = await context.adapters.places.getCoordinates(placeId);
   if (result.ok) return result.location;
   context.logger.warn("listed_provider", { outcome: "coordinates_unavailable", reason: result.reason });
   return null;
 }
 
-interface ProviderProposal {
+export interface ProviderProposal {
   name: string;
   region: RegionRef;
   providerType: ProviderType;
@@ -226,7 +227,7 @@ function aggregatesWith(published: QuerySnapshot, testimonyId: string, self: Agg
  * makes this one retry, see it, and keep the Listed name. Returns the Region and type
  * the Testimony copies.
  */
-function writeProviderOnPublish(
+export function writeProviderOnPublish(
   tx: Transaction,
   input: {
     placeId: string;
@@ -267,7 +268,7 @@ function writeProviderOnPublish(
 }
 
 /** Recomputes aggregates after a Testimony left `published`. */
-function writeProviderOnUnpublish(
+export function writeProviderOnUnpublish(
   tx: Transaction,
   provider: DocumentSnapshot,
   published: QuerySnapshot,
@@ -277,7 +278,7 @@ function writeProviderOnUnpublish(
   tx.update(provider.ref, { aggregates: aggregatesWith(published, testimonyId, null), updatedAt: Timestamp.now() });
 }
 
-const regionValue = (region: RegionRef): RegionRef => ({
+export const regionValue = (region: RegionRef): RegionRef => ({
   provinceCode: region.provinceCode,
   regencyCode: region.regencyCode,
   ...(region.districtCode ? { districtCode: region.districtCode } : {}),
@@ -385,7 +386,11 @@ export async function createTestimony(context: AppLoadContext, request: Request)
 
       tx.create(
         decisionRef,
-        moderationDecisionDoc(outcome, { subjectType: "testimony", subjectId: ref.id, placeId: value.placeId }),
+        moderationDecisionDoc(
+          outcome,
+          { subjectType: "testimony", subjectId: ref.id, placeId: value.placeId },
+          isSpotCheck(decided === "published", context.config.spotCheckRate),
+        ),
       );
       const doc: TestimonyDoc = {
         ...content,
@@ -436,7 +441,7 @@ function checkOwn(snapshot: DocumentSnapshot, uid: string): TestimonyDoc {
   return testimony;
 }
 
-const storedPhotoPaths = (testimony: TestimonyDoc) => [
+export const storedPhotoPaths = (testimony: TestimonyDoc) => [
   ...testimony.photoPaths,
   ...(testimony.pendingRevision?.photoPaths ?? []),
 ];
@@ -526,11 +531,15 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       const verifiedVisit = before.verifiedVisit || outcome.decision.proofOfVisit === "accepted";
       tx.create(
         decisionRef,
-        moderationDecisionDoc(outcome, {
-          subjectType: editingPublished ? "testimonyRevision" : "testimony",
-          subjectId: testimonyId,
-          placeId: before.placeId,
-        }),
+        moderationDecisionDoc(
+          outcome,
+          {
+            subjectType: editingPublished ? "testimonyRevision" : "testimony",
+            subjectId: testimonyId,
+            placeId: before.placeId,
+          },
+          isSpotCheck(status === "published", context.config.spotCheckRate),
+        ),
       );
 
       let update: Record<string, unknown>;
@@ -672,7 +681,7 @@ export interface MyTestimony {
   status: TestimonyStatus;
   /** An edit of a published Testimony that is still being decided. */
   pendingStatus?: "submitted" | "needsAuthorFix" | "held";
-  /** Admin reason on rejected or removed. */
+  /** Admin reason on rejected, removed or sent back to the author. */
   adminReason?: string;
   ratings: AspectRatings;
   text: string;

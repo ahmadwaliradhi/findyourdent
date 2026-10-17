@@ -16,9 +16,10 @@ export type ProtectionOutcome =
  * - `guidanceFollowUp`: the answer to its one follow-up question, counted apart
  *   so a session with a follow-up still costs one of the hourly sessions;
  * - `places`: a Places-backed request (Shortlist, Provider detail, picker);
- * - `testimony`: a Testimony submission by a signed-in account.
+ * - `testimony`: a Testimony submission by a signed-in account;
+ * - `report`: a Testimony report by anyone (it can hide a Testimony at once).
  */
-export type PaidRoute = "guidance" | "guidanceFollowUp" | "places" | "testimony";
+export type PaidRoute = "guidance" | "guidanceFollowUp" | "places" | "testimony" | "report";
 
 export interface PaidRequest {
   request: Request;
@@ -60,6 +61,9 @@ function rulesFor(context: AppLoadContext, paid: PaidRequest, appCheckToken: str
       break;
     case "places":
       perBrowser(limits.placesPerHour);
+      break;
+    case "report":
+      perBrowser(limits.reportsPerHour);
       break;
     case "testimony":
       if (!paid.uid) throw new Error("testimony rate limit needs a signed-in uid");

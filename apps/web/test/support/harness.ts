@@ -57,6 +57,8 @@ export interface TestServer {
   setLimits(limits: Partial<RateLimits>): void;
   /** The temporary Moderation switch until the next reset (default "publish"). */
   setTestimonyModeration(value: TestimonyModerationSwitch): void;
+  /** Spot-check sample rate until the next reset (default 0, so tests are deterministic). */
+  setSpotCheckRate(rate: number): void;
   /** Fresh fakes, empty logs, default limits, empty emulator Firestore, Auth and uploads bucket. */
   reset(): Promise<void>;
   /** A Firebase ID token from the Auth emulator, as the browser gets right after signing in. */
@@ -162,6 +164,7 @@ export async function startTestServer(): Promise<TestServer> {
   let nowMs = Date.now();
   let limits = { ...DEFAULT_RATE_LIMITS };
   let testimonyModeration: TestimonyModerationSwitch = "publish";
+  let spotCheckRate = 0;
   const rateLimiter = createFirestoreRateLimiter(firebase.firestore, { salt: "test-salt", now: () => nowMs });
 
   const context = (): BaseContext => ({
@@ -178,6 +181,7 @@ export async function startTestServer(): Promise<TestServer> {
       firebaseWeb: NO_FIREBASE,
       shareLinkSecret: "test-share-link-secret",
       testimonyModeration,
+      spotCheckRate,
     },
   });
 
@@ -215,6 +219,7 @@ export async function startTestServer(): Promise<TestServer> {
       nowMs = Date.now();
       limits = { ...DEFAULT_RATE_LIMITS };
       testimonyModeration = "publish";
+      spotCheckRate = 0;
       logs.length = 0;
       await clearEmulators(firebase.projectId, firebase.uploads);
     },
@@ -228,6 +233,9 @@ export async function startTestServer(): Promise<TestServer> {
     },
     setTestimonyModeration(value) {
       testimonyModeration = value;
+    },
+    setSpotCheckRate(rate) {
+      spotCheckRate = rate;
     },
     emulatorIdToken,
     async signInWithGoogle(email) {

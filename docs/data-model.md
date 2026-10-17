@@ -66,15 +66,15 @@ Owner-confirmed price lists (spec 05). Only confirmed rows are stored (`procedur
 
 ### `moderationDecisions`
 
-One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `proofOfVisit` result, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample). It never stores the moderated text or images. Type `ModerationDecisionDoc`.
+One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `proofOfVisit` result, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). It never stores the moderated text or images. Type `ModerationDecisionDoc`.
 
 ### `nameCorrections`
 
-"Sarankan koreksi" suggestions on a Listed Provider's first-party name or Region (spec 03), made by a signed-in user from the Testimony form. Each stores the `placeId`, the suggested name and/or Region (at least one), the current values at suggestion time, the suggester's uid, a status (`open`, `applied`, `dismissed`) and who resolved it when. Suggestions land in the admin queue; the Provider changes only when an admin applies one (`applyNameCorrection` in `adminActions`). Type `NameCorrectionDoc`. The link and form arrive with T11, the admin review with T14.
+"Sarankan koreksi" suggestions on a Listed Provider's first-party name or Region (spec 03), made by a signed-in user from the Testimony form. Each stores the `placeId`, the suggested name and/or Region (at least one), the current values at suggestion time, the suggester's uid, a status (`open`, `applied`, `dismissed`) and who resolved it when. Suggestions land in the admin queue; the Provider changes only when an admin applies one (`applyNameCorrection` in `adminActions`). Type `NameCorrectionDoc`. Applying one changes the Provider's name and Region and the Region copied onto its Testimonies.
 
 ### `adminActions`
 
-Append-only audit log of every admin action (publish, reject, send back to the author, hide, remove, dismiss report, approve, reject or revoke a Claim, apply or dismiss a name correction, confirm a spot check), with the admin's email and uid, subject, reason and status change. Type `AdminActionDoc`.
+Append-only audit log of every admin action (publish, reject, send back to the author, hide, remove, dismiss report, approve, reject or revoke a Claim, apply or dismiss a name correction, confirm a spot check), with the admin's email and uid, subject, reason and status change. Reasons are required to reject, send back, hide or remove; the author sees the reason on reject, send back and remove. Type `AdminActionDoc`.
 
 ### `counters`
 
