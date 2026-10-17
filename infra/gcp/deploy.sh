@@ -44,6 +44,23 @@ REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
 log() { printf '\n==> %s\n' "$*"; }
 skip() { printf '    (exists) %s\n' "$*"; }
 
+# Secrets fyd-web mounts (--set-secrets below). setup.sh creates them; one added
+# after the last setup.sh run would otherwise fail the deploy after the image build.
+if [[ "$SERVICE" == web ]]; then
+  missing=()
+  for secret in places-api-key admin-emails rate-limit-salt share-link-secret; do
+    if [[ -z "$(gcloud secrets versions list "$secret" --project "$PROJECT_ID" \
+                  --filter=state=ENABLED --limit=1 --format='value(name)' 2>/dev/null)" ]]; then
+      missing+=("$secret")
+    fi
+  done
+  if ((${#missing[@]} > 0)); then
+    echo "missing secret(s) or no enabled version: ${missing[*]}" >&2
+    echo "re-run infra/gcp/setup.sh (ADMIN_EMAILS=... the first time), then deploy again" >&2
+    exit 1
+  fi
+fi
+
 # fyd-scheduler: the identity every Cloud Scheduler job here calls Google APIs as.
 ensure_scheduler_sa() {
   if gcloud iam service-accounts describe "$SCHEDULER_SA" --project "$PROJECT_ID" >/dev/null 2>&1; then
@@ -205,6 +222,33 @@ SITE_KEY=$(gcloud recaptcha keys list --project "$PROJECT_ID" \
   --filter="displayName=${WEB_APP_NAME}-appcheck" --format='value(name)' | head -1 | sed 's#.*/##')
 [[ -n "$SITE_KEY" ]] || { echo "no reCAPTCHA key ${WEB_APP_NAME}-appcheck: run infra/gcp/setup.sh" >&2; exit 1; }
 echo "    web app ${WEB_APP_ID}, site key ${SITE_KEY}"
+
+# Firestore composite indexes and the deny-all Firestore and Storage rules, before
+# the new revision serves queries that need them. Non-interactive without --force,
+# so an index in the project but not in firestore.indexes.json is reported, never
+# deleted. Storage rules go to the `uploads` deploy target (.firebaserc), because
+# findyourdent-uploads is not a Firebase default bucket.
+log "Firestore indexes, Firestore and Storage rules"
+pnpm --dir apps/web exec firebase deploy --only firestore:indexes,firestore:rules,storage \
+  --project "$PROJECT_ID" --config "${ROOT}/firebase.json" --non-interactive
+
+# A new index builds in the background; queries that need it fail with
+# FAILED_PRECONDITION until it is READY. Wait up to 10 minutes, then name the rest.
+creating_indexes() {
+  gcloud firestore indexes composite list --project "$PROJECT_ID" \
+    --filter=state=CREATING --format='value(name)'
+}
+for _ in $(seq 60); do
+  [[ -z "$(creating_indexes)" ]] && break
+  sleep 10
+done
+still_creating=$(creating_indexes)
+if [[ -n "$still_creating" ]]; then
+  echo "    indexes still CREATING after 10 minutes (queries on them fail until READY):" >&2
+  sed 's/^/      /' <<<"$still_creating" >&2
+else
+  echo "    all composite indexes READY"
+fi
 
 log "Cloud Run ${WEB_SERVICE}"
 # TRUST_PROXY_HOPS=2: Firebase Hosting and Cloud Run's front end each append to

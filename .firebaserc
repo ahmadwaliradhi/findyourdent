@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "demo-findyourdent"
+  },
+  "targets": {
+    "findyourdent": {
+      "storage": {
+        "uploads": ["findyourdent-uploads"]
+      }
+    },
+    "demo-findyourdent": {
+      "storage": {
+        "uploads": ["demo-findyourdent-uploads"]
+      }
+    }
   }
 }

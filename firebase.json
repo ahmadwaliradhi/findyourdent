@@ -16,9 +16,12 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "storage": {
-    "rules": "storage.rules"
-  },
+  "storage": [
+    {
+      "target": "uploads",
+      "rules": "storage.rules"
+    }
+  ],
   "emulators": {
     "singleProjectMode": true,
     "auth": { "port": 9099 },

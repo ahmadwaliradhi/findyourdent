@@ -51,6 +51,8 @@ APIS=(
   logging.googleapis.com
   # Deletes the warm-instance schedule after judging (infra/gcp/deploy.sh).
   workflows.googleapis.com
+  # Firestore and Storage rules releases (infra/gcp/deploy.sh web).
+  firebaserules.googleapis.com
 )
 
 log() { printf '\n==> %s\n' "$*"; }
