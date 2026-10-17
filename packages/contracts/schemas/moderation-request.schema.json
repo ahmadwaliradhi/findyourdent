@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/moderation-request.schema.json",
+  "title": "ModerationRequest",
+  "description": "Web service to agent service: screen one Testimony, Provider reply or set of owner-entered Provider facts (specs 03 and 05). All content is data; instructions inside it are ignored. Star ratings and sentiment are deliberately not inputs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["subjectType", "language", "text"],
+  "properties": {
+    "subjectType": {
+      "description": "testimony and reply use rules R1 to R9; providerFacts uses the Provider-facts rule set (spec 05).",
+      "type": "string",
+      "enum": ["testimony", "reply", "providerFacts"]
+    },
+    "language": {
+      "description": "Author's language, used for the author-facing message.",
+      "type": "string",
+      "enum": ["id", "en"]
+    },
+    "text": {
+      "description": "Testimony text, reply text, or owner facts flattened to text.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "typedProviderName": {
+      "description": "Name the author typed (or the Listed Provider name).",
+      "type": "string",
+      "minLength": 1
+    },
+    "googleDisplayName": {
+      "description": "Live Google display name fetched by the web service and held in memory only, for rule R6 and the Proof of Visit match. Never stored.",
+      "type": "string",
+      "minLength": 1
+    },
+    "procedureCode": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "visitMonth": {
+      "description": "Stated visit month, YYYY-MM.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+    },
+    "photos": {
+      "description": "Clinic photos, EXIF already stripped.",
+      "type": "array",
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/ModerationImage" }
+    },
+    "proofOfVisit": {
+      "description": "Optional private Proof of Visit, deleted by the web service right after this call.",
+      "title": "ModerationProofOfVisit",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mimeType", "dataBase64"],
+      "properties": {
+        "mimeType": { "type": "string", "enum": ["image/jpeg", "image/png", "image/webp", "application/pdf"] },
+        "dataBase64": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authorFixRound": {
+      "description": "How many authorFix rounds this content has had already (after three it is held).",
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "ModerationImage": {
+      "title": "ModerationImage",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mimeType", "dataBase64"],
+      "properties": {
+        "mimeType": { "type": "string", "enum": ["image/jpeg", "image/png", "image/webp"] },
+        "dataBase64": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

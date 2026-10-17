@@ -1,0 +1,96 @@
+import type * as React from "react";
+import { I18nextProvider, useTranslation } from "react-i18next";
+import {
+  data,
+  isRouteErrorResponse,
+  Link,
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useRouteLoaderData,
+} from "react-router";
+import { LanguageToggle } from "~/components/language-toggle";
+import { Button } from "~/components/ui/button";
+import { DEFAULT_LANGUAGE, getI18n, type Language } from "~/i18n/config";
+import { detectLanguage } from "~/i18n/language.server";
+import type { Route } from "./+types/root";
+import "./app.css";
+
+export const links: Route.LinksFunction = () => [{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }];
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const language = await detectLanguage(request);
+  return data({ language }, { headers: { Vary: "Cookie, Accept-Language" } });
+}
+
+export function Layout({ children }: { children: React.ReactNode }) {
+  const loaderData = useRouteLoaderData<typeof loader>("root");
+  const language: Language = loaderData?.language ?? DEFAULT_LANGUAGE;
+  const i18n = getI18n(language);
+  const t = i18n.getFixedT(language);
+
+  return (
+    <html lang={language}>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#0f6e74" />
+        <Meta />
+        <Links />
+      </head>
+      <body className="min-h-dvh">
+        <I18nextProvider i18n={i18n}>
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded focus:bg-background focus:px-3 focus:py-2"
+          >
+            {t("nav.skipToContent")}
+          </a>
+          <header className="border-b bg-card">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
+              <Link to="/" aria-label={t("nav.home")} className="text-lg font-bold tracking-tight text-primary">
+                FindYourDent
+              </Link>
+              <LanguageToggle language={language} />
+            </div>
+          </header>
+          <main id="main" className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
+            {children}
+          </main>
+          <footer className="mx-auto max-w-2xl px-4 pb-8 text-xs text-muted-foreground">{t("footer.note")}</footer>
+        </I18nextProvider>
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+export default function App() {
+  return <Outlet />;
+}
+
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const { t } = useTranslation();
+  const notFound = isRouteErrorResponse(error) && error.status === 404;
+  return (
+    <section className="flex flex-col gap-4" aria-labelledby="error-title">
+      <h1 id="error-title" className="text-2xl font-bold">
+        {notFound ? t("errors.notFoundTitle") : t("errors.title")}
+      </h1>
+      <p className="text-muted-foreground">{notFound ? t("errors.notFound") : t("errors.generic")}</p>
+      <div className="flex flex-wrap gap-3">
+        {!notFound && (
+          <Button type="button" onClick={() => window.location.reload()}>
+            {t("errors.retry")}
+          </Button>
+        )}
+        <Button asChild variant="outline">
+          <Link to="/">{t("errors.backHome")}</Link>
+        </Button>
+      </div>
+    </section>
+  );
+}

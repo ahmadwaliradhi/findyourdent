@@ -1,0 +1,11 @@
+**/node_modules
+**/build
+**/.react-router
+**/.venv
+**/__pycache__
+**/test-results
+**/playwright-report
+**/.lighthouseci
+.git
+services
+docs

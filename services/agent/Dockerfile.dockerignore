@@ -1,0 +1,10 @@
+# Used by BuildKit for services/agent/Dockerfile (context = repository root).
+*
+!services/agent/pyproject.toml
+!services/agent/uv.lock
+!services/agent/.python-version
+!services/agent/src/**
+!packages/contracts/schemas/**
+!packages/contracts/data/**
+**/__pycache__
+**/*.pyc

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/shortlist-reasons-response.schema.json",
+  "title": "ShortlistReasonsResponse",
+  "description": "Agent service to web service: one short reason per Provider, same placeIds as the request (spec 02). On failure the web service shows a templated reason instead.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reasons"],
+  "properties": {
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "title": "ShortlistReason",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["placeId", "reason"],
+        "properties": {
+          "placeId": { "type": "string", "minLength": 1 },
+          "reason": {
+            "description": "One line in the Patient's language.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      }
+    }
+  }
+}

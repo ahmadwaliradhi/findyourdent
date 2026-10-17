@@ -1,0 +1,29 @@
+{
+  "name": "@findyourdent/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared JSON Schema contracts, generated TypeScript types, Ajv validators, Firestore model types and shared data (procedures, Kemendagri regions).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./firestore": "./src/firestore.ts",
+    "./schemas/*": "./schemas/*",
+    "./data/*": "./data/*"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.ts",
+    "check": "node scripts/generate.ts --check",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "json-schema-to-typescript": "16.0.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}

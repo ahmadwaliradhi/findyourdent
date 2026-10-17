@@ -1,0 +1,141 @@
+{
+  "$schema": "../schemas/procedures.schema.json",
+  "version": "2026-10-17",
+  "procedures": [
+    {
+      "code": "consultation",
+      "category": "diagnostic",
+      "label": { "id": "Konsultasi dan pemeriksaan gigi", "en": "Dental consultation and examination" }
+    },
+    {
+      "code": "dental_xray_periapical",
+      "category": "diagnostic",
+      "label": { "id": "Rontgen gigi periapikal", "en": "Periapical dental X-ray" }
+    },
+    {
+      "code": "dental_xray_panoramic",
+      "category": "diagnostic",
+      "label": { "id": "Rontgen panoramik", "en": "Panoramic dental X-ray" }
+    },
+    {
+      "code": "scaling",
+      "category": "preventive",
+      "label": { "id": "Scaling (pembersihan karang gigi)", "en": "Scaling (tartar removal)" }
+    },
+    {
+      "code": "fluoride_application",
+      "category": "preventive",
+      "label": { "id": "Aplikasi fluor", "en": "Fluoride application" }
+    },
+    {
+      "code": "fissure_sealant",
+      "category": "preventive",
+      "label": { "id": "Penutupan celah gigi (fissure sealant)", "en": "Fissure sealant" }
+    },
+    {
+      "code": "tooth_filling",
+      "category": "restorative",
+      "label": { "id": "Tambal gigi", "en": "Tooth filling" }
+    },
+    {
+      "code": "pulpotomy",
+      "category": "endodontic",
+      "label": { "id": "Pulpotomi (perawatan saraf gigi anak)", "en": "Pulpotomy (baby tooth nerve treatment)" }
+    },
+    {
+      "code": "root_canal_treatment",
+      "category": "endodontic",
+      "label": { "id": "Perawatan saluran akar", "en": "Root canal treatment" }
+    },
+    {
+      "code": "tooth_extraction",
+      "category": "surgical",
+      "label": { "id": "Cabut gigi", "en": "Tooth extraction" }
+    },
+    {
+      "code": "surgical_extraction",
+      "category": "surgical",
+      "label": { "id": "Cabut gigi dengan tindakan bedah", "en": "Surgical tooth extraction" }
+    },
+    {
+      "code": "wisdom_tooth_surgery",
+      "category": "surgical",
+      "label": { "id": "Operasi gigi bungsu (odontektomi)", "en": "Wisdom tooth surgery (odontectomy)" }
+    },
+    {
+      "code": "abscess_drainage",
+      "category": "surgical",
+      "label": { "id": "Insisi dan drainase abses", "en": "Abscess incision and drainage" }
+    },
+    {
+      "code": "tooth_replantation",
+      "category": "surgical",
+      "label": { "id": "Penanaman kembali gigi yang copot", "en": "Replantation of a knocked-out tooth" }
+    },
+    {
+      "code": "tooth_splinting",
+      "category": "periodontal",
+      "label": { "id": "Splinting gigi goyang", "en": "Splinting of loose teeth" }
+    },
+    {
+      "code": "periodontal_treatment",
+      "category": "periodontal",
+      "label": { "id": "Perawatan gusi (root planing, kuretase)", "en": "Gum treatment (root planing, curettage)" }
+    },
+    {
+      "code": "dental_crown",
+      "category": "prosthodontic",
+      "label": { "id": "Mahkota gigi (crown)", "en": "Dental crown" }
+    },
+    {
+      "code": "dental_bridge",
+      "category": "prosthodontic",
+      "label": { "id": "Gigi tiruan jembatan (bridge)", "en": "Dental bridge" }
+    },
+    {
+      "code": "dental_implant",
+      "category": "prosthodontic",
+      "label": { "id": "Implan gigi", "en": "Dental implant" }
+    },
+    {
+      "code": "removable_denture",
+      "category": "prosthodontic",
+      "label": { "id": "Gigi tiruan lepasan", "en": "Removable denture" }
+    },
+    {
+      "code": "denture_repair",
+      "category": "prosthodontic",
+      "label": { "id": "Perbaikan atau pelapisan ulang gigi tiruan", "en": "Denture repair or relining" }
+    },
+    {
+      "code": "orthodontic_braces",
+      "category": "orthodontic",
+      "label": { "id": "Pemasangan behel (kawat gigi)", "en": "Orthodontic braces" }
+    },
+    {
+      "code": "orthodontic_adjustment",
+      "category": "orthodontic",
+      "label": { "id": "Kontrol behel", "en": "Braces adjustment visit" }
+    },
+    {
+      "code": "clear_aligners",
+      "category": "orthodontic",
+      "label": { "id": "Aligner bening", "en": "Clear aligners" }
+    },
+    {
+      "code": "teeth_whitening",
+      "category": "cosmetic",
+      "label": { "id": "Pemutihan gigi (bleaching)", "en": "Teeth whitening" }
+    },
+    {
+      "code": "dental_veneer",
+      "category": "cosmetic",
+      "label": { "id": "Veneer gigi", "en": "Dental veneer" }
+    },
+    {
+      "code": "oral_lesion_treatment",
+      "category": "oral_medicine",
+      "label": { "id": "Perawatan sariawan atau lesi mulut", "en": "Mouth ulcer or oral lesion treatment" }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/price-list-extraction-response.schema.json",
+  "title": "PriceListExtractionResponse",
+  "description": "Agent service to web service (spec 05). Invalid or failed extraction returns kind failed with no rows and a retry message, never partial unvalidated rows.",
+  "oneOf": [{ "$ref": "#/$defs/PriceListExtractionOk" }, { "$ref": "#/$defs/PriceListExtractionFailed" }],
+  "$defs": {
+    "PriceListExtractionOk": {
+      "title": "PriceListExtractionOk",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "rows"],
+      "properties": {
+        "kind": { "const": "ok" },
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/ExtractedPriceRow" } }
+      }
+    },
+    "PriceListExtractionFailed": {
+      "title": "PriceListExtractionFailed",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "retryMessage"],
+      "properties": {
+        "kind": { "const": "failed" },
+        "retryMessage": { "type": "string", "minLength": 1 }
+      }
+    },
+    "PriceUnit": {
+      "type": "string",
+      "enum": ["per_tooth", "per_jaw", "per_visit", "per_package"]
+    },
+    "ExtractedPriceRow": {
+      "title": "ExtractedPriceRow",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["procedureText", "minRupiah", "maxRupiah", "unit", "confidence"],
+      "properties": {
+        "procedureCode": {
+          "description": "Code from the shared procedure list when the row maps to one.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "procedureText": {
+          "description": "Procedure as written on the document (free text when no code matches).",
+          "type": "string",
+          "minLength": 1
+        },
+        "minRupiah": { "type": "integer", "minimum": 0 },
+        "maxRupiah": { "description": "Equal to minRupiah for a fixed price.", "type": "integer", "minimum": 0 },
+        "unit": { "$ref": "#/$defs/PriceUnit" },
+        "notes": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}
