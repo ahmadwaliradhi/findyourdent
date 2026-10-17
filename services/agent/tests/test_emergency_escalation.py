@@ -6,16 +6,14 @@ queued output, so any Gemini call raises; tests also assert it recorded no call.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import Draft202012Validator
 
 from findyourdent_agent.adapters.fakes import FakeGeminiAdapter
-from findyourdent_agent.data import contracts_dir
 
 
 def ask(client: TestClient, complaint: str, **extra: Any) -> dict[str, Any]:
@@ -66,6 +64,14 @@ MUST_ESCALATE: list[tuple[str, str]] = [
     ("I can't open my mouth since yesterday", "trismus"),
     ("The bleeding won't stop after my extraction", "uncontrolled_bleeding"),
     ("My son's front tooth got knocked out playing football", "knocked_out_permanent_tooth"),
+    ("sudah 3 hari tidak turun demam, pipi bengkak", "fever"),
+    ("tidak lama pipi bengkak dan demam", "facial_or_neck_swelling"),
+    ("bengkaknya sampai pipi, demam juga", "facial_or_neck_swelling"),
+    ("pipi membesar sebelah dan suhu 39", "fever"),
+    ("gigi bungsu sakit, nyeri saat menelan", "difficulty_swallowing"),
+    ("it hurts to swallow since my wisdom tooth flared up", "difficulty_swallowing"),
+    ("perdarahan hebat setelah cabut gigi", "uncontrolled_bleeding"),
+    ("habis cabut gigi darahnya banyak banget", "uncontrolled_bleeding"),
     (
         "Halo dok, mau tanya. Jadi gigi geraham bawah kiri saya sudah berlubang lama, dulu "
         "pernah ditambal di puskesmas tapi tambalannya lepas tahun lalu. Minggu ini mulai "
@@ -100,25 +106,24 @@ MUST_NOT_ESCALATE: list[str] = [
     "Anak jatuh kemarin, gigi susunya copot",
     "Gusi berdarah dan sakitnya tidak berhenti",
     "Gigi tidak sakit lagi tapi badan demam",
+    "gusi berdarah terus keluar waktu sikat gigi",
+    "darah keluar terus dari gusi saat sikat gigi",
 ]
-
-
-def response_validator() -> Draft202012Validator:
-    schema = json.loads(
-        (contracts_dir() / "schemas" / "guidance-response.schema.json").read_text("utf-8")
-    )
-    return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
 @pytest.mark.parametrize(("complaint", "red_flag"), MUST_ESCALATE)
 def test_red_flag_escalates_before_any_model_call(
-    client: TestClient, fake_gemini: FakeGeminiAdapter, complaint: str, red_flag: str
+    client: TestClient,
+    fake_gemini: FakeGeminiAdapter,
+    response_validator: Draft202012Validator,
+    complaint: str,
+    red_flag: str,
 ) -> None:
     body = ask(client, complaint)
 
     assert body["kind"] == "emergency", complaint
     assert red_flag in body["redFlags"]
-    assert list(response_validator().iter_errors(body)) == []
+    assert list(response_validator.iter_errors(body)) == []
     assert fake_gemini.calls == []
 
 
@@ -140,9 +145,9 @@ def test_red_flag_in_the_follow_up_answer_escalates(client: TestClient) -> None:
     ("language", "expected"),
     [("id", "infeksi yang menyebar"), ("en", "infection is spreading")],
 )
-def test_reason_follows_the_request_language(
-    client: TestClient, language: str, expected: str
-) -> None:
+def test_reason_follows_the_ui_language(client: TestClient, language: str, expected: str) -> None:
+    # The deterministic layer does not detect the complaint's language, so the reason
+    # follows the UI toggle; the model layer answers in the complaint's language.
     body = ask(client, "Pipi bengkak dan demam", language=language)
 
     assert expected in body["reason"]

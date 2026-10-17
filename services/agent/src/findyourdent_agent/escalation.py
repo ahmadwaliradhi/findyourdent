@@ -15,9 +15,10 @@ code. Text and phrases are normalised the same way into word tokens:
 A phrase matches when its tokens appear in order within one clause (or across clauses,
 for a flag that allows it), with at most ``max_gap`` other tokens between consecutive
 phrase tokens. A match is ignored when a negator sits before it in the same clause,
-within ``negation_window`` tokens ("tidak demam", "no fever"), unless the phrase itself
-starts with the negator ("tidak bisa menelan"), or when one of the flag's exclusion
-phrases matches in the clauses the match covers ("gigi susu" for a knocked-out tooth).
+within ``negation_window`` tokens ("tidak demam", "no fever"), unless the negator is
+followed by an exception word ("tidak turun demam") or the phrase itself starts with it
+("tidak bisa menelan"). It is also ignored when one of the flag's exclusion phrases
+matches in the clauses the match covers ("gigi susu" for a knocked-out tooth).
 """
 
 from __future__ import annotations
@@ -32,8 +33,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from .contracts.guidance_response import EmergencyResponse, HospitalSearch
+from .stub import Language
 
-Language = Literal["id", "en"]
+# Mirrors the redFlags enum in guidance-response.schema.json; red_flags.json is
+# validated against it on load, and EmergencyResponse validates every response.
 RedFlag = Literal[
     "facial_or_neck_swelling",
     "fever",
@@ -68,6 +71,9 @@ class Reason(_Data):
     id: str = Field(min_length=1)
     en: str = Field(min_length=1)
 
+    def text(self, language: Language) -> str:
+        return self.id if language == "id" else self.en
+
 
 class Rule(_Data):
     """Escalate when every flag in ``all`` is present. Rules are listed in priority
@@ -84,6 +90,7 @@ class RedFlagRules(_Data):
     negation_window: int = Field(ge=1)
     synonyms: dict[str, str]
     negators: list[str] = Field(min_length=1)
+    negation_exceptions: list[str] = []
     clause_breaks: list[str]
     flags: dict[RedFlag, FlagPhrases]
     rules: list[Rule] = Field(min_length=1)
@@ -122,6 +129,7 @@ class RedFlagMatcher:
         self._synonyms = {_one_token(k): tuple(_raw_tokens(v)) for k, v in rules.synonyms.items()}
         self._breaks = {self._word(w) for w in rules.clause_breaks}
         self._negators = {self._word(w) for w in rules.negators}
+        self._negation_exceptions = {self._word(w) for w in rules.negation_exceptions}
         self._flags = {
             flag: _Flag(
                 phrases=self._compile(spec.phrases),
@@ -134,7 +142,8 @@ class RedFlagMatcher:
 
     def _word(self, word: str) -> str:
         """One configured word, after the synonym table ("gak" -> "tidak")."""
-        mapped = self._synonyms.get(_one_token(word), (_one_token(word),))
+        token = _one_token(word)
+        mapped = self._synonyms.get(token, (token,))
         if len(mapped) != 1:
             raise ValueError(f"red_flags.json: {word!r} must map to a single word")
         return mapped[0]
@@ -152,7 +161,7 @@ class RedFlagMatcher:
 
     @staticmethod
     def _spans(
-        text: list[str], phrase: Phrase, max_gap: int, cross_clauses: bool = False
+        text: list[str], phrase: Phrase, max_gap: int, cross_clauses: bool
     ) -> list[tuple[int, int]]:
         """(first, last) token indexes of each match of ``phrase`` with bounded gaps."""
         spans = []
@@ -185,7 +194,10 @@ class RedFlagMatcher:
 
     def _negated(self, text: list[str], first: int) -> bool:
         window_start = max(self._clause_start(text, first), first - self.rules.negation_window)
-        return not self._negators.isdisjoint(text[window_start:first])
+        return any(
+            text[i] in self._negators and text[i + 1] not in self._negation_exceptions
+            for i in range(window_start, first)
+        )
 
     def _present(self, text: list[str], flag: _Flag) -> bool:
         for phrase in flag.phrases:
@@ -193,24 +205,24 @@ class RedFlagMatcher:
                 if phrase[0] not in self._negators and self._negated(text, first):
                     continue
                 clauses = text[self._clause_start(text, first) : self._clause_end(text, last)]
-                if any(self._spans(clauses, e, self.rules.max_gap) for e in flag.exclude):
+                if any(self._spans(clauses, e, self.rules.max_gap, False) for e in flag.exclude):
                     continue
                 return True
         return False
 
-    def flags_in(self, text: str) -> set[RedFlag]:
+    def _flags_in(self, text: str) -> set[RedFlag]:
         tokens = self._tokens(text)
         return {flag for flag, spec in self._flags.items() if self._present(tokens, spec)}
 
     def check(self, *texts: str | None, language: Language) -> EmergencyResponse | None:
         """The emergency response if any rule fires on the Patient's texts, else None."""
-        found = set().union(*(self.flags_in(t) for t in texts if t))
+        found = set().union(*(self._flags_in(t) for t in texts if t))
         fired = [rule for rule in self.rules.rules if set(rule.all) <= found]
         if not fired:
             return None
         return EmergencyResponse(
             kind="emergency",
-            reason=getattr(fired[0].reason, language),
+            reason=fired[0].reason.text(language),
             redFlags=sorted({flag for rule in fired for flag in rule.all}),
             hospitalSearch=HospitalSearch(
                 providerType="hospital", requiresEmergencyDepartment=True

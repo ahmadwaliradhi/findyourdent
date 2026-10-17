@@ -1,11 +1,12 @@
 {
-  "version": "2026-10-17.1",
+  "version": "2026-10-17.2",
   "notes": [
     "Emergency Escalation red flags (spec 01), checked before any model call. A clinical reviewer extends this file; bump version on every change and add must-escalate or must-not-escalate cases to services/agent/tests/test_emergency_escalation.py.",
     "Matching is on normalised words: lower case, no accents or apostrophes, repeated letters collapsed (bengkaaak = bengkak, tinggi = tingi), 'gigi2' = 'gigi'. Write phrases in plain spelling; misspellings and slang go in synonyms.",
     "synonyms map one word to one or more words, applied to the Patient's text and to every phrase below.",
     "A phrase matches when its words appear in order within one clause, with at most max_gap other words between them. Clauses end at . , ; : ! ? ( ) and at clause_breaks words.",
     "A flag can set its own max_gap, and cross_clauses: true to let its phrases span clauses (a fall in one sentence, the lost tooth in the next).",
+    "A negator followed by a negation_exceptions word does not negate ('tidak turun demam' = the fever is not going down, 'tidak lama' = not long after).",
     "A match is ignored when a negator appears up to negation_window words before it in the same clause, unless the phrase starts with the negator, or when an exclude phrase of the same flag appears in the clauses the match covers.",
     "rules fire when every flag in 'all' is present; the first rule that fires (top to bottom) gives the reason shown to the Patient.",
     "Sources for the red flags: NHS 111 and SDCEP dental emergency guidance (UK), Alberta Dental Association guidance (Canada), Queensland Health dental emergency referral guidance, IADT avulsion guideline."
@@ -13,6 +14,7 @@
   "max_gap": 2,
   "negation_window": 2,
   "negators": ["tidak", "bukan", "belum", "tanpa", "no", "not", "without", "never", "dont", "doesnt", "didnt", "isnt", "havent", "hasnt", "nor"],
+  "negation_exceptions": ["turun", "lama", "hilang", "sembuh", "reda", "kunjung", "going", "getting", "long"],
   "clause_breaks": ["tapi", "tetapi", "namun", "but", "however", "although", "walaupun", "meskipun", "cuma", "hanya"],
   "synonyms": {
     "gak": "tidak",
@@ -51,6 +53,8 @@
     "benkak": "bengkak",
     "bengkek": "bengkak",
     "bengkakan": "bengkak",
+    "bengkaknya": "bengkak",
+    "membesar": "bengkak",
     "membengkak": "bengkak",
     "abuh": "bengkak",
     "bareuh": "bengkak",
@@ -91,6 +95,14 @@
     "feaver": "fever",
     "feverish": "fever",
 
+    "nyeri": "sakit",
+    "hurt": "pain",
+    "hurts": "pain",
+    "painful": "pain",
+    "banget": "sekali",
+    "bgt": "sekali",
+    "bngt": "sekali",
+    "amat": "sekali",
     "nelan": "menelan",
     "telan": "menelan",
     "ditelan": "menelan",
@@ -197,13 +209,15 @@
     "fever": {
       "phrases": [
         "demam", "meriang", "panas dingin", "badan panas", "panas badan", "panas tinggi",
-        "fever", "high temperature", "chills"
+        "suhu 38", "suhu 39", "suhu 40", "suhu 41", "38 derajat", "39 derajat", "40 derajat",
+        "fever", "high temperature", "chills", "temperature 38", "temperature 39", "temperature 40"
       ]
     },
     "difficulty_swallowing": {
       "phrases": [
         "susah menelan", "tidak bisa menelan", "menelan susah", "ludah tidak bisa menelan",
-        "difficulty swallow", "cannot swallow", "can not swallow"
+        "sakit menelan", "menelan sakit",
+        "difficulty swallow", "cannot swallow", "can not swallow", "pain swallow", "swallow pain"
       ]
     },
     "difficulty_breathing": {
@@ -229,8 +243,10 @@
         "bleeding doesnt stop", "bleeding not stopping", "cannot stop bleeding",
         "bleeding heavily", "heavy bleeding", "uncontrolled bleeding", "bleeding nonstop",
         "bleeding non stop",
-        "darah cabut tidak berhenti", "darah cabut terus keluar"
+        "darah cabut tidak berhenti", "darah cabut terus keluar",
+        "darah hebat", "darah deras", "darah banyak sekali"
       ],
+      "exclude": ["sikat gigi", "gosok gigi", "brushing", "brush", "floss", "flossing"],
       "max_gap": 1
     },
     "knocked_out_permanent_tooth": {

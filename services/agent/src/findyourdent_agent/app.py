@@ -94,13 +94,12 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
     )
     async def guidance(body: GuidanceRequest, request: Request) -> GuidanceResponse:
         turn = body.root
-        # Emergency Escalation runs first and without any model call (spec 01).
-        emergency = red_flags.check(turn.complaintText, turn.followUpAnswer, language=turn.language)
-        if emergency is not None:
-            request.state.outcome = emergency.kind
-            return GuidanceResponse(root=emergency)
-        # Walking skeleton: fixed card, no model, Agent Search or Places call.
-        card = stub_guidance(turn.language)
+        # Emergency Escalation runs first and without any model call (spec 01). A voice
+        # note has no text to check here; the model layer covers it once Gemini lands.
+        # Otherwise, walking skeleton: fixed card, no model, Agent Search or Places call.
+        card = red_flags.check(
+            turn.complaintText, turn.followUpAnswer, language=turn.language
+        ) or stub_guidance(turn.language)
         request.state.outcome = card.kind
         return GuidanceResponse(root=card)
 

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import Draft202012Validator
 
 from findyourdent_agent.adapters.fakes import (
     FakeAgentSearchAdapter,
@@ -17,21 +15,11 @@ from findyourdent_agent.contracts.guidance_response import (
     GuidanceCardResponse,
     GuidanceResponse,
 )
-from findyourdent_agent.data import contracts_dir, procedure_codes
+from findyourdent_agent.data import procedure_codes
 
 COMPLAINT_ID = (
     "Gigi geraham kiri bawah nyut-nyutan sejak tiga hari, makin sakit kalau minum dingin."
 )
-
-
-def load_schema(name: str) -> dict[str, Any]:
-    return json.loads((contracts_dir() / "schemas" / name).read_text(encoding="utf-8"))
-
-
-def response_validator() -> Draft202012Validator:
-    schema = load_schema("guidance-response.schema.json")
-    Draft202012Validator.check_schema(schema)
-    return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
 @pytest.mark.parametrize("language", ["id", "en"])
@@ -40,6 +28,7 @@ def test_complaint_returns_guidance_card_matching_the_contract(
     fake_gemini: FakeGeminiAdapter,
     fake_agent_search: FakeAgentSearchAdapter,
     fake_places: FakePlacesAdapter,
+    response_validator: Draft202012Validator,
     language: str,
 ) -> None:
     response = client.post(
@@ -51,7 +40,7 @@ def test_complaint_returns_guidance_card_matching_the_contract(
     body = response.json()
     assert body["kind"] == "guidance"
 
-    errors = sorted(response_validator().iter_errors(body), key=lambda e: list(e.path))
+    errors = sorted(response_validator.iter_errors(body), key=lambda e: list(e.path))
     assert errors == [], [e.message for e in errors]
 
     parsed = GuidanceResponse.model_validate(body)
