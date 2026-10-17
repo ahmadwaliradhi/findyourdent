@@ -32,7 +32,7 @@ describe("POST /api/guidance", () => {
     const sent = server.fakes.agent.calls[0];
     expect(validateGuidanceRequest(sent), JSON.stringify(validateGuidanceRequest.errors)).toBe(true);
     expect(sent).toMatchObject({ complaintText: COMPLAINT, language: "id" });
-    expect(response.headers.get("set-cookie")).toMatch(/^fyd_sid=/);
+    expect(response.headers.get("set-cookie")).toMatch(/^__session=/);
 
     // Complaint text is processed in memory only: nothing stored but rate-limit counters, nothing logged.
     const collections = await server.firestore.listCollections();
@@ -97,7 +97,7 @@ describe("language detection", () => {
       redirect: "manual",
     });
     const cookie = toggle.headers.get("set-cookie")?.split(";")[0] ?? "";
-    expect(cookie).toMatch(/^lang=/);
+    expect(cookie).toMatch(/^__session=/);
 
     const toggled = await fetch(new URL("/", server.baseUrl), {
       headers: { "accept-language": "en-US,en;q=0.9", cookie },

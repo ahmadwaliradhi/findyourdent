@@ -20,6 +20,7 @@ class FakeGeminiAdapter:
         instruction: str,
         contents: list[Any],
         response_schema: dict[str, Any],
+        temperature: float,
     ) -> dict[str, Any]:
         self.calls.append(
             {
@@ -27,6 +28,7 @@ class FakeGeminiAdapter:
                 "instruction": instruction,
                 "contents": contents,
                 "response_schema": response_schema,
+                "temperature": temperature,
             }
         )
         if not self.outputs:

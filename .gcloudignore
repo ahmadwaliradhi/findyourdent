@@ -1,0 +1,24 @@
+# Source uploaded by `gcloud builds submit` (infra/gcp/deploy.sh). Only what the
+# two Dockerfiles copy; everything else stays on the laptop.
+*
+!apps/
+!apps/web/
+!apps/web/**
+!packages/
+!packages/contracts/
+!packages/contracts/**
+!services/
+!services/agent/
+!services/agent/**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+**/node_modules/
+**/build/
+**/.react-router/
+**/.venv/
+**/__pycache__/
+**/test-results/
+**/playwright-report/
+**/.lighthouseci/
+**/.env

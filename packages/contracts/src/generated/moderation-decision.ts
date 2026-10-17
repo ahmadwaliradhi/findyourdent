@@ -19,10 +19,11 @@ export type ModerationRuleCode =
   | "photo_not_clinic_setting"
   | "promotional_wording"
   | "misleading_statement"
-  | "model_error";
+  | "model_error"
+  | "low_confidence";
 
 /**
- * Agent service to web service: the Moderation result (spec 03). Model errors, timeouts or invalid output always become hold with ruleCodes ["model_error"].
+ * Agent service to web service: the Moderation result (spec 03). Model errors, timeouts or invalid output always become hold with ruleCodes ["model_error"]; a valid model result with no rule hit but too little confidence to publish becomes hold with ruleCodes ["low_confidence"].
  */
 export interface ModerationDecision {
   decision: "publish" | "authorFix" | "hold";
@@ -45,7 +46,7 @@ export interface ModerationDecision {
    */
   ownHealthDataWarning?: boolean;
   /**
-   * Plausible match with the Provider name and a date within 24 months of the visit month. A rejection never holds the Testimony; it only withholds Kunjungan terbukti.
+   * Plausible match with the Provider name and a date within 24 months of the visit month. A rejection never holds the Testimony; it only withholds Kunjungan terbukti. Absent when the check did not run (model error, timeout or invalid output): treat it as not verified, and delete the file anyway.
    */
   proofOfVisit?: "accepted" | "rejected" | "notProvided";
 }

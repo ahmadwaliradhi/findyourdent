@@ -1,24 +1,12 @@
 import type express from "express";
 import type { Auth } from "firebase-admin/auth";
-import { createCookie } from "react-router";
-import type { SharedContext } from "./context.ts";
+import { readBrowserState, updateBrowserState } from "./browser-state.ts";
+import type { BaseContext } from "./context.ts";
 
 /** Google is the only sign-in provider (spec 00). */
 export const GOOGLE_PROVIDER = "google.com";
 
 const SESSION_DAYS = 5;
-
-/**
- * Firebase session cookie. Named `__session` because Firebase Hosting strips every
- * other cookie before it reaches Cloud Run.
- */
-export const sessionCookie = createCookie("__session", {
-  path: "/",
-  sameSite: "lax",
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  maxAge: SESSION_DAYS * 24 * 60 * 60,
-});
 
 export interface SignedInUser {
   uid: string;
@@ -33,7 +21,12 @@ export type SessionOutcome =
  * Exchanges a fresh Google sign-in (a Firebase ID token) for a session cookie.
  * No email or phone verification follows.
  */
-export async function createSession(auth: Auth, idToken: string, nowMs = Date.now()): Promise<SessionOutcome> {
+export async function createSession(
+  auth: Auth,
+  idToken: string,
+  cookieHeader: string | null | undefined,
+  nowMs = Date.now(),
+): Promise<SessionOutcome> {
   let decoded: Awaited<ReturnType<Auth["verifyIdToken"]>>;
   try {
     decoded = await auth.verifyIdToken(idToken);
@@ -46,11 +39,13 @@ export async function createSession(auth: Auth, idToken: string, nowMs = Date.no
 
   const expiresIn = SESSION_DAYS * 24 * 60 * 60 * 1000;
   const value = await auth.createSessionCookie(idToken, { expiresIn });
-  return { ok: true, setCookie: await sessionCookie.serialize(value) };
+  // Kept in the one `__session` cookie beside the language and Guidance session id.
+  return { ok: true, setCookie: await updateBrowserState(cookieHeader, { auth: value }) };
 }
 
-export function clearSession(): Promise<string> {
-  return sessionCookie.serialize("", { maxAge: 0 });
+/** Set-Cookie that signs out, keeping the language toggle and the Guidance session. */
+export function clearSession(cookieHeader: string | null | undefined): Promise<string> {
+  return updateBrowserState(cookieHeader, { auth: undefined });
 }
 
 /** The signed-in Google account behind the request's session cookie, or null. */
@@ -59,8 +54,8 @@ export async function readSession(
   cookieHeader: string | null | undefined,
 ): Promise<SignedInUser | null> {
   if (!auth) return null;
-  const value: unknown = await sessionCookie.parse(cookieHeader ?? null);
-  if (typeof value !== "string" || value === "") return null;
+  const value = (await readBrowserState(cookieHeader)).auth;
+  if (!value) return null;
   try {
     const decoded = await auth.verifySessionCookie(value, true);
     if (decoded.firebase.sign_in_provider !== GOOGLE_PROVIDER) return null;
@@ -84,7 +79,7 @@ const ADMIN_PATH = /^\/admin(?:[./]|$)/i;
  * nested routes and actions. React Router only sees allowlisted admins, and
  * finds them in `res.locals.admin`.
  */
-export function adminGate(context: () => SharedContext): express.RequestHandler {
+export function adminGate(context: () => BaseContext): express.RequestHandler {
   return async (req, res, next) => {
     if (!ADMIN_PATH.test(req.path)) return next();
     const { auth, config } = context();

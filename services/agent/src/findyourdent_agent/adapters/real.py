@@ -1,21 +1,36 @@
-"""Production adapters. Placeholders in the walking skeleton: the stub Guidance endpoint
-never calls them. Each later ticket fills in one adapter behind the same port.
+"""Production adapters. Each ticket fills in one adapter behind the same port; the ones
+still raising NotImplementedError are placeholders.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field
 from typing import Any
+
+from google import genai
+from google.genai import types
 
 from ..config import Settings
 from . import Adapters
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass
 class GoogleGeminiAdapter:
     """Gemini through google-genai on Vertex AI, global endpoint (ADR-0003)."""
 
     settings: Settings
+    _client: genai.Client | None = field(default=None, init=False, repr=False)
+
+    def _vertex_client(self) -> genai.Client:
+        # Built on first use so the service starts without credentials (tests, local dev).
+        if self._client is None:
+            self._client = genai.Client(
+                vertexai=True,
+                project=self.settings.google_cloud_project,
+                location=self.settings.google_cloud_location,
+            )
+        return self._client
 
     async def generate_structured(
         self,
@@ -24,8 +39,21 @@ class GoogleGeminiAdapter:
         instruction: str,
         contents: list[Any],
         response_schema: dict[str, Any],
+        temperature: float,
     ) -> dict[str, Any]:
-        raise NotImplementedError("Gemini Guidance call lands in a later ticket (spec 01)")
+        response = await self._vertex_client().aio.models.generate_content(
+            model=model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=instruction,
+                temperature=temperature,
+                response_mime_type="application/json",
+                response_json_schema=response_schema,
+            ),
+        )
+        if not response.text:
+            raise ValueError("Gemini returned no text")
+        return json.loads(response.text)
 
 
 @dataclass(frozen=True, slots=True)

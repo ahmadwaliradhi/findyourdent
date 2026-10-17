@@ -23,7 +23,7 @@ export type PaidRoute = "guidance" | "guidanceFollowUp" | "places" | "testimony"
 export interface PaidRequest {
   request: Request;
   route: PaidRoute;
-  /** Opaque session id from the fyd_sid cookie. Required for guidance and places. */
+  /** Opaque Guidance session id from the __session cookie. Required for guidance and places. */
   sessionId?: string;
   /** Signed-in account. Required for testimony. */
   uid?: string;

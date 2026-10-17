@@ -16,7 +16,7 @@ import {
   type FakePlacesAdapter,
 } from "../../server/adapters/fakes.ts";
 import { createApp } from "../../server/app.ts";
-import { DEFAULT_RATE_LIMITS, type RateLimits, type SharedContext } from "../../server/context.ts";
+import { type BaseContext, DEFAULT_RATE_LIMITS, type RateLimits } from "../../server/context.ts";
 import { initFirebaseAdmin } from "../../server/firebase.ts";
 import type { LogFields, Logger } from "../../server/logger.ts";
 import { createFirestoreRateLimiter } from "../../server/rate-limit.ts";
@@ -151,7 +151,7 @@ export async function startTestServer(): Promise<TestServer> {
   let limits = { ...DEFAULT_RATE_LIMITS };
   const rateLimiter = createFirestoreRateLimiter(firebase.firestore, { salt: "test-salt", now: () => nowMs });
 
-  const context = (): SharedContext => ({
+  const context = (): BaseContext => ({
     adapters: fakes,
     firestore: firebase.firestore,
     auth: firebase.auth,
