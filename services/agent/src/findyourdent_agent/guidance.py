@@ -261,7 +261,6 @@ async def answer_turn(
             complaint, turn.followUpAnswer, turn.followUpQuestion, retrieved
         ),
         response_schema=model_response_schema(),
-        temperature=settings.guidance_temperature,
         max_output_tokens=settings.guidance_max_output_tokens,
         thinking_level=settings.guidance_thinking_level,
     )

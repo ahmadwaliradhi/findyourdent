@@ -1,6 +1,6 @@
 # Voice input evaluation: Gemini native audio on Indonesian dental voice notes
 
-H11 (issue #31). Measures how well Gemini native audio hears Indonesian voice complaints with dental terms, and whether giving it the dental term list helps. ElevenLabs is out of scope (ADR 0010). Everything above **Results** is fixed before the run.
+H11 (issue #31). Measures how well Gemini native audio hears Indonesian voice complaints with dental terms, and whether giving it the dental term list helps. ElevenLabs is out of scope (ADR 0010). Everything above **Results** was fixed before the run. The scripted run below was not carried out: a manual check on the live site settled the question first (see **Results**).
 
 ## Runs
 
@@ -76,4 +76,11 @@ From the product owner's hand-off (issue #31, first comment). The headwords and 
 
 ## Results
 
-Not run yet: waiting for the 10 recordings (human lane).
+**17 Oct 2026, manual check on findyourdent.com (product owner).** The product owner recorded voice complaints in Indonesian on the live site, in production with the dental term list not added, and judged the transcripts and Guidance good enough. H11 was closed on that basis.
+
+What this does and does not settle:
+
+- Production stays as it is (the third outcome of the decision rule).
+- Run (b), the dental term list in the Guidance instruction, was dropped as not needed. Revisit it if Patients report misheard dental terms.
+- The 10 scripted recordings, term recall and WER were not measured, so there are no numbers for the deck.
+- The VN-01 gap in the deterministic rule is unaffected: it fails on the exact sentence, typed or heard (issue #67).

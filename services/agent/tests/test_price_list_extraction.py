@@ -66,7 +66,7 @@ def test_rows_read_from_a_pdf_are_returned(
     assert result == {"kind": "ok", "rows": [a_row()]}
 
 
-def test_uses_extraction_model_at_temperature_zero_with_documents_as_data(
+def test_uses_extraction_model_and_row_schema_with_documents_as_data(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
     fake_gemini.outputs.append({"rows": [a_row()]})
@@ -75,7 +75,9 @@ def test_uses_extraction_model_at_temperature_zero_with_documents_as_data(
 
     (call,) = fake_gemini.calls
     assert call["model"] == "gemini-3.5-flash-lite"
-    assert call["temperature"] == 0
+    assert call["response_schema"]["required"] == ["rows"]
+    row = call["response_schema"]["properties"]["rows"]["items"]
+    assert row["required"] == ["procedureText", "minRupiah", "maxRupiah", "unit", "confidence"]
     assert call["max_output_tokens"]
     documents = [p.inline_data for p in call["contents"] if p.inline_data]
     assert [(d.mime_type, d.data) for d in documents] == [("application/pdf", b"%PDF-1.7 list")]

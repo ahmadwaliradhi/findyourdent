@@ -65,13 +65,11 @@ class GoogleGeminiAdapter:
         instruction: str,
         contents: list[Any],
         response_schema: dict[str, Any],
-        temperature: float,
         max_output_tokens: int | None = None,
         thinking_level: str | None = None,
     ) -> dict[str, Any]:
         config = types.GenerateContentConfig(
             system_instruction=instruction,
-            temperature=temperature,
             max_output_tokens=max_output_tokens or DEFAULT_MAX_OUTPUT_TOKENS,
             response_mime_type="application/json",
             response_json_schema=response_schema,

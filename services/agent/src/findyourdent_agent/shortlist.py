@@ -42,7 +42,6 @@ async def write_reasons(
         instruction=shortlist_instruction(),
         contents=shortlist_contents(request),
         response_schema=MODEL_OUTPUT_SCHEMA,
-        temperature=settings.shortlist_temperature,
         max_output_tokens=settings.shortlist_max_output_tokens,
         thinking_level=settings.shortlist_thinking_level,
     )
