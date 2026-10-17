@@ -33,12 +33,14 @@ package = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# evals/ holds the evaluation runners (spec 06); tests import their scoring.
+pythonpath = ["."]
 addopts = ["-ra", "--strict-markers"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["src", "tests", "scripts"]
+src = ["src", "tests", "scripts", "evals"]
 # Generated from packages/contracts/schemas; kept stable by scripts/generate_contracts.py.
 extend-exclude = ["src/findyourdent_agent/contracts"]
 
@@ -48,3 +50,4 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "S", "PT"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 "scripts/**" = ["S603", "S607"]
+"evals/**" = ["S603", "S607"]
