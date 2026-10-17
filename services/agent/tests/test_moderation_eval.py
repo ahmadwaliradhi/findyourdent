@@ -140,4 +140,16 @@ def test_results_hold_rule_codes_but_never_the_author_message() -> None:
     report = evaluate(a_case_set(a_case("clean-1")), [clean_output()])
 
     (run,) = report["cases"][0]["runs"]
-    assert set(run) == {"decision", "ruleCodes", "confidence", "outcome"}
+    assert set(run) == {"decision", "ruleCodes", "confidence", "outcome", "ownHealthDataWarning"}
+
+
+def test_own_health_details_count_only_when_the_warning_is_shown() -> None:
+    own_health = a_case("own-health")
+    own_health["expected"]["ownHealthDataWarning"] = True
+    warned = {**clean_output(), "ownHealthDataWarning": True}
+
+    report = evaluate(a_case_set(own_health), [warned, clean_output(), warned], runs=3)
+
+    (row,) = report["cases"]
+    assert row["majority"] == "publish"
+    assert row["warningFoundInRuns"] == 2

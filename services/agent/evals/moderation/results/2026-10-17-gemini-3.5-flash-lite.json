@@ -8,25 +8,18 @@
   "labelStatus": "draft",
   "metrics": {
     "cases": 30,
-    "decisionAccuracy": 0.9333333333333333,
-    "falsePublishes": [
-      "p4-neg"
-    ],
-    "neutralityMismatches": [
-      "p4"
-    ],
-    "pairRunDisagreements": [
-      "p4"
-    ],
+    "decisionAccuracy": 0.9666666666666667,
+    "falsePublishes": [],
+    "neutralityMismatches": [],
+    "pairRunDisagreements": [],
     "flips": [
-      "clean-pos-child",
-      "p4-neg"
+      "clean-pos-child"
     ],
     "invalidCases": [],
     "outcomes": {
       "authorFix": 18,
-      "hold": 33,
-      "publish": 39
+      "hold": 35,
+      "publish": 37
     }
   },
   "gates": [
@@ -34,21 +27,21 @@
       "name": "falsePublishes",
       "threshold": 0,
       "op": "<=",
-      "value": 1,
-      "status": "fail"
+      "value": 0,
+      "status": "pass"
     },
     {
       "name": "neutralityMismatches",
       "threshold": 0,
       "op": "<=",
-      "value": 1,
-      "status": "fail"
+      "value": 0,
+      "status": "pass"
     },
     {
       "name": "decisionAccuracy",
       "threshold": 0.9,
       "op": ">=",
-      "value": 0.9333333333333333,
+      "value": 0.9666666666666667,
       "status": "pass"
     }
   ],
@@ -63,24 +56,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         }
       ]
     },
@@ -94,20 +91,14 @@
       "correct": false,
       "flipped": true,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
-        {
-          "decision": "hold",
-          "ruleCodes": [
-            "r8_third_party_health_data"
-          ],
-          "confidence": 1.0,
-          "outcome": "hold"
-        },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -115,7 +106,17 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -129,24 +130,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -160,24 +165,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -191,24 +200,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         }
       ]
     },
@@ -222,24 +235,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": 3,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         }
       ]
     },
@@ -253,24 +270,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         }
       ]
     },
@@ -284,24 +305,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -317,6 +342,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "authorFix",
@@ -324,7 +350,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -332,7 +359,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -340,7 +368,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -356,6 +385,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -363,7 +393,8 @@
             "r2_accusation_as_fact"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -371,7 +402,8 @@
             "r2_accusation_as_fact"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -379,7 +411,8 @@
             "r2_accusation_as_fact"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -395,6 +428,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -402,7 +436,8 @@
             "r3_hate_or_harassment"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -410,7 +445,8 @@
             "r3_hate_or_harassment"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -418,7 +454,8 @@
             "r3_hate_or_harassment"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -434,6 +471,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "authorFix",
@@ -441,7 +479,8 @@
             "r4_not_first_hand"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -449,7 +488,8 @@
             "r4_not_first_hand"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -457,7 +497,8 @@
             "r4_not_first_hand"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -473,6 +514,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "authorFix",
@@ -480,7 +522,8 @@
             "r5_medical_advice"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "authorFix",
@@ -488,7 +531,8 @@
             "r5_medical_advice"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "authorFix",
@@ -496,7 +540,8 @@
             "r5_medical_advice"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": true
         }
       ]
     },
@@ -512,6 +557,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "authorFix",
@@ -519,7 +565,8 @@
             "r6_wrong_provider"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -527,7 +574,8 @@
             "r6_wrong_provider"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -535,7 +583,8 @@
             "r6_wrong_provider"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -551,6 +600,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -558,7 +608,8 @@
             "r7_conflict_of_interest"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -566,7 +617,8 @@
             "r7_conflict_of_interest"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -574,7 +626,8 @@
             "r7_conflict_of_interest"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -590,6 +643,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -598,7 +652,8 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -607,7 +662,8 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -616,7 +672,8 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -632,6 +689,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -639,7 +697,8 @@
             "r9_manipulation"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -647,7 +706,8 @@
             "r9_manipulation"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -655,7 +715,8 @@
             "r9_manipulation"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -671,6 +732,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -678,7 +740,8 @@
             "named_person_negative"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -686,7 +749,8 @@
             "named_person_negative"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -694,7 +758,8 @@
             "named_person_negative"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -708,24 +773,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -741,6 +810,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -748,7 +818,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -756,7 +827,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -764,7 +836,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -780,6 +853,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -787,7 +861,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -795,7 +870,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -803,7 +879,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -819,6 +896,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -826,7 +904,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -834,7 +913,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -842,7 +922,8 @@
             "photo_not_clinic_setting"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -856,24 +937,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -887,24 +972,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -918,24 +1007,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         }
       ]
     },
@@ -949,24 +1042,28 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         },
         {
           "decision": "publish",
           "ruleCodes": [],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "publish",
+          "ownHealthDataWarning": true
         }
       ]
     },
@@ -982,6 +1079,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "authorFix",
@@ -989,7 +1087,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -997,7 +1096,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -1005,7 +1105,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -1021,6 +1122,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "authorFix",
@@ -1028,7 +1130,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -1036,7 +1139,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "authorFix",
@@ -1044,7 +1148,8 @@
             "r1_personal_data"
           ],
           "confidence": 1.0,
-          "outcome": "authorFix"
+          "outcome": "authorFix",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -1056,16 +1161,20 @@
       "expectedRules": [
         "r8_third_party_health_data"
       ],
-      "majority": "publish",
-      "correct": false,
-      "flipped": true,
-      "rulesFoundInRuns": 1,
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
-          "decision": "publish",
-          "ruleCodes": [],
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -1073,13 +1182,17 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
-          "decision": "publish",
-          "ruleCodes": [],
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
           "confidence": 1.0,
-          "outcome": "publish"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     },
@@ -1095,6 +1208,7 @@
       "correct": true,
       "flipped": false,
       "rulesFoundInRuns": 3,
+      "warningFoundInRuns": null,
       "runs": [
         {
           "decision": "hold",
@@ -1102,7 +1216,8 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -1110,7 +1225,8 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         },
         {
           "decision": "hold",
@@ -1118,7 +1234,8 @@
             "r8_third_party_health_data"
           ],
           "confidence": 1.0,
-          "outcome": "hold"
+          "outcome": "hold",
+          "ownHealthDataWarning": false
         }
       ]
     }

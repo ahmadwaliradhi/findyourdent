@@ -59,6 +59,8 @@ class Gates(_Strict):
 class Expected(_Strict):
     decision: Decision
     rules: list[str]
+    ownHealthDataWarning: bool = False  # noqa: N815
+    """The author's own health details publish with a gentle warning (spec 03)."""
 
 
 class EvalCase(_Strict):
@@ -138,6 +140,7 @@ async def run_eval(
             "ruleCodes": list(d.ruleCodes),
             "confidence": d.confidence,
             "outcome": result.outcome,
+            "ownHealthDataWarning": bool(d.ownHealthDataWarning),
         }
 
     # Run by run, so a pair's two members are screened within the same run.
@@ -178,6 +181,11 @@ def _report(
                 "flipped": len(set(decisions)) > 1,
                 "rulesFoundInRuns": sum(
                     set(case.expected.rules) <= set(a["ruleCodes"]) for a in answers
+                ),
+                "warningFoundInRuns": (
+                    sum(a["ownHealthDataWarning"] for a in answers)
+                    if case.expected.ownHealthDataWarning
+                    else None
                 ),
                 "runs": answers,
             }

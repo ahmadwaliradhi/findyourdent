@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from findyourdent_agent.adapters.fakes import FakeGeminiAdapter
 from findyourdent_agent.adapters.real import GoogleGeminiAdapter
 from findyourdent_agent.config import Settings
 from findyourdent_agent.moderation_eval import CaseSet, prompt_fingerprint, run_eval
@@ -38,19 +39,16 @@ PHOTOS_DIR = EVAL_DIR / "photos"
 RESULTS_DIR = EVAL_DIR / "results"
 
 
-class _CleanGemini:
-    """--dry-run: every case comes back clean, to exercise the plumbing for free."""
-
-    async def generate_structured(self, **_: Any) -> dict[str, Any]:
-        return {
-            "ruleCodes": [],
-            "flaggedSpans": [],
-            "flaggedPhotos": [],
-            "confidence": 0.95,
-            "authorMessage": "Dry run.",
-            "ownHealthDataWarning": False,
-            "proofOfVisit": "notProvided",
-        }
+# --dry-run: every case comes back clean, to exercise the plumbing for free.
+_CLEAN_OUTPUT = {
+    "ruleCodes": [],
+    "flaggedSpans": [],
+    "flaggedPhotos": [],
+    "confidence": 0.95,
+    "authorMessage": "Dry run.",
+    "ownHealthDataWarning": False,
+    "proofOfVisit": "notProvided",
+}
 
 
 def render_markdown(results: dict[str, Any]) -> str:
@@ -84,13 +82,14 @@ def render_markdown(results: dict[str, Any]) -> str:
         f"- Invalid cases (Gemini never answered): {', '.join(m['invalidCases']) or 'none'}",
         f"- Outcomes: {', '.join(f'{k} {v}' for k, v in m['outcomes'].items())}",
         "",
-        "| Case | Group | Expected | Majority | Runs | Expected rules found |",
+        "| Case | Group | Expected | Majority | Runs | Expected rule or warning found |",
         "|---|---|---|---|---|---|",
     ]
     for c in results["cases"]:
         mark = "" if c["correct"] else " ✗"
         runs = ", ".join(r["decision"] for r in c["runs"])
-        rules = f"{c['rulesFoundInRuns']}/{len(c['runs'])}" if c["expectedRules"] else "-"
+        found = c["rulesFoundInRuns"] if c["expectedRules"] else c["warningFoundInRuns"]
+        rules = "-" if found is None else f"{found}/{len(c['runs'])}"
         lines.append(
             f"| {c['id']} | {c['group']} | {c['expected']} | {c['majority']}{mark} "
             f"| {runs} | {rules} |"
@@ -107,8 +106,10 @@ def main() -> int:
     args = parser.parse_args()
 
     settings = Settings.from_env()
+    case_set = CaseSet.model_validate_json(CASES_FILE.read_text(encoding="utf-8"))
     if args.dry_run:
-        gemini: Any = _CleanGemini()
+        calls = len(case_set.cases) * args.runs
+        gemini: Any = FakeGeminiAdapter(outputs=[dict(_CLEAN_OUTPUT) for _ in range(calls)])
     else:
         if settings.gemini_adapter == "fake" or not settings.google_cloud_project:
             print("Set GOOGLE_CLOUD_PROJECT and do not set GEMINI_ADAPTER=fake.", file=sys.stderr)
@@ -118,7 +119,6 @@ def main() -> int:
         gemini = GoogleGeminiAdapter(settings)
         settings = dataclasses.replace(settings, moderation_timeout_seconds=60.0)
 
-    case_set = CaseSet.model_validate_json(CASES_FILE.read_text(encoding="utf-8"))
     report = asyncio.run(
         run_eval(
             case_set,

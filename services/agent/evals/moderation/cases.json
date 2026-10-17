@@ -50,7 +50,7 @@
         "decision": "publish",
         "rules": []
       },
-      "note": "Mentions own child without health detail beyond the visit itself."
+      "note": "Labelled publish, but the reviewer should decide: a child's baby-tooth extraction may count as someone else's health data (R8, hold)."
     },
     {
       "id": "clean-neg-wait",
@@ -132,7 +132,8 @@
       "photoFiles": [],
       "expected": {
         "decision": "publish",
-        "rules": []
+        "rules": [],
+        "ownHealthDataWarning": true
       },
       "note": "Author's own health details: publish with ownHealthDataWarning (spec 03 line 80)."
     },
@@ -416,7 +417,7 @@
       "request": {
         "subjectType": "testimony",
         "language": "id",
-        "text": "Ruang tunggunya nyaman dan bersih. Saya lampirkan foto ruang perawatannya.",
+        "text": "Ruang tunggunya nyaman dan bersih. Saya lampirkan foto ruang tunggunya.",
         "typedProviderName": "Klinik Gigi Senyum Sehat",
         "googleDisplayName": "Klinik Gigi Senyum Sehat Tebet",
         "visitMonth": "2026-08",
