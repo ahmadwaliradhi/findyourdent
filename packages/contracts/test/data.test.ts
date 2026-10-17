@@ -60,10 +60,21 @@ describe("data/regions.json", () => {
     }
   });
 
-  it("marks completeness honestly", () => {
+  it("matches the per-province kabupaten/kota counts in the Kepmendagri annex", () => {
     const counts = new Map<string, number>();
     for (const r of REGIONS.regencies) counts.set(r.provinceCode, (counts.get(r.provinceCode) ?? 0) + 1);
-    const expectedComplete: Record<string, number> = {
+    // Lampiran A of Kepmendagri 300.2.2-2138/2025 (kabupaten + kota per province).
+    const expected: Record<string, number> = {
+      "11": 23,
+      "12": 33,
+      "13": 19,
+      "14": 12,
+      "15": 11,
+      "16": 17,
+      "17": 10,
+      "18": 15,
+      "19": 7,
+      "21": 7,
       "31": 6,
       "32": 27,
       "33": 35,
@@ -71,11 +82,34 @@ describe("data/regions.json", () => {
       "35": 38,
       "36": 8,
       "51": 9,
+      "52": 10,
+      "53": 22,
+      "61": 14,
+      "62": 14,
+      "63": 13,
+      "64": 10,
+      "65": 5,
+      "71": 15,
+      "72": 13,
+      "73": 24,
+      "74": 17,
+      "75": 6,
+      "76": 6,
+      "81": 11,
+      "82": 10,
+      "91": 9,
+      "92": 7,
+      "93": 4,
+      "94": 8,
+      "95": 8,
+      "96": 6,
     };
     for (const p of REGIONS.provinces) {
-      expect(p.regenciesComplete, p.code).toBe(p.code in expectedComplete);
-      if (p.regenciesComplete) expect(counts.get(p.code), p.code).toBe(expectedComplete[p.code]);
+      expect(p.regenciesComplete, p.code).toBe(true);
+      expect(counts.get(p.code), p.code).toBe(expected[p.code]);
     }
-    expect(REGIONS.complete).toBe(REGIONS.provinces.every((p) => p.regenciesComplete));
+    expect(REGIONS.regencies.filter((r) => r.type === "kabupaten")).toHaveLength(416);
+    expect(REGIONS.regencies.filter((r) => r.type === "kota")).toHaveLength(98);
+    expect(REGIONS.complete).toBe(true);
   });
 });
