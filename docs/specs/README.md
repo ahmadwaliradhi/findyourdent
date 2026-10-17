@@ -1,6 +1,6 @@
 # FindYourDent specs (AI Builder Cup 2026)
 
-Written 17 October 2026 from the grilling sessions. Submission deadline is 18 October 2026 (assumed 23:59 IST); the deployed URL must stay up through the finalist announcement on 7 November 2026. Team of two: **A** builds the agent service (Python, ADK, Gemini), **B** builds the web app and Google Cloud setup (Next.js, Firebase); the product owner does the deck, video and narration.
+Written 17 October 2026 from the grilling sessions. Submission deadline is 18 October 2026 (assumed 23:59 IST); the deployed URL must stay up through the finalist announcement on 7 November 2026. Team of two: **A** builds the agent service (Python, ADK, Gemini), **B** builds the web app and Google Cloud setup (React Router v7, Firebase); the product owner does the deck, video and narration.
 
 Vocabulary follows [GLOSSARY.md](../../GLOSSARY.md). Decisions follow the ADRs in [docs/adr](../adr). These specs replace the scope in `docs/hackathon-plan.md` (written by another session for an earlier version of the idea).
 
@@ -39,7 +39,7 @@ Cut order under time pressure, first to last: Price List, Claim, Gemini Moderati
 | Technical Merit & Gen AI Implementation | 40% | Spec 01 (grounded ADK agent, structured Guidance, two-layer Emergency Escalation with published tests), spec 03 (Gemini Moderation with human accountability, Proof of Visit check), spec 05 (document extraction), spec 00 (Cloud Run, Firestore, App Check, Agent Search, quotas) |
 | Problem Alignment & Impact | 25% | Problems A1 and A2; SKI 2023 figures; BPJS answers; the live impact counter (spec 04); spec 06 results during judging |
 | Innovation & Creativity | 25% | Guidance plus a Shortlist ranked by Testimonies FindYourDent owns, each screened by AI and checked against proof of visit; voice complaint input |
-| User Experience | 10% | Indonesian-first PWA, voice input, sign-in only at "Kirim", fix-before-submit Moderation, Lighthouse scores |
+| User Experience | 10% | Indonesian-first, mobile-first responsive web app, voice input, sign-in only at "Kirim", fix-before-submit Moderation, Lighthouse scores |
 
 Differentiator (deck and video): "FindYourDent turns a toothache into a guided decision. A grounded Gemini agent explains urgency, the visit journey, cost and BPJS coverage, then shortlists Providers ranked by Patient Testimonies that FindYourDent owns, each one screened by AI and checked against proof of visit."
 
