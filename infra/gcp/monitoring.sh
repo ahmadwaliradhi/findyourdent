@@ -7,6 +7,8 @@
 # resources are found by display name, created when missing and updated otherwise.
 # Alerts go by email to the admin allowlist in the admin-emails secret.
 set -euo pipefail
+# uptime_check runs inside $(...); without this a failed API call there is ignored.
+shopt -s inherit_errexit
 
 PROJECT_ID="${PROJECT_ID:-findyourdent}"
 REGION="${REGION:-asia-southeast2}"
@@ -35,8 +37,6 @@ if ! gcloud run services describe fyd-agent --project "$PROJECT_ID" --region "$R
   echo "deploy the agent first: infra/gcp/deploy.sh agent" >&2
   exit 1
 fi
-AGENT_HOST=$(gcloud run services describe fyd-agent --project "$PROJECT_ID" --region "$REGION" \
-  --format='value(status.url)' | sed -E 's#^https://##')
 
 # 0. Uptime check identity ----------------------------------------------------------------
 # An uptime check with service agent authentication sends an identity token for the
@@ -75,14 +75,13 @@ done
 # Every minute from three regions, the minimum an uptime check allows
 # (https://docs.cloud.google.com/monitoring/uptime-checks). About 260,000 runs a
 # month; check the free allowance on https://cloud.google.com/stackdriver/pricing.
-# uptime_check <display name> <host> <identity token: true|false>
+# uptime_check <display name> <monitored resource JSON> <HTTP check extras JSON>
 uptime_check() {
-  local display="$1" host="$2" oidc="$3" body name
-  body=$(jq -n --arg d "$display" --arg h "$host" --arg p "$PROJECT_ID" --argjson oidc "$oidc" '{
+  local display="$1" resource="$2" extras="$3" body name
+  body=$(jq -n --arg d "$display" --argjson r "$resource" --argjson x "$extras" '{
     displayName: $d,
-    monitoredResource: {type: "uptime_url", labels: {project_id: $p, host: $h}},
-    httpCheck: ({path: "/health", port: 443, useSsl: true, validateSsl: true, requestMethod: "GET"}
-      + (if $oidc then {serviceAgentAuthentication: {type: "OIDC_TOKEN"}} else {} end)),
+    monitoredResource: $r,
+    httpCheck: ({path: "/health", port: 443, useSsl: true, requestMethod: "GET"} + $x),
     contentMatchers: [{content: "\"status\":\"ok\"", matcher: "CONTAINS_STRING"}],
     period: "60s",
     timeout: "10s",
@@ -104,10 +103,16 @@ uptime_check() {
 
 log "Uptime checks"
 # The web check goes through Firebase Hosting, the way judges reach the demo.
-WEB_CHECK=$(uptime_check "fyd-web health" "$WEB_HOST" false)
-# The agent refuses anonymous calls; the check sends an identity token for the
-# monitoring service agent, which deploy.sh made an invoker.
-AGENT_CHECK=$(uptime_check "fyd-agent health" "$AGENT_HOST" true)
+WEB_CHECK=$(uptime_check "fyd-web health" \
+  "$(jq -nc --arg p "$PROJECT_ID" --arg h "$WEB_HOST" '{type: "uptime_url", labels: {project_id: $p, host: $h}}')" \
+  '{"validateSsl": true}')
+# The agent refuses anonymous calls, so the check sends an identity token for the
+# Monitoring service agent (step 0). The API allows that only on a Cloud Run
+# resource, and validateSsl only on uptime_url (both checked 17 October 2026).
+AGENT_CHECK=$(uptime_check "fyd-agent health" \
+  "$(jq -nc --arg p "$PROJECT_ID" --arg r "$REGION" \
+    '{type: "cloud_run_revision", labels: {project_id: $p, service_name: "fyd-agent", location: $r}}')" \
+  '{"serviceAgentAuthentication": {"type": "OIDC_TOKEN"}}')
 
 # 3. Alert policy ------------------------------------------------------------------------
 log "Alert policy: five minutes of errors"
@@ -117,9 +122,9 @@ POLICY=$(jq -n --arg d "$DISPLAY" --arg web "$WEB_CHECK" --arg agent "$AGENT_CHE
   def uptime($id; $label): {
     displayName: ("Uptime check failing: " + $label),
     conditionThreshold: {
-      filter: ("metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND resource.type=\"uptime_url\" AND metric.label.check_id=\"" + $id + "\""),
+      filter: ("metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.label.check_id=\"" + $id + "\""),
       aggregations: [{alignmentPeriod: "60s", perSeriesAligner: "ALIGN_NEXT_OLDER",
-        crossSeriesReducer: "REDUCE_COUNT_FALSE", groupByFields: ["resource.label.host"]}],
+        crossSeriesReducer: "REDUCE_COUNT_FALSE", groupByFields: ["metric.label.check_id"]}],
       comparison: "COMPARISON_GT", thresholdValue: 1, duration: "300s",
       trigger: {count: 1}
     }
