@@ -66,6 +66,38 @@ def test_retrieved_documents_are_cited_before_the_curated_sources(
     assert len(titles) == len(set(titles))
 
 
+def test_a_regulation_cited_by_the_search_is_not_cited_again_from_the_curated_file(
+    client: TestClient,
+    fake_gemini: FakeGeminiAdapter,
+    fake_agent_search: FakeAgentSearchAdapter,
+) -> None:
+    # Titles and PDF links as the data store holds them; the curated file cites the
+    # same regulations with other titles and landing-page links.
+    fake_agent_search.results += [
+        GroundingDoc(
+            title="KMK HK.01.07/MENKES/1492/2023 \u2013 PNPK Tata Laksana Penyakit Pulpa",
+            publisher="Kementerian Kesehatan RI",
+            url="https://jdih.kemkes.go.id/storage/documents/pdfs/2023kepmenkes1492.pdf",
+            snippet="Pulpitis ireversibel ditandai nyeri spontan.",
+        ),
+        GroundingDoc(
+            title="Permenkes No. 3 Tahun 2023 \u2013 Standar Tarif Pelayanan Kesehatan JKN",
+            publisher="Kementerian Kesehatan RI",
+            url="https://peraturan.bpk.go.id/Download/334015/Permenkes%20Nomor%203%20Tahun%202023.pdf",
+            snippet="Tarif kapitasi FKTP.",
+        ),
+    ]
+    fake_gemini.outputs.append(model_turn())
+
+    sources = ask(client)["guidance"]["sources"]
+
+    cited = " ".join(f"{s['title']} {s.get('citation', '')}" for s in sources)
+    assert cited.count("1492/2023") == 1
+    assert "Permenkes 3/2023" not in cited
+    # Regulations the search did not return keep their curated citation.
+    assert "Perpres 59/2024" in cited
+
+
 def test_complaint_is_the_query_and_excerpts_reach_gemini_after_it(
     client: TestClient,
     fake_gemini: FakeGeminiAdapter,

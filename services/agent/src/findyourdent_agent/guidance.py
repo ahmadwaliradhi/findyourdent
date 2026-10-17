@@ -20,6 +20,7 @@ Complaint text stays in memory for the length of the request. Nothing here logs 
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from functools import cache
 
@@ -140,9 +141,24 @@ async def _retrieve(
         return []
 
 
+# "KMK HK.01.07/MENKES/1492/2023", "Permenkes 3/2023", "Perpres No. 59 Tahun 2024".
+_REGULATION = re.compile(r"\b(kmk|permenkes|perpres)\b.*?(\d+)(?:/|\s+tahun\s+)(\d{4})\b")
+
+
+def _regulation(source: Source) -> tuple[str, ...] | None:
+    """The regulation a source is, from its citation or title: the data store and the
+    curated file name the same regulation with different titles and links."""
+    for text in (source.citation, source.title):
+        if text and (match := _REGULATION.search(text.lower())):
+            return match.groups()
+    return None
+
+
 def _same_source(a: Source, b: Source) -> bool:
-    if a.url and b.url:
-        return str(a.url).rstrip("/") == str(b.url).rstrip("/")
+    if a.url and b.url and str(a.url).rstrip("/") == str(b.url).rstrip("/"):
+        return True
+    if (regulation := _regulation(a)) and regulation == _regulation(b):
+        return True
     return " ".join(a.title.lower().split()) == " ".join(b.title.lower().split())
 
 
