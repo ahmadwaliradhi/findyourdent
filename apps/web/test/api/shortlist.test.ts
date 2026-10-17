@@ -25,7 +25,8 @@ beforeEach(async () => {
 /** Gubeng, Surabaya: where the Patient shares their location from. */
 const GUBENG = { lat: -7.2756, lng: 112.7509 };
 
-const ROOT_CANAL_GUIDANCE = STUB_GUIDANCE_RESPONSE.guidance as unknown as Guidance;
+// Without the stub's language, as on Guidance links made before it existed; tests that need one set it.
+const { language: _stubLanguage, ...ROOT_CANAL_GUIDANCE } = STUB_GUIDANCE_RESPONSE.guidance as unknown as Guidance;
 
 const WISDOM_TOOTH_GUIDANCE: Guidance = {
   ...ROOT_CANAL_GUIDANCE,

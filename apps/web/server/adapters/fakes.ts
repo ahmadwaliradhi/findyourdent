@@ -54,6 +54,7 @@ export const STUB_GUIDANCE_RESPONSE = {
     },
     sources: [{ title: "Stub source", citation: "Placeholder until grounding lands" }],
     disclaimer: "Ini informasi edukasi, bukan diagnosis. Tetap periksakan gigi Anda ke dokter gigi.",
+    language: "id",
   },
 } as const;
 

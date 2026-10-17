@@ -80,7 +80,11 @@
       "whatsapp": "Share on WhatsApp",
       "open": "Open guidance link"
     },
-    "transcriptHint": "A word wrong? Fix it in the complaint box above, then press Get guidance."
+    "transcriptHint": "A word wrong? Fix it in the complaint box above, then press Get guidance.",
+    "languageNote": {
+      "id": "This Guidance is in Bahasa Indonesia, the language of your complaint. Write your complaint in English to get Guidance in English.",
+      "en": "This Guidance is in English, the language of your complaint. Write your complaint in Bahasa Indonesia to get Guidance in Bahasa Indonesia."
+    }
   },
   "estimate": "estimasi (estimate)",
   "urgency": {

@@ -12,6 +12,7 @@ export default [
   route("auth/signout", "routes/auth.signout.ts"),
   route("admin", "routes/admin.tsx"),
   route("panduan/:token", "routes/panduan.$token.tsx"),
+  route("api/guidance-card", "routes/api.guidance-card.ts"),
   route("api/feed", "routes/api.feed.ts"),
   route("direktori", "routes/direktori.tsx"),
   route("tempat/:placeId", "routes/tempat.$placeId.tsx"),

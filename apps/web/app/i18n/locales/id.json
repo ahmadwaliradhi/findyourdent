@@ -80,7 +80,11 @@
       "whatsapp": "Bagikan lewat WhatsApp",
       "open": "Buka tautan panduan"
     },
-    "transcriptHint": "Ada kata yang salah? Perbaiki di kotak keluhan di atas, lalu tekan Lihat panduan."
+    "transcriptHint": "Ada kata yang salah? Perbaiki di kotak keluhan di atas, lalu tekan Lihat panduan.",
+    "languageNote": {
+      "id": "Panduan ini dalam Bahasa Indonesia, sesuai bahasa keluhan Anda. Tulis keluhan dalam bahasa Inggris untuk panduan dalam bahasa Inggris.",
+      "en": "Panduan ini dalam bahasa Inggris, sesuai bahasa keluhan Anda. Tulis keluhan dalam Bahasa Indonesia untuk panduan dalam Bahasa Indonesia."
+    }
   },
   "estimate": "estimasi",
   "urgency": {

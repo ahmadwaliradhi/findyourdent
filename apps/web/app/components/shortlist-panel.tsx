@@ -6,7 +6,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import type { Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
-import { recallEntry, rememberEntry } from "~/lib/entry-memory";
+import { keepAcrossReload, recallAcrossReload, recallEntry, rememberEntry } from "~/lib/entry-memory";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatDistance, formatRupiah, formatScore } from "~/lib/format";
@@ -40,7 +40,11 @@ export function ShortlistPanel(
   // last one starts over from whatever the new entry remembers (nothing, at first).
   const { key: entryKey } = useLocation();
   const slot = `shortlist:${props.purpose}:${props.guidanceToken ?? ""}`;
-  const recalled = () => recallEntry<State>(entryKey, slot) ?? { phase: "closed" };
+  // After a reload only "it was open" is left (results are Google data, never stored), so it opens ready to search.
+  const openSlot = `shortlist:${props.purpose}:open`;
+  const recalled = (): State =>
+    recallEntry<State>(entryKey, slot) ??
+    (recallAcrossReload(entryKey, openSlot) ? { phase: "asking" } : { phase: "closed" });
   const [state, setState] = useState<State>(recalled);
   const [stateEntry, setStateEntry] = useState(entryKey);
   if (stateEntry !== entryKey) {
@@ -50,7 +54,8 @@ export function ShortlistPanel(
   useEffect(() => {
     // Settled states only: a closed panel stays closed on Back, and results replace older ones.
     if (state.phase === "done" || state.phase === "closed") rememberEntry(entryKey, slot, state);
-  }, [entryKey, slot, state]);
+    if (state.phase !== "closed") keepAcrossReload(entryKey, openSlot, "1");
+  }, [entryKey, slot, openSlot, state]);
   const [area, setArea] = useState("");
   const areaId = useId();
   const emergency = props.purpose === "emergency";
