@@ -385,10 +385,24 @@ describe("Moderation switch: hold", () => {
     expect(decision).toMatchObject({ decision: "hold", ruleCodes: ["low_confidence"], model: "switch" });
   });
 
-  it("publishes a held Testimony edited after the switch flips, creating the Listed Provider then", async () => {
+  it("keeps an edited held Testimony held for the admin even when Moderation would publish", async () => {
     server.setTestimonyModeration("hold");
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await createOk(submission(), { cookie });
+    server.setTestimonyModeration("publish");
+    const response = await edit(testimonyId, submission({ providerName: undefined, region: undefined }), { cookie });
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as TestimonySubmitResponse).status).toBe("held");
+    expect(await provider(NEW_PLACE)).toBeUndefined();
+    expect((await testimony(testimonyId)).proposedProviderName).toBe("Klinik Gigi Ceria");
+  });
+
+  it("publishes a fixed Testimony, creating the Listed Provider then", async () => {
+    server.setTestimonyModeration("hold");
+    const { cookie } = await signIn("pasien@example.com");
+    const { testimonyId } = await createOk(submission(), { cookie });
+    // Sent back for a fix, as Moderation (T13) or the admin queue (T14) would.
+    await server.firestore.collection(COLLECTIONS.testimonies).doc(testimonyId).update({ status: "needsAuthorFix" });
     server.setTestimonyModeration("publish");
     const response = await edit(testimonyId, submission({ providerName: undefined, region: undefined }), { cookie });
     expect(response.status).toBe(200);

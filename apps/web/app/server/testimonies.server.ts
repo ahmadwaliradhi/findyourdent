@@ -441,6 +441,8 @@ const storedPhotoPaths = (testimony: TestimonyDoc) => [
   ...(testimony.pendingRevision?.photoPaths ?? []),
 ];
 
+const ADMIN_DECIDES: ReadonlySet<TestimonyStatus> = new Set(["held", "rejected"]);
+
 /**
  * POST /api/testimonies/:testimonyId: the author edits. A `published` Testimony keeps
  * its public version while the edit is decided (`pendingRevision`); publish replaces
@@ -499,7 +501,9 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       authorFixRound: current.authorFixRounds,
       media,
     });
-    decided = statusForDecision(outcome.decision.decision);
+    // A held or rejected Testimony waits for an admin (ADR-0004): an edit is screened
+    // again but cannot Moderate its way past that, so it stays held for the queue.
+    decided = ADMIN_DECIDES.has(current.status) ? "held" : statusForDecision(outcome.decision.decision);
     const status = decided;
     const becomesPublished = !editingPublished && status === "published";
     const location = becomesPublished && !listedAtStart ? await coordinatesFor(context, current.placeId) : null;
@@ -532,9 +536,15 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       let update: Record<string, unknown>;
       let after: { photoPaths: string[]; pending: string[] };
       if (editingPublished && status !== "published") {
-        // The public version stays; the edit waits for a decision. The public name changes with it.
+        // The public version stays; the edit, public name included, waits for a decision.
         update = {
-          pendingRevision: { ...content, status, submittedAt: now, moderationDecisionId: decisionRef.id },
+          pendingRevision: {
+            ...content,
+            displayName: value.displayName,
+            status,
+            submittedAt: now,
+            moderationDecisionId: decisionRef.id,
+          },
           updatedAt: now,
         };
         after = { photoPaths: before.photoPaths, pending: content.photoPaths };
@@ -746,7 +756,7 @@ export async function loadTestimonyForEdit(
       visitMonth: content.visitMonth,
       ...(content.procedureCode ? { procedureCode: content.procedureCode } : {}),
       ...(content.pricePaidRupiah !== undefined ? { pricePaidRupiah: content.pricePaidRupiah } : {}),
-      displayName: testimony.displayName,
+      displayName: testimony.pendingRevision?.displayName ?? testimony.displayName,
       photos: content.photoPaths.map((path) => ({ path, url: testimonyPhotoUrl(testimonyId, path) })),
     },
   };

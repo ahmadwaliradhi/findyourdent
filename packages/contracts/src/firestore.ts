@@ -198,6 +198,8 @@ export interface TestimonyDoc extends TestimonyContent {
    * fields above stay visible until it is decided.
    */
   pendingRevision?: TestimonyContent & {
+    /** The public name chosen with this edit; replaces `displayName` when it is published. */
+    displayName?: string;
     status: "submitted" | "needsAuthorFix" | "held";
     submittedAt: Timestamp;
     moderationDecisionId?: string;

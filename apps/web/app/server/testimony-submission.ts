@@ -8,7 +8,8 @@ import { isValidRegion, PROVINCES } from "~/lib/regions";
 import { TESTIMONY_LIMITS } from "~/lib/testimony";
 
 /** Google place ids are URL-safe base64-ish strings. */
-export const PLACE_ID = /^[A-Za-z0-9_-]{1,256}$/;
+// Same shape the Provider page accepts (provider.server.ts).
+export const PLACE_ID = /^[A-Za-z0-9_-]{4,512}$/;
 const VISIT_MONTH = /^(\d{4})-(0[1-9]|1[0-2])$/;
 /** Older visit months are almost certainly typos. */
 export const EARLIEST_VISIT_MONTH = "1980-01";

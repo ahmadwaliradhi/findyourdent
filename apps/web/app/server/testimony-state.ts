@@ -38,10 +38,11 @@ const EDGES: Record<TransitionActor, ReadonlySet<Edge>> = {
     "published>removed",
   ]),
   author: new Set<Edge>([
-    // Resubmitting after a fix, a hold or a rejection runs Moderation again.
+    // Resubmitting after a fix runs Moderation again.
     "needsAuthorFix>submitted",
-    "held>submitted",
-    "rejected>submitted",
+    // An edit of a held or rejected Testimony is screened again but goes back to the
+    // admin queue: only a human decides it (ADR-0004).
+    "rejected>held",
   ]),
 };
 

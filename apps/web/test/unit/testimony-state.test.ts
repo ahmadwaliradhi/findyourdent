@@ -13,10 +13,9 @@ const ALLOWED: ReadonlyArray<[TestimonyStatus, TestimonyStatus, TransitionActor]
   ["submitted", "published", "system"],
   ["submitted", "needsAuthorFix", "system"],
   ["submitted", "held", "system"],
-  // The author resubmits after fixing, after a hold or after a rejection.
+  // The author resubmits after a fix; an edit after a rejection goes back to the admin.
   ["needsAuthorFix", "submitted", "author"],
-  ["held", "submitted", "author"],
-  ["rejected", "submitted", "author"],
+  ["rejected", "held", "author"],
   // The admin decides a held Testimony, or sends it back to the author.
   ["held", "published", "admin"],
   ["held", "rejected", "admin"],
