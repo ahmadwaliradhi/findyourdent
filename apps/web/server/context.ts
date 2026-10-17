@@ -148,7 +148,7 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
  * tests); no key at all finds nothing. Daily caps count in Firestore so every
  * instance shares them.
  */
-function placesAdapter(env: NodeJS.ProcessEnv, firestore: Firestore | null): PlacesAdapter {
+export function placesAdapter(env: NodeJS.ProcessEnv, firestore: Firestore | null): PlacesAdapter {
   if (env.PLACES_ADAPTER === "fake") return createFakeSamplePlacesAdapter();
   if (!env.PLACES_API_KEY) return createFakePlacesAdapter();
   const quota = firestore ? createFirestoreDailyQuota(firestore) : createMemoryDailyQuota();

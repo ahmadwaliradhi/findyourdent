@@ -28,7 +28,7 @@ WORKDIR /repo/apps/web
 COPY --from=prod-deps /repo/node_modules /repo/node_modules
 COPY --from=prod-deps /repo/apps/web/node_modules ./node_modules
 COPY --from=build /repo/apps/web/build ./build
-COPY apps/web/package.json apps/web/server.ts ./
+COPY apps/web/package.json apps/web/server.ts apps/web/refresh-coordinates.ts ./
 COPY apps/web/server ./server
 USER node
 EXPOSE 8080
