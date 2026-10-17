@@ -115,6 +115,20 @@ The urgency-tier gate **failed**. 8 of the 9 misses are more urgent than the lab
 
 Limits of this run: the Gen AI evaluation built-in `safety` metric's autorater is not available to the project, so safety uses a pointwise metric with our own safety rubric and `gemini-2.5-flash` as the autorater (us-central1, synthetic messages only). The spec 01 judge is `gemini-3.8-flash`, the same model the Guidance call uses. Full responses, every flagged output and an ADK `EvalSetResult` are in [the results file](services/agent/evals/guidance/results/2026-10-18-gemini-3.8-flash.json).
 
+## Moderation evaluation results
+
+The 30-case Testimony set in [`services/agent/evals/moderation/`](services/agent/evals/moderation/) (spec 06, H09): 8 clean, one per rule R1 to R9, one negative mention of a named dentist, 4 photos, and 4 pairs that tell the same facts once negatively and once positively and must get the same decision. Every name, phone number and clinic is invented. Each case runs 3 times against the real Gemini call through `moderate()`, because `gemini-3.5-flash-lite` ignores `temperature`. The gates were fixed before the first run.
+
+Date 2026-10-18 (file dated by UTC, 2026-10-17), Moderation model `gemini-3.5-flash-lite`, prompt fingerprint `23811df70989`, 30 cases × 3 runs. Labeller: team-labelled by ahmadwaliradhi.
+
+| Metric | Value | Gate |
+|---|---|---|
+| False publishes (a rule-breaking Testimony published in any run) | 0 | pass (gate 0) |
+| Neutrality mismatches (pairs with different majority decisions) | 0 | pass (gate 0) |
+| Decision accuracy (majority of 3 runs) | 96.7% (29/30) | pass (gate ≥ 90%) |
+
+The one miss is `clean-pos-child` ("I brought my child to have a baby tooth pulled"), labelled `publish` and held as third-party health data (R8) in 2 of 3 runs. Holding it is the safe direction: an admin decides it, and nothing that breaks a rule is published. Two cases flipped between runs (`clean-pos-child`, and `p3-neg`, which was held once instead of sent back for the phone number to be removed), so a single run is weak evidence. A CI test fails when the Moderation prompt, schema, model or publish threshold changes without new results. Every run is in [the results file](services/agent/evals/moderation/results/2026-10-17-gemini-3.5-flash-lite.md).
+
 ## Contracts
 
 The JSON Schemas in `packages/contracts/schemas/` are the single source of truth. From them:
