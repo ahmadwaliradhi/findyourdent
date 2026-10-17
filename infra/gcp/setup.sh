@@ -5,11 +5,11 @@
 # rerun after a failure or to converge drift. Run it signed in as a project
 # owner who can also manage the billing account:
 #
-#   gcloud auth login && gcloud auth application-default login
+#   gcloud auth login
 #   infra/gcp/setup.sh
 #
-# Steps that the APIs cannot do (Google sign-in provider, some quota caps) are
-# printed at the end as console instructions.
+# The Google sign-in provider has no API without an Identity Platform upgrade;
+# enable it in the Firebase console (see infra/gcp/README.md, Manual steps).
 set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:-findyourdent}"
@@ -68,9 +68,9 @@ gapi() {
 # Start a long-running Firebase operation and wait for it; fails if the
 # operation finishes with an error.
 run_op() {
-  local op i result
+  local op result
   op=$(gapi POST "$1" "$2" | jq -r '.name')
-  for i in $(seq 1 30); do
+  for _ in $(seq 1 30); do
     result=$(gapi GET "${FB}/${op}")
     if [[ "$(jq -r '.done // false' <<<"$result")" == "true" ]]; then
       if jq -e '.error' <<<"$result" >/dev/null; then
@@ -97,7 +97,9 @@ api_key_name() {
     --filter="displayName=$1" --format='value(name)' | head -1
 }
 
+# gcloud reports the property change on stderr; errors still stop the script.
 gcloud config set project "$PROJECT_ID" >/dev/null 2>&1
+# Only client libraries use ADC; a missing ADC login must not block the gcloud steps.
 gcloud auth application-default set-quota-project "$PROJECT_ID" >/dev/null 2>&1 || true
 
 # 1. Project and billing --------------------------------------------------------
@@ -248,6 +250,7 @@ if ! gcloud secrets describe admin-emails --project "$PROJECT_ID" >/dev/null 2>&
     --replication-policy=user-managed --locations="$REGION"
 fi
 if [[ -n "${ADMIN_EMAILS:-}" ]]; then
+  # A new secret has no version yet; treat that as "no current value".
   current=$(gcloud secrets versions access latest --secret=admin-emails --project "$PROJECT_ID" 2>/dev/null || true)
   if [[ "$current" == "$ADMIN_EMAILS" ]]; then
     skip "admin-emails unchanged"
@@ -280,10 +283,10 @@ GEMINI_FLASH_LITE="${GEMINI_FLASH_LITE:-gemini-3.5-flash-lite-qcd}"
 
 QUOTAS="https://cloudquotas.googleapis.com/v1/projects/${PROJECT_ID}/locations/global/quotaPreferences"
 
-# quota_cap <preference-id> <service> <quotaId> <value> [dimensions-json]
+# quota_cap <preference-id> <service> <quotaId> <value> [base-model]
 quota_cap() {
-  local id="$1" service="$2" quota="$3" value="$4" dims="${5:-}"
-  [[ -n "$dims" ]] || dims='{}'
+  local id="$1" service="$2" quota="$3" value="$4" dims
+  dims=$(jq -nc --arg m "${5:-}" 'if $m == "" then {} else {base_model: $m} end')
   local body out
   body=$(jq -n --arg s "$service" --arg q "$quota" --arg v "$value" --argjson d "$dims" \
     '{service: $s, quotaId: $q, dimensions: $d, quotaConfig: {preferredValue: $v},
@@ -310,7 +313,7 @@ quota_cap places-lookup-summary $P LookupUserContentSummaryRequestPerDayPerProje
 
 log "Gemini caps (global endpoint)"
 A=aiplatform.googleapis.com
-quota_cap gemini-flash-tokens-day      $A GlobalGenerateContentInputTokensPerDayPerBaseModel 2000000 "{\"base_model\": \"${GEMINI_FLASH}\"}"
-quota_cap gemini-flash-lite-tokens-day $A GlobalGenerateContentInputTokensPerDayPerBaseModel 1000000 "{\"base_model\": \"${GEMINI_FLASH_LITE}\"}"
+quota_cap gemini-flash-tokens-day      $A GlobalGenerateContentInputTokensPerDayPerBaseModel 2000000 "$GEMINI_FLASH"
+quota_cap gemini-flash-lite-tokens-day $A GlobalGenerateContentInputTokensPerDayPerBaseModel 1000000 "$GEMINI_FLASH_LITE"
 
 log "Done. Project ${PROJECT_ID}, web app ${WEB_APP_ID}, site key ${SITE_KEY}"
