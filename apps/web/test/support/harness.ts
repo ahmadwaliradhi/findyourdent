@@ -16,8 +16,13 @@ import {
   type FakePlacesAdapter,
 } from "../../server/adapters/fakes.ts";
 import { createApp } from "../../server/app.ts";
-import { type BaseContext, DEFAULT_RATE_LIMITS, type RateLimits } from "../../server/context.ts";
-import { initFirebaseAdmin } from "../../server/firebase.ts";
+import {
+  type BaseContext,
+  DEFAULT_RATE_LIMITS,
+  type RateLimits,
+  type TestimonyModerationSwitch,
+} from "../../server/context.ts";
+import { type Bucket, initFirebaseAdmin } from "../../server/firebase.ts";
 import type { LogFields, Logger } from "../../server/logger.ts";
 import { createFirestoreRateLimiter } from "../../server/rate-limit.ts";
 
@@ -42,13 +47,17 @@ export interface TestServer {
   baseUrl: string;
   fakes: Fakes;
   firestore: Firestore;
+  /** The uploads bucket in the Storage emulator. */
+  uploads: Bucket;
   /** Every log line written by the app since the last reset, serialised. */
   logs: string[];
   /** The clock the rate limiter reads; starts at the real time on every reset. */
   clock: { advance(seconds: number): void };
   /** Override rate limits until the next reset. */
   setLimits(limits: Partial<RateLimits>): void;
-  /** Fresh fakes, empty logs, default limits, empty emulator Firestore and Auth. */
+  /** The temporary Moderation switch until the next reset (default "publish"). */
+  setTestimonyModeration(value: TestimonyModerationSwitch): void;
+  /** Fresh fakes, empty logs, default limits, empty emulator Firestore, Auth and uploads bucket. */
   reset(): Promise<void>;
   /** A Firebase ID token from the Auth emulator, as the browser gets right after signing in. */
   emulatorIdToken(user: { email: string; provider: "google.com" | "password" }): Promise<string>;
@@ -71,7 +80,7 @@ function freshFakes(): Fakes {
   };
 }
 
-async function clearEmulators(projectId: string) {
+async function clearEmulators(projectId: string, uploads: Bucket) {
   const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
   const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
   const requests: Promise<Response>[] = [];
@@ -88,6 +97,7 @@ async function clearEmulators(projectId: string) {
   for (const response of await Promise.all(requests)) {
     if (!response.ok) throw new Error(`emulator reset failed: ${response.status} ${response.url}`);
   }
+  if (process.env.FIREBASE_STORAGE_EMULATOR_HOST) await uploads.deleteFiles({ force: true });
 }
 
 async function emulatorIdToken(user: { email: string; provider: "google.com" | "password" }): Promise<string> {
@@ -151,12 +161,14 @@ export async function startTestServer(): Promise<TestServer> {
 
   let nowMs = Date.now();
   let limits = { ...DEFAULT_RATE_LIMITS };
+  let testimonyModeration: TestimonyModerationSwitch = "publish";
   const rateLimiter = createFirestoreRateLimiter(firebase.firestore, { salt: "test-salt", now: () => nowMs });
 
   const context = (): BaseContext => ({
     adapters: fakes,
     firestore: firebase.firestore,
     auth: firebase.auth,
+    uploads: firebase.uploads,
     rateLimiter,
     logger,
     config: {
@@ -165,6 +177,7 @@ export async function startTestServer(): Promise<TestServer> {
       adminEmails: ADMIN_EMAILS,
       firebaseWeb: NO_FIREBASE,
       shareLinkSecret: "test-share-link-secret",
+      testimonyModeration,
     },
   });
 
@@ -194,14 +207,16 @@ export async function startTestServer(): Promise<TestServer> {
       return fakes;
     },
     firestore: firebase.firestore,
+    uploads: firebase.uploads,
     logs,
     async reset() {
       fakes = freshFakes();
       defaultToken = fakes.appCheck.issueToken();
       nowMs = Date.now();
       limits = { ...DEFAULT_RATE_LIMITS };
+      testimonyModeration = "publish";
       logs.length = 0;
-      await clearEmulators(firebase.projectId);
+      await clearEmulators(firebase.projectId, firebase.uploads);
     },
     clock: {
       advance(seconds) {
@@ -210,6 +225,9 @@ export async function startTestServer(): Promise<TestServer> {
     },
     setLimits(overrides) {
       limits = { ...limits, ...overrides };
+    },
+    setTestimonyModeration(value) {
+      testimonyModeration = value;
     },
     emulatorIdToken,
     async signInWithGoogle(email) {

@@ -324,6 +324,9 @@ function Feed({ filters, feed }: { filters: ListingFilters; feed: FeedPage }) {
           {area ? t("feed.titleIn", { area }) : t("feed.title")}
         </h2>
         <p className="text-sm text-muted-foreground">{t("feed.intro")}</p>
+        <Link to="/ceritakan" className="self-start text-sm font-medium text-primary underline underline-offset-4">
+          {t("testimonyForm.entryCta")}
+        </Link>
       </div>
       <details className="rounded-md border px-4 py-3" open={query !== ""}>
         <summary className="cursor-pointer font-medium">{t("filters.title")}</summary>
@@ -349,9 +352,8 @@ function FeedList({ query, feed }: { query: string; feed: FeedPage }) {
       <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed px-5 py-6">
         <p className="font-semibold">{t("feed.emptyTitle")}</p>
         <p className="text-sm text-muted-foreground">{t("feed.emptyBody")}</p>
-        {/* Testimony posting arrives with its own ticket. */}
         <Button asChild>
-          <Link to="/tulis">{t("feed.writeCta")}</Link>
+          <Link to="/ceritakan">{t("feed.writeCta")}</Link>
         </Button>
       </div>
     );

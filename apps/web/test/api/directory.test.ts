@@ -152,7 +152,7 @@ describe("GET /direktori", () => {
 
     expect(rows).toEqual([]);
     expect(html).toContain("Belum ada tempat yang cocok");
-    expect(html).toMatch(/<a[^>]+href="\/tulis"[^>]*>Ceritakan pengalamanmu<\/a>/);
+    expect(html).toMatch(/<a[^>]+href="\/ceritakan"[^>]*>Ceritakan pengalamanmu<\/a>/);
     expect(html).toMatch(/<title>[^<]*Kota Bandung[^<]*<\/title>/);
   });
 });

@@ -34,11 +34,12 @@ Indexes (`firestore.indexes.json`): each of `region.provinceCode`, `region.regen
 
 ### `testimonies`
 
-A Patient's Testimony. Random document id (the author uid never appears in a URL). One per author per Provider, enforced in a transaction that queries `authorUid` + `placeId`. Type `TestimonyDoc`.
+A Patient's Testimony. Random document id (the author uid never appears in a URL). One per author per Provider among Testimonies that are not `deleted` (an author delete is erasure, so it frees the place for a new one), enforced in a transaction that queries `authorUid` + `placeId`. Type `TestimonyDoc`.
 
 | Field | Notes |
 | --- | --- |
-| `placeId`, `region`, `providerType` | Region and type copied from the Listed Provider for feed filters (spec 04). |
+| `placeId`, `region`, `providerType` | Region and type copied from the Listed Provider for feed filters (spec 04). Before the place is Listed: the Region the author picked and the type inferred from the typed name. |
+| `proposedProviderName` | The name the author typed for a place not yet Listed. Names the Listed Provider when the Testimony is first published, then removed. Never Google's name. |
 | `authorUid`, `displayName` | Uid is never shown; display name defaults to first name plus initial. |
 | `ratings` | `service`, `hygiene`, `materialsEquipment`, each 1 to 5. |
 | `text`, `visitMonth`, `procedureCode`, `pricePaidRupiah`, `photoPaths` | Text up to 10,000 characters; up to four photos, EXIF stripped. |
@@ -47,7 +48,7 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `authorFixRounds` | Held after three rounds. |
 | `pendingRevision` | Edit of a published Testimony under Moderation; the public fields stay visible until it is decided. |
 | `reply` | The claimed Provider's one public reply, with its own Moderation status. |
-| `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text and photos are removed. |
+| `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply are removed. |
 
 Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`, `providerType`, `verifiedVisit` combinations for feed filters; `placeId` + `status` + `publishedAt desc` (Provider page); `authorUid` + `placeId` (uniqueness).
 

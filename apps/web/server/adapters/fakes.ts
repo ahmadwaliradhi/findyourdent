@@ -3,6 +3,10 @@ import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
 import type {
+  AutocompleteRequest,
+  AutocompleteResult,
+  AutocompleteSuggestion,
+  CoordinatesResult,
   GoogleBlock,
   GoogleBlockResult,
   GoogleReview,
@@ -111,17 +115,45 @@ export interface FakePlacesAdapter extends PlacesAdapter {
   respondWithGoogleBlock(answer: Omit<GoogleBlock, "placeId"> | GoogleBlockResult): void;
   /** Next Google Reviews: the reviews, or a failed result. */
   respondWithReviews(answer: GoogleReview[] | GoogleReviewsResult): void;
+  /** Autocomplete requests, in order. */
+  readonly autocompleteCalls: AutocompleteRequest[];
+  /** Next Autocomplete answer: suggestions, or a failed result. */
+  respondWithSuggestions(answer: AutocompleteSuggestion[] | AutocompleteResult): void;
+  /** Place ids asked for coordinates, in order. */
+  readonly coordinatesCalls: string[];
+  /** Next coordinates answer. Defaults to a point in Jakarta. */
+  respondWithCoordinates(answer: CoordinatesResult): void;
 }
 
 export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlacesAdapter {
   let next: TextSearchResult = { ok: true, places: initial };
   let nextBlock: Omit<GoogleBlock, "placeId"> | GoogleBlockResult = { displayName: "Fake Google Place", types: [] };
   let nextReviews: GoogleReviewsResult = { ok: true, reviews: [] };
+  let nextSuggestions: AutocompleteResult = { ok: true, suggestions: [] };
+  let nextCoordinates: CoordinatesResult = { ok: true, location: { lat: -6.1754, lng: 106.8272 } };
   const calls: TextSearch[] = [];
   const detailsCalls: FakePlacesAdapter["detailsCalls"] = [];
+  const autocompleteCalls: AutocompleteRequest[] = [];
+  const coordinatesCalls: string[] = [];
   return {
     calls,
     detailsCalls,
+    autocompleteCalls,
+    coordinatesCalls,
+    respondWithSuggestions(answer) {
+      nextSuggestions = Array.isArray(answer) ? { ok: true, suggestions: answer } : answer;
+    },
+    respondWithCoordinates(answer) {
+      nextCoordinates = answer;
+    },
+    async autocomplete(request) {
+      autocompleteCalls.push(structuredClone(request));
+      return structuredClone(nextSuggestions);
+    },
+    async getCoordinates(placeId) {
+      coordinatesCalls.push(placeId);
+      return structuredClone(nextCoordinates);
+    },
     respondWith(answer) {
       next = Array.isArray(answer) ? { ok: true, places: answer } : answer;
     },
@@ -251,6 +283,21 @@ export function createFakeSamplePlacesAdapter(): PlacesAdapter {
       return known.has(placeId)
         ? { ok: true, reviews: structuredClone(SAMPLE_REVIEWS) }
         : { ok: false, reason: "cap_reached" };
+    },
+    async autocomplete({ input }) {
+      const query = input.trim().toLowerCase();
+      const suggestions = SAMPLE_PLACES.filter((place) => place.displayName.toLowerCase().includes(query)).map(
+        (place) => ({
+          placeId: place.placeId,
+          mainText: place.displayName,
+          ...(place.formattedAddress ? { secondaryText: place.formattedAddress } : {}),
+        }),
+      );
+      return { ok: true, suggestions };
+    },
+    async getCoordinates(placeId) {
+      const location = known.get(placeId)?.location;
+      return location ? { ok: true, location } : { ok: false, reason: "not_found" };
     },
   };
 }

@@ -166,9 +166,18 @@ export interface TestimonyReply {
  */
 export interface TestimonyDoc extends TestimonyContent {
   placeId: PlaceId;
-  /** Copied from the Listed Provider for feed filters (spec 04). */
+  /**
+   * Copied from the Listed Provider for feed filters (spec 04). Before the place is
+   * Listed: the Region the author picked, and the type inferred from the typed name.
+   */
   region: RegionRef;
   providerType: ProviderType;
+  /**
+   * The name the author typed for a place that was not yet a Listed Provider. Kept
+   * until the Testimony is first published, when it names the new Listed Provider
+   * (or is dropped, if another Testimony made the place Listed first). Never Google's name.
+   */
+  proposedProviderName?: string;
   authorUid: Uid;
   /** Public name chosen by the author (default: first name plus initial). */
   displayName: string;
@@ -189,6 +198,8 @@ export interface TestimonyDoc extends TestimonyContent {
    * fields above stay visible until it is decided.
    */
   pendingRevision?: TestimonyContent & {
+    /** The public name chosen with this edit; replaces `displayName` when it is published. */
+    displayName?: string;
     status: "submitted" | "needsAuthorFix" | "held";
     submittedAt: Timestamp;
     moderationDecisionId?: string;
@@ -354,7 +365,7 @@ export const IMPACT_COUNTERS = {
   verifiedVisits: "impact.verifiedVisits",
 } as const;
 
-export type PlacesMethod = "shortlistSearch" | "providerGoogleBlock" | "googleReviews" | "coordinates";
+export type PlacesMethod = "shortlistSearch" | "providerGoogleBlock" | "googleReviews" | "coordinates" | "autocomplete";
 
 /** Daily paid-API usage counter id, e.g. `quota.places.shortlistSearch.2026-10-20` (Asia/Jakarta date). */
 export function dailyQuotaCounterId(api: "places" | "gemini", method: string, jakartaDate: string): string {

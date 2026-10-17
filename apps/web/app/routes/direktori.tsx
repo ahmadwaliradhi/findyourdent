@@ -187,7 +187,7 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
             <h3 className="font-semibold">{t("directory.emptyTitle")}</h3>
             <p className="text-muted-foreground">{t("directory.emptyBody")}</p>
             <Button asChild size="lg">
-              <Link to="/tulis">{t("directory.emptyCta")}</Link>
+              <Link to="/ceritakan">{t("directory.emptyCta")}</Link>
             </Button>
           </div>
         ) : (
