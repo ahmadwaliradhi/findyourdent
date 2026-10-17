@@ -199,6 +199,25 @@ def is_unsafe_output(text: str) -> bool:
     )
 
 
+# Five words in a row from the Patient's text is a quote, not a coincidence.
+_QUOTE_WORDS = 5
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", _fold(text))
+
+
+def quotes(text: str, patient_text: str) -> bool:
+    """True when ``text`` repeats a run of the Patient's own words. A Guidance card can
+    be shared as a link, so it must never carry the complaint."""
+    said = _words(patient_text)
+    runs = {tuple(said[i : i + _QUOTE_WORDS]) for i in range(len(said) - _QUOTE_WORDS + 1)}
+    written = _words(text)
+    return any(
+        tuple(written[i : i + _QUOTE_WORDS]) in runs for i in range(len(written) - _QUOTE_WORDS + 1)
+    )
+
+
 def is_injection(text: str) -> bool:
     """True when a complaint tries to change the agent's rules."""
     return _has_phrase(text, guidance_safety().injectionPhrases)

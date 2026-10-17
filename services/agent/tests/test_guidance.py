@@ -315,3 +315,19 @@ def test_complaint_text_never_reaches_logs_or_the_card(
     assert complaint not in ok.text
     assert complaint not in failed.text
     assert all(complaint not in str(record.__dict__) for record in caplog.records)
+
+
+def test_model_text_that_quotes_the_complaint_is_replaced_with_the_safe_fallback(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    # The card can be shared as a link, so the Patient's own words must never be on it.
+    complaint = "Gigi geraham kiri bawah saya nyut-nyutan sejak tiga hari waktu di kantor pajak"
+    echo = "Anda bilang gigi geraham kiri bawah saya nyut-nyutan sejak tiga hari waktu di kantor."
+    fake_gemini.outputs.append(
+        model_turn(likelyCategory={"code": "deep_caries_or_pulpitis", "explanation": echo})
+    )
+
+    body = ask(client, complaint)
+
+    assert "kantor" not in str(body)
+    assert "tanyakan apoteker" in body["guidance"]["likelyCategory"]["explanation"]

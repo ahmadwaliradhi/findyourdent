@@ -13,6 +13,7 @@ import httpx
 from google import genai
 from google.genai import errors, types
 
+from ..agents.guidance import generation_config
 from ..config import Settings
 from . import Adapters, ModelQuotaExhaustedError, ModelUnavailableError
 from .fakes import CannedGeminiAdapter
@@ -22,8 +23,8 @@ from .fakes import CannedGeminiAdapter
 class GoogleGeminiAdapter:
     """Gemini through google-genai on Vertex AI, global endpoint (ADR-0003).
 
-    Structured output, low temperature, and ``max_output_tokens`` on every call: output
-    tokens have no daily quota and thinking tokens count as output. RESOURCE_EXHAUSTED
+    Structured output with the Guidance generation config (agents/guidance.py), which
+    bounds output tokens on every call. RESOURCE_EXHAUSTED
     (HTTP 429) means the daily input-token cap is reached (infra/gcp/README.md).
     """
 
@@ -48,16 +49,7 @@ class GoogleGeminiAdapter:
         contents: list[Any],
         response_schema: dict[str, Any],
     ) -> dict[str, Any]:
-        config = types.GenerateContentConfig(
-            system_instruction=instruction,
-            temperature=self.settings.guidance_temperature,
-            max_output_tokens=self.settings.guidance_max_output_tokens,
-            response_mime_type="application/json",
-            response_json_schema=response_schema,
-            thinking_config=types.ThinkingConfig(
-                thinking_level=types.ThinkingLevel(self.settings.guidance_thinking_level)
-            ),
-        )
+        config = generation_config(self.settings, response_schema, instruction)
         turns = [
             types.Content(role=c["role"], parts=[types.Part(text=c["text"])]) for c in contents
         ]

@@ -7,7 +7,8 @@ Order of checks:
 3. One Gemini call. Its output is validated; off-topic gets the redirect; the model can
    raise urgency (to the emergency kind) but never lower it below a deterministic red
    flag; a follow-up question is asked at most once; text that names a medicine, gives
-   a dose or discourages a dentist is replaced with the safe fallback.
+   a dose, discourages a dentist or quotes the Patient is replaced with the safe
+   fallback.
 4. The Cost Estimate, BPJS answer, sources and disclaimer come from the knowledge files.
 
 Complaint text stays in memory for the length of the request. Nothing here logs it.
@@ -49,6 +50,7 @@ from .knowledge import (
     guidance_safety,
     is_injection,
     is_unsafe_output,
+    quotes,
     sources,
 )
 
@@ -180,7 +182,11 @@ async def answer_turn(
     if model.offTopic:
         return Outcome(_redirect(model.language), "redirect")
 
-    safe = not any(is_unsafe_output(t) for t in _model_texts(model))
+    patient_texts = [t for t in texts if t]
+    safe = not any(
+        is_unsafe_output(t) or any(quotes(t, said) for said in patient_texts)
+        for t in _model_texts(model)
+    )
     deterministic = red_flags.flags(*texts)
     if model.urgencyTier == "darurat" and (deterministic or model.redFlags):
         reason = model.emergencyReason if safe and model.emergencyReason else None

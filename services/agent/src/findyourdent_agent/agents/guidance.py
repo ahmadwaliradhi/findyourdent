@@ -170,6 +170,23 @@ def guidance_contents(complaint: str, follow_up_answer: str | None) -> list[dict
     return contents
 
 
+def generation_config(
+    settings: Settings, response_schema: dict[str, Any], instruction: str | None = None
+) -> types.GenerateContentConfig:
+    """Low temperature, JSON output, bounded output tokens (thinking tokens count as
+    output and have no daily quota), shared by the adapter and the ADK agent."""
+    return types.GenerateContentConfig(
+        system_instruction=instruction,
+        temperature=settings.guidance_temperature,
+        max_output_tokens=settings.guidance_max_output_tokens,
+        response_mime_type="application/json",
+        response_json_schema=response_schema,
+        thinking_config=types.ThinkingConfig(
+            thinking_level=types.ThinkingLevel(settings.guidance_thinking_level)
+        ),
+    )
+
+
 def build_guidance_agent(settings: Settings) -> Agent:
     """The same Guidance call as an ADK agent, for `adk web` and the evaluation in spec 06.
     Vertex AI routing (global endpoint, ADR-0003) is set through
@@ -179,15 +196,7 @@ def build_guidance_agent(settings: Settings) -> Agent:
         description="Turns a Patient complaint into a follow-up question or Guidance.",
         model=settings.guidance_model,
         static_instruction=guidance_instruction(),
-        generate_content_config=types.GenerateContentConfig(
-            temperature=settings.guidance_temperature,
-            max_output_tokens=settings.guidance_max_output_tokens,
-            response_mime_type="application/json",
-            response_json_schema=model_response_schema(),
-            thinking_config=types.ThinkingConfig(
-                thinking_level=types.ThinkingLevel(settings.guidance_thinking_level)
-            ),
-        ),
+        generate_content_config=generation_config(settings, model_response_schema()),
         disallow_transfer_to_parent=True,
         disallow_transfer_to_peers=True,
         output_key="guidance_response",
