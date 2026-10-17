@@ -6,10 +6,12 @@ Places are replaced by fakes at their adapters.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from jsonschema import Draft202012Validator, FormatChecker
 
 from findyourdent_agent.adapters import Adapters
 from findyourdent_agent.adapters.fakes import (
@@ -18,6 +20,16 @@ from findyourdent_agent.adapters.fakes import (
     FakePlacesAdapter,
 )
 from findyourdent_agent.app import create_app
+from findyourdent_agent.data import contracts_dir
+
+
+@pytest.fixture(scope="session")
+def response_validator() -> Draft202012Validator:
+    """Validates a body against the shared guidance-response.schema.json."""
+    path = contracts_dir() / "schemas" / "guidance-response.schema.json"
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
 @pytest.fixture

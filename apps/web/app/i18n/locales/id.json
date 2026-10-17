@@ -40,7 +40,7 @@
     "emergency": {
       "title": "Ke IGD sekarang",
       "redFlagsLabel": "Tanda bahaya yang terdeteksi",
-      "hospitalsPending": "Rumah sakit terdekat dengan IGD akan ditampilkan di sini.",
+      "findIgd": "Cari IGD terdekat di Google Maps",
       "action": "Segera pergi ke Instalasi Gawat Darurat (IGD) rumah sakit terdekat. Jangan menunggu jadwal dokter gigi."
     },
     "followUp": {
