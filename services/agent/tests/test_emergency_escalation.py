@@ -109,6 +109,22 @@ MUST_ESCALATE: list[tuple[str, str]] = [
     # A negator after the term only negates it when it ends the clause.
     ("Pipi bengkak, demam ga turun-turun", "fever"),
     ("badan demam gak mau makan, pipi bengkak", "fever"),
+    # Voice ground truth VN-01 (#67): reversed word order and clinical words.
+    (
+        "Pipi kiri bawah saya bengkak besar sampai ke leher dan demam sejak kemarin, ada "
+        "benjolan abses di gusi dekat gigi geraham yang karies parah, sekarang buat menelan "
+        "dan buka mulut susah karena trismus.",
+        "facial_or_neck_swelling",
+    ),
+    ("sekarang buat menelan dan buka mulut susah", "difficulty_swallowing"),
+    ("sekarang buat menelan dan buka mulut susah", "trismus"),
+    ("gigi bungsu sakit, buka mulut susah dari kemarin", "trismus"),
+    ("geraham bawah sakit, menelan gak bisa", "difficulty_swallowing"),
+    ("kata dokter saya kena trismus setelah gigi bungsu meradang", "trismus"),
+    ("dokter puskesmas bilang curiga angina Ludwig", "difficulty_swallowing"),
+    ("I think it might be Ludwig's angina", "difficulty_swallowing"),
+    ("ada selulitis di pipi kanan dan demam", "facial_or_neck_swelling"),
+    ("facial cellulitis from a bad tooth and a fever", "facial_or_neck_swelling"),
 ]
 
 MUST_NOT_ESCALATE: list[str] = [
@@ -135,6 +151,12 @@ MUST_NOT_ESCALATE: list[str] = [
     "Demam sih nggak, pipi bengkak sedikit",
     "Pipi bengkak dikit, demam udah enggak ada",
     "wajah tidak bengkak dan agak meriang",
+    # A dental abscess alone is urgent dental care, not the IGD (#67).
+    "ada abses kecil di gusi dekat geraham, sakit kalau digigit",
+    "buka mulut tidak susah, cuma gigi ngilu",
+    "menelan tidak susah, cuma gusi sakit",
+    "selulitis di pipi tapi tidak demam",
+    "dokter bilang bukan trismus, cuma pegal rahang",
     # Evalset C10: "pipi ga bengkak" must not count as swelling.
     "gusi di gigi geraham bawah kanan bengkak ada benjolan putih isinya nanah, sakit kalo "
     "dipake gigit, udah 2 hari. ga demam, pipi ga bengkak. amoxicillin 500 diminum berapa "
