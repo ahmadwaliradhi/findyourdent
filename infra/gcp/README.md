@@ -40,7 +40,7 @@ The web service (T03) reads these at start-up:
 | `RATE_LIMIT_SALT` | Secret `rate-limit-salt` (random, created once by `setup.sh`), so rate-limit key hashes can't be reversed and every instance shares counters. Required in production |
 | `TRUST_PROXY_HOPS` | Proxies in front of the service that append to `X-Forwarded-For`: 1 for Cloud Run alone (default), 2 behind Firebase Hosting. The per-IP ceiling reads the client IP this many hops from the right, so a client can't fake it |
 
-`APP_CHECK_DEBUG_TOKEN` is for local runs and CI only; production ignores it. The deployed service only accepts real App Check tokens, so the smoke test gets one by exchanging the registered `app-check-debug-token` (App Check API `exchangeDebugToken`, checked against the API discovery document on 17 October 2026). Rate limits default to spec 00 and can be overridden with `RATE_LIMIT_*` (see `apps/web/.env.example`). The `rateLimits.expiresAt` TTL policy is still a manual step (docs/data-model.md).
+`APP_CHECK_DEBUG_TOKEN` is for local runs and CI only; production ignores it. The deployed service only accepts real App Check tokens, so the smoke test gets one by exchanging the registered `app-check-debug-token` (App Check API `exchangeDebugToken`, called like the Firebase JS SDK with the web app's API key in `X-Goog-Api-Key`; a gcloud OAuth token gets 401. Checked against `firebaseappcheck.googleapis.com` on 17 October 2026). Rate limits default to spec 00 and can be overridden with `RATE_LIMIT_*` (see `apps/web/.env.example`). The `rateLimits.expiresAt` TTL policy is still a manual step (docs/data-model.md).
 
 ## Agent service environment
 
@@ -89,18 +89,20 @@ Firebase Hosting fronts the web service; both services run in Jakarta (ADR-0008)
 
 ```bash
 infra/gcp/deploy.sh agent    # first, and whenever the agent changes
-infra/gcp/deploy.sh web      # web service, Firebase Hosting, then the smoke test
+infra/gcp/deploy.sh web      # rules and indexes, web service, Firebase Hosting, then the smoke test
 infra/gcp/monitoring.sh      # once after the first deploy, or to converge drift
 infra/gcp/smoke.sh           # on its own at any time
 ```
 
 `deploy.sh` refuses uncommitted changes, builds the image for `HEAD` with Cloud Build (`cloudbuild.yaml`, upload limited by `.gcloudignore`), pushes it to Artifact Registry and deploys it. The Firebase CLI step uses your gcloud application default credentials, or `firebase login`.
 
+`deploy.sh web` first checks that the secrets `fyd-web` mounts (`places-api-key`, `admin-emails`, `rate-limit-salt`, `share-link-secret`) exist with an enabled version, and stops before the build if one is missing: re-run `setup.sh`, which creates them. Before the Cloud Run deploy it runs `firebase deploy --only firestore:indexes,firestore:rules,storage --non-interactive`: the composite indexes in `firestore.indexes.json` and the deny-all `firestore.rules` and `storage.rules` (every read and write goes through the web service's Admin SDK, which rules don't apply to). Without `--force` the CLI never deletes an index that is in the project but not in the file; it only warns. Storage rules go to the deploy target `uploads`, which `.firebaserc` maps to `findyourdent-uploads` (and to `demo-findyourdent-uploads` for the emulators), because the project has no Firebase default bucket. A new index builds in the background and queries on it fail with `FAILED_PRECONDITION` until it is `READY`, so the script waits up to 10 minutes and then lists any index still `CREATING`; check later with `gcloud firestore indexes composite list --filter=state=CREATING`.
+
 | Thing | Value |
 | --- | --- |
 | Public URL | https://findyourdent.web.app (Hosting rewrites every path to `fyd-web`) |
 | Artifact Registry | `asia-southeast2-docker.pkg.dev/findyourdent/findyourdent/{web,agent}:<commit>` |
-| `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS`, `RATE_LIMIT_SALT` from Secret Manager; public Firebase web config and reCAPTCHA site key looked up at deploy; `TRUST_PROXY_HOPS=2` |
+| `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS`, `RATE_LIMIT_SALT`, `SHARE_LINK_SECRET` from Secret Manager; public Firebase web config and reCAPTCHA site key looked up at deploy; `TRUST_PROXY_HOPS=2` |
 | `fyd-agent` | `--no-allow-unauthenticated`; `roles/run.invoker` only for `fyd-web` and the Monitoring service agent (uptime check); maximum 4 instances |
 | `coordinates-refresh` | Cloud Run Job on the web image (`node refresh-coordinates.ts`, as `fyd-web`, secret `PLACES_API_KEY`), run by the Cloud Scheduler job of the same name at 03:00 Jakarta time every day as `fyd-scheduler`. Each run refreshes at most 7 Listed Providers whose coordinates are 25 or more days old or missing, and deletes coordinates that could not be refreshed and would be older than 30 days by the next run, so each Provider comes up once a month (spec 02). At 7 a day it keeps up with about 175 Listed Providers; past that, raise `COORDINATES_DAILY_CAP` and the Get Place quota together. Run it by hand: `gcloud run jobs execute coordinates-refresh --region asia-southeast2` |
 | Warm agent instance | service-level minimum 1 from 19 October to 7 November 2026 (Jakarta time), 0 otherwise |

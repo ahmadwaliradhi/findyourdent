@@ -64,17 +64,25 @@ agent_health=$(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-identity
 check "agent /health with an identity token" health_ok "$agent_health"
 
 # App Check guards /api/guidance (T03). Swap the registered debug token (setup.sh)
-# for a real App Check token; both travel through stdin, never argv.
-web_app_id=$(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)" \
-  | curl -sS --fail-with-body -H @- -H "x-goog-user-project: ${PROJECT_ID}" \
-    "https://firebase.googleapis.com/v1beta1/projects/${PROJECT_ID}/webApps" \
-  | jq -r '[.apps[]? | select(.displayName == "findyourdent-web")][0].appId // empty')
+# for a real App Check token. exchangeDebugToken is the call the Firebase JS SDK
+# makes, authorized by the web app's API key: a gcloud OAuth access token gets 401
+# UNAUTHENTICATED (checked against firebaseappcheck.googleapis.com on 17 October
+# 2026). The key, the debug token and the App Check token all travel through
+# stdin or a temp file, never argv or output.
+firebase_api() {
+  printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)" \
+    | curl -sS --fail-with-body -H @- -H "x-goog-user-project: ${PROJECT_ID}" \
+      "https://firebase.googleapis.com/v1beta1/projects/${PROJECT_ID}/$1"
+}
+web_app_id=$(firebase_api webApps \
+  | jq -r '[.apps[]? | select(.displayName == "findyourdent-web")][0].appId // empty' || true)
+web_api_key=$(firebase_api "webApps/${web_app_id}/config" | jq -r '.apiKey // empty' || true)
 exchange_body=$(mktemp)
 trap 'rm -f "$exchange_body"' EXIT
 gcloud secrets versions access latest --secret=app-check-debug-token --project "$PROJECT_ID" \
   | jq -Rc '{debugToken: .}' >"$exchange_body"
-app_check_token=$(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)" \
-  | curl -sS --fail-with-body -X POST -H @- -H "x-goog-user-project: ${PROJECT_ID}" \
+app_check_token=$(printf 'X-Goog-Api-Key: %s\n' "$web_api_key" \
+  | curl -sS --fail-with-body -X POST -H @- \
     -H 'Content-Type: application/json' -d "@${exchange_body}" \
     "https://firebaseappcheck.googleapis.com/v1/projects/${PROJECT_ID}/apps/${web_app_id}:exchangeDebugToken" \
   | jq -r '.token // empty' || true)
