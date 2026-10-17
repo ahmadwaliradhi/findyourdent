@@ -1,151 +1,210 @@
 {
-  "version": "2026-10-17.1",
+  "version": "2026-10-17.2",
   "notes": [
     "Cost Estimate ranges per procedure code (spec 01), shown to the Patient labelled 'estimasi'. Codes must match packages/contracts/data/procedures.json; a test checks every code has a range.",
-    "These ranges are a team estimate awaiting review against published price lists (T05). A reviewer replaces 'source' with the specific price lists or tariffs used and bumps version on every change.",
-    "Ranges are out-of-pocket prices at private clinics. BPJS Kesehatan coverage lives in bpjs_coverage.json; never promise a scaling frequency."
+    "Ranges come from docs/research/dental-prices-2026-10-17.md: private clinics' own published price lists (Jakarta and Jabodetabek, Surabaya, Medan, Yogyakarta, Makassar, Tanjungpinang) for the range, official public tariffs (RSKGM Kota Bandung 2026, RSUD Dr. Soetomo under Perda Jatim 8/2023, Semarang puskesmas under Perwal 23/2025) for the floor. Normal prices, not promo prices.",
+    "confidence: confirmed = two or more private price lists agree; likely = one private list or a unit conversion; unconfirmed = public tariffs only, no private price list found. 'unit' records what the range covers; the card shows one range per procedure.",
+    "Not yet reviewed by a dentist (H08). Bump version on every change. BPJS Kesehatan coverage lives in bpjs_coverage.json; never promise a scaling frequency."
   ],
   "sources": {
-    "team_estimate": {
-      "id": "Estimasi tim FindYourDent dari tarif publik dan daftar harga klinik, Oktober 2026",
-      "en": "FindYourDent team estimate from public tariffs and clinic price lists, October 2026"
+    "published_prices": {
+      "id": "Daftar harga resmi klinik gigi swasta dan tarif RS pemerintah di beberapa kota, 2025–2026",
+      "en": "Clinics' own published price lists and government hospital tariffs in several cities, 2025–2026"
+    },
+    "public_tariffs": {
+      "id": "Tarif resmi RS dan puskesmas pemerintah 2025–2026; harga klinik swasta bisa lebih tinggi",
+      "en": "Official government hospital and puskesmas tariffs, 2025–2026; private clinics may charge more"
     }
   },
   "ranges": {
     "consultation": {
       "minRupiah": 50000,
-      "maxRupiah": 250000,
-      "source": "team_estimate"
+      "maxRupiah": 200000,
+      "unit": "per visit",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "dental_xray_periapical": {
-      "minRupiah": 50000,
+      "minRupiah": 100000,
       "maxRupiah": 200000,
-      "source": "team_estimate"
+      "unit": "per film",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "dental_xray_panoramic": {
-      "minRupiah": 150000,
+      "minRupiah": 200000,
       "maxRupiah": 500000,
-      "source": "team_estimate"
+      "unit": "per exposure",
+      "confidence": "unconfirmed",
+      "source": "public_tariffs"
     },
     "scaling": {
-      "minRupiah": 150000,
-      "maxRupiah": 800000,
-      "source": "team_estimate"
+      "minRupiah": 200000,
+      "maxRupiah": 700000,
+      "unit": "per visit",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "fluoride_application": {
       "minRupiah": 100000,
-      "maxRupiah": 400000,
-      "source": "team_estimate"
+      "maxRupiah": 350000,
+      "unit": "per visit",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "fissure_sealant": {
-      "minRupiah": 100000,
+      "minRupiah": 150000,
       "maxRupiah": 400000,
-      "source": "team_estimate"
+      "unit": "per tooth",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "tooth_filling": {
-      "minRupiah": 150000,
-      "maxRupiah": 800000,
-      "source": "team_estimate"
+      "minRupiah": 250000,
+      "maxRupiah": 1000000,
+      "unit": "per tooth",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "pulpotomy": {
-      "minRupiah": 300000,
-      "maxRupiah": 1000000,
-      "source": "team_estimate"
+      "minRupiah": 250000,
+      "maxRupiah": 700000,
+      "unit": "per tooth",
+      "confidence": "unconfirmed",
+      "source": "public_tariffs"
     },
     "root_canal_treatment": {
       "minRupiah": 1000000,
-      "maxRupiah": 5000000,
-      "source": "team_estimate"
+      "maxRupiah": 3000000,
+      "unit": "per tooth, full course, crown excluded",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "tooth_extraction": {
-      "minRupiah": 150000,
-      "maxRupiah": 1000000,
-      "source": "team_estimate"
+      "minRupiah": 300000,
+      "maxRupiah": 900000,
+      "unit": "per tooth",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "surgical_extraction": {
-      "minRupiah": 750000,
-      "maxRupiah": 3000000,
-      "source": "team_estimate"
+      "minRupiah": 600000,
+      "maxRupiah": 1500000,
+      "unit": "per tooth",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "wisdom_tooth_surgery": {
-      "minRupiah": 1500000,
-      "maxRupiah": 6000000,
-      "source": "team_estimate"
+      "minRupiah": 1900000,
+      "maxRupiah": 5000000,
+      "unit": "per tooth",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "abscess_drainage": {
-      "minRupiah": 300000,
-      "maxRupiah": 1500000,
-      "source": "team_estimate"
+      "minRupiah": 200000,
+      "maxRupiah": 750000,
+      "unit": "per procedure",
+      "confidence": "unconfirmed",
+      "source": "public_tariffs"
     },
     "tooth_replantation": {
       "minRupiah": 500000,
-      "maxRupiah": 2500000,
-      "source": "team_estimate"
+      "maxRupiah": 2000000,
+      "unit": "per tooth, splint included",
+      "confidence": "unconfirmed",
+      "source": "public_tariffs"
     },
     "tooth_splinting": {
-      "minRupiah": 500000,
-      "maxRupiah": 2000000,
-      "source": "team_estimate"
+      "minRupiah": 600000,
+      "maxRupiah": 2500000,
+      "unit": "per splint (about 4 to 6 teeth)",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "periodontal_treatment": {
-      "minRupiah": 500000,
+      "minRupiah": 400000,
       "maxRupiah": 3000000,
-      "source": "team_estimate"
+      "unit": "per region",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "dental_crown": {
-      "minRupiah": 1500000,
+      "minRupiah": 1600000,
       "maxRupiah": 7000000,
-      "source": "team_estimate"
+      "unit": "per tooth",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "dental_bridge": {
-      "minRupiah": 4000000,
+      "minRupiah": 4500000,
       "maxRupiah": 15000000,
-      "source": "team_estimate"
+      "unit": "per 3-unit bridge",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "dental_implant": {
       "minRupiah": 10000000,
-      "maxRupiah": 30000000,
-      "source": "team_estimate"
+      "maxRupiah": 35000000,
+      "unit": "per tooth, with abutment and crown",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "removable_denture": {
-      "minRupiah": 500000,
-      "maxRupiah": 5000000,
-      "source": "team_estimate"
+      "minRupiah": 900000,
+      "maxRupiah": 7000000,
+      "unit": "per denture",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "denture_repair": {
-      "minRupiah": 150000,
-      "maxRupiah": 750000,
-      "source": "team_estimate"
+      "minRupiah": 300000,
+      "maxRupiah": 900000,
+      "unit": "per repair",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "orthodontic_braces": {
-      "minRupiah": 5000000,
+      "minRupiah": 3000000,
       "maxRupiah": 25000000,
-      "source": "team_estimate"
+      "unit": "fitting, both jaws, monthly visits extra",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "orthodontic_adjustment": {
-      "minRupiah": 150000,
-      "maxRupiah": 500000,
-      "source": "team_estimate"
+      "minRupiah": 100000,
+      "maxRupiah": 350000,
+      "unit": "per visit",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "clear_aligners": {
-      "minRupiah": 15000000,
-      "maxRupiah": 60000000,
-      "source": "team_estimate"
+      "minRupiah": 12000000,
+      "maxRupiah": 85000000,
+      "unit": "full treatment",
+      "confidence": "likely",
+      "source": "published_prices"
     },
     "teeth_whitening": {
       "minRupiah": 1000000,
-      "maxRupiah": 4000000,
-      "source": "team_estimate"
+      "maxRupiah": 5000000,
+      "unit": "per treatment",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "dental_veneer": {
-      "minRupiah": 1000000,
-      "maxRupiah": 7000000,
-      "source": "team_estimate"
+      "minRupiah": 500000,
+      "maxRupiah": 6000000,
+      "unit": "per tooth",
+      "confidence": "confirmed",
+      "source": "published_prices"
     },
     "oral_lesion_treatment": {
       "minRupiah": 100000,
-      "maxRupiah": 750000,
-      "source": "team_estimate"
+      "maxRupiah": 600000,
+      "unit": "per visit",
+      "confidence": "unconfirmed",
+      "source": "public_tariffs"
     }
   }
 }

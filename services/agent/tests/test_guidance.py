@@ -45,8 +45,8 @@ def test_complaint_gets_a_guidance_card_from_one_gemini_call(
     # Cost Estimate and BPJS answer come from the curated knowledge files, not the model.
     filling = next(c for c in guidance["costEstimate"] if c["procedureCode"] == "tooth_filling")
     assert (filling["minRupiah"], filling["maxRupiah"], filling["label"]) == (
-        150_000,
-        800_000,
+        250_000,
+        1_000_000,
         "estimasi",
     )
     assert guidance["bpjs"]["status"] == "referral_needed"
@@ -225,7 +225,7 @@ def test_guidance_answers_in_the_complaint_language(
     guidance = body["guidance"]
     assert "not a diagnosis" in guidance["disclaimer"]
     assert "three months" in guidance["bpjs"]["explanation"]
-    assert "team estimate" in guidance["costEstimate"][0]["source"]
+    assert "published price lists" in guidance["costEstimate"][0]["source"]
 
 
 def test_unknown_procedure_codes_from_the_model_are_dropped(

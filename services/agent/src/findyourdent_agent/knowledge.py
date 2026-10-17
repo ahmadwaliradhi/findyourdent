@@ -44,6 +44,9 @@ class Text(_Data):
 class CostRange(_Data):
     minRupiah: int = Field(ge=0)  # noqa: N815 - mirrors the contract field
     maxRupiah: int = Field(ge=0)  # noqa: N815
+    unit: str = Field(min_length=1)
+    """What the range covers (per tooth, full course); for reviewers, not shown."""
+    confidence: Literal["confirmed", "likely", "unconfirmed"]
     source: str
 
 
