@@ -86,7 +86,8 @@ export function VoiceRecorder({
     }
     try {
       const type = recordingType();
-      const media = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+      // 32 kbps is plenty for speech and keeps 60 seconds near 240 KB, far under the cap.
+      const media = new MediaRecorder(stream, { audioBitsPerSecond: 32_000, ...(type ? { mimeType: type } : {}) });
       const chunks: Blob[] = [];
       media.ondataavailable = (event) => {
         if (event.data.size > 0) chunks.push(event.data);
