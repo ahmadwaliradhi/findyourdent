@@ -38,11 +38,19 @@ The admin allowlist is kept in Secret Manager instead of the repository because 
 | Gemini 3.8 Flash input tokens (global) | 2,000,000/day | About 250 sessions at two 4k-token calls |
 | Gemini 3.5 Flash-Lite input tokens (global) | 1,000,000/day | Moderation and extraction |
 
-Gemini has no requests-per-day quota on Vertex AI, so the daily input-token quota is the cap. The coordinates calls in spec 02 (Place Details Essentials) also count against the Get Place cap.
+Gemini has no requests-per-day quota on Vertex AI, so the daily input-token quota is the cap. Output tokens have no daily quota; the agent service must bound them with `max_output_tokens`.
+
+Before building on these caps, the Places adapter (spec 02) must know:
+
+- The 83/day Get Place cap is shared. The console cannot stop the Google block from using all 83, so the adapter has to enforce 50 for the block and 33 for reviews.
+- Coordinates lookups (Place Details Essentials) are Get Place calls too, so they eat into the same 83. Run the monthly coordinates refresh in small batches, or raise the cap for that day.
 
 ## Manual steps
 
 These have no API that works without upgrading to Identity Platform:
 
 1. Firebase console, Authentication, Get started, Sign-in method, Google, Enable; pick the support email; Save.
-2. After the first deploy (T02), add the Cloud Run or custom domain under Authentication, Settings, Authorized domains, and grant `fyd-web` `roles/run.invoker` on the agent service.
+2. After the first deploy (T02):
+   - Add the Cloud Run or custom domain under Authentication, Settings, Authorized domains.
+   - Add the exact Cloud Run host to `RECAPTCHA_DOMAINS` and rerun this script.
+   - Grant `fyd-web` `roles/run.invoker` on the agent service.

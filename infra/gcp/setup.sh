@@ -21,7 +21,9 @@ BUCKET="${BUCKET:-${PROJECT_ID}-uploads}"
 BUDGET_AMOUNT="${BUDGET_AMOUNT:-1650000IDR}"
 BUDGET_NAME="${BUDGET_NAME:-findyourdent-usd100}"
 WEB_APP_NAME="${WEB_APP_NAME:-findyourdent-web}"
-RECAPTCHA_DOMAINS="${RECAPTCHA_DOMAINS:-localhost,${PROJECT_ID}.web.app,${PROJECT_ID}.firebaseapp.com,findyourdent.com,run.app}"
+# Add the exact Cloud Run host after the first deploy (T02) and rerun; never
+# the bare run.app suffix, which would let any Cloud Run service use the key.
+RECAPTCHA_DOMAINS="${RECAPTCHA_DOMAINS:-localhost,${PROJECT_ID}.web.app,${PROJECT_ID}.firebaseapp.com,findyourdent.com}"
 
 APIS=(
   run.googleapis.com
@@ -52,28 +54,47 @@ APIS=(
 log() { printf '\n==> %s\n' "$*"; }
 skip() { printf '    (exists) %s\n' "$*"; }
 
-token() { gcloud auth print-access-token; }
-
-# Authenticated call to a Google REST API, billed to this project.
+# Authenticated call to a Google REST API, billed to this project. Fails on any
+# HTTP error. The token goes in through stdin so it never shows up in `ps`.
 gapi() {
   local method="$1" url="$2" body="${3:-}"
-  local args=(-sS -X "$method" "$url"
-    -H "Authorization: Bearer $(token)"
+  local args=(-sS --fail-with-body -X "$method" "$url" -H @-
     -H "x-goog-user-project: ${PROJECT_ID}"
     -H "Content-Type: application/json")
   [[ -n "$body" ]] && args+=(-d "$body")
-  curl "${args[@]}"
+  printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)" | curl "${args[@]}"
 }
 
-# Poll a long-running operation returned by a Firebase/Google REST API.
-wait_op() {
-  local base="$1" op="$2" i
+# Start a long-running Firebase operation and wait for it; fails if the
+# operation finishes with an error.
+run_op() {
+  local op i result
+  op=$(gapi POST "$1" "$2" | jq -r '.name')
   for i in $(seq 1 30); do
-    if gapi GET "${base}/${op}" | grep -q '"done": true'; then return 0; fi
+    result=$(gapi GET "${FB}/${op}")
+    if [[ "$(jq -r '.done // false' <<<"$result")" == "true" ]]; then
+      if jq -e '.error' <<<"$result" >/dev/null; then
+        echo "operation ${op} failed: ${result}" >&2
+        return 1
+      fi
+      return 0
+    fi
     sleep 4
   done
   echo "timed out waiting for ${op}" >&2
   return 1
+}
+
+# Firebase web app ID for WEB_APP_NAME, or empty if there is none.
+web_app_id() {
+  gapi GET "${FB}/projects/${PROJECT_ID}/webApps" \
+    | jq -r --arg n "$WEB_APP_NAME" '[.apps[]? | select(.displayName == $n)][0].appId // empty'
+}
+
+# Resource name of the API key with display name $1, or empty.
+api_key_name() {
+  gcloud services api-keys list --project "$PROJECT_ID" \
+    --filter="displayName=$1" --format='value(name)' | head -1
 }
 
 gcloud config set project "$PROJECT_ID" >/dev/null 2>&1
@@ -120,26 +141,20 @@ fi
 # 4. Firebase ------------------------------------------------------------------
 FB="https://firebase.googleapis.com/v1beta1"
 log "Firebase"
-if gapi GET "${FB}/projects/${PROJECT_ID}" | grep -q '"projectId"'; then
+# A project without Firebase answers 403/404 here, which gapi turns into failure.
+if gapi GET "${FB}/projects/${PROJECT_ID}" >/dev/null 2>&1; then
   skip "firebase project"
 else
-  op=$(gapi POST "${FB}/projects/${PROJECT_ID}:addFirebase" '{}' | sed -n 's/.*"name": "\(operations\/[^"]*\)".*/\1/p')
-  wait_op "$FB" "$op"
+  run_op "${FB}/projects/${PROJECT_ID}:addFirebase" '{}'
 fi
 
 log "Firebase web app ${WEB_APP_NAME}"
-WEB_APP_ID=$(gapi GET "${FB}/projects/${PROJECT_ID}/webApps" \
-  | tr -d '\n' | grep -o "\"appId\": \"[^\"]*\"[^}]*\"displayName\": \"${WEB_APP_NAME}\"" \
-  | sed -n 's/"appId": "\([^"]*\)".*/\1/p' | head -1 || true)
+WEB_APP_ID=$(web_app_id)
 if [[ -n "$WEB_APP_ID" ]]; then
   skip "web app ${WEB_APP_ID}"
 else
-  op=$(gapi POST "${FB}/projects/${PROJECT_ID}/webApps" "{\"displayName\": \"${WEB_APP_NAME}\"}" \
-    | sed -n 's/.*"name": "\(operations\/[^"]*\)".*/\1/p')
-  wait_op "$FB" "$op"
-  WEB_APP_ID=$(gapi GET "${FB}/projects/${PROJECT_ID}/webApps" \
-    | tr -d '\n' | grep -o "\"appId\": \"[^\"]*\"[^}]*\"displayName\": \"${WEB_APP_NAME}\"" \
-    | sed -n 's/"appId": "\([^"]*\)".*/\1/p' | head -1)
+  run_op "${FB}/projects/${PROJECT_ID}/webApps" "$(jq -n --arg n "$WEB_APP_NAME" '{displayName: $n}')"
+  WEB_APP_ID=$(web_app_id)
 fi
 echo "    web app id: ${WEB_APP_ID}"
 
@@ -149,6 +164,8 @@ SITE_KEY=$(gcloud recaptcha keys list --project "$PROJECT_ID" \
   --filter="displayName=${WEB_APP_NAME}-appcheck" --format='value(name)' | head -1 | sed 's#.*/##')
 if [[ -n "$SITE_KEY" ]]; then
   skip "key ${SITE_KEY}"
+  gcloud recaptcha keys update "$SITE_KEY" --project "$PROJECT_ID" --web \
+    --domains="$RECAPTCHA_DOMAINS" >/dev/null
 else
   SITE_KEY=$(gcloud recaptcha keys create --project "$PROJECT_ID" \
     --display-name="${WEB_APP_NAME}-appcheck" --web --integration-type=score \
@@ -158,27 +175,31 @@ echo "    site key: ${SITE_KEY}"
 
 log "Register key with App Check"
 gapi PATCH "https://firebaseappcheck.googleapis.com/v1/projects/${PROJECT_ID}/apps/${WEB_APP_ID}/recaptchaEnterpriseConfig?updateMask=siteKey" \
-  "{\"siteKey\": \"${SITE_KEY}\"}" >/dev/null
+  "$(jq -n --arg k "$SITE_KEY" '{siteKey: $k}')" | jq -r '"    registered " + .siteKey'
 
 # 6. Places API key in Secret Manager -------------------------------------------
 log "Places API key"
-PLACES_KEY_NAME=$(gcloud services api-keys list --project "$PROJECT_ID" \
-  --filter="displayName=places-server" --format='value(name)' | head -1)
+PLACES_KEY_NAME=$(api_key_name places-server)
 if [[ -n "$PLACES_KEY_NAME" ]]; then
   skip "api key places-server"
 else
+  # Without --async gcloud waits for the create operation to finish.
   gcloud services api-keys create --project "$PROJECT_ID" --display-name=places-server \
-    --api-target=service=places.googleapis.com >/dev/null 2>&1
-  PLACES_KEY_NAME=$(gcloud services api-keys list --project "$PROJECT_ID" \
-    --filter="displayName=places-server" --format='value(name)' | head -1)
+    --api-target=service=places.googleapis.com >/dev/null
+  PLACES_KEY_NAME=$(api_key_name places-server)
 fi
+[[ -n "$PLACES_KEY_NAME" ]] || { echo "places-server API key not found" >&2; exit 1; }
 
 log "Secret places-api-key"
-if gcloud secrets describe places-api-key --project "$PROJECT_ID" >/dev/null 2>&1; then
-  skip "secret places-api-key"
-else
+if ! gcloud secrets describe places-api-key --project "$PROJECT_ID" >/dev/null 2>&1; then
   gcloud secrets create places-api-key --project "$PROJECT_ID" \
     --replication-policy=user-managed --locations="$REGION"
+fi
+# Checked separately so a run that died between create and add still converges.
+if [[ -n "$(gcloud secrets versions list places-api-key --project "$PROJECT_ID" \
+       --filter='state=ENABLED' --limit=1 --format='value(name)')" ]]; then
+  skip "secret places-api-key has a version"
+else
   gcloud services api-keys get-key-string "$PLACES_KEY_NAME" --format='value(keyString)' \
     | tr -d '\n' | gcloud secrets versions add places-api-key --project "$PROJECT_ID" --data-file=-
 fi
@@ -239,8 +260,8 @@ gcloud secrets add-iam-policy-binding admin-emails --project "$PROJECT_ID" \
 
 # 9. Budget ---------------------------------------------------------------------
 log "Budget ${BUDGET_NAME} (${BUDGET_AMOUNT}, 50% and 90%)"
-if gcloud billing budgets list --billing-account="$BILLING_ACCOUNT" \
-     --format='value(displayName)' | grep -qx "$BUDGET_NAME"; then
+budgets=$(gcloud billing budgets list --billing-account="$BILLING_ACCOUNT" --format='value(displayName)')
+if grep -qx "$BUDGET_NAME" <<<"$budgets"; then
   skip "budget"
 else
   gcloud billing budgets create --billing-account="$BILLING_ACCOUNT" \
@@ -263,12 +284,11 @@ QUOTAS="https://cloudquotas.googleapis.com/v1/projects/${PROJECT_ID}/locations/g
 quota_cap() {
   local id="$1" service="$2" quota="$3" value="$4" dims="${5:-}"
   [[ -n "$dims" ]] || dims='{}'
-  local body="{\"service\": \"${service}\", \"quotaId\": \"${quota}\", \"dimensions\": ${dims},
-    \"quotaConfig\": {\"preferredValue\": \"${value}\"},
-    \"justification\": \"FindYourDent spending guard (spec 00, spec 02)\"}"
-  local out
-  out=$(gapi PATCH "${QUOTAS}/${id}?allowMissing=true&ignoreSafetyChecks=QUOTA_DECREASE_PERCENTAGE_TOO_HIGH&ignoreSafetyChecks=QUOTA_DECREASE_BELOW_USAGE" "$body")
-  if grep -q '"error"' <<<"$out"; then
+  local body out
+  body=$(jq -n --arg s "$service" --arg q "$quota" --arg v "$value" --argjson d "$dims" \
+    '{service: $s, quotaId: $q, dimensions: $d, quotaConfig: {preferredValue: $v},
+      justification: "FindYourDent spending guard (spec 00, spec 02)"}')
+  if ! out=$(gapi PATCH "${QUOTAS}/${id}?allowMissing=true&ignoreSafetyChecks=QUOTA_DECREASE_PERCENTAGE_TOO_HIGH&ignoreSafetyChecks=QUOTA_DECREASE_BELOW_USAGE" "$body"); then
     echo "    FAILED ${quota}: ${out}" >&2
     return 1
   fi
