@@ -202,7 +202,7 @@ export const AUTOCOMPLETE_DAILY_CAP = 300;
  * Coordinates lookups are Get Place calls too, so they share Google's 83-a-day cap
  * with the Google block (50) and Google Reviews (33), which already use it all. Ten a
  * day bounds how much they can take from the Provider page; past it, a new Listed
- * Provider is created without coordinates, and the monthly refresh fills them in.
+ * Provider is created without coordinates, and the daily coordinate refresh fills them in.
  */
 export const COORDINATES_DAILY_CAP = 10;
 

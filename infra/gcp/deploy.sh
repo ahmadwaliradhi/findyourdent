@@ -13,6 +13,7 @@ PROJECT_ID="${PROJECT_ID:-findyourdent}"
 REGION="${REGION:-asia-southeast2}"
 REPOSITORY="${REPOSITORY:-findyourdent}"
 WEB_SERVICE=fyd-web
+COORDINATES_JOB=coordinates-refresh
 AGENT_SERVICE=fyd-agent
 WEB_SA="fyd-web@${PROJECT_ID}.iam.gserviceaccount.com"
 AGENT_SA="fyd-agent@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -42,6 +43,16 @@ REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
 
 log() { printf '\n==> %s\n' "$*"; }
 skip() { printf '    (exists) %s\n' "$*"; }
+
+# fyd-scheduler: the identity every Cloud Scheduler job here calls Google APIs as.
+ensure_scheduler_sa() {
+  if gcloud iam service-accounts describe "$SCHEDULER_SA" --project "$PROJECT_ID" >/dev/null 2>&1; then
+    skip "service account ${SCHEDULER_SA_ID}"
+  else
+    gcloud iam service-accounts create "$SCHEDULER_SA_ID" --project "$PROJECT_ID" \
+      --display-name="FindYourDent scheduled jobs"
+  fi
+}
 
 # URL of a Cloud Run service, or empty when it is not deployed yet.
 service_url() {
@@ -107,12 +118,7 @@ if [[ "$SERVICE" == agent ]]; then
   # Cloud Scheduler flips it at the window edges; this sets the value for today
   # so a deploy never undoes the schedule.
   log "Warm instance schedule"
-  if gcloud iam service-accounts describe "$SCHEDULER_SA" --project "$PROJECT_ID" >/dev/null 2>&1; then
-    skip "service account ${SCHEDULER_SA_ID}"
-  else
-    gcloud iam service-accounts create "$SCHEDULER_SA_ID" --project "$PROJECT_ID" \
-      --display-name="FindYourDent warm-instance schedule"
-  fi
+  ensure_scheduler_sa
   gcloud run services add-iam-policy-binding "$AGENT_SERVICE" --project "$PROJECT_ID" \
     --region "$REGION" --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.developer >/dev/null
   # Updating a service checks actAs on the service account it runs as.
@@ -210,6 +216,36 @@ gcloud run deploy "$WEB_SERVICE" --project "$PROJECT_ID" --region "$REGION" \
   --set-env-vars="AGENT_URL=${AGENT_URL},AGENT_AUTH=id_token,FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID},TRUST_PROXY_HOPS=2,FIREBASE_WEB_API_KEY=${WEB_API_KEY},FIREBASE_WEB_APP_ID=${WEB_APP_ID},FIREBASE_AUTH_DOMAIN=${WEB_AUTH_DOMAIN},RECAPTCHA_SITE_KEY=${SITE_KEY}" \
   --set-secrets="PLACES_API_KEY=places-api-key:latest,ADMIN_EMAILS=admin-emails:latest,RATE_LIMIT_SALT=rate-limit-salt:latest,SHARE_LINK_SECRET=share-link-secret:latest" \
   --quiet
+
+# Coordinates refresh (spec 02, ADR-0005): stored coordinates must be refreshed or
+# deleted within 30 days. A Cloud Run Job on the web image, run daily at 03:00 by
+# Cloud Scheduler; each run refreshes at most 7 Listed Providers whose coordinates
+# are 25 days old or missing (apps/web/server/coordinates-refresh.ts), so each one
+# comes up once a month without crowding the shared 83-a-day Get Place cap.
+log "Coordinates refresh job"
+gcloud run jobs deploy "$COORDINATES_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --image "$IMAGE" --service-account "$WEB_SA" \
+  --command=node --args=refresh-coordinates.ts \
+  --tasks=1 --max-retries=1 --task-timeout=10m --cpu=1 --memory=512Mi \
+  --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
+  --set-secrets="PLACES_API_KEY=places-api-key:latest" \
+  --quiet >/dev/null
+ensure_scheduler_sa
+# roles/run.invoker carries run.jobs.run, and Scheduler starts a job with POST to the
+# v2 `:run` method (checked against docs.cloud.google.com/run/docs/execute/jobs-on-schedule
+# and /run/docs/reference/iam/roles on 17 October 2026).
+gcloud run jobs add-iam-policy-binding "$COORDINATES_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
+verb=create
+if gcloud scheduler jobs describe "$COORDINATES_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+  verb=update
+fi
+gcloud scheduler jobs "$verb" http "$COORDINATES_JOB" --project "$PROJECT_ID" --location "$REGION" \
+  --schedule="0 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
+  --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${COORDINATES_JOB}:run" \
+  --oauth-service-account-email="$SCHEDULER_SA" \
+  --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+echo "    ${COORDINATES_JOB}: 0 3 * * * (Asia/Jakarta)"
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).
 log "Firebase Hosting"

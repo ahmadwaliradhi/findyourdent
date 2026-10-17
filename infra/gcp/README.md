@@ -71,7 +71,7 @@ Gemini has no requests-per-day quota on Vertex AI, so the daily input-token quot
 Before building on these caps, the Places adapter (spec 02) must know:
 
 - The 83/day Get Place cap is shared. The console cannot stop the Google block from using all 83, so the adapter has to enforce 50 for the block and 33 for reviews.
-- Coordinates lookups (Place Details Essentials) are Get Place calls too, so they eat into the same 83. Run the monthly coordinates refresh in small batches, or raise the cap for that day.
+- Coordinates lookups (Place Details Essentials) are Get Place calls too, so they eat into the same 83. The adapter caps them at 10 a day, and the coordinates refresh runs daily in batches of at most 7, leaving 3 for new Listed Providers. Those 10 come out of the 83 that the Google block and Google Reviews could otherwise use up between them, so on a day both hit their own caps, Google refuses the last few with a 429 and the page shows its fallback.
 - Moderation's lookup of Google's live name (Place Details, `displayName` only, one per Testimony submission) is a Get Place call too. The web adapter caps it at 15 a day (`MODERATION_NAME_DAILY_CAP`); past that, or when Google's 83 runs out first, Moderation checks rule R6 and the Proof of Visit against the typed name alone.
 
 ## Platform facts (checked 17 October 2026 via the Cloud Quotas API)
@@ -100,6 +100,7 @@ infra/gcp/smoke.sh           # on its own at any time
 | Artifact Registry | `asia-southeast2-docker.pkg.dev/findyourdent/findyourdent/{web,agent}:<commit>` |
 | `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS`, `RATE_LIMIT_SALT` from Secret Manager; public Firebase web config and reCAPTCHA site key looked up at deploy; `TRUST_PROXY_HOPS=2` |
 | `fyd-agent` | `--no-allow-unauthenticated`; `roles/run.invoker` only for `fyd-web` and the Monitoring service agent (uptime check); maximum 4 instances |
+| `coordinates-refresh` | Cloud Run Job on the web image (`node refresh-coordinates.ts`, as `fyd-web`, secret `PLACES_API_KEY`), run by the Cloud Scheduler job of the same name at 03:00 Jakarta time every day as `fyd-scheduler`. Each run refreshes at most 7 Listed Providers whose coordinates are 25 or more days old or missing, and deletes coordinates that could not be refreshed and would be older than 30 days by the next run, so each Provider comes up once a month (spec 02). At 7 a day it keeps up with about 175 Listed Providers; past that, raise `COORDINATES_DAILY_CAP` and the Get Place quota together. Run it by hand: `gcloud run jobs execute coordinates-refresh --region asia-southeast2` |
 | Warm agent instance | service-level minimum 1 from 19 October to 7 November 2026 (Jakarta time), 0 otherwise |
 | Uptime checks | `fyd-web health` (through Hosting) and `fyd-agent health` (with an identity token), `/health` every minute from three regions |
 | Alert policy | `FindYourDent demo is down`: either uptime check failing, or 5xx responses every minute, for five minutes; email to the `admin-emails` allowlist |
