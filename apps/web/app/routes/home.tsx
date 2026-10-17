@@ -142,6 +142,8 @@ export default function Home({ actionData, loaderData }: Route.ComponentProps) {
   const navigation = useNavigation();
   // Fetching the App Check token counts as pending too, so a second tap cannot send a second request.
   const [preparing, setPreparing] = useState(false);
+  // A typed submit mid-recording would race the voice note, so it waits.
+  const [recording, setRecording] = useState(false);
   const pending = preparing || (navigation.state === "submitting" && navigation.formAction === "/?index");
   const submit = useSubmit();
   const firebase = useFirebaseConfig();
@@ -212,10 +214,15 @@ export default function Home({ actionData, loaderData }: Route.ComponentProps) {
             {t("home.complaintHint")}
           </p>
         </div>
-        <Button type="submit" size="lg" disabled={pending || !hydrated} className="w-full sm:w-auto sm:self-start">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={pending || recording || !hydrated}
+          className="w-full sm:w-auto sm:self-start"
+        >
           {pending ? t("home.submitting") : t("home.submit")}
         </Button>
-        <VoiceRecorder disabled={pending || !hydrated} onRecorded={onRecorded} />
+        <VoiceRecorder disabled={pending || !hydrated} onRecorded={onRecorded} onRecordingChange={setRecording} />
 
         <div aria-live="polite" className="flex flex-col gap-3">
           {actionData?.error && (

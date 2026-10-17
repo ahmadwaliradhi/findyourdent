@@ -33,7 +33,16 @@ function MicIcon() {
  * never stored. Hidden where the browser cannot record, so the typed complaint
  * stays the way in.
  */
-export function VoiceRecorder({ disabled, onRecorded }: { disabled: boolean; onRecorded: (audio: Blob) => void }) {
+export function VoiceRecorder({
+  disabled,
+  onRecorded,
+  onRecordingChange,
+}: {
+  disabled: boolean;
+  onRecorded: (audio: Blob) => void;
+  /** Lets the page hold its typed submit while a voice note is being recorded. */
+  onRecordingChange: (recording: boolean) => void;
+}) {
   const { t } = useTranslation();
   const [supported, setSupported] = useState(false);
   const [state, setState] = useState<RecorderState>("idle");
@@ -41,6 +50,7 @@ export function VoiceRecorder({ disabled, onRecorded }: { disabled: boolean; onR
   const recorder = useRef<MediaRecorder | null>(null);
   const cancelled = useRef(false);
   const statusId = useId();
+  const recordButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setSupported(typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia));
@@ -60,6 +70,9 @@ export function VoiceRecorder({ disabled, onRecorded }: { disabled: boolean; onR
   useEffect(() => {
     if (state === "recording" && elapsed >= MAX_RECORDING_SECONDS) recorder.current?.stop();
   }, [state, elapsed]);
+
+  const recording = state === "recording";
+  useEffect(() => onRecordingChange(recording), [recording, onRecordingChange]);
 
   if (!supported) return null;
 
@@ -103,14 +116,16 @@ export function VoiceRecorder({ disabled, onRecorded }: { disabled: boolean; onR
   const stop = (cancel: boolean) => {
     cancelled.current = cancel;
     recorder.current?.stop();
+    // The cancel button goes away with the recording; keep keyboard focus on the page.
+    if (cancel) recordButton.current?.focus();
   };
 
-  const recording = state === "recording";
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground">{t("home.voiceOr")}</p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
+          ref={recordButton}
           type="button"
           size="lg"
           variant={recording ? "destructive" : "secondary"}
