@@ -187,3 +187,18 @@ describe("HTTP agent adapter for Moderation", () => {
     });
   });
 });
+
+describe("HTTP agent adapter for Price List extraction", () => {
+  it("posts the documents to the agent's extraction endpoint and returns its body for validation", async () => {
+    const agent = fakeAgent();
+    const adapter = createHttpAgentAdapter({ baseUrl: "https://agent.example/", fetch: agent.fetch });
+
+    await adapter.requestPriceListExtraction(
+      { pdf: { mimeType: "application/pdf", dataBase64: "JVBERi0=" } },
+      { requestId: "price-list-request" },
+    );
+
+    expect(agent.seen[0]?.url).toBe("https://agent.example/v1/price-list-extraction");
+    expect(agent.seen[0]?.headers.get("x-request-id")).toBe("price-list-request");
+  });
+});

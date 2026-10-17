@@ -9,12 +9,10 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
-import { APP_CHECK_HEADER } from "~/lib/app-check";
 import {
   CLAIM_CHECK_WORKING_DAYS,
   CLAIM_FIELDS,
   CLAIM_ROLES,
-  type ClaimApiError,
   type ClaimSubmission,
   OWNER_LIMITS,
   type OwnerContentResponse,
@@ -22,9 +20,9 @@ import {
   PERMIT_MIME_TYPES,
   PROVIDER_TYPES,
 } from "~/lib/claims";
-import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
+import { sendOwnerRequest as send } from "~/lib/owner-request";
 import { providerPath } from "~/lib/paths";
 import { PROVINCES, regenciesOf } from "~/lib/regions";
 import { SITE_NAME } from "~/lib/seo";
@@ -47,31 +45,6 @@ export function meta({ matches }: Route.MetaArgs) {
   const language: Language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
   return [{ title: `${t("claim.title")} | ${SITE_NAME}` }, { name: "robots", content: "noindex" }];
-}
-
-/** POST helper: the App Check token rides along on every owner write. */
-async function send(
-  firebase: ReturnType<typeof useFirebaseConfig>,
-  url: string,
-  body: FormData | object,
-): Promise<{ ok: true; body: unknown } | { ok: false; message: string | null }> {
-  try {
-    const token = await getAppCheckToken(firebase);
-    const json = !(body instanceof FormData);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        ...(json ? { "content-type": "application/json" } : {}),
-        ...(token ? { [APP_CHECK_HEADER]: token } : {}),
-      },
-      body: json ? JSON.stringify(body) : body,
-    });
-    const parsed: unknown = await response.json().catch(() => null);
-    if (response.ok) return { ok: true, body: parsed };
-    return { ok: false, message: (parsed as ClaimApiError | null)?.message ?? null };
-  } catch {
-    return { ok: false, message: null };
-  }
 }
 
 export default function ClaimPage({ loaderData }: Route.ComponentProps) {
@@ -364,6 +337,12 @@ function OwnerTools({ page }: { page: ClaimPageData }) {
   return (
     <div className="flex flex-col gap-8">
       <p className="text-sm text-muted-foreground">{t("claim.ownerIntro")}</p>
+      <section className="flex flex-col items-start gap-2 rounded-md border px-4 py-3">
+        <p className="text-sm text-muted-foreground">{t("priceList.intro")}</p>
+        <Button asChild size="sm">
+          <Link to={`${providerPath(page.placeId)}/daftar-harga`}>{t("claim.priceListCta")}</Link>
+        </Button>
+      </section>
       <OwnerFactsForm placeId={page.placeId} owner={owner} />
       <section aria-labelledby="replies-title" className="flex flex-col gap-3">
         <h2 id="replies-title" className="text-lg font-semibold">

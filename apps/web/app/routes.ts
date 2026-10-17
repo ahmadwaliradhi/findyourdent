@@ -33,6 +33,7 @@ export default [
   route("direktori", "routes/direktori.tsx"),
   route("tempat/:placeId", "routes/tempat.$placeId.tsx"),
   route("tempat/:placeId/klaim", "routes/tempat.$placeId.klaim.tsx"),
+  route("tempat/:placeId/daftar-harga", "routes/tempat.$placeId.daftar-harga.tsx"),
   route("dampak", "routes/dampak.ts"),
   route("sitemap.xml", "routes/sitemap.xml.ts"),
   route("ceritakan", "routes/ceritakan.tsx"),

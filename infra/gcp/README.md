@@ -18,7 +18,7 @@ ADMIN_EMAILS="a@example.com,b@example.com" infra/gcp/setup.sh
 | Billing account | `019521-D61E16-A0C8A3` (billed in IDR) |
 | Region | `asia-southeast2` (Jakarta) |
 | Firestore | `(default)`, Native mode, Jakarta |
-| Bucket | `gs://findyourdent-uploads`, uniform access, public access prevented |
+| Bucket | `gs://findyourdent-uploads`, uniform access, public access prevented; lifecycle rule deletes `priceLists/` objects 30 days after upload (Price List originals, spec 05) |
 | Firebase web app | `1:1001413011907:web:d59beb8fb53f70f21d3576` |
 | reCAPTCHA Enterprise site key (App Check) | `6LeFCfMtAAAAACLP7NiG2xaEClvTnRY5qqTPFdxC` (score-based; public by design) |
 | Service accounts | `fyd-web@findyourdent.iam.gserviceaccount.com`, `fyd-agent@findyourdent.iam.gserviceaccount.com` |
@@ -51,7 +51,9 @@ The agent service (`services/agent/src/findyourdent_agent/config.py`) reads thes
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global` | Gemini on Vertex AI, global endpoint (ADR-0003) |
 | `AGENT_SEARCH_SERVING_CONFIG` | Serving config Guidance searches for grounding (T06): `projects/findyourdent/locations/global/collections/default_collection/engines/findyourdent-guidance/servingConfigs/default_search`. Searched through the Discovery Engine v1 REST API as `fyd-agent`, which holds `roles/discoveryengine.user` (includes `servingConfigs.search`) |
 | `AGENT_SEARCH_MAX_RESULTS` | Source documents per Guidance, default 5 |
-| `GEMINI_ADAPTER=fake` | Local development without credentials: canned Guidance and no Agent Search call |
+| `EXTRACTION_MODEL` | Price List extraction model, default `gemini-3.5-flash-lite`; switch to `gemini-3.8-flash` if extraction quality is poor (spec 05) |
+| `EXTRACTION_MAX_OUTPUT_TOKENS`, `EXTRACTION_TIMEOUT_SECONDS` | Price List extraction caps, default 16384 tokens and 60 s; on timeout the owner gets a retry message |
+| `GEMINI_ADAPTER=fake` | Local development without credentials: canned Guidance, Shortlist reasons and Price List rows, and no Agent Search call |
 
 If the search fails (5 s timeout, auth, HTTP error) or finds nothing, Guidance uses the curated knowledge files and the request log line says `"grounding": "curated"` (with a warning naming only the error class); otherwise `"grounding": "agent_search"`.
 

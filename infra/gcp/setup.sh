@@ -141,6 +141,15 @@ else
   gcloud storage buckets create "gs://${BUCKET}" --project "$PROJECT_ID" \
     --location="$REGION" --uniform-bucket-level-access --public-access-prevention
 fi
+# Price List originals are kept 30 days for disputes, then deleted (spec 05). The rule
+# is written whole on every run, so it converges. Lifecycle `age` counts days since the
+# object was created, and Cloud Storage acts on it asynchronously, usually within a day
+# (cloud.google.com/storage/docs/lifecycle, checked 17 October 2026).
+log "Bucket lifecycle (priceLists/ originals, 30 days)"
+LIFECYCLE_FILE="$(mktemp)"
+trap 'rm -f "$LIFECYCLE_FILE"' EXIT
+jq -n '{rule: [{action: {type: "Delete"}, condition: {age: 30, matchesPrefix: ["priceLists/"]}}]}' >"$LIFECYCLE_FILE"
+gcloud storage buckets update "gs://${BUCKET}" --project "$PROJECT_ID" --lifecycle-file="$LIFECYCLE_FILE"
 
 # 4. Firebase ------------------------------------------------------------------
 FB="https://firebase.googleapis.com/v1beta1"

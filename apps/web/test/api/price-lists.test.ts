@@ -333,3 +333,29 @@ describe("Price List on the Provider page", () => {
     expect(await page(owner.placeId)).not.toContain("Daftar harga dari pemilik");
   });
 });
+
+describe("The owner's Price List page", () => {
+  const ownerPage = async (placeId: string, cookie?: string) =>
+    (
+      await fetch(new URL(`/tempat/${placeId}/daftar-harga`, server.baseUrl), { headers: cookie ? { cookie } : {} })
+    ).text();
+
+  it("offers the upload to the approved claimant only", async () => {
+    const { placeId, cookie } = await claimedProvider();
+    const other = await server.signInWithGoogle("bukan.pemilik@example.com");
+
+    expect(await ownerPage(placeId, cookie)).toContain("Baca daftar harga");
+    const refused = await ownerPage(placeId, other);
+    expect(refused).toContain("Hanya pemilik yang klaimnya sudah disetujui");
+    expect(refused).not.toContain("Baca daftar harga");
+    expect(await ownerPage(placeId)).toContain("Masuk dengan Google untuk mengunggah daftar harga");
+  });
+
+  it("is linked from the claimant's Claim page", async () => {
+    const { placeId, cookie } = await claimedProvider();
+    const claimPage = await (
+      await fetch(new URL(`/tempat/${placeId}/klaim`, server.baseUrl), { headers: { cookie } })
+    ).text();
+    expect(claimPage).toContain(`/tempat/${placeId}/daftar-harga`);
+  });
+});

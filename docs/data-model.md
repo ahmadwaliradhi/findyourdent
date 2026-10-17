@@ -64,7 +64,9 @@ Queries: `placeId` + `status in [submitted, approved]` (one active Claim), `stat
 
 ### `priceLists`
 
-Owner-confirmed price lists (spec 05). Only confirmed rows are stored (`procedureCode` when it maps to the shared list, `procedureText`, `minRupiah`, `maxRupiah`, `unit`, `notes`), with `source: "ownerPriceList"` (shown as "Daftar harga dari pemilik"), `uploadedAt` and `confirmedAt`. A new confirmed list sets the previous one to `replaced`. The original document is kept privately for 30 days (`originalDeleteAfter`), then deleted. Type `PriceListDoc`.
+Owner-confirmed price lists (spec 05). An upload by the approved claimant is stored as a `draft` with no rows (the rows Gemini read go back to the owner only); confirming stores exactly the rows the owner confirmed (`procedureCode` when it maps to the shared list, `procedureText`, `minRupiah`, `maxRupiah`, `unit`, `notes`), sets `status: "current"` and `confirmedAt`, and sets the place's previous current list to `replaced` in the same transaction. Every list carries `source: "ownerPriceList"` (shown as "Daftar harga dari pemilik"), `uploadedAt` and the `claimId` it was uploaded under; it is shown only while that Claim is the place's current one. Lists confirmed more than 12 months ago show "mungkin sudah berubah". The originals (`originalDocumentPaths`: `priceLists/{priceListId}/original-*`, one PDF or up to five photos stripped of metadata) are kept privately for 30 days (`originalDeleteAfter`), then deleted by the uploads bucket's lifecycle rule (infra/gcp/setup.sh). A failed extraction stores nothing. Type `PriceListDoc`.
+
+Queries: `placeId` + `status` (the current list of a place; `in` on `placeId` for the Shortlist).
 
 ### `moderationDecisions`
 

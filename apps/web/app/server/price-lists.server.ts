@@ -335,3 +335,42 @@ export function publicPriceList(list: ConfirmedPriceList, now: Date = new Date()
     possiblyOutdated: isPossiblyOutdated(list.confirmedAt.toDate(), now),
   };
 }
+
+// The owner's page --------------------------------------------------------------------
+
+export interface PriceListPageData {
+  placeId: string;
+  providerName: string | null;
+  signedIn: boolean;
+  /** Only the approved claimant may upload. */
+  owner: boolean;
+  /** `YYYY-MM-DD` of the list on show, which a new confirmation replaces. */
+  currentConfirmedAt: string | null;
+}
+
+export async function loadPriceListPage(
+  context: AppLoadContext,
+  request: Request,
+  placeId: string,
+): Promise<PriceListPageData> {
+  const { firestore } = context;
+  const user = await readSession(context.auth, request.headers.get("cookie"));
+  const base: PriceListPageData = {
+    placeId,
+    providerName: null,
+    signedIn: Boolean(user),
+    owner: false,
+    currentConfirmedAt: null,
+  };
+  if (!firestore || !user) return base;
+  const owned = await approvedClaimOf(firestore, placeId, user.uid);
+  if (!owned) return base;
+  const provider = owned.provider.data() as ProviderDoc;
+  const current = (await currentPriceLists(firestore, [provider])).get(placeId);
+  return {
+    ...base,
+    providerName: provider.name,
+    owner: true,
+    currentConfirmedAt: current ? jakartaDate(current.confirmedAt.toMillis()) : null,
+  };
+}
