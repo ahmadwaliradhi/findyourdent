@@ -43,6 +43,8 @@ class GoogleGeminiAdapter:
 
     settings: Settings
     _client: genai.Client | None = field(default=None, repr=False)
+    # The exact model version of the last answer, for the Moderation evaluation results.
+    last_model_version: str | None = field(default=None, repr=False)
 
     def _vertex_client(self) -> genai.Client:
         # Built on first use so the service starts without credentials (tests, local dev).
@@ -86,6 +88,7 @@ class GoogleGeminiAdapter:
             raise ModelUnavailableError(f"gemini {error.code}") from None
         except (httpx.HTTPError, TimeoutError) as error:
             raise ModelUnavailableError(f"gemini {type(error).__name__}") from None
+        self.last_model_version = response.model_version
         try:
             parsed = json.loads(response.text or "")
         except json.JSONDecodeError:

@@ -26,7 +26,7 @@ class _Models:
 
     async def generate_content(self, **request: Any) -> Any:
         self.requests.append(request)
-        return SimpleNamespace(text='{"ok": true}', candidates=[])
+        return SimpleNamespace(text='{"ok": true}', candidates=[], model_version="test-model")
 
 
 def test_the_adapter_sends_no_temperature_to_gemini() -> None:
