@@ -354,7 +354,7 @@ export const IMPACT_COUNTERS = {
   verifiedVisits: "impact.verifiedVisits",
 } as const;
 
-export type PlacesMethod = "shortlistSearch" | "providerGoogleBlock" | "googleReviews" | "coordinates";
+export type PlacesMethod = "shortlistSearch" | "providerGoogleBlock" | "googleReviews" | "coordinates" | "autocomplete";
 
 /** Daily paid-API usage counter id, e.g. `quota.places.shortlistSearch.2026-10-20` (Asia/Jakarta date). */
 export function dailyQuotaCounterId(api: "places" | "gemini", method: string, jakartaDate: string): string {

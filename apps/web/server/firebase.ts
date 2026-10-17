@@ -1,11 +1,17 @@
 import { type App, getApps, initializeApp } from "firebase-admin/app";
 import { type Auth, getAuth } from "firebase-admin/auth";
 import { type Firestore, getFirestore } from "firebase-admin/firestore";
+import { getStorage, type Storage } from "firebase-admin/storage";
+
+/** A Cloud Storage bucket handle (firebase-admin does not export the class type itself). */
+export type Bucket = ReturnType<Storage["bucket"]>;
 
 export interface FirebaseHandles {
   app: App;
   firestore: Firestore;
   auth: Auth;
+  /** The private uploads bucket; UPLOADS_BUCKET, else `<project>-uploads` (infra/gcp/setup.sh). */
+  uploads: Bucket;
   projectId: string;
 }
 
@@ -21,5 +27,6 @@ export function initFirebaseAdmin(env: NodeJS.ProcessEnv = process.env): Firebas
 
   const projectId = env.GCLOUD_PROJECT ?? env.GOOGLE_CLOUD_PROJECT ?? "demo-findyourdent";
   const app = getApps().find((a) => a.name === "[DEFAULT]") ?? initializeApp({ projectId });
-  return { app, firestore: getFirestore(app), auth: getAuth(app), projectId };
+  const uploads = getStorage(app).bucket(env.UPLOADS_BUCKET || `${projectId}-uploads`);
+  return { app, firestore: getFirestore(app), auth: getAuth(app), uploads, projectId };
 }

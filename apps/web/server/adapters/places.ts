@@ -81,8 +81,44 @@ export type PlaceDetailsFailure = { ok: false; reason: "cap_reached" | "not_foun
 export type GoogleBlockResult = { ok: true; block: GoogleBlock } | PlaceDetailsFailure;
 export type GoogleReviewsResult = { ok: true; reviews: GoogleReview[] } | PlaceDetailsFailure;
 
+/** One Autocomplete (New) request from the Testimony Provider picker (spec 03). */
+export interface AutocompleteRequest {
+  input: string;
+  /** Opaque Autocomplete session token from the browser, one per pick. */
+  sessionToken: string;
+  /** Only when the Patient shared their location. */
+  locationBias?: { center: LatLng; radiusMeters: number };
+  language: Language;
+}
+
+/**
+ * One suggestion. `mainText` and `secondaryText` are Google's words: shown live in
+ * the suggestion list only, never stored or sent back as a name to keep.
+ */
+export interface AutocompleteSuggestion {
+  placeId: string;
+  mainText: string;
+  secondaryText?: string;
+}
+
+export type AutocompleteResult =
+  | { ok: true; suggestions: AutocompleteSuggestion[] }
+  | { ok: false; reason: "cap_reached" | "unavailable" };
+
+export type CoordinatesResult = { ok: true; location: LatLng } | PlaceDetailsFailure;
+
 export interface PlacesAdapter {
   searchText(search: TextSearch): Promise<TextSearchResult>;
+  /**
+   * Places Autocomplete (New), restricted to Indonesia and dentist and hospital types.
+   * Counted against the `autocomplete` daily cap. No Place Details call follows a pick.
+   */
+  autocomplete(request: AutocompleteRequest): Promise<AutocompleteResult>;
+  /**
+   * Place Details, Essentials tier (`location` only): coordinates for a new Listed
+   * Provider. Counted against the `coordinates` daily cap.
+   */
+  getCoordinates(placeId: string): Promise<CoordinatesResult>;
   /** Place Details, Enterprise tier: one call per Provider page view, asked for by the browser. */
   getGoogleBlock(request: PlaceDetailsRequest): Promise<GoogleBlockResult>;
   /** Place Details with only the reviews field: only when the Patient taps "Lihat ulasan Google". */
@@ -336,6 +372,15 @@ export function createGooglePlacesAdapter(options: GooglePlacesAdapterOptions): 
     async getGoogleReviews(request) {
       const result = await placeDetails("googleReviews", GOOGLE_REVIEWS_DAILY_CAP, GOOGLE_REVIEWS_FIELD_MASK, request);
       return result.ok ? { ok: true, reviews: (result.place.reviews ?? []).map(toReview) } : result;
+    },
+
+    // TODO(T11 picker): real Autocomplete (New) and Essentials coordinates calls.
+    async autocomplete() {
+      return { ok: false, reason: "unavailable" };
+    },
+
+    async getCoordinates() {
+      return { ok: false, reason: "unavailable" };
     },
   };
 }
