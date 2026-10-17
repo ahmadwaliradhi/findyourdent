@@ -78,6 +78,21 @@ test("going back from a Provider page keeps the Guidance and the Shortlist, with
   await expect(page.getByText("Klinik Gigi Senyum Contoh")).toBeVisible();
   await expect(page.getByText("drg. Ani Contoh")).toBeVisible();
   expect(searches).toHaveLength(1);
+  // Kept in memory only: nothing from Google lands in browser storage or history state.
+  const stored = await page.evaluate(() =>
+    JSON.stringify([{ ...sessionStorage }, { ...localStorage }, window.history.state]),
+  );
+  expect(stored).not.toContain("Contoh");
+});
+
+test("a new complaint does not bring back the previous Shortlist", async ({ page }) => {
+  await guidanceAndShortlist(page);
+
+  await page.getByLabel("Ceritakan keluhan gigi Anda").fill("Gusi berdarah saat sikat gigi");
+  await page.getByRole("button", { name: "Lihat panduan" }).click();
+
+  await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toBeVisible();
+  await expect(page.getByText("Klinik Gigi Senyum Contoh")).toHaveCount(0);
 });
 
 test("Shortlist cards offer Google Reviews in place", async ({ page }) => {

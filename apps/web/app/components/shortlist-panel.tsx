@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation as useRouterLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -36,11 +36,20 @@ export function ShortlistPanel(
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   const firebase = useFirebaseConfig();
   // Back from a Provider page shows the same results again, with no second Text Search.
-  const { key: entryKey } = useRouterLocation();
+  // Each Guidance submit is a new history entry, so a panel still mounted from the
+  // last one starts over from whatever the new entry remembers (nothing, at first).
+  const { key: entryKey } = useLocation();
   const slot = `shortlist:${props.purpose}:${props.guidanceToken ?? ""}`;
-  const [state, setState] = useState<State>(() => recallEntry<State>(entryKey, slot) ?? { phase: "closed" });
+  const recalled = () => recallEntry<State>(entryKey, slot) ?? { phase: "closed" };
+  const [state, setState] = useState<State>(recalled);
+  const [stateEntry, setStateEntry] = useState(entryKey);
+  if (stateEntry !== entryKey) {
+    setStateEntry(entryKey);
+    setState(recalled());
+  }
   useEffect(() => {
-    if (state.phase === "done") rememberEntry(entryKey, slot, state);
+    // Settled states only: a closed panel stays closed on Back, and results replace older ones.
+    if (state.phase === "done" || state.phase === "closed") rememberEntry(entryKey, slot, state);
   }, [entryKey, slot, state]);
   const [area, setArea] = useState("");
   const areaId = useId();
@@ -62,7 +71,7 @@ export function ShortlistPanel(
     }
   };
 
-  const useLocation = () => {
+  const shareLocation = () => {
     if (!("geolocation" in navigator)) {
       setState({ phase: "asking", locationDenied: true });
       return;
@@ -106,7 +115,7 @@ export function ShortlistPanel(
     <section className="flex flex-col gap-3" aria-busy={busy} data-testid="shortlist">
       <h3 className="font-semibold">{emergency ? t("shortlist.emergencyTitle") : t("shortlist.title")}</h3>
       <div className="flex flex-col gap-2">
-        <Button type="button" onClick={useLocation} disabled={busy} className="w-full sm:w-auto sm:self-start">
+        <Button type="button" onClick={shareLocation} disabled={busy} className="w-full sm:w-auto sm:self-start">
           {state.phase === "locating" ? t("shortlist.locating") : t("shortlist.useLocation")}
         </Button>
         {state.phase === "asking" && state.locationDenied && (

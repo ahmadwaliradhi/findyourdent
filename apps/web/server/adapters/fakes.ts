@@ -168,7 +168,7 @@ export function createFakeAppCheckVerifier(): FakeAppCheckVerifier {
 }
 
 /** Sample places for local runs and the browser tests (PLACES_ADAPTER=fake). Made up, not Google data. */
-export const SAMPLE_PLACES: PlaceSummary[] = [
+const SAMPLE_PLACES: PlaceSummary[] = [
   {
     placeId: "sample-klinik-senyum",
     displayName: "Klinik Gigi Senyum Contoh",
@@ -201,7 +201,7 @@ const SAMPLE_REVIEWS: GoogleReview[] = [
  * block and one review. Any other place id answers like a used-up daily cap, so the
  * fallback can be seen too.
  */
-export function createSamplePlacesAdapter(): PlacesAdapter {
+export function createFakeSamplePlacesAdapter(): PlacesAdapter {
   const known = new Map(SAMPLE_PLACES.map((place) => [place.placeId, place]));
   return {
     async searchText() {

@@ -13,7 +13,7 @@ import {
   createFakeAgentAdapter,
   createFakeGeminiAdapter,
   createFakePlacesAdapter,
-  createSamplePlacesAdapter,
+  createFakeSamplePlacesAdapter,
 } from "./adapters/fakes.ts";
 import type { GeminiAdapter } from "./adapters/gemini.ts";
 import { createGooglePlacesAdapter, type PlacesAdapter } from "./adapters/places.ts";
@@ -133,7 +133,7 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
  * instance shares them.
  */
 function placesAdapter(env: NodeJS.ProcessEnv, firestore: Firestore | null): PlacesAdapter {
-  if (env.PLACES_ADAPTER === "fake") return createSamplePlacesAdapter();
+  if (env.PLACES_ADAPTER === "fake") return createFakeSamplePlacesAdapter();
   if (!env.PLACES_API_KEY) return createFakePlacesAdapter();
   const quota = firestore ? createFirestoreDailyQuota(firestore) : createMemoryDailyQuota();
   return createGooglePlacesAdapter({ apiKey: env.PLACES_API_KEY, quota });
