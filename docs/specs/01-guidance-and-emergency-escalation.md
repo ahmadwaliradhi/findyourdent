@@ -10,7 +10,7 @@ cut_order: never cut, except voice input (last in the cut order)
 
 ## Problem Statement
 
-A Patient with a toothache does not know how urgent it is, what it probably is, whether it takes one visit or many, why one clinic quotes Rp 300 ribu and another Rp 3 juta, or whether BPJS Kesehatan pays (problem A2). Survei Kesehatan Indonesia 2023 found 56.9% of Indonesians aged 3 and over had a dental or oral problem in the past year, but only 11.2% of them were treated by dental staff, and 57.0% of those who did not seek care said they felt no need. People wait until pain decides for them, and a few of them are in danger: a spreading dental infection with facial swelling and fever, or difficulty swallowing, breathing or opening the mouth, needs an emergency department today, not a dentist next week.
+A Patient with a toothache does not know how urgent it is, what it probably is, whether it takes one visit or many, why one clinic quotes Rp 300 ribu and another Rp 3 juta, or whether BPJS Kesehatan pays (problem A2). Survei Kesehatan Indonesia 2023 found 56.9% of Indonesians aged 3 and over had a dental or oral problem in the past year, but only 11.2% of them were treated by dental health workers, and 57.0% of people not treated by one said they felt no need (verified in `docs/research/ski-2023-oral-health-2026-10-17.md`). People wait until pain decides for them, and a few of them are in danger: a spreading dental infection with facial swelling and fever, or difficulty swallowing, breathing or opening the mouth, needs an emergency department today, not a dentist next week.
 
 ## Solution
 
@@ -96,4 +96,4 @@ The Patient describes the problem in their own words, typed or as a voice note, 
 
 - ElevenLabs as an alternative for voice input (requested by the product owner; make this its own ticket). Evaluate ElevenLabs speech-to-text against Gemini native audio on a few Indonesian voice notes. Before choosing it, record these trade-offs: the hackathon requires the Google Cloud stack and scores "Google Cloud architectural depth" and a "Best use of Google Cloud AI tools" award, so a third-party speech API weakens both; Patient voice notes are health-related personal data and would be transferred to another processor outside Indonesia, which needs disclosure and a lawful basis under UU 27/2022; and it adds a vendor key and cost. Gemini native audio stays the default unless the evaluation shows clearly better Indonesian transcription.
 - Facts behind the BPJS answers: docs/research/facts-2026-10-16.md.
-- The SKI 2023 figures in the Problem Statement must be checked against SKI 2023 Dalam Angka, Bab 9 (Tabel 9.7 for the reasons) before they appear in the deck or video.
+- The SKI 2023 figures in the Problem Statement were checked on 17 Oct 2026 (H03): 56.9% from Dalam Angka Tabel 9.5 (p. 324), 57.0% from Tabel 9.7 (p. 327), and 11.2% from the BKPK factsheet only. Citations and caveats: docs/research/ski-2023-oral-health-2026-10-17.md.
