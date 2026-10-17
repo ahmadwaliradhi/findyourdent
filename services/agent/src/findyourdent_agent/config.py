@@ -16,6 +16,9 @@ class Settings:
     shortlist_model: str = "gemini-3.8-flash"
     moderation_model: str = "gemini-3.5-flash-lite"
     extraction_model: str = "gemini-3.5-flash-lite"
+    moderation_timeout_seconds: float = 20.0
+    # Below this, a Testimony with no rule hit is held instead of published (ADR-0004).
+    moderation_publish_confidence: float = 0.8
     google_cloud_project: str | None = None
     # ADR-0003: Gemini runs on the global endpoint; stored data stays in asia-southeast2.
     google_cloud_location: str = "global"
@@ -29,6 +32,14 @@ class Settings:
             shortlist_model=os.environ.get("SHORTLIST_MODEL", defaults.shortlist_model),
             moderation_model=os.environ.get("MODERATION_MODEL", defaults.moderation_model),
             extraction_model=os.environ.get("EXTRACTION_MODEL", defaults.extraction_model),
+            moderation_timeout_seconds=float(
+                os.environ.get("MODERATION_TIMEOUT_SECONDS", defaults.moderation_timeout_seconds)
+            ),
+            moderation_publish_confidence=float(
+                os.environ.get(
+                    "MODERATION_PUBLISH_CONFIDENCE", defaults.moderation_publish_confidence
+                )
+            ),
             google_cloud_project=os.environ.get("GOOGLE_CLOUD_PROJECT") or None,
             google_cloud_location=os.environ.get(
                 "GOOGLE_CLOUD_LOCATION", defaults.google_cloud_location

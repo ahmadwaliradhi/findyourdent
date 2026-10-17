@@ -17,6 +17,7 @@ class GeminiAdapter(Protocol):
         instruction: str,
         contents: list[Any],
         response_schema: dict[str, Any],
+        temperature: float,
     ) -> dict[str, Any]: ...
 
 
