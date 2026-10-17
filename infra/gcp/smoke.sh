@@ -3,6 +3,7 @@
 # on its own:
 #
 #   infra/gcp/smoke.sh                          # against https://findyourdent.web.app
+#   BASE_URL=https://findyourdent.com infra/gcp/smoke.sh
 #   BASE_URL=https://<web>.run.app infra/gcp/smoke.sh
 #
 # Checks the landing page, the language toggle, both health routes, that the agent
