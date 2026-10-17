@@ -466,24 +466,230 @@ def test_attachment_that_is_not_base64_is_refused(
     assert fake_gemini.calls == []
 
 
-def test_provider_reply_is_screened_by_the_same_rules(
+REPLY_TEXT = "Terima kasih atas masukannya, kami akan memperbaiki waktu tunggu."
+
+
+def a_reply(text: str = REPLY_TEXT, **extra: Any) -> dict[str, Any]:
+    return a_testimony(text, subjectType="reply", **extra)
+
+
+def test_provider_reply_with_a_fixable_rule_is_held(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
+    # A Provider reply never goes back for authorFix: any hit is held for an admin (spec 05).
     phone = {"text": "0812-0000-0000", "ruleCode": "r1_personal_data"}
     fake_gemini.outputs.append(model_output(flaggedSpans=[phone]))
 
-    decision = screen(client, a_testimony("Silakan hubungi 0812-0000-0000.", subjectType="reply"))
-
-    assert decision["decision"] == "authorFix"
-
-
-def test_provider_facts_are_held_until_their_rule_set_exists(
-    client: TestClient, fake_gemini: FakeGeminiAdapter
-) -> None:
-    decision = screen(client, a_testimony("Buka 08.00-20.00", subjectType="providerFacts"))
+    decision = screen(client, a_reply("Silakan hubungi 0812-0000-0000."))
 
     assert decision["decision"] == "hold"
-    assert fake_gemini.calls == []
+    assert decision["ruleCodes"] == ["r1_personal_data"]
+    assert [s["text"] for s in decision["flaggedSpans"]] == ["0812-0000-0000"]
+    assert "Balasan" in decision["authorMessage"]
+
+
+def test_promotional_reply_is_held(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
+    text = "Klinik kami yang terbaik di Bandung, diskon 20% bulan ini!"
+    fake_gemini.outputs.append(
+        model_output(
+            ruleCodes=["promotional_wording"],
+            flaggedSpans=[
+                {"text": "yang terbaik di Bandung", "ruleCode": "promotional_wording"},
+                {"text": "diskon 20% bulan ini", "ruleCode": "promotional_wording"},
+            ],
+        )
+    )
+
+    decision = screen(client, a_reply(text))
+
+    assert decision["decision"] == "hold"
+    assert decision["ruleCodes"] == ["promotional_wording"]
+    assert [(s["start"], s["end"]) for s in decision["flaggedSpans"]] == [(12, 35), (37, 57)]
+
+
+def test_clean_reply_is_published(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
+    fake_gemini.outputs.append(model_output())
+
+    decision = screen(client, a_reply())
+
+    assert decision["decision"] == "publish"
+    assert decision["ruleCodes"] == []
+
+
+def test_reply_prompt_and_schema_add_the_promotional_rule(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.extend([model_output(), model_output()])
+
+    screen(client, a_testimony())
+    screen(client, a_reply())
+
+    testimony_call, reply_call = fake_gemini.calls
+    assert "promotional_wording" in reply_call["instruction"]
+    rule_enum = reply_call["response_schema"]["properties"]["ruleCodes"]["items"]["enum"]
+    assert "promotional_wording" in rule_enum
+    assert "r2_accusation_as_fact" in rule_enum
+    testimony_enum = testimony_call["response_schema"]["properties"]["ruleCodes"]["items"]["enum"]
+    assert "promotional_wording" not in testimony_enum
+
+
+def test_promotional_wording_on_a_testimony_is_invalid_output(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    # Testimonies have no promotional rule (advertising there is R4), so the model naming
+    # one is output outside the schema it was given.
+    fake_gemini.outputs.append(model_output(ruleCodes=["promotional_wording"]))
+
+    assert_model_error_hold(screen(client, a_testimony()))
+
+
+FACTS_TEXT = (
+    "Nama: Klinik Gigi Senyum Sehat\n"
+    "Jenis: Klinik\n"
+    "Alamat: Jl. Merdeka No. 10, Bandung\n"
+    "Telepon: 022-1234567\n"
+    "WhatsApp: 0812-1111-2222\n"
+    "Jam buka: Senin-Sabtu 08.00-20.00\n"
+    "Layanan: Tambal gigi, cabut gigi, scaling"
+)
+
+
+def provider_facts(text: str = FACTS_TEXT, **extra: Any) -> dict[str, Any]:
+    return {"subjectType": "providerFacts", "language": "id", "text": text, **extra}
+
+
+def facts_output(**overrides: Any) -> dict[str, Any]:
+    output: dict[str, Any] = {
+        "ruleCodes": [],
+        "flaggedSpans": [],
+        "confidence": 0.95,
+        "authorMessage": "Terima kasih, data praktik Anda sudah tayang.",
+    }
+    output.update(overrides)
+    return output
+
+
+def test_clean_provider_facts_are_published(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_gemini.outputs.append(facts_output())
+
+    with caplog.at_level(logging.INFO):
+        decision = screen(client, provider_facts())
+
+    assert decision["decision"] == "publish"
+    assert decision["ruleCodes"] == []
+    assert decision["flaggedSpans"] == []
+    assert [r.outcome for r in caplog.records if hasattr(r, "outcome")] == ["publish"]
+
+
+def test_promotional_provider_facts_are_held(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    text = FACTS_TEXT + "\nLayanan: Klinik termurah se-Bandung, gratis scaling"
+    fake_gemini.outputs.append(
+        facts_output(
+            ruleCodes=["promotional_wording"],
+            flaggedSpans=[
+                {"text": "Klinik termurah se-Bandung", "ruleCode": "promotional_wording"}
+            ],
+        )
+    )
+
+    with caplog.at_level(logging.INFO):
+        decision = screen(client, provider_facts(text))
+
+    assert decision["decision"] == "hold"
+    assert decision["ruleCodes"] == ["promotional_wording"]
+    (span,) = decision["flaggedSpans"]
+    assert text[span["start"] : span["end"]] == "Klinik termurah se-Bandung"
+    assert "proofOfVisit" not in decision
+    assert [r.outcome for r in caplog.records if hasattr(r, "outcome")] == ["hold"]
+
+
+@pytest.mark.parametrize(
+    ("rule", "quote"),
+    [
+        ("misleading_statement", "Satu-satunya klinik bersertifikat internasional"),
+        ("r1_personal_data", "pasien Budi Santoso, RM 00123"),
+    ],
+)
+def test_any_provider_facts_rule_is_held_never_author_fix(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, rule: str, quote: str
+) -> None:
+    text = f"{FACTS_TEXT}\nLayanan: {quote}"
+    fake_gemini.outputs.append(
+        facts_output(ruleCodes=[rule], flaggedSpans=[{"text": quote, "ruleCode": rule}])
+    )
+
+    decision = screen(client, provider_facts(text))
+
+    assert decision["decision"] == "hold"
+    assert decision["ruleCodes"] == [rule]
+    assert [s["text"] for s in decision["flaggedSpans"]] == [quote]
+    assert "Data praktik" in decision["authorMessage"]
+
+
+def test_provider_facts_model_error_holds() -> None:
+    with client_with(ExplodingGemini()) as client:
+        assert_model_error_hold(screen(client, provider_facts()))
+
+
+@pytest.mark.parametrize(
+    "bad_output",
+    [
+        {},
+        facts_output(confidence=1.4),
+        facts_output(ruleCodes=["r2_accusation_as_fact"]),  # a Testimony rule, not a facts one
+        model_output(),  # Testimony-only fields are not part of the facts output
+    ],
+)
+def test_invalid_provider_facts_output_holds(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, bad_output: dict[str, Any]
+) -> None:
+    fake_gemini.outputs.append(bad_output)
+
+    assert_model_error_hold(screen(client, provider_facts()))
+
+
+def test_low_confidence_provider_facts_are_held(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(facts_output(confidence=0.5))
+
+    decision = screen(client, provider_facts())
+
+    assert decision["decision"] == "hold"
+    assert decision["ruleCodes"] == ["low_confidence"]
+
+
+def test_provider_facts_use_their_own_rule_set(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.extend([model_output(), facts_output()])
+
+    screen(client, a_testimony())
+    screen(client, provider_facts())
+
+    testimony_call, facts_call = fake_gemini.calls
+    instruction = facts_call["instruction"]
+    assert instruction != testimony_call["instruction"]
+    for rule in ("promotional_wording", "misleading_statement", "r1_personal_data"):
+        assert rule in instruction
+    # The clinic's own phone, WhatsApp and address are expected, not personal data.
+    assert "WhatsApp" in instruction
+    assert "terbaik" in instruction
+    assert "Klinik Gigi Senyum" not in instruction
+    rule_enum = facts_call["response_schema"]["properties"]["ruleCodes"]["items"]["enum"]
+    assert "promotional_wording" in rule_enum
+    assert "misleading_statement" in rule_enum
+    assert "r2_accusation_as_fact" not in rule_enum
+    assert facts_call["model"] == "gemini-3.5-flash-lite"
+    assert facts_call["temperature"] == 0
+    submissions = [
+        json.loads(p.text) for p in facts_call["contents"] if p.text and p.text[0] == "{"
+    ]
+    assert [s["text"] for s in submissions] == [FACTS_TEXT]
 
 
 def test_author_fix_with_no_span_found_in_the_text_is_held(

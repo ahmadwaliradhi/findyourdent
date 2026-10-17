@@ -1,4 +1,4 @@
-import type { ProviderType } from "@findyourdent/contracts/firestore";
+import type { ProcedureCode, ProviderType } from "@findyourdent/contracts/firestore";
 
 // What the Provider page's two Google routes return (app/server/provider.server.ts),
 // shared with the page, plus the owner facts its loader passes through.
@@ -6,6 +6,8 @@ import type { ProviderType } from "@findyourdent/contracts/firestore";
 /** Owner-entered facts from an approved Claim, shown only once moderation published them. */
 export interface OwnerFacts {
   address?: string;
+  /** Procedure codes the owner lists. */
+  services?: ProcedureCode[];
   phone?: string;
   whatsappUri?: string;
   website?: string;

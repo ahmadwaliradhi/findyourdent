@@ -155,7 +155,10 @@
         "report": "Laporan",
         "spotCheck": "Cek acak (10%)",
         "nameCorrection": "Koreksi nama",
-        "hidden": "Testimoni disembunyikan"
+        "hidden": "Testimoni disembunyikan",
+        "claim": "Klaim halaman",
+        "ownerFacts": "Data pemilik ditahan",
+        "reply": "Balasan ditahan"
       },
       "status": {
         "submitted": "Diperiksa",
@@ -196,11 +199,31 @@
         "dismissReport": "Abaikan laporan",
         "applyNameCorrection": "Terapkan koreksi",
         "dismissNameCorrection": "Abaikan koreksi",
-        "spotCheckConfirm": "Sudah dicek, tetap tayang"
+        "spotCheckConfirm": "Sudah dicek, tetap tayang",
+        "approveClaim": "Setujui klaim",
+        "rejectClaim": "Tolak klaim",
+        "revokeClaim": "Cabut klaim",
+        "publishOwnerFacts": "Tayangkan data",
+        "rejectOwnerFacts": "Tolak data",
+        "publishReply": "Tayangkan balasan",
+        "rejectReply": "Tolak balasan"
       },
       "reasonFor": "Alasan untuk \"{{action}}\" (dicatat; penulis melihatnya kecuali saat disembunyikan)",
       "logged": "Setiap tindakan dicatat dengan nama admin, waktu dan alasan.",
-      "failed": "Tindakan gagal. Silakan coba lagi."
+      "failed": "Tindakan gagal. Silakan coba lagi.",
+      "approvedClaims": "Klaim disetujui ({{count}})",
+      "replyTo": "Membalas Testimoni:",
+      "claim": {
+        "place": "Tempat",
+        "notListed": "belum terdaftar, akan didaftarkan saat disetujui",
+        "role": "Peran",
+        "contactPhone": "Telepon pengklaim",
+        "googlePhone": "Telepon di Google",
+        "noGooglePhone": "Tidak tersedia dari Google saat ini",
+        "permit": "Dokumen",
+        "openPermit": "Buka SIP atau izin praktik",
+        "callHint": "Telepon nomor di Google (bukan nomor pengklaim) untuk memastikan pemiliknya. Dokumen dihapus begitu klaim diputuskan."
+      }
     }
   },
   "footer": {
@@ -363,7 +386,12 @@
       "empty": "Belum ada ulasan Google.",
       "unavailable": "Ulasan Google sementara tidak tersedia.",
       "rating": "{{rating}} dari 5"
-    }
+    },
+    "claimHint": "Anda pemilik atau dokter di sini?",
+    "claimCta": "Klaim halaman ini",
+    "ownerHint": "Pemilik tempat ini?",
+    "manageCta": "Kelola halaman",
+    "services": "Layanan: {{services}}"
   },
   "shortlist": {
     "reason": {
@@ -683,5 +711,90 @@
     "sent": "Terima kasih. Tim FindYourDent akan meninjau laporan ini dalam 24 jam.",
     "sentHidden": "Terima kasih. Testimoni ini disembunyikan dan akan ditinjau tim FindYourDent dalam 24 jam.",
     "failed": "Laporan belum terkirim. Silakan coba lagi."
+  },
+  "claimApi": {
+    "errors": {
+      "sign_in_required": "Masuk dengan Google dulu untuk mengklaim halaman ini.",
+      "invalid_claim": "Ada isian yang perlu diperbaiki: peran, nomor telepon, dan untuk tempat baru, nama serta wilayahnya.",
+      "invalid_file": "Unggah satu foto atau PDF SIP atau izin praktik, maksimal 10 MB.",
+      "invalid_facts": "Ada data praktik yang perlu diperbaiki. Periksa nama, jenis, wilayah, nomor telepon, dan layanan.",
+      "invalid_reply": "Tulis balasan, maksimal 2.000 karakter.",
+      "claim_exists": "Halaman ini sudah diklaim atau sedang diperiksa untuk klaim lain.",
+      "not_owner": "Hanya pemilik yang klaimnya sudah disetujui yang bisa melakukan ini.",
+      "not_found": "Halaman atau Testimoni ini tidak ditemukan.",
+      "unavailable": "Layanan klaim sedang tidak tersedia. Silakan coba lagi sebentar lagi."
+    },
+    "submitted": "Klaim Anda sudah kami terima. Tim FindYourDent memeriksa dokumen dan menelepon nomor di Google Maps dalam {{days}} hari kerja. Hasilnya muncul di halaman ini.",
+    "facts": {
+      "published": "Data praktik Anda sudah tayang.",
+      "held": "Data praktik Anda sedang ditinjau tim FindYourDent, biasanya dalam 24 jam. Sampai saat itu halaman menampilkan data sebelumnya."
+    },
+    "reply": {
+      "published": "Balasan Anda sudah tayang di bawah Testimoni.",
+      "held": "Balasan Anda sedang ditinjau tim FindYourDent, biasanya dalam 24 jam."
+    }
+  },
+  "claim": {
+    "title": "Klaim halaman ini",
+    "manageTitle": "Kelola halaman tempat praktik",
+    "back": "Kembali ke halaman tempat",
+    "intro": "Untuk dokter gigi, pemilik atau pengelola klinik. Setelah klaim disetujui, halaman ini menampilkan \"Diklaim pemilik\", dan Anda bisa memperbarui data praktik serta membalas Testimoni.",
+    "steps": {
+      "signIn": "Masuk dengan akun Google Anda.",
+      "permit": "Unggah foto atau PDF SIP atau izin praktik. Dokumen disimpan privat dan dihapus setelah keputusan.",
+      "check": "Tim FindYourDent memeriksa dokumen dan menelepon nomor yang tercantum di Google Maps untuk tempat ini, dalam {{days}} hari kerja."
+    },
+    "ethics": "Sesuai kode etik kedokteran gigi, tidak ada promosi, iklan, diskon, atau peringkat berbayar. Klaim tidak mengubah urutan di Shortlist, dan Testimoni tidak bisa dihapus atau disembunyikan oleh tempat praktik.",
+    "signIn": "Masuk dengan Google untuk mengklaim",
+    "role": "Peran Anda",
+    "roles": {
+      "owner": "Pemilik",
+      "practisingDentist": "Dokter gigi yang berpraktik di sini",
+      "manager": "Pengelola"
+    },
+    "contactPhone": "Nomor telepon Anda",
+    "contactPhoneHint": "Hanya untuk tim FindYourDent jika perlu menghubungi Anda. Tidak ditampilkan.",
+    "permit": "SIP atau izin praktik",
+    "permitHint": "Satu foto (JPG, PNG, WebP) atau PDF, maksimal 10 MB.",
+    "submit": "Kirim klaim",
+    "sending": "Mengirim…",
+    "failed": "Gagal mengirim. Periksa koneksi lalu coba lagi.",
+    "choose": "Pilih",
+    "status": {
+      "submitted": "Klaim Anda sedang diperiksa. Tim FindYourDent memeriksa dokumen dan menelepon nomor di Google Maps dalam {{days}} hari kerja. Hasilnya muncul di halaman ini.",
+      "rejected": "Klaim sebelumnya ditolak: {{reason}}. Anda bisa mengirim klaim baru dengan dokumen yang sesuai.",
+      "revoked": "Klaim sebelumnya dicabut tim FindYourDent. Hubungi kami jika ini keliru, atau kirim klaim baru.",
+      "claimedByOther": "Halaman ini sudah diklaim atau sedang diperiksa untuk klaim lain. Jika Anda pemiliknya, hubungi tim FindYourDent."
+    },
+    "ownerIntro": "Klaim Anda disetujui. Data dan balasan diperiksa otomatis sebelum tayang; yang berisi promosi ditahan untuk ditinjau tim.",
+    "facts": {
+      "title": "Data praktik",
+      "intro": "Data ini menggantikan nama yang diketik penulis Testimoni pertama dan jenis perkiraan. Tanpa kata promosi seperti \"terbaik\", \"termurah\" atau diskon.",
+      "held": "Sedang ditinjau",
+      "name": "Nama tempat praktik",
+      "providerType": "Jenis",
+      "region": "Wilayah",
+      "province": "Provinsi",
+      "regency": "Kota atau kabupaten",
+      "address": "Alamat",
+      "phone": "Telepon",
+      "whatsapp": "WhatsApp",
+      "openingHours": "Jam buka",
+      "services": "Layanan",
+      "save": "Simpan data"
+    },
+    "replies": {
+      "title": "Balas Testimoni",
+      "intro": "Satu balasan publik untuk setiap Testimoni. Anda bisa mengubahnya kapan saja. Untuk Testimoni yang menurut Anda keliru, gunakan tombol Laporkan di halaman tempat.",
+      "write": "Balasan Anda",
+      "edit": "Ubah balasan",
+      "send": "Kirim balasan",
+      "status": {
+        "submitted": "Diperiksa",
+        "published": "Tayang",
+        "held": "Ditinjau tim",
+        "rejected": "Ditolak"
+      }
+    }
   }
 }

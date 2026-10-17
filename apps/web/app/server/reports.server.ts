@@ -15,6 +15,7 @@ import {
   type ReportResponse,
 } from "~/lib/reports";
 import { readSession } from "../../server/auth.ts";
+import { approvedClaimOf } from "./claims.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
 import { publishedOf, writeProviderOnUnpublish } from "./testimonies.server.ts";
@@ -88,7 +89,11 @@ async function fileReport(
   const testimony = (await tx.get(ref)).data() as TestimonyDoc | undefined;
   if (!testimony || (testimony.status !== "published" && testimony.status !== "hidden")) throw new NotReportable();
 
+  // The claimed Provider of the place reports like anyone, but its report never hides
+  // the Testimony: no route lets a Provider hide or remove one (spec 05).
+  const claimedProvider = input.user ? await approvedClaimOf(firestore, testimony.placeId, input.user.uid, tx) : null;
   const hides =
+    !claimedProvider &&
     HIDING_CATEGORIES.has(input.report.category) &&
     testimony.status === "published" &&
     canTransition("published", "hidden", "system");
@@ -111,8 +116,7 @@ async function fileReport(
     category: input.report.category,
     ...(input.report.details ? { details: input.report.details } : {}),
     ...(input.user ? { reporterUid: input.user.uid } : {}),
-    // Claimed Providers report signed in once Claims exist (spec 05).
-    reporterRole: "public",
+    reporterRole: claimedProvider ? "claimedProvider" : "public",
     hidTestimony: hides,
     status: "open",
     createdAt: Timestamp.now(),

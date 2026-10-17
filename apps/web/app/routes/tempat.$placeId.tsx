@@ -153,6 +153,13 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
           <h2 className="text-lg font-semibold">{t("provider.ownerTitle")}</h2>
           {provider.owner.address && <p>{provider.owner.address}</p>}
           {provider.owner.openingHours && <p className="whitespace-pre-line">{provider.owner.openingHours}</p>}
+          {provider.owner.services && (
+            <p>
+              {t("provider.services", {
+                services: provider.owner.services.map((code) => procedureLabel(code, language)).join(", "),
+              })}
+            </p>
+          )}
           {provider.owner.website && (
             <a href={provider.owner.website} target="_blank" rel="noreferrer nofollow" className="underline">
               {provider.owner.website}
@@ -179,6 +186,13 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
           )}
         </section>
       )}
+
+      <p className="text-sm text-muted-foreground">
+        {provider?.claimed ? t("provider.ownerHint") : t("provider.claimHint")}{" "}
+        <Link to={`${providerPath(placeId)}/klaim`} className="font-medium text-foreground underline">
+          {provider?.claimed ? t("provider.manageCta") : t("provider.claimCta")}
+        </Link>
+      </p>
 
       <section
         aria-labelledby="google-title"

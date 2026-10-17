@@ -299,6 +299,36 @@ describe("POST /api/shortlist", () => {
     ]);
   });
 
+  it("ranks a claimed Provider exactly as the same Provider unclaimed", async () => {
+    const ratings = {
+      testimonyCount: 4,
+      verifiedVisitCount: 1,
+      averages: { service: 4.2, hygiene: 4.4, materialsEquipment: 4 },
+      procedurePrices: {},
+    };
+    const run = async (claimed: boolean) => {
+      await server.reset();
+      server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG]);
+      await seedProviders(
+        listedProvider(GOOGLE_CLINIC.placeId, {
+          aggregates: ratings,
+          ...(claimed ? { claimStatus: "claimed", claimId: "claim-1", nameSource: "claim" } : {}),
+        }),
+        listedProvider(GOOGLE_DRG.placeId, { providerType: "privateDentist", aggregates: ratings }),
+      );
+      const { body } = await shortlist({
+        purpose: "shortlist",
+        guidanceToken: tokenFor(ROOT_CANAL_GUIDANCE),
+        location: GUBENG,
+      });
+      return body.providers.map(({ claimed: _claimed, ...rest }) => rest);
+    };
+
+    const unclaimed = await run(false);
+    expect(unclaimed).toHaveLength(2);
+    expect(await run(true)).toEqual(unclaimed);
+  });
+
   it("finds nearby Hospitals for the emergency card without needing a Guidance", async () => {
     server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_HOSPITAL]);
 

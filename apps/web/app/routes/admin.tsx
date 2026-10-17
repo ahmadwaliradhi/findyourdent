@@ -9,8 +9,11 @@ import {
   ADMIN_REASON_MAX_CHARS,
   type AdminActionRequest,
   type AdminApiError,
+  type ApprovedClaim,
+  type QueueClaim,
   type QueueItem,
   type QueueModeration,
+  type QueueOwnerFacts,
   type QueueTestimony,
   type QueueTestimonyContent,
   REASON_REQUIRED,
@@ -37,13 +40,15 @@ export function meta({ matches }: Route.MetaArgs) {
  */
 export async function loader({ context }: Route.LoaderArgs) {
   if (!context.admin) throw new Response(null, { status: 403 });
-  const { items } = context.firestore ? await loadAdminQueue(context.firestore) : { items: [] };
-  return { email: context.admin.email, items };
+  const { items, approvedClaims } = context.firestore
+    ? await loadAdminQueue(context, context.firestore)
+    : { items: [], approvedClaims: [] };
+  return { email: context.admin.email, items, approvedClaims };
 }
 
 export default function Admin({ loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
-  const { items } = loaderData;
+  const { items, approvedClaims } = loaderData;
   const overdue = items.filter((item) => item.overdue).length;
   return (
     <section className="flex flex-col gap-4" aria-labelledby="admin-title">
@@ -75,7 +80,35 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
           ))}
         </ul>
       )}
+      {approvedClaims.length > 0 && <ApprovedClaims claims={approvedClaims} />}
     </section>
+  );
+}
+
+/** Approved Claims, so a wrong approval can be revoked. */
+function ApprovedClaims({ claims }: { claims: ApprovedClaim[] }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  return (
+    <details className="rounded-xl border p-4">
+      <summary className="cursor-pointer font-semibold">
+        {t("admin.queue.approvedClaims", { count: claims.length })}
+      </summary>
+      <ul className="mt-3 flex flex-col gap-3">
+        {claims.map((claim) => (
+          <li key={claim.claimId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span>
+              <a href={providerPath(claim.placeId)} className="underline">
+                {claim.providerName || claim.placeId}
+              </a>{" "}
+              · {formatTime(claim.reviewedAt, language)}
+              {claim.reviewedBy && <> · {claim.reviewedBy}</>}
+            </span>
+            <ActionButton request={{ action: "revokeClaim", subjectId: claim.claimId }} />
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -102,6 +135,9 @@ function QueueCard({ item }: { item: QueueItem }) {
         <h2 id={headingId} className="text-lg font-semibold">
           {t(`admin.queue.kind.${item.kind}`)}
           {item.testimony && <span className="font-normal"> · {item.testimony.providerName}</span>}
+          {item.claim && <span className="font-normal"> · {item.claim.providerName}</span>}
+          {item.reply && <span className="font-normal"> · {item.reply.providerName}</span>}
+          {item.ownerFacts && <span className="font-normal"> · {item.ownerFacts.currentName}</span>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {item.testimony && <Badge variant="secondary">{t(`admin.queue.status.${item.testimony.status}`)}</Badge>}
@@ -152,8 +188,109 @@ function QueueCard({ item }: { item: QueueItem }) {
         </dl>
       )}
 
+      {item.claim && <ClaimView claim={item.claim} />}
+      {item.ownerFacts && <OwnerFactsView ownerFacts={item.ownerFacts} />}
+      {item.reply && (
+        <div className="flex flex-col gap-2 text-sm">
+          <ModerationLine moderation={item.reply.moderation} />
+          <p className="text-muted-foreground">{t("admin.queue.replyTo")}</p>
+          <blockquote className="whitespace-pre-line border-l-2 pl-3 text-muted-foreground">
+            {item.reply.testimonyText}
+          </blockquote>
+          <FlaggedText text={item.reply.text} moderation={item.reply.moderation} />
+        </div>
+      )}
+
       <Actions item={item} />
     </article>
+  );
+}
+
+function ModerationLine({ moderation }: { moderation: QueueModeration | null }) {
+  const { t } = useTranslation();
+  if (!moderation) return null;
+  return (
+    <p className="text-sm">
+      <span className="text-muted-foreground">{t("admin.queue.gemini")}</span> <strong>{moderation.decision}</strong>
+      {moderation.ruleCodes.length > 0 && <> · {moderation.ruleCodes.join(", ")}</>} ·{" "}
+      {t("admin.queue.confidence", { value: moderation.confidence.toFixed(2) })} · {moderation.model}
+    </p>
+  );
+}
+
+/** The permit, the claimant's details and the live Google listing phone to call. */
+function ClaimView({ claim }: { claim: QueueClaim }) {
+  const { t } = useTranslation();
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      <dt className="text-muted-foreground">{t("admin.queue.claim.place")}</dt>
+      <dd>
+        <a href={providerPath(claim.placeId)} className="underline">
+          {claim.providerName}
+        </a>
+        {!claim.listed && <> · {t("admin.queue.claim.notListed")}</>}
+      </dd>
+      <dt className="text-muted-foreground">{t("admin.queue.claim.role")}</dt>
+      <dd>{t(`claim.roles.${claim.role}`)}</dd>
+      <dt className="text-muted-foreground">{t("admin.queue.claim.contactPhone")}</dt>
+      <dd>{claim.contactPhone}</dd>
+      <dt className="text-muted-foreground">{t("admin.queue.claim.googlePhone")}</dt>
+      <dd>
+        {claim.googlePhone ? (
+          <a href={`tel:${claim.googlePhone.replace(/[^\d+]/g, "")}`} className="font-semibold underline">
+            {claim.googlePhone}
+          </a>
+        ) : (
+          t("admin.queue.claim.noGooglePhone")
+        )}
+        {claim.googleDisplayName && <span className="text-muted-foreground"> · {claim.googleDisplayName}</span>}
+      </dd>
+      <dt className="text-muted-foreground">{t("admin.queue.claim.permit")}</dt>
+      <dd>
+        {claim.permitUrl ? (
+          <a href={claim.permitUrl} target="_blank" rel="noreferrer" className="underline">
+            {t("admin.queue.claim.openPermit")}
+          </a>
+        ) : (
+          "-"
+        )}
+      </dd>
+      <dd className="col-span-2 text-xs text-muted-foreground">{t("admin.queue.claim.callHint")}</dd>
+    </dl>
+  );
+}
+
+function OwnerFactsView({ ownerFacts }: { ownerFacts: QueueOwnerFacts }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const { facts } = ownerFacts;
+  const rows: Array<[string, string | undefined]> = [
+    [t("claim.facts.name"), facts.name],
+    [t("claim.facts.providerType"), t(`provider.type.${facts.providerType}`)],
+    [t("claim.facts.region"), regionLabel(facts.region)],
+    [t("claim.facts.address"), facts.address],
+    [t("claim.facts.phone"), facts.phone],
+    [t("claim.facts.whatsapp"), facts.whatsapp],
+    [t("claim.facts.openingHours"), facts.openingHours],
+    [t("claim.facts.services"), facts.services.map((code) => procedureLabel(code, language)).join(", ")],
+  ];
+  const flagged = new Set(ownerFacts.moderation?.flaggedSpans.map((span) => span.text) ?? []);
+  return (
+    <div className="flex flex-col gap-2">
+      <ModerationLine moderation={ownerFacts.moderation} />
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        {rows
+          .filter((row): row is [string, string] => Boolean(row[1]))
+          .map(([label, value]) => (
+            <div key={label} className="contents">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className={[...flagged].some((text) => value.includes(text)) ? "bg-yellow-200 text-black" : ""}>
+                {value}
+              </dd>
+            </div>
+          ))}
+      </dl>
+    </div>
   );
 }
 
@@ -226,14 +363,7 @@ function TestimonyView({ testimony }: { testimony: QueueTestimony }) {
   const { moderation } = testimony;
   return (
     <div className="flex flex-col gap-3">
-      {moderation && (
-        <p className="text-sm">
-          <span className="text-muted-foreground">{t("admin.queue.gemini")}</span>{" "}
-          <strong>{moderation.decision}</strong>
-          {moderation.ruleCodes.length > 0 && <> · {moderation.ruleCodes.join(", ")}</>} ·{" "}
-          {t("admin.queue.confidence", { value: moderation.confidence.toFixed(2) })} · {moderation.model}
-        </p>
-      )}
+      <ModerationLine moderation={moderation} />
       {testimony.revision ? (
         <>
           <h3 className="font-medium">{t("admin.queue.revision")}</h3>
@@ -285,6 +415,24 @@ function Actions({ item }: { item: QueueItem }) {
           <ActionButton key={action} request={{ action, subjectId: item.subjectId }} />
         ))}
         {item.kind === "spotCheck" && <ActionButton request={{ action: "spotCheckConfirm", subjectId: item.id }} />}
+        {item.kind === "claim" && (
+          <>
+            <ActionButton request={{ action: "approveClaim", subjectId: item.subjectId }} />
+            <ActionButton request={{ action: "rejectClaim", subjectId: item.subjectId }} />
+          </>
+        )}
+        {item.kind === "ownerFacts" && (
+          <>
+            <ActionButton request={{ action: "publishOwnerFacts", subjectId: item.subjectId }} />
+            <ActionButton request={{ action: "rejectOwnerFacts", subjectId: item.subjectId }} />
+          </>
+        )}
+        {item.kind === "reply" && (
+          <>
+            <ActionButton request={{ action: "publishReply", subjectId: item.subjectId }} />
+            <ActionButton request={{ action: "rejectReply", subjectId: item.subjectId }} />
+          </>
+        )}
         {item.kind === "nameCorrection" && (
           <>
             <ActionButton request={{ action: "applyNameCorrection", subjectId: item.id }} />
@@ -308,7 +456,10 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const label = t(`admin.queue.actions.${request.action}`);
-  const destructive = request.action === "remove" || request.action === "reject";
+  const destructive = ["remove", "reject", "rejectClaim", "revokeClaim", "rejectOwnerFacts", "rejectReply"].includes(
+    request.action,
+  );
+  const primary = ["publish", "approveClaim", "publishOwnerFacts", "publishReply"].includes(request.action);
 
   const send = async () => {
     setBusy(true);
@@ -372,7 +523,7 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
     <span className="flex flex-col gap-1">
       <Button
         size="sm"
-        variant={destructive ? "destructive" : request.action === "publish" ? "default" : "outline"}
+        variant={destructive ? "destructive" : primary ? "default" : "outline"}
         disabled={busy}
         onClick={needsReason ? () => setAsking(true) : send}
       >

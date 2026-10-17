@@ -76,17 +76,21 @@ export function stubShortlistReasons(request: ShortlistReasonsRequest): Shortlis
   return { reasons: request.providers.map((p) => ({ placeId: p.placeId, reason })) };
 }
 
-/** Indonesian mobile numbers ("0812-3456-7890", "+62 812 3456 7890"): what the stub flags. */
+/** Indonesian mobile numbers ("0812-3456-7890", "+62 812 3456 7890"): what the stub flags in a Testimony. */
 const STUB_PHONE_NUMBER = /(?:\+62|0)\s?8\d(?:[\s-]?\d){6,10}/;
+/** What the stub holds owner facts and replies for: the promotional words spec 05 names. */
+const STUB_PROMOTIONAL = /\b(terbaik|termurah|diskon|promo)\b/i;
 
 /**
- * A stub Moderation decision, valid against moderation-decision.schema.json: an
- * Indonesian mobile number is an R1 authorFix (a hold after three rounds), anything
- * else publishes. A Proof of Visit is always accepted. Lets local runs and browser
- * tests walk the fix-before-submit loop without Gemini.
+ * A stub Moderation decision, valid against moderation-decision.schema.json. A
+ * Testimony with an Indonesian mobile number is an R1 authorFix (a hold after three
+ * rounds); owner facts or a reply with promotional wording are held (a practice's own
+ * phone is expected there). Anything else publishes, and a Proof of Visit is always
+ * accepted. Lets local runs and browser tests walk both flows without Gemini.
  */
 export function stubModeration(request: ModerationRequest): ModerationDecision {
   const en = request.language === "en";
+  if (request.subjectType !== "testimony") return stubOwnerModeration(request, en);
   const proofOfVisit = request.proofOfVisit ? "accepted" : "notProvided";
   const phone = STUB_PHONE_NUMBER.exec(request.text);
   if (!phone) {
@@ -104,6 +108,21 @@ export function stubModeration(request: ModerationRequest): ModerationDecision {
       ? "Please remove the phone number before sending."
       : "Mohon hapus nomor telepon sebelum mengirim.",
     proofOfVisit,
+  };
+}
+
+function stubOwnerModeration(request: ModerationRequest, en: boolean): ModerationDecision {
+  const hit = STUB_PROMOTIONAL.exec(request.text);
+  if (!hit) {
+    const authorMessage = en ? "Thank you, it is live." : "Terima kasih, sudah tayang.";
+    return { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.95, authorMessage };
+  }
+  return {
+    decision: "hold",
+    ruleCodes: ["promotional_wording"],
+    flaggedSpans: [{ start: hit.index, end: hit.index + hit[0].length, text: hit[0], ruleCode: "promotional_wording" }],
+    confidence: 0.9,
+    authorMessage: en ? "Held for a review by our team." : "Ditahan untuk ditinjau tim kami.",
   };
 }
 

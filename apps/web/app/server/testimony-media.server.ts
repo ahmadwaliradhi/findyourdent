@@ -30,7 +30,7 @@ const PROOF_MAX_EDGE_PX = 2400;
 type SniffedType = (typeof PROOF_MIME_TYPES)[number];
 
 /** The real type from the first bytes, whatever the browser declared. */
-async function sniffType(file: File): Promise<SniffedType | null> {
+export async function sniffType(file: File): Promise<SniffedType | null> {
   const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const ascii = (from: number, to: number) => String.fromCharCode(...head.subarray(from, to));
   if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return "image/jpeg";
@@ -45,7 +45,7 @@ function includes<T extends string>(list: readonly T[], value: string | null): v
 }
 
 /** Whether sharp can decode the image at all, so a truncated file fails here rather than at storage. */
-async function decodes(file: File): Promise<boolean> {
+export async function decodes(file: File): Promise<boolean> {
   try {
     await sharp(Buffer.from(await file.arrayBuffer()), { failOn: "error" }).stats();
     return true;
@@ -140,6 +140,18 @@ async function strippedJpeg(file: File, maxEdge: number): Promise<Buffer> {
 /** Objects stay private: the bucket prevents public access and nothing here grants it. */
 async function save(uploads: Bucket, path: string, body: Buffer, contentType: string): Promise<void> {
   await uploads.file(path).save(body, { contentType, resumable: false, metadata: { cacheControl: "private" } });
+}
+
+/**
+ * Stores one private document (a Claim's permit) at `{prefix}.{jpg|pdf}`: images
+ * re-encoded with every metadata block stripped, PDFs as sent. Returns the path.
+ */
+export async function storePrivateDocument(uploads: Bucket, prefix: string, file: File): Promise<string> {
+  const pdf = file.type === "application/pdf";
+  const path = `${prefix}.${pdf ? "pdf" : "jpg"}`;
+  const body = pdf ? Buffer.from(await file.arrayBuffer()) : await strippedJpeg(file, PROOF_MAX_EDGE_PX);
+  await save(uploads, path, body, pdf ? "application/pdf" : "image/jpeg");
+  return path;
 }
 
 /**

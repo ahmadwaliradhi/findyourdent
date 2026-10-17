@@ -17,16 +17,17 @@ export type ProtectionOutcome =
  *   so a session with a follow-up still costs one of the hourly sessions;
  * - `places`: a Places-backed request (Shortlist, Provider detail, picker);
  * - `testimony`: a Testimony submission by a signed-in account;
- * - `report`: a Testimony report by anyone (it can hide a Testimony at once).
+ * - `report`: a Testimony report by anyone (it can hide a Testimony at once);
+ * - `owner`: a Claim, owner facts or a reply by a signed-in account (spec 05).
  */
-export type PaidRoute = "guidance" | "guidanceFollowUp" | "places" | "testimony" | "report";
+export type PaidRoute = "guidance" | "guidanceFollowUp" | "places" | "testimony" | "report" | "owner";
 
 export interface PaidRequest {
   request: Request;
   route: PaidRoute;
   /** Opaque Guidance session id from the __session cookie. Required for guidance and places. */
   sessionId?: string;
-  /** Signed-in account. Required for testimony. */
+  /** Signed-in account. Required for testimony and owner. */
   uid?: string;
   /** Token from the form body, for routes that take a form post instead of fetch. */
   formToken?: FormDataEntryValue | null;
@@ -66,12 +67,13 @@ function rulesFor(context: AppLoadContext, paid: PaidRequest, appCheckToken: str
       perBrowser(limits.reportsPerHour);
       break;
     case "testimony":
-      if (!paid.uid) throw new Error("testimony rate limit needs a signed-in uid");
+    case "owner":
+      if (!paid.uid) throw new Error(`${paid.route} rate limit needs a signed-in uid`);
       rules.push({
         scope: "user",
         key: paid.uid,
         route: paid.route,
-        limit: limits.testimoniesPerDay,
+        limit: paid.route === "testimony" ? limits.testimoniesPerDay : limits.ownerWritesPerDay,
         windowSeconds: DAY,
       });
       break;

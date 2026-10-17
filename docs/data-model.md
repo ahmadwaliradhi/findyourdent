@@ -26,7 +26,7 @@ A Listed Provider. **Document id = `placeId`.** Created by the first published T
 | `location` | `{ lat, lng, fetchedAt }` from a Place Details Essentials call; refreshed monthly, deleted when older than 30 days and not refreshable. |
 | `providerType`, `providerTypeSource` | `klinik`, `privateDentist` or `hospital`; `inferred` (shown "perkiraan") or `claimed`. |
 | `claimStatus`, `claimId` | `unclaimed` or `claimed`. Never affects ranking. |
-| `ownerFacts` | Owner-entered address, phone, WhatsApp, website, opening hours, services; screened by Moderation, `published` or `held`. |
+| `ownerFacts` | Owner-entered name, type, Region, address, phone, WhatsApp, opening hours, services; screened by Moderation (Provider-facts rules). A held edit (any rule hit) waits in `pendingOwnerFacts` while the published `ownerFacts` stay live. Once published, name, type and Region are copied to the top-level fields (`nameSource: "claim"`, `providerTypeSource: "claimed"`) and the Region and type to the place's Testimonies. Removed when the Claim is revoked. |
 | `aggregates` | `testimonyCount`, `verifiedVisitCount`, aspect `averages`, `procedurePrices` (count, median, min, max per procedure). Recomputed whenever a Testimony enters or leaves `published`. |
 | `listedBy`, `createdAt`, `updatedAt` | |
 
@@ -47,7 +47,7 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `verifiedVisit`, `proofOfVisit` | Kunjungan terbukti and the check result with its date. The Proof of Visit file itself is deleted right after the check. |
 | `authorFixRounds` | authorFix rounds used before this version was stored (the next authorFix after three is held). An authorFix itself stores nothing on the Testimony; the count waits in `counters` meanwhile. |
 | `pendingRevision` | Edit of a published Testimony under Moderation; the public fields stay visible until it is decided. |
-| `reply` | The claimed Provider's one public reply, with its own Moderation status. |
+| `reply` | The claimed Provider's one public reply (editable), with its own Moderation status and the `claimId` it was written under; shown only while that Claim is the place's current one. |
 | `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply are removed. |
 
 Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`, `providerType`, `verifiedVisit` combinations for feed filters; `placeId` + `status` + `publishedAt desc` (Provider page); `authorUid` + `placeId` (uniqueness).
@@ -58,7 +58,9 @@ Reports from anyone (category `personalData`, `threat`, `falseClaim`, `spam`, `c
 
 ### `claims`
 
-Claims by owners, practising dentists or managers (spec 05). States `submitted`, `approved`, `rejected`, `revoked`. One active Claim (`submitted` or `approved`) per `placeId`. `permitDocumentPath` points to the private bucket and is deleted (with the file) when the Claim leaves `submitted`; only the decision, reviewer and date stay. The Google phone number the reviewer calls is fetched live and never stored. Type `ClaimDoc`.
+Claims by owners, practising dentists or managers (spec 05). States `submitted`, `approved`, `rejected` (with `rejectionReason`), `revoked`. One active Claim (`submitted` or `approved`) per `placeId`. `permitDocumentPath` points to the private bucket (`claims/{claimId}/permit-*`, images stripped of metadata) and is deleted (with the file) when the Claim leaves `submitted`; only the decision, reviewer and date stay. The Google phone number the reviewer calls is fetched live and never stored. A Claim on a place that is not Listed carries `proposedProviderName` and `proposedRegion`, and approving it creates the Listed Provider (`listedBy: "claim"`). Type `ClaimDoc`.
+
+Queries: `placeId` + `status in [submitted, approved]` (one active Claim), `status` (admin queue), `claimantUid` + `placeId` (the Claim page).
 
 ### `priceLists`
 

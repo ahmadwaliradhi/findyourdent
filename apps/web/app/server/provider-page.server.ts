@@ -64,6 +64,7 @@ function ownerFacts(doc: ProviderDoc): OwnerFacts | undefined {
     ...(whatsapp ? { whatsappUri: whatsapp } : {}),
     ...(facts.website ? { website: facts.website } : {}),
     ...(facts.openingHours ? { openingHours: facts.openingHours } : {}),
+    ...(facts.services?.length ? { services: facts.services } : {}),
   };
   return Object.keys(owner).length > 0 ? owner : undefined;
 }
@@ -136,7 +137,10 @@ export async function loadProviderPage(
       procedureCode: t.procedureCode,
       pricePaidRupiah: t.pricePaidRupiah,
       verifiedVisit: t.verifiedVisit === true,
-      ...(t.reply?.status === "published" ? { reply: t.reply.text } : {}),
+      // Only the current claimant's reply: a revoked Claim's replies stop showing.
+      ...(t.reply?.status === "published" && doc.claimStatus === "claimed" && t.reply.claimId === doc.claimId
+        ? { reply: t.reply.text }
+        : {}),
     };
   });
   const owner = ownerFacts(doc);
