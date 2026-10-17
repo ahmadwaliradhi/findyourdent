@@ -1,0 +1,3 @@
+# Gemini may publish a Testimony, but only a human may hold-decide or remove one
+
+We considered pre-moderation by an admin for every Testimony (biayasekolah.id's approach) and rejected it: with a two-person team every Testimony would wait hours. Instead Gemini publishes Testimonies that break no Moderation rule with high confidence and holds anything doubtful; an admin decides every held or reported Testimony and is the only one who can remove a published one, and 10% of auto-published Testimonies are spot-checked. Sentiment and star ratings are never Moderation inputs, so complaints are published under the same rules as praise; a negative mention that names a person is always held for an admin.
