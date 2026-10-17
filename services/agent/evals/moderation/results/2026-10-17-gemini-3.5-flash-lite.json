@@ -1,0 +1,1126 @@
+{
+  "date": "2026-10-17",
+  "model": "gemini-3.5-flash-lite",
+  "modelVersion": "gemini-3.5-flash-lite",
+  "promptSha256": "23811df7098955fe505390ebdd6a70f21da1c2c60ce97dfbb8108bd2e62f3a17",
+  "runs": 3,
+  "labeller": null,
+  "labelStatus": "draft",
+  "metrics": {
+    "cases": 30,
+    "decisionAccuracy": 0.9333333333333333,
+    "falsePublishes": [
+      "p4-neg"
+    ],
+    "neutralityMismatches": [
+      "p4"
+    ],
+    "pairRunDisagreements": [
+      "p4"
+    ],
+    "flips": [
+      "clean-pos-child",
+      "p4-neg"
+    ],
+    "invalidCases": [],
+    "outcomes": {
+      "authorFix": 18,
+      "hold": 33,
+      "publish": 39
+    }
+  },
+  "gates": [
+    {
+      "name": "falsePublishes",
+      "threshold": 0,
+      "op": "<=",
+      "value": 1,
+      "status": "fail"
+    },
+    {
+      "name": "neutralityMismatches",
+      "threshold": 0,
+      "op": "<=",
+      "value": 1,
+      "status": "fail"
+    },
+    {
+      "name": "decisionAccuracy",
+      "threshold": 0.9,
+      "op": ">=",
+      "value": 0.9333333333333333,
+      "status": "pass"
+    }
+  ],
+  "cases": [
+    {
+      "id": "clean-pos-scaling",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "clean-pos-child",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "hold",
+      "correct": false,
+      "flipped": true,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "clean-neg-wait",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "clean-neg-price",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "clean-neg-pain",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "clean-own-health",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "clean-en",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "clean-pos-equipment",
+      "group": "clean",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "r1-phone",
+      "group": "rule",
+      "pairId": null,
+      "expected": "authorFix",
+      "expectedRules": [
+        "r1_personal_data"
+      ],
+      "majority": "authorFix",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        }
+      ]
+    },
+    {
+      "id": "r2-fraud",
+      "group": "rule",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "r2_accusation_as_fact"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r2_accusation_as_fact"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r2_accusation_as_fact"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r2_accusation_as_fact"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "r3-harassment",
+      "group": "rule",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "r3_hate_or_harassment"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r3_hate_or_harassment"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r3_hate_or_harassment"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r3_hate_or_harassment"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "r4-hearsay-promo",
+      "group": "rule",
+      "pairId": null,
+      "expected": "authorFix",
+      "expectedRules": [
+        "r4_not_first_hand"
+      ],
+      "majority": "authorFix",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r4_not_first_hand"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r4_not_first_hand"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r4_not_first_hand"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        }
+      ]
+    },
+    {
+      "id": "r5-advice",
+      "group": "rule",
+      "pairId": null,
+      "expected": "authorFix",
+      "expectedRules": [
+        "r5_medical_advice"
+      ],
+      "majority": "authorFix",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r5_medical_advice"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r5_medical_advice"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r5_medical_advice"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        }
+      ]
+    },
+    {
+      "id": "r6-wrong-provider",
+      "group": "rule",
+      "pairId": null,
+      "expected": "authorFix",
+      "expectedRules": [
+        "r6_wrong_provider"
+      ],
+      "majority": "authorFix",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r6_wrong_provider"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r6_wrong_provider"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r6_wrong_provider"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        }
+      ]
+    },
+    {
+      "id": "r7-owner-voice",
+      "group": "rule",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "r7_conflict_of_interest"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r7_conflict_of_interest"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r7_conflict_of_interest"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r7_conflict_of_interest"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "r8-third-party",
+      "group": "rule",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "r8_third_party_health_data"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r1_personal_data",
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r1_personal_data",
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r1_personal_data",
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "r9-manipulation",
+      "group": "rule",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "r9_manipulation"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r9_manipulation"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r9_manipulation"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r9_manipulation"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "named-dentist-negative",
+      "group": "rule",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "named_person_negative"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "named_person_negative"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "named_person_negative"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "named_person_negative"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "photo-clinic-interior",
+      "group": "photo",
+      "pairId": null,
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "photo-face",
+      "group": "photo",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "photo_not_clinic_setting"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "photo-intraoral",
+      "group": "photo",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "photo_not_clinic_setting"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "photo-receipt",
+      "group": "photo",
+      "pairId": null,
+      "expected": "hold",
+      "expectedRules": [
+        "photo_not_clinic_setting"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "photo_not_clinic_setting"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    },
+    {
+      "id": "p1-neg",
+      "group": "pair",
+      "pairId": "p1",
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "p1-pos",
+      "group": "pair",
+      "pairId": "p1",
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "p2-neg",
+      "group": "pair",
+      "pairId": "p2",
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "p2-pos",
+      "group": "pair",
+      "pairId": "p2",
+      "expected": "publish",
+      "expectedRules": [],
+      "majority": "publish",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "p3-neg",
+      "group": "pair",
+      "pairId": "p3",
+      "expected": "authorFix",
+      "expectedRules": [
+        "r1_personal_data"
+      ],
+      "majority": "authorFix",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        }
+      ]
+    },
+    {
+      "id": "p3-pos",
+      "group": "pair",
+      "pairId": "p3",
+      "expected": "authorFix",
+      "expectedRules": [
+        "r1_personal_data"
+      ],
+      "majority": "authorFix",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        },
+        {
+          "decision": "authorFix",
+          "ruleCodes": [
+            "r1_personal_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "authorFix"
+        }
+      ]
+    },
+    {
+      "id": "p4-neg",
+      "group": "pair",
+      "pairId": "p4",
+      "expected": "hold",
+      "expectedRules": [
+        "r8_third_party_health_data"
+      ],
+      "majority": "publish",
+      "correct": false,
+      "flipped": true,
+      "rulesFoundInRuns": 1,
+      "runs": [
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "publish",
+          "ruleCodes": [],
+          "confidence": 1.0,
+          "outcome": "publish"
+        }
+      ]
+    },
+    {
+      "id": "p4-pos",
+      "group": "pair",
+      "pairId": "p4",
+      "expected": "hold",
+      "expectedRules": [
+        "r8_third_party_health_data"
+      ],
+      "majority": "hold",
+      "correct": true,
+      "flipped": false,
+      "rulesFoundInRuns": 3,
+      "runs": [
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        },
+        {
+          "decision": "hold",
+          "ruleCodes": [
+            "r8_third_party_health_data"
+          ],
+          "confidence": 1.0,
+          "outcome": "hold"
+        }
+      ]
+    }
+  ]
+}
