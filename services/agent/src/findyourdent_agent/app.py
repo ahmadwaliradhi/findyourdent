@@ -15,7 +15,10 @@ from .adapters import Adapters
 from .config import Settings
 from .contracts.guidance_request import GuidanceRequest
 from .contracts.guidance_response import GuidanceResponse
+from .contracts.moderation_decision import ModerationDecision
+from .contracts.moderation_request import ModerationRequest
 from .data import procedure_codes
+from .moderation import InvalidAttachmentError, moderate
 from .stub import PROCEDURES, stub_guidance
 
 log = logging.getLogger("findyourdent_agent")
@@ -95,5 +98,24 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         card = stub_guidance(body.root.language)
         request.state.outcome = card.kind
         return GuidanceResponse(root=card)
+
+    @app.post(
+        "/v1/moderation",
+        response_model=ModerationDecision,
+        response_model_exclude_none=True,
+    )
+    async def moderation(
+        body: ModerationRequest, request: Request
+    ) -> ModerationDecision | JSONResponse:
+        try:
+            decision = await moderate(body, adapters.gemini, settings)
+        except InvalidAttachmentError:
+            request.state.outcome = "invalid_request"
+            return JSONResponse(
+                status_code=422,
+                content={"detail": [{"type": "invalid_base64", "msg": "attachment is not base64"}]},
+            )
+        request.state.outcome = decision.decision
+        return decision
 
     return app
