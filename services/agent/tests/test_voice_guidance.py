@@ -88,6 +88,27 @@ def test_a_voice_note_without_speech_asks_the_patient_to_record_again(
     assert (response.status_code, response.json()) == (422, {"error": "no_speech"})
 
 
+def test_the_model_red_flags_still_escalate_when_no_words_were_made_out(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(
+        model_turn(
+            transcript="",
+            urgencyTier="darurat",
+            redFlags=["difficulty_breathing"],
+            emergencyReason="Sulit bernapas perlu ditangani di IGD sekarang.",
+        )
+    )
+
+    response = speak(client)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["kind"] == "emergency"
+    assert body["redFlags"] == ["difficulty_breathing"]
+    assert "transcript" not in body
+
+
 def test_audio_that_is_not_base64_is_refused_without_calling_gemini(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:

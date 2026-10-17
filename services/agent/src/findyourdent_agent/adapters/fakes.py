@@ -144,9 +144,8 @@ _CANNED_TRANSCRIPT = "Transkrip contoh: suara tidak dikirim ke Gemini saat GEMIN
 class CannedGeminiAdapter:
     """Local development without Google Cloud credentials (GEMINI_ADAPTER=fake):
     every complaint gets the same deep-caries Guidance (a voice note with a stock
-    transcript), and every Shortlist Provider
-    the same stock reason. The output schema tells the two calls apart, since both
-    can use the same model."""
+    transcript), and every Shortlist Provider the same stock reason. The output schema
+    tells the two calls apart, since both can use the same model."""
 
     async def generate_structured(
         self,

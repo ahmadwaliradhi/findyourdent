@@ -249,8 +249,8 @@ async def answer_turn(
     # A voice note has no text to search with before Gemini hears it, so the curated
     # knowledge files ground it; a corrected transcript sent back as text is searched.
     complaint = voice or turn.complaintText
-    if complaint is None:  # GuidanceRequest needs complaintText or audio
-        raise InvalidAudioError
+    if complaint is None:  # GuidanceRequest rules this out
+        raise TypeError("a Guidance turn needs complaintText or audio")
     retrieved = [] if voice else await _retrieve(agent_search, complaint, settings)
     grounding = "agent_search" if retrieved else "curated"
     raw = await gemini.generate_structured(
@@ -274,8 +274,12 @@ async def answer_turn(
     if voice:
         transcript = (model.transcript or "").strip()
         if not transcript:
+            # The model's own red flags still escalate a voice note it could not make out.
+            if model.urgencyTier == "darurat" and model.redFlags:
+                result = _judge(turn, model, (), red_flags=red_flags, retrieved=[])
+                return Outcome(result.response, result.outcome, grounding)
             raise NoSpeechError
-        texts = (transcript, turn.followUpAnswer)
+        texts = (transcript, turn.followUpAnswer)  # what the Patient said, as if typed
         heard = red_flags.check(*texts, language=model.language)
         if heard:
             return Outcome(_with_transcript(heard, transcript), "emergency")

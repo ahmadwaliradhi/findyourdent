@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "~/components/ui/button";
 
@@ -40,6 +40,7 @@ export function VoiceRecorder({ disabled, onRecorded }: { disabled: boolean; onR
   const [elapsed, setElapsed] = useState(0);
   const recorder = useRef<MediaRecorder | null>(null);
   const cancelled = useRef(false);
+  const statusId = useId();
 
   useEffect(() => {
     setSupported(typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia));
@@ -114,12 +115,14 @@ export function VoiceRecorder({ disabled, onRecorded }: { disabled: boolean; onR
           size="lg"
           variant={recording ? "destructive" : "secondary"}
           className="h-14 w-full gap-3 px-6 text-lg sm:w-auto"
-          aria-describedby="voiceStatus"
+          aria-describedby={statusId}
           disabled={disabled && !recording}
           onClick={() => (recording ? stop(false) : void start())}
         >
           <MicIcon />
-          {recording ? `${t("home.voiceStop")} (${clock(elapsed)})` : t("home.voiceRecord")}
+          {recording ? t("home.voiceStop") : t("home.voiceRecord")}
+          {/* Visual only: a name that changed every second would be read out again and again. */}
+          {recording && <span aria-hidden="true">({clock(elapsed)})</span>}
         </Button>
         {recording && (
           <Button type="button" variant="outline" size="lg" onClick={() => stop(true)}>
@@ -128,13 +131,13 @@ export function VoiceRecorder({ disabled, onRecorded }: { disabled: boolean; onR
         )}
       </div>
       <p
-        id="voiceStatus"
+        id={statusId}
         aria-live="polite"
         className={
           state === "denied" || state === "failed" ? "text-sm text-destructive" : "text-xs text-muted-foreground"
         }
       >
-        {state === "recording" && t("home.voiceRecording")}
+        {recording && t("home.voiceRecording")}
         {state === "idle" && t("home.voiceHint")}
         {state === "denied" && t("home.voiceDenied")}
         {state === "failed" && t("home.voiceFailed")}
