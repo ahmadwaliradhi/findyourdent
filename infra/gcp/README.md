@@ -100,7 +100,7 @@ infra/gcp/smoke.sh           # on its own at any time
 
 | Thing | Value |
 | --- | --- |
-| Public URL | https://findyourdent.com, custom domain on Firebase Hosting with a Hosting-managed certificate; `www.findyourdent.com` redirects to it. https://findyourdent.web.app serves the same site. Hosting rewrites every path to `fyd-web` |
+| Public URL | https://findyourdent.com, a [custom domain on Firebase Hosting](https://firebase.google.com/docs/hosting/custom-domain) with a Hosting-managed certificate, added in the Firebase console (not in `firebase.json`); `www.findyourdent.com` is added there too, set to redirect to the apex. https://findyourdent.web.app serves the same site. Hosting rewrites every path to `fyd-web` |
 | Domain | `findyourdent.com`, registered at Hostinger, which also hosts its DNS: the apex `A` record points at Firebase Hosting and `www` is a `CNAME` to `findyourdent.web.app` |
 | Artifact Registry | `asia-southeast2-docker.pkg.dev/findyourdent/findyourdent/{web,agent}:<commit>` |
 | `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS`, `RATE_LIMIT_SALT`, `SHARE_LINK_SECRET` from Secret Manager; public Firebase web config and reCAPTCHA site key looked up at deploy; `TRUST_PROXY_HOPS=2` |

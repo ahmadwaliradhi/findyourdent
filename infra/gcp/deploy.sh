@@ -299,4 +299,4 @@ pnpm --dir apps/web exec firebase deploy --only hosting --project "$PROJECT_ID" 
 log "Smoke test"
 infra/gcp/smoke.sh
 
-log "Done. https://findyourdent.com and https://${PROJECT_ID}.web.app (Cloud Run: $(service_url "$WEB_SERVICE"))"
+log "Done. https://${PROJECT_ID}.web.app (Cloud Run: $(service_url "$WEB_SERVICE"))"
