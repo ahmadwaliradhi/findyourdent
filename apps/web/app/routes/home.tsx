@@ -1,8 +1,17 @@
+import type { Guidance } from "@findyourdent/contracts";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { data, Form, Link, type ShouldRevalidateFunctionArgs, useNavigation, useSubmit } from "react-router";
-import { GuidanceResult } from "~/components/guidance-result";
+import {
+  data,
+  Form,
+  Link,
+  type ShouldRevalidateFunctionArgs,
+  useLocation,
+  useNavigation,
+  useSubmit,
+} from "react-router";
+import { GuidanceResult, shareTokenOf } from "~/components/guidance-result";
 import { ImpactCounter } from "~/components/impact-counter";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
 import { TestimonyCard } from "~/components/testimony-card";
@@ -12,7 +21,7 @@ import { VoiceRecorder } from "~/components/voice-recorder";
 import { getI18n } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_FIELD } from "~/lib/app-check";
-import { useEntryMemory } from "~/lib/entry-memory";
+import { keepAcrossReload, recallAcrossReload, rememberEntry, useEntryMemory } from "~/lib/entry-memory";
 import type { FeedItem, FeedPage } from "~/lib/feed";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
@@ -108,7 +117,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!protection.ok) {
     setRetryAfter(headers, protection);
     return data(
-      { complaintText: echoed, error: protection.error, response: null },
+      { complaintText: echoed, error: protection.error, response: null, share: null },
       { status: protection.status, headers },
     );
   }
@@ -140,8 +149,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function Home({ actionData: freshActionData, loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
-  // Back from a Provider page brings the Guidance card back without asking again.
-  const actionData = useEntryMemory("guidance", freshActionData);
+  // Back from a Provider page brings the Guidance card back without asking again; a reload rebuilds it.
+  const remembered = useEntryMemory("guidance", freshActionData);
+  const restored = useGuidanceAcrossReload(remembered);
+  const actionData = remembered ?? restored;
   const navigation = useNavigation();
   // Fetching the App Check token counts as pending too, so a second tap cannot send a second request.
   const [preparing, setPreparing] = useState(false);
@@ -250,6 +261,55 @@ export default function Home({ actionData: freshActionData, loaderData }: Route.
       <Feed filters={loaderData.filters} feed={loaderData.feed} />
     </div>
   );
+}
+
+type HomeActionData = NonNullable<Route.ComponentProps["actionData"]>;
+
+/**
+ * Keeps the signed Guidance token of this history entry in sessionStorage and, when a
+ * reload left the in-tab memory empty, rebuilds the card from it on the server. No
+ * Gemini call, and the complaint box starts empty: the complaint is never stored.
+ */
+function useGuidanceAcrossReload(shown: HomeActionData | undefined): HomeActionData | undefined {
+  const { key: entryKey } = useLocation();
+  const [restored, setRestored] = useState<{ entryKey: string; data: HomeActionData } | null>(null);
+  const token = shown?.share ? shareTokenOf(shown.share.path) : null;
+
+  useEffect(() => {
+    if (token) keepAcrossReload(entryKey, "guidanceToken", token);
+  }, [entryKey, token]);
+
+  useEffect(() => {
+    if (shown) return;
+    const kept = recallAcrossReload(entryKey, "guidanceToken");
+    if (!kept) return;
+    let live = true;
+    void fetch("/api/guidance-card", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: kept }),
+    })
+      .then(async (response) => {
+        // A token signed with an older secret no longer opens; forget it.
+        if (response.status === 404) keepAcrossReload(entryKey, "guidanceToken", null);
+        if (!response.ok) return;
+        const { guidance } = (await response.json()) as { guidance: Guidance };
+        const data: HomeActionData = {
+          complaintText: "",
+          error: null,
+          response: { kind: "guidance", guidance },
+          share: { path: `/panduan/${kept}`, origin: window.location.origin },
+        };
+        rememberEntry(entryKey, "guidance", data);
+        if (live) setRestored({ entryKey, data });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [entryKey, shown]);
+
+  return restored?.entryKey === entryKey ? restored.data : undefined;
 }
 
 function Feed({ filters, feed }: { filters: ListingFilters; feed: FeedPage }) {

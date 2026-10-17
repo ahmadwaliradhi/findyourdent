@@ -37,6 +37,7 @@ export function GuidanceResult({
       {response.transcript && <Transcript text={response.transcript} />}
       {response.kind === "emergency" && <EmergencyCard response={response} />}
       {response.kind === "followUp" && <FollowUpCard response={response} pending={pending} />}
+      {response.kind === "guidance" && <LanguageNote guidance={response.guidance} />}
       {response.kind === "guidance" && (
         <GuidanceCard
           guidance={response.guidance}
@@ -49,8 +50,23 @@ export function GuidanceResult({
 }
 
 /** The signed Guidance token in /panduan/<token>; the Shortlist reads the Guidance from it. */
-function shareTokenOf(path: string): string | null {
+export function shareTokenOf(path: string): string | null {
   return path.split("/").pop() || null;
+}
+
+/**
+ * After the language toggle the card keeps its words, which follow the complaint's
+ * language (spec 01), not the toggle. Asking again would only repeat them, so the note
+ * says how to get the other language instead.
+ */
+function LanguageNote({ guidance }: { guidance: Guidance }) {
+  const { t, i18n } = useTranslation();
+  if (!guidance.language || guidance.language === i18n.language) return null;
+  return (
+    <p role="note" className="rounded-md bg-muted px-3 py-2 text-sm" data-testid="guidance-language">
+      {t(`card.languageNote.${guidance.language}`)}
+    </p>
+  );
 }
 
 function Transcript({ text }: { text: string }) {
