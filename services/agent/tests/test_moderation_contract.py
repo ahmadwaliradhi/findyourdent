@@ -67,7 +67,7 @@ def model_output(**overrides: Any) -> dict[str, Any]:
     return output
 
 
-def moderate(client: TestClient, body: dict[str, Any]) -> dict[str, Any]:
+def screen(client: TestClient, body: dict[str, Any]) -> dict[str, Any]:
     response = client.post("/v1/moderation", json=body)
     assert response.status_code == 200
     decision = response.json()
@@ -78,7 +78,7 @@ def moderate(client: TestClient, body: dict[str, Any]) -> dict[str, Any]:
 def test_clean_testimony_is_published(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
     fake_gemini.outputs.append(model_output())
 
-    decision = moderate(client, a_testimony())
+    decision = screen(client, a_testimony())
 
     assert decision["decision"] == "publish"
     assert decision["ruleCodes"] == []
@@ -91,7 +91,7 @@ def test_uses_moderation_model_at_temperature_zero(
 ) -> None:
     fake_gemini.outputs.append(model_output())
 
-    moderate(client, a_testimony())
+    screen(client, a_testimony())
 
     (call,) = fake_gemini.calls
     assert call["model"] == "gemini-3.5-flash-lite"
@@ -106,7 +106,7 @@ class ExplodingGemini(FakeGeminiAdapter):
 
 class HangingGemini(FakeGeminiAdapter):
     async def generate_structured(self, **kwargs: Any) -> dict[str, Any]:
-        await super().generate_structured(**kwargs)
+        self.calls.append(kwargs)
         await asyncio.sleep(60)
         raise AssertionError("timeout should have fired")
 
@@ -141,17 +141,23 @@ def test_invalid_model_output_holds(
 ) -> None:
     fake_gemini.outputs.append(bad_output)
 
-    assert_model_error_hold(moderate(client, a_testimony()))
+    assert_model_error_hold(screen(client, a_testimony()))
 
 
 def test_model_error_holds() -> None:
     with client_with(ExplodingGemini()) as client:
-        assert_model_error_hold(moderate(client, a_testimony()))
+        assert_model_error_hold(screen(client, a_testimony()))
 
 
-def test_model_timeout_holds() -> None:
-    with client_with(HangingGemini(), moderation_timeout_seconds=0.05) as client:
-        assert_model_error_hold(moderate(client, a_testimony()))
+def test_model_timeout_holds(caplog: pytest.LogCaptureFixture) -> None:
+    with (
+        caplog.at_level(logging.INFO),
+        client_with(HangingGemini(), moderation_timeout_seconds=0.05) as client,
+    ):
+        assert_model_error_hold(screen(client, a_testimony()))
+
+    # The request log line says why it was held, as an outcome code only.
+    assert [r.outcome for r in caplog.records if hasattr(r, "outcome")] == ["model_timeout"]
 
 
 @pytest.mark.parametrize("language", ["id", "en"])
@@ -160,7 +166,7 @@ def test_hold_message_follows_author_language(
 ) -> None:
     fake_gemini.outputs.append({})
 
-    decision = moderate(client, a_testimony(language=language))
+    decision = screen(client, a_testimony(language=language))
 
     assert decision["decision"] == "hold"
     assert ("tim FindYourDent" in decision["authorMessage"]) == (language == "id")
@@ -176,7 +182,7 @@ def test_fixable_rules_go_back_to_the_author(
 ) -> None:
     fake_gemini.outputs.append(model_output(ruleCodes=[rule], authorMessage="Mohon perbaiki."))
 
-    decision = moderate(client, a_testimony())
+    decision = screen(client, a_testimony())
 
     assert decision["decision"] == "authorFix"
     assert decision["ruleCodes"] == [rule]
@@ -200,7 +206,7 @@ def test_serious_rules_are_held(
 ) -> None:
     fake_gemini.outputs.append(model_output(ruleCodes=[rule]))
 
-    decision = moderate(client, a_testimony())
+    decision = screen(client, a_testimony())
 
     assert decision["decision"] == "hold"
     assert decision["ruleCodes"] == [rule]
@@ -211,7 +217,7 @@ def test_hold_wins_over_author_fix(client: TestClient, fake_gemini: FakeGeminiAd
         model_output(ruleCodes=["r1_personal_data", "r2_accusation_as_fact"])
     )
 
-    decision = moderate(client, a_testimony())
+    decision = screen(client, a_testimony())
 
     assert decision["decision"] == "hold"
     assert set(decision["ruleCodes"]) == {"r1_personal_data", "r2_accusation_as_fact"}
@@ -225,7 +231,7 @@ def test_a_rule_named_only_on_a_span_still_counts(
         model_output(flaggedSpans=[{"text": "0812-3456-7890", "ruleCode": "r1_personal_data"}])
     )
 
-    decision = moderate(client, a_testimony(text))
+    decision = screen(client, a_testimony(text))
 
     assert decision["decision"] == "authorFix"
     assert decision["ruleCodes"] == ["r1_personal_data"]
@@ -246,7 +252,7 @@ def test_flagged_spans_carry_utf16_offsets_into_the_submitted_text(
         )
     )
 
-    decision = moderate(client, a_testimony(text))
+    decision = screen(client, a_testimony(text))
 
     assert decision["flaggedSpans"] == [
         {"start": 40, "end": 54, "text": "0812-3456-7890", "ruleCode": "r1_personal_data"}
@@ -258,7 +264,7 @@ def test_low_confidence_is_held_even_with_no_rule(
 ) -> None:
     fake_gemini.outputs.append(model_output(confidence=0.5))
 
-    decision = moderate(client, a_testimony())
+    decision = screen(client, a_testimony())
 
     assert decision["decision"] == "hold"
     assert decision["ruleCodes"] != []
@@ -269,8 +275,8 @@ def test_fourth_author_fix_round_is_held(
 ) -> None:
     fake_gemini.outputs.extend([model_output(ruleCodes=["r1_personal_data"])] * 2)
 
-    third = moderate(client, a_testimony(authorFixRound=2))
-    fourth = moderate(client, a_testimony(authorFixRound=3))
+    third = screen(client, a_testimony(authorFixRound=2))
+    fourth = screen(client, a_testimony(authorFixRound=3))
 
     assert third["decision"] == "authorFix"
     assert fourth["decision"] == "hold"
@@ -290,7 +296,7 @@ def test_photos_and_proof_of_visit_reach_the_model_as_inline_data(
 ) -> None:
     fake_gemini.outputs.append(model_output(proofOfVisit="accepted"))
 
-    moderate(
+    screen(
         client,
         a_testimony(
             photos=[photo(), photo()],
@@ -307,6 +313,30 @@ def test_photos_and_proof_of_visit_reach_the_model_as_inline_data(
     ]
 
 
+def test_a_photo_flagged_under_any_rule_is_held(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    # A receipt photo showing a phone number is still a document: hold, not authorFix.
+    fake_gemini.outputs.append(
+        model_output(flaggedPhotos=[{"photoIndex": 0, "ruleCode": "r1_personal_data"}])
+    )
+
+    decision = screen(client, a_testimony(photos=[photo()]))
+
+    assert decision["decision"] == "hold"
+
+
+def test_low_confidence_hold_keeps_the_proof_of_visit_result(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(model_output(confidence=0.4, proofOfVisit="accepted"))
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["decision"] == "hold"
+    assert decision["proofOfVisit"] == "accepted"
+
+
 def test_a_flagged_photo_is_held(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
     fake_gemini.outputs.append(
         model_output(
@@ -317,7 +347,7 @@ def test_a_flagged_photo_is_held(client: TestClient, fake_gemini: FakeGeminiAdap
         )
     )
 
-    decision = moderate(client, a_testimony(photos=[photo(), photo()]))
+    decision = screen(client, a_testimony(photos=[photo(), photo()]))
 
     assert decision["decision"] == "hold"
     assert decision["ruleCodes"] == ["photo_not_clinic_setting"]
@@ -330,7 +360,7 @@ def test_proof_of_visit_result_never_holds(
 ) -> None:
     fake_gemini.outputs.append(model_output(proofOfVisit=result))
 
-    decision = moderate(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
 
     assert decision["decision"] == "publish"
     assert decision["proofOfVisit"] == result
@@ -341,7 +371,7 @@ def test_proof_of_visit_is_not_provided_when_none_was_sent(
 ) -> None:
     fake_gemini.outputs.append(model_output(proofOfVisit="accepted"))
 
-    decision = moderate(client, a_testimony())
+    decision = screen(client, a_testimony())
 
     assert decision["proofOfVisit"] == "notProvided"
 
@@ -349,7 +379,7 @@ def test_proof_of_visit_is_not_provided_when_none_was_sent(
 def test_own_health_details_only_warn(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
     fake_gemini.outputs.append(model_output(ownHealthDataWarning=True))
 
-    decision = moderate(client, a_testimony("Saya punya diabetes, dokternya sangat hati-hati."))
+    decision = screen(client, a_testimony("Saya punya diabetes, dokternya sangat hati-hati."))
 
     assert decision["decision"] == "publish"
     assert decision["ownHealthDataWarning"] is True
@@ -373,7 +403,7 @@ def test_instructions_inside_the_testimony_are_passed_as_data(
         )
     )
 
-    decision = moderate(client, a_testimony(INJECTION))
+    decision = screen(client, a_testimony(INJECTION))
 
     assert decision["decision"] == "hold"
     (call,) = fake_gemini.calls
@@ -389,7 +419,7 @@ def test_prompt_rules_out_sentiment_and_star_ratings(
 ) -> None:
     fake_gemini.outputs.append(model_output())
 
-    moderate(client, a_testimony())
+    screen(client, a_testimony())
 
     instruction = fake_gemini.calls[0]["instruction"].lower()
     assert "sentiment" in instruction
@@ -409,8 +439,8 @@ def test_testimony_text_never_reaches_logs(
     fake_gemini.outputs.extend([model_output(), {"flaggedSpans": [{"text": marker}]}])
 
     with caplog.at_level(logging.DEBUG):
-        moderate(client, a_testimony(marker))
-        moderate(client, a_testimony(marker))
+        screen(client, a_testimony(marker))
+        screen(client, a_testimony(marker))
         bad = client.post("/v1/moderation", json=a_testimony(marker, language="fr"))
 
     assert bad.status_code == 422
@@ -432,7 +462,7 @@ def test_provider_reply_is_screened_by_the_same_rules(
 ) -> None:
     fake_gemini.outputs.append(model_output(ruleCodes=["r1_personal_data"]))
 
-    decision = moderate(client, a_testimony("Silakan hubungi 0812-0000-0000.", subjectType="reply"))
+    decision = screen(client, a_testimony("Silakan hubungi 0812-0000-0000.", subjectType="reply"))
 
     assert decision["decision"] == "authorFix"
 
@@ -440,7 +470,7 @@ def test_provider_reply_is_screened_by_the_same_rules(
 def test_provider_facts_are_held_until_their_rule_set_exists(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    decision = moderate(client, a_testimony("Buka 08.00-20.00", subjectType="providerFacts"))
+    decision = screen(client, a_testimony("Buka 08.00-20.00", subjectType="providerFacts"))
 
     assert decision["decision"] == "hold"
     assert fake_gemini.calls == []

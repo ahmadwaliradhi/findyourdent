@@ -11,8 +11,7 @@ import asyncio
 import base64
 import binascii
 import json
-import logging
-from typing import Annotated, Any, Literal, get_args
+from typing import Annotated, Any, Literal, NamedTuple, get_args
 
 from google.genai import types
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -21,8 +20,6 @@ from .adapters import GeminiAdapter
 from .config import Settings
 from .contracts.moderation_decision import FlaggedPhoto, FlaggedSpan, ModerationDecision
 from .contracts.moderation_request import ModerationRequest
-
-log = logging.getLogger("findyourdent_agent.moderation")
 
 TestimonyRule = Literal[
     "r1_personal_data",
@@ -218,7 +215,15 @@ def build_contents(request: ModerationRequest) -> list[types.Part]:
     return parts
 
 
-def _model_error_hold(request: ModerationRequest) -> ModerationDecision:
+class Moderation(NamedTuple):
+    decision: ModerationDecision
+    outcome: str
+    """Outcome code for the request log line; never content (spec 00)."""
+
+
+def _hold_for_admin(request: ModerationRequest) -> ModerationDecision:
+    """Hold with no rule hit. The contract has no closer code than model_error, which the
+    admin queue reads as "the model could not decide" (spec 03)."""
     return ModerationDecision(
         decision="hold",
         ruleCodes=["model_error"],
@@ -230,11 +235,10 @@ def _model_error_hold(request: ModerationRequest) -> ModerationDecision:
 
 async def moderate(
     request: ModerationRequest, gemini: GeminiAdapter, settings: Settings
-) -> ModerationDecision:
+) -> Moderation:
     if request.subjectType == "providerFacts":
         # The Provider-facts rule set belongs to spec 05; until it lands, a human decides.
-        log.info("provider facts not screened yet", extra={"outcome": "unsupported_subject"})
-        return _model_error_hold(request)
+        return Moderation(_hold_for_admin(request), "unsupported_subject")
 
     contents = build_contents(request)
     try:
@@ -250,28 +254,16 @@ async def moderate(
         )
         output = ModelOutput.model_validate(raw)
     except TimeoutError:
-        log.warning("moderation model timed out", extra={"outcome": "model_timeout"})
-        return _model_error_hold(request)
-    except ValidationError as exc:
-        # Log only error types and locations: values can quote the Testimony.
-        log.warning(
-            "moderation model output invalid",
-            extra={"outcome": "model_invalid_output", "errors": [e["type"] for e in exc.errors()]},
-        )
-        return _model_error_hold(request)
-    except Exception as exc:
-        log.warning(
-            "moderation model call failed",
-            extra={"outcome": "model_error", "error_type": type(exc).__name__},
-        )
-        return _model_error_hold(request)
+        return Moderation(_hold_for_admin(request), "model_timeout")
+    except ValidationError:
+        return Moderation(_hold_for_admin(request), "model_invalid_output")
+    except Exception:
+        return Moderation(_hold_for_admin(request), "model_error")
 
     return _decide(request, output, settings)
 
 
-def _decide(
-    request: ModerationRequest, output: ModelOutput, settings: Settings
-) -> ModerationDecision:
+def _decide(request: ModerationRequest, output: ModelOutput, settings: Settings) -> Moderation:
     photo_count = len(request.photos or [])
     photos = [p for p in output.flaggedPhotos if p.photoIndex < photo_count]
     # A rule named only on a span or photo still counts.
@@ -284,30 +276,42 @@ def _decide(
             ]
         )
     )
-    if any(rule in HOLD_RULES for rule in rules):
+    outcome = None
+    # Any flagged photo is held, whichever rule the model tagged it with (spec 03 photo rules).
+    if photos or any(rule in HOLD_RULES for rule in rules):
         decision = "hold"
     elif rules:
         # After three authorFix rounds the content goes to the admin instead (spec 03).
-        decision = "authorFix" if (request.authorFixRound or 0) < MAX_AUTHOR_FIX_ROUNDS else "hold"
+        if (request.authorFixRound or 0) < MAX_AUTHOR_FIX_ROUNDS:
+            decision = "authorFix"
+        else:
+            decision, outcome = "hold", "author_fix_rounds_exhausted"
     elif output.confidence < settings.moderation_publish_confidence:
         # No rule fired but the model is not sure enough to publish (ADR-0004).
-        return _model_error_hold(request)
+        decision, outcome = "hold", "low_confidence"
+        rules = ["model_error"]
     else:
         decision = "publish"
 
-    return ModerationDecision(
-        decision=decision,
-        ruleCodes=rules,
-        flaggedSpans=_locate_spans(request.text, output.flaggedSpans),
-        flaggedPhotos=[FlaggedPhoto(photoIndex=p.photoIndex, ruleCode=p.ruleCode) for p in photos]
-        or None,
-        confidence=output.confidence,
-        authorMessage=_HOLD_MESSAGE[request.language]
-        if decision == "hold"
-        else output.authorMessage,
-        ownHealthDataWarning=output.ownHealthDataWarning or None,
-        # The check never holds; a missing file can only be notProvided.
-        proofOfVisit=output.proofOfVisit if request.proofOfVisit else "notProvided",
+    # The Proof of Visit check never holds, and its file is deleted after this call, so its
+    # result is returned on every path where the model produced one.
+    return Moderation(
+        ModerationDecision(
+            decision=decision,
+            ruleCodes=rules,
+            flaggedSpans=_locate_spans(request.text, output.flaggedSpans),
+            flaggedPhotos=[
+                FlaggedPhoto(photoIndex=p.photoIndex, ruleCode=p.ruleCode) for p in photos
+            ]
+            or None,
+            confidence=output.confidence,
+            authorMessage=(
+                _HOLD_MESSAGE[request.language] if decision == "hold" else output.authorMessage
+            ),
+            ownHealthDataWarning=output.ownHealthDataWarning or None,
+            proofOfVisit=output.proofOfVisit if request.proofOfVisit else "notProvided",
+        ),
+        outcome or decision,
     )
 
 

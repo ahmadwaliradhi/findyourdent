@@ -108,14 +108,12 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         body: ModerationRequest, request: Request
     ) -> ModerationDecision | JSONResponse:
         try:
-            decision = await moderate(body, adapters.gemini, settings)
+            result = await moderate(body, adapters.gemini, settings)
         except InvalidAttachmentError:
             request.state.outcome = "invalid_request"
-            return JSONResponse(
-                status_code=422,
-                content={"detail": [{"type": "invalid_base64", "msg": "attachment is not base64"}]},
-            )
-        request.state.outcome = decision.decision
-        return decision
+            detail = {"type": "invalid_base64", "loc": ["body"], "msg": "attachment is not base64"}
+            return JSONResponse(status_code=422, content={"detail": [detail]})
+        request.state.outcome = result.outcome
+        return result.decision
 
     return app

@@ -22,7 +22,7 @@ class GoogleGeminiAdapter:
     settings: Settings
     _client: genai.Client | None = field(default=None, init=False, repr=False)
 
-    def _vertex(self) -> genai.Client:
+    def _vertex_client(self) -> genai.Client:
         # Built on first use so the service starts without credentials (tests, local dev).
         if self._client is None:
             self._client = genai.Client(
@@ -41,7 +41,7 @@ class GoogleGeminiAdapter:
         response_schema: dict[str, Any],
         temperature: float,
     ) -> dict[str, Any]:
-        response = await self._vertex().aio.models.generate_content(
+        response = await self._vertex_client().aio.models.generate_content(
             model=model,
             contents=contents,
             config=types.GenerateContentConfig(
