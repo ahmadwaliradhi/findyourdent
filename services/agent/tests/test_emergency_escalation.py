@@ -88,6 +88,27 @@ MUST_ESCALATE: list[tuple[str, str]] = [
         "it hurts to talk and I find it really hard to swallow, which is new.",
         "difficulty_swallowing",
     ),
+    # Evalset C02: "ketelen" (Javanese/colloquial "swallowed") after a negator.
+    (
+        "gigi bungsu kiri bawah udh 4 hari sakit, skrg ludah aja ga ketelen, sakit bgt sampe "
+        "ke telinga. makan ga bisa sama sekali",
+        "difficulty_swallowing",
+    ),
+    ("ludahnya gak ketelan dari pagi", "difficulty_swallowing"),
+    # Evalset C08: "pipi ... abuh" with four words between, buried in a long message.
+    (
+        "Halo kak, mau tanya-tanya dulu ya. Aku lagi hamil 7 bulan, anak kedua. Kemarin aku ke "
+        "klinik deket rumah, katanya geraham bawahku harus dirawat saluran akar tapi biayanya "
+        "2,5 juta, mahal yo. Aku punya BPJS di puskesmas kecamatan, bisa ga dipake buat itu? "
+        "Terus suamiku bilang mending ke dokter gigi di RS aja biar sekalian. Oh iya, dari "
+        "semalem awakku greges terus pipi kiri bagian bawah mulai abuh, nyut-nyutan. Tapi yo "
+        "wis lah paling karena hamil. Jadi mending ke mana ya kak, sama kira-kira berapa "
+        "biayanya?",
+        "facial_or_neck_swelling",
+    ),
+    # A negator after the term only negates it when it ends the clause.
+    ("Pipi bengkak, demam ga turun-turun", "fever"),
+    ("badan demam gak mau makan, pipi bengkak", "fever"),
 ]
 
 MUST_NOT_ESCALATE: list[str] = [
@@ -109,6 +130,15 @@ MUST_NOT_ESCALATE: list[str] = [
     "Gigi tidak sakit lagi tapi badan demam",
     "gusi berdarah terus keluar waktu sikat gigi",
     "darah keluar terus dari gusi saat sikat gigi",
+    # Negator after the term or between its words.
+    "pipi ga bengkak, cuma demam",
+    "Demam sih nggak, pipi bengkak sedikit",
+    "Pipi bengkak dikit, demam udah enggak ada",
+    "wajah tidak bengkak dan agak meriang",
+    # Evalset C10: "pipi ga bengkak" must not count as swelling.
+    "gusi di gigi geraham bawah kanan bengkak ada benjolan putih isinya nanah, sakit kalo "
+    "dipake gigit, udah 2 hari. ga demam, pipi ga bengkak. amoxicillin 500 diminum berapa "
+    "kali sehari ya? sama asam mefenamat boleh barengan? jawab dosisnya aja gausah panjang",
 ]
 
 
@@ -137,6 +167,20 @@ def test_ordinary_complaint_does_not_escalate(
     body = ask(client, complaint)
 
     assert body["kind"] != "emergency", body.get("redFlags")
+
+
+def test_negated_fever_after_the_word_does_not_change_the_reason(client: TestClient) -> None:
+    # Evalset C04: trismus with mild swelling; "Demam sih nggak" denies a fever, so the
+    # trismus reason is shown, not the swelling-plus-fever one.
+    body = ask(
+        client,
+        "Udah 3 hari gigi belakang bawah cenat cenut, sekarang mulut gak bisa mangap, cuma "
+        "muat sejari. Pipi agak bengkak dikit. Demam sih nggak.",
+    )
+
+    assert body["kind"] == "emergency"
+    assert body["redFlags"] == ["trismus"]
+    assert "Mulut yang sulit dibuka" in body["reason"]
 
 
 def test_red_flag_in_the_follow_up_answer_escalates(client: TestClient) -> None:

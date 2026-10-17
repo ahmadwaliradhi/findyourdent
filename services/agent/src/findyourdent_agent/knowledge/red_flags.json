@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-17.2",
+  "version": "2026-10-17.3",
   "notes": [
     "Emergency Escalation red flags (spec 01), checked before any model call. A clinical reviewer extends this file; bump version on every change and add must-escalate or must-not-escalate cases to services/agent/tests/test_emergency_escalation.py.",
     "Matching is on normalised words: lower case, no accents or apostrophes, repeated letters collapsed (bengkaaak = bengkak, tinggi = tingi), 'gigi2' = 'gigi'. Write phrases in plain spelling; misspellings and slang go in synonyms.",
@@ -8,6 +8,7 @@
     "A flag can set its own max_gap, and cross_clauses: true to let its phrases span clauses (a fall in one sentence, the lost tooth in the next).",
     "A negator followed by a negation_exceptions word does not negate ('tidak turun demam' = the fever is not going down, 'tidak lama' = not long after).",
     "A match is ignored when a negator appears up to negation_window words before it in the same clause, unless the phrase starts with the negator, or when an exclude phrase of the same flag appears in the clauses the match covers.",
+    "A match is also ignored when a negator sits between its words ('pipi ga bengkak'), or follows it within post_negation_window words in the same clause with only post_negation_tail words after the negator ('demam sih nggak', 'demam udah gak ada'). A negator followed by anything else ('demam ga mau makan', 'demam ga turun') does not negate.",
     "rules fire when every flag in 'all' is present; the first rule that fires (top to bottom) gives the reason shown to the Patient.",
     "Sources for the red flags: NHS 111 and SDCEP dental emergency guidance (UK), Alberta Dental Association guidance (Canada), Queensland Health dental emergency referral guidance, IADT avulsion guideline."
   ],
@@ -15,6 +16,8 @@
   "negation_window": 2,
   "negators": ["tidak", "bukan", "belum", "tanpa", "no", "not", "without", "never", "dont", "doesnt", "didnt", "isnt", "havent", "hasnt", "nor"],
   "negation_exceptions": ["turun", "lama", "hilang", "sembuh", "reda", "kunjung", "going", "getting", "long"],
+  "post_negation_window": 3,
+  "post_negation_tail": ["sih", "kok", "ada", "lagi", "kan", "ya", "lah", "dong", "juga", "pernah", "sama", "sekali", "at", "all", "really"],
   "clause_breaks": ["tapi", "tetapi", "namun", "but", "however", "although", "walaupun", "meskipun", "cuma", "hanya"],
   "synonyms": {
     "gak": "tidak",
@@ -109,6 +112,8 @@
     "nelen": "menelan",
     "neureuy": "menelan",
     "nguntal": "menelan",
+    "ketelen": "bisa menelan",
+    "ketelan": "bisa menelan",
     "swallowing": "swallow",
     "swalow": "swallow",
     "swalowing": "swallow",
@@ -204,7 +209,8 @@
         "swollen jaw", "jaw swollen",
         "swollen neck", "neck swollen",
         "swollen under jaw"
-      ]
+      ],
+      "max_gap": 5
     },
     "fever": {
       "phrases": [
