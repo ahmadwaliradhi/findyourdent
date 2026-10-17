@@ -237,7 +237,8 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
               <span className="text-muted-foreground">
                 ({t(`shortlist.priceSource.${signal.source}`)}
                 {signal.source === "costEstimate" ? `, ${t("estimate")}` : ""}
-                {signal.asOf ? `, ${t("shortlist.asOf", { date: signal.asOf })}` : ""})
+                {signal.asOf ? `, ${t("shortlist.asOf", { date: signal.asOf })}` : ""}
+                {signal.possiblyOutdated ? `, ${t("shortlist.possiblyOutdated")}` : ""})
               </span>
             </li>
           ))}

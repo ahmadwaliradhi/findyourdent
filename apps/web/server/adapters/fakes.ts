@@ -2,6 +2,8 @@ import type {
   GuidanceRequest,
   ModerationDecision,
   ModerationRequest,
+  PriceListExtractionRequest,
+  PriceListExtractionResponse,
   ShortlistReasonsRequest,
   ShortlistReasonsResponse,
 } from "@findyourdent/contracts";
@@ -126,6 +128,40 @@ function stubOwnerModeration(request: ModerationRequest, en: boolean): Moderatio
   };
 }
 
+/**
+ * Stub Price List rows, valid against price-list-extraction-response.schema.json: two
+ * rows mapped to the shared procedure list and one free-text row read with low confidence.
+ */
+export const STUB_PRICE_LIST_EXTRACTION: PriceListExtractionResponse = {
+  kind: "ok",
+  rows: [
+    {
+      procedureCode: "scaling",
+      procedureText: "Scaling (pembersihan karang gigi)",
+      minRupiah: 300_000,
+      maxRupiah: 300_000,
+      unit: "per_visit",
+      confidence: 0.95,
+    },
+    {
+      procedureCode: "tooth_filling",
+      procedureText: "Tambal gigi komposit",
+      minRupiah: 250_000,
+      maxRupiah: 450_000,
+      unit: "per_tooth",
+      notes: "Tergantung luas lubang",
+      confidence: 0.9,
+    },
+    {
+      procedureText: "Bleaching",
+      minRupiah: 1_500_000,
+      maxRupiah: 2_500_000,
+      unit: "per_package",
+      confidence: 0.45,
+    },
+  ],
+};
+
 export interface FakeAgentAdapter extends AgentAdapter {
   readonly calls: GuidanceRequest[];
   readonly reasonsCalls: ShortlistReasonsRequest[];
@@ -135,6 +171,12 @@ export interface FakeAgentAdapter extends AgentAdapter {
    * the default is `stubModeration`.
    */
   respondToModerationWith(response: unknown): void;
+  readonly extractionCalls: PriceListExtractionRequest[];
+  /**
+   * Next value returned (or thrown, if an Error) by requestPriceListExtraction, until
+   * changed; the default is `STUB_PRICE_LIST_EXTRACTION`.
+   */
+  respondToExtractionWith(response: unknown): void;
   /** Next value returned (or thrown, if an Error) by requestGuidance. */
   respondWith(response: unknown): void;
   /** Next value returned (or thrown, if an Error) by requestShortlistReasons; the default is stub reasons. */
@@ -145,6 +187,8 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
   let next: unknown = initial;
   let nextReasons: unknown;
   let nextModeration: unknown;
+  let nextExtraction: unknown = STUB_PRICE_LIST_EXTRACTION;
+  const extractionCalls: PriceListExtractionRequest[] = [];
   const calls: GuidanceRequest[] = [];
   const reasonsCalls: ShortlistReasonsRequest[] = [];
   const moderationCalls: ModerationRequest[] = [];
@@ -152,6 +196,15 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
     calls,
     reasonsCalls,
     moderationCalls,
+    extractionCalls,
+    respondToExtractionWith(response) {
+      nextExtraction = response;
+    },
+    async requestPriceListExtraction(request) {
+      extractionCalls.push(structuredClone(request));
+      if (nextExtraction instanceof Error) throw nextExtraction;
+      return structuredClone(nextExtraction);
+    },
     respondToModerationWith(response) {
       nextModeration = response;
     },

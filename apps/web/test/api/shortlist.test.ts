@@ -258,6 +258,62 @@ describe("POST /api/shortlist", () => {
     });
   });
 
+  it("shows the owner's confirmed Price List second, after prices paid, with its date and an outdated note", async () => {
+    server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG]);
+    const paid = {
+      root_canal_treatment: { count: 2, medianRupiah: 1_200_000, minRupiah: 1_000_000, maxRupiah: 1_400_000 },
+    };
+    await seedProviders(
+      listedProvider(GOOGLE_CLINIC.placeId, {
+        claimStatus: "claimed",
+        claimId: "claim-current",
+        aggregates: { testimonyCount: 2, verifiedVisitCount: 0, averages: null, procedurePrices: paid },
+      }),
+      listedProvider(GOOGLE_DRG.placeId, { claimStatus: "claimed", claimId: "claim-current-drg" }),
+    );
+    const list = (placeId: string, claimId: string, confirmedAt: Date) => ({
+      placeId,
+      claimId,
+      uploadedBy: "owner-uid",
+      source: "ownerPriceList",
+      status: "current",
+      rows: [
+        {
+          procedureCode: "root_canal_treatment",
+          procedureText: "PSA",
+          minRupiah: 1_500_000,
+          maxRupiah: 2_500_000,
+          unit: "per_tooth",
+        },
+      ],
+      uploadedAt: confirmedAt,
+      confirmedAt,
+    });
+    const lists = server.firestore.collection(COLLECTIONS.priceLists);
+    await lists.add(list(GOOGLE_CLINIC.placeId, "claim-current", new Date("2025-06-01T03:00:00Z")));
+    // A list from an earlier claimant of the same place is never shown.
+    await lists.add(list(GOOGLE_DRG.placeId, "claim-revoked", new Date()));
+
+    const { body } = await shortlist({
+      purpose: "shortlist",
+      guidanceToken: tokenFor(ROOT_CANAL_GUIDANCE),
+      location: GUBENG,
+    });
+
+    const clinic = body.providers.find((p) => p.placeId === GOOGLE_CLINIC.placeId);
+    expect(clinic?.priceSignals.map((s) => s.source)).toEqual(["testimonies", "priceList", "costEstimate"]);
+    expect(clinic?.priceSignals[1]).toEqual({
+      procedureCode: "root_canal_treatment",
+      source: "priceList",
+      minRupiah: 1_500_000,
+      maxRupiah: 2_500_000,
+      asOf: "2025-06-01",
+      possiblyOutdated: true,
+    });
+    const drg = body.providers.find((p) => p.placeId === GOOGLE_DRG.placeId);
+    expect(drg?.priceSignals.map((s) => s.source)).toEqual(["costEstimate"]);
+  });
+
   it("writes no Google field to Firestore other than place_id and dated coordinates", async () => {
     server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG, GOOGLE_HOSPITAL]);
     await seedProviders(listedProvider(GOOGLE_CLINIC.placeId));

@@ -4,17 +4,18 @@
 import {
   type AspectRatings,
   COLLECTIONS,
-  type PriceListDoc,
   type ProcedureCode,
   type ProviderDoc,
   type ProviderType,
   type TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
+import type { PublicPriceList } from "~/lib/price-lists";
 import type { OwnerFacts } from "~/lib/provider";
 import { regionLabel } from "~/lib/regions";
 import type { PriceSignal } from "~/lib/shortlist";
 import { jakartaDate } from "../../server/quota.ts";
+import { currentPriceLists, publicPriceList } from "./price-lists.server.ts";
 import { whatsappUri } from "./provider.server.ts";
 import { placeMapsUrl } from "./shortlist.server.ts";
 
@@ -33,8 +34,10 @@ export interface ProviderSummary {
   testimonyCount: number;
   verifiedVisitCount: number;
   averages: AspectRatings | null;
-  /** Median price paid (two or more) and the owner's Price List, each with its source and date. */
+  /** Median price paid (two or more), with its source and date. */
   priceSignals: PriceSignal[];
+  /** The owner's confirmed Price List, every row, second to prices paid (spec 05). */
+  priceList?: PublicPriceList;
   /** Owner facts from an approved Claim, once moderation published them. */
   owner?: OwnerFacts;
   /** Built without an API call, so the page always links to Google Maps. */
@@ -69,8 +72,8 @@ function ownerFacts(doc: ProviderDoc): OwnerFacts | undefined {
   return Object.keys(owner).length > 0 ? owner : undefined;
 }
 
-/** Without a Guidance there is no Cost Estimate: median price paid, then the Price List, per procedure. */
-function priceSignals(doc: ProviderDoc, priceList: PriceListDoc | undefined): PriceSignal[] {
+/** Without a Guidance there is no Cost Estimate: the median price paid per procedure; the Price List is shown in full apart. */
+function priceSignals(doc: ProviderDoc): PriceSignal[] {
   const signals: PriceSignal[] = [];
   for (const [code, paid] of Object.entries(doc.aggregates.procedurePrices)) {
     if (paid.count < MIN_PRICES_FOR_MEDIAN) continue;
@@ -82,29 +85,7 @@ function priceSignals(doc: ProviderDoc, priceList: PriceListDoc | undefined): Pr
       asOf: jakartaDate(doc.updatedAt.toMillis()),
     });
   }
-  if (priceList) {
-    for (const row of priceList.rows) {
-      if (!row.procedureCode) continue;
-      signals.push({
-        procedureCode: row.procedureCode,
-        source: "priceList",
-        minRupiah: row.minRupiah,
-        maxRupiah: row.maxRupiah,
-        asOf: jakartaDate(priceList.confirmedAt.toMillis()),
-      });
-    }
-  }
   return signals;
-}
-
-async function currentPriceList(firestore: Firestore, placeId: string): Promise<PriceListDoc | undefined> {
-  const snapshot = await firestore
-    .collection(COLLECTIONS.priceLists)
-    .where("placeId", "==", placeId)
-    .where("status", "==", "current")
-    .limit(1)
-    .get();
-  return snapshot.docs[0]?.data() as PriceListDoc | undefined;
 }
 
 /** null when the place is not a Listed Provider. */
@@ -124,7 +105,7 @@ export async function loadProviderPage(
   ]);
   if (!providerSnapshot.exists) return null;
   const doc = providerSnapshot.data() as ProviderDoc;
-  const priceList = doc.claimStatus === "claimed" ? await currentPriceList(firestore, placeId) : undefined;
+  const priceList = (await currentPriceLists(firestore, [doc])).get(placeId);
 
   const testimonies: PublicTestimony[] = testimonySnapshot.docs.map((snapshot) => {
     const t = snapshot.data() as TestimonyDoc;
@@ -156,7 +137,8 @@ export async function loadProviderPage(
       testimonyCount: doc.aggregates.testimonyCount,
       verifiedVisitCount: doc.aggregates.verifiedVisitCount,
       averages: doc.aggregates.averages,
-      priceSignals: priceSignals(doc, priceList),
+      priceSignals: priceSignals(doc),
+      ...(priceList ? { priceList: publicPriceList(priceList) } : {}),
       ...(owner ? { owner } : {}),
       googleMapsUri: placeMapsUrl(doc.name, placeId),
     },

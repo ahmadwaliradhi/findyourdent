@@ -10,6 +10,8 @@ export interface PriceSignal {
   maxRupiah: number;
   /** `YYYY-MM-DD` the price was last confirmed; absent for the Cost Estimate. */
   asOf?: string;
+  /** A Price List confirmed more than 12 months ago: shown with "mungkin sudah berubah". */
+  possiblyOutdated?: true;
 }
 
 export interface ShortlistProvider {
