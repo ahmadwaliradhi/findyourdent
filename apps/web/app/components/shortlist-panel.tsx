@@ -1,11 +1,12 @@
-import { type KeyboardEvent, useId, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useLocation as useRouterLocation } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import type { Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
+import { recallEntry, rememberEntry } from "~/lib/entry-memory";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatDistance, formatRupiah, formatScore } from "~/lib/format";
@@ -34,7 +35,13 @@ export function ShortlistPanel(
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   const firebase = useFirebaseConfig();
-  const [state, setState] = useState<State>({ phase: "closed" });
+  // Back from a Provider page shows the same results again, with no second Text Search.
+  const { key: entryKey } = useRouterLocation();
+  const slot = `shortlist:${props.purpose}:${props.guidanceToken ?? ""}`;
+  const [state, setState] = useState<State>(() => recallEntry<State>(entryKey, slot) ?? { phase: "closed" });
+  useEffect(() => {
+    if (state.phase === "done") rememberEntry(entryKey, slot, state);
+  }, [entryKey, slot, state]);
   const [area, setArea] = useState("");
   const areaId = useId();
   const emergency = props.purpose === "emergency";

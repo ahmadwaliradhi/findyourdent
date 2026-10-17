@@ -166,3 +166,70 @@ export function createFakeAppCheckVerifier(): FakeAppCheckVerifier {
     },
   };
 }
+
+/** Sample places for local runs and the browser tests (PLACES_ADAPTER=fake). Made up, not Google data. */
+export const SAMPLE_PLACES: PlaceSummary[] = [
+  {
+    placeId: "sample-klinik-senyum",
+    displayName: "Klinik Gigi Senyum Contoh",
+    formattedAddress: "Jl. Contoh No. 1, Surabaya",
+    location: { lat: -7.2711, lng: 112.7509 },
+    types: ["dentist", "health"],
+    googleMapsUri: "https://www.google.com/maps/search/?api=1&query=Klinik&query_place_id=sample-klinik-senyum",
+  },
+  {
+    placeId: "sample-drg-ani",
+    displayName: "drg. Ani Contoh",
+    formattedAddress: "Jl. Contoh No. 2, Surabaya",
+    location: { lat: -7.2856, lng: 112.7509 },
+    types: ["dentist", "health"],
+    googleMapsUri: "https://www.google.com/maps/search/?api=1&query=drg&query_place_id=sample-drg-ani",
+  },
+];
+
+const SAMPLE_REVIEWS: GoogleReview[] = [
+  {
+    rating: 5,
+    text: "Contoh ulasan: dokternya sabar dan ruangannya bersih.",
+    relativeTime: "2 minggu lalu",
+    author: { name: "Pengulas Contoh", uri: "https://www.google.com/maps/contrib/sample", photoUri: "/favicon.svg" },
+  },
+];
+
+/**
+ * The fake adapter with SAMPLE_PLACES: every search finds them, each has a Google
+ * block and one review. Any other place id answers like a used-up daily cap, so the
+ * fallback can be seen too.
+ */
+export function createSamplePlacesAdapter(): PlacesAdapter {
+  const known = new Map(SAMPLE_PLACES.map((place) => [place.placeId, place]));
+  return {
+    async searchText() {
+      return { ok: true, places: structuredClone(SAMPLE_PLACES) };
+    },
+    async getGoogleBlock({ placeId }) {
+      const place = known.get(placeId);
+      if (!place) return { ok: false, reason: "cap_reached" };
+      return {
+        ok: true,
+        block: {
+          placeId,
+          displayName: place.displayName,
+          types: place.types,
+          ...(place.formattedAddress ? { formattedAddress: place.formattedAddress } : {}),
+          openNow: true,
+          weekdayHours: ["Senin: 09.00–21.00", "Selasa: 09.00–21.00"],
+          nationalPhoneNumber: "0812-0000-0001",
+          rating: 4.6,
+          userRatingCount: 12,
+          ...(place.googleMapsUri ? { googleMapsUri: place.googleMapsUri } : {}),
+        },
+      };
+    },
+    async getGoogleReviews({ placeId }) {
+      return known.has(placeId)
+        ? { ok: true, reviews: structuredClone(SAMPLE_REVIEWS) }
+        : { ok: false, reason: "cap_reached" };
+    },
+  };
+}

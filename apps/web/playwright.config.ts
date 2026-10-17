@@ -22,7 +22,12 @@ export default defineConfig({
     command: "node server.ts",
     url: `http://127.0.0.1:${port}/health`,
     // No Firebase here: the browser sends the debug token in place of an App Check token.
-    env: { PORT: String(port), AGENT_ADAPTER: "fake", APP_CHECK_DEBUG_TOKEN: "e2e-app-check-debug-token" },
+    env: {
+      PORT: String(port),
+      AGENT_ADAPTER: "fake",
+      PLACES_ADAPTER: "fake",
+      APP_CHECK_DEBUG_TOKEN: "e2e-app-check-debug-token",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },

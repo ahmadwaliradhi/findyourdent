@@ -9,7 +9,12 @@ import {
   createDebugAppCheckVerifier,
   createFirebaseAppCheckVerifier,
 } from "./adapters/app-check.ts";
-import { createFakeAgentAdapter, createFakeGeminiAdapter, createFakePlacesAdapter } from "./adapters/fakes.ts";
+import {
+  createFakeAgentAdapter,
+  createFakeGeminiAdapter,
+  createFakePlacesAdapter,
+  createSamplePlacesAdapter,
+} from "./adapters/fakes.ts";
 import type { GeminiAdapter } from "./adapters/gemini.ts";
 import { createGooglePlacesAdapter, type PlacesAdapter } from "./adapters/places.ts";
 import type { SignedInUser } from "./auth.ts";
@@ -123,10 +128,13 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
 
 /**
  * Real Places only with a key (the `places-api-key` secret) and PLACES_ADAPTER not
- * set to fake. Daily caps count in Firestore so every instance shares them.
+ * set to fake. PLACES_ADAPTER=fake serves made-up sample places (local runs, browser
+ * tests); no key at all finds nothing. Daily caps count in Firestore so every
+ * instance shares them.
  */
 function placesAdapter(env: NodeJS.ProcessEnv, firestore: Firestore | null): PlacesAdapter {
-  if (env.PLACES_ADAPTER === "fake" || !env.PLACES_API_KEY) return createFakePlacesAdapter();
+  if (env.PLACES_ADAPTER === "fake") return createSamplePlacesAdapter();
+  if (!env.PLACES_API_KEY) return createFakePlacesAdapter();
   const quota = firestore ? createFirestoreDailyQuota(firestore) : createMemoryDailyQuota();
   return createGooglePlacesAdapter({ apiKey: env.PLACES_API_KEY, quota });
 }
