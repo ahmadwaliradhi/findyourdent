@@ -17,11 +17,14 @@ from .contracts.guidance_request import GuidanceRequest
 from .contracts.guidance_response import GuidanceResponse
 from .contracts.moderation_decision import ModerationDecision
 from .contracts.moderation_request import ModerationRequest
+from .contracts.shortlist_reasons_request import ShortlistReasonsRequest
+from .contracts.shortlist_reasons_response import ShortlistReasonsResponse
 from .data import procedure_codes
 from .escalation import default_matcher
 from .guidance import AudioNotSupportedError, answer_turn
 from .knowledge import bpjs_coverage, cost_estimates, guidance_safety
 from .moderation import InvalidAttachmentError, moderate
+from .shortlist import write_reasons
 
 log = logging.getLogger("findyourdent_agent")
 
@@ -142,5 +145,19 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             return JSONResponse(status_code=422, content={"detail": [detail]})
         request.state.outcome = result.outcome
         return result.decision
+
+    @app.post("/v1/shortlist-reasons", response_model=ShortlistReasonsResponse)
+    async def shortlist_reasons(body: ShortlistReasonsRequest, request: Request) -> Response:
+        # Provider names and reasons are never logged; the web service shows its
+        # templated reasons on any error.
+        try:
+            result = await write_reasons(body, gemini=adapters.gemini, settings=settings)
+        except ModelQuotaExhaustedError:
+            return _error(request, 503, "model_quota_exhausted")
+        except ModelUnavailableError as error:
+            log.error("gemini unavailable: %s", type(error).__name__)
+            return _error(request, 503, "model_unavailable")
+        request.state.outcome = "reasons"
+        return JSONResponse(result.model_dump(mode="json"))
 
     return app
