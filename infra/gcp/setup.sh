@@ -21,8 +21,8 @@ BUCKET="${BUCKET:-${PROJECT_ID}-uploads}"
 BUDGET_AMOUNT="${BUDGET_AMOUNT:-1650000IDR}"
 BUDGET_NAME="${BUDGET_NAME:-findyourdent-usd100}"
 WEB_APP_NAME="${WEB_APP_NAME:-findyourdent-web}"
-# Add the exact Cloud Run host after the first deploy (T02) and rerun; never
-# the bare run.app suffix, which would let any Cloud Run service use the key.
+# Patients use the Firebase Hosting domain (ADR-0008). Never add the bare run.app
+# suffix, which would let any Cloud Run service use the key.
 RECAPTCHA_DOMAINS="${RECAPTCHA_DOMAINS:-localhost,${PROJECT_ID}.web.app,${PROJECT_ID}.firebaseapp.com,findyourdent.com}"
 
 APIS=(
@@ -238,8 +238,8 @@ gcloud storage buckets add-iam-policy-binding "gs://${BUCKET}" \
   --member="serviceAccount:${WEB_SA}" --role=roles/storage.objectAdmin >/dev/null
 gcloud secrets add-iam-policy-binding places-api-key --project "$PROJECT_ID" \
   --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
-# run.invoker on the agent service is granted at deploy time (T02), when the
-# service exists, so only the web service can call it.
+# run.invoker on the agent service is granted by infra/gcp/deploy.sh agent, when
+# the service exists, so only the web service can call it.
 
 # 8. Admin allowlist ------------------------------------------------------------
 # Held in Secret Manager, not the public repo, because the addresses are

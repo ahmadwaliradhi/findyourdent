@@ -47,7 +47,7 @@ export async function requestGuidance(context: AppLoadContext, input: GuidanceIn
 
   let raw: unknown;
   try {
-    raw = await context.adapters.agent.requestGuidance(request);
+    raw = await context.adapters.agent.requestGuidance(request, { requestId: context.requestId });
   } catch (error) {
     context.logger.error("guidance", {
       outcome: "agent_unavailable",

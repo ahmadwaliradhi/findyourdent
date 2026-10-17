@@ -20,7 +20,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "node server.ts",
-    url: `http://127.0.0.1:${port}/healthz`,
+    url: `http://127.0.0.1:${port}/health`,
     env: { PORT: String(port), AGENT_ADAPTER: "fake" },
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

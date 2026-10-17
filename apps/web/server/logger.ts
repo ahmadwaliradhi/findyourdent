@@ -22,3 +22,12 @@ export const logger: Logger = {
 };
 
 export const silentLogger: Logger = { info() {}, warn() {}, error() {} };
+
+/** A logger that adds the same fields (the request id) to every line. */
+export function withFields(base: Logger, fixed: LogFields): Logger {
+  return {
+    info: (message, fields) => base.info(message, { ...fixed, ...fields }),
+    warn: (message, fields) => base.warn(message, { ...fixed, ...fields }),
+    error: (message, fields) => base.error(message, { ...fixed, ...fields }),
+  };
+}
