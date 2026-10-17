@@ -51,7 +51,7 @@ The agent service (`services/agent/src/findyourdent_agent/config.py`) reads thes
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global` | Gemini on Vertex AI, global endpoint (ADR-0003) |
 | `AGENT_SEARCH_SERVING_CONFIG` | Serving config Guidance searches for grounding (T06): `projects/findyourdent/locations/global/collections/default_collection/engines/findyourdent-guidance/servingConfigs/default_search`. Searched through the Discovery Engine v1 REST API as `fyd-agent`, which holds `roles/discoveryengine.user` (includes `servingConfigs.search`) |
 | `AGENT_SEARCH_MAX_RESULTS` | Source documents per Guidance, default 5 |
-| `EXTRACTION_MODEL` | Price List extraction model, default `gemini-3.5-flash-lite`; switch to `gemini-3.8-flash` if extraction quality is poor (spec 05) |
+| `EXTRACTION_MODEL` | Price List extraction model, default `gemini-3.5-flash-lite`; switch to `gemini-3.8-flash` if extraction quality is poor (spec 05; both model IDs as checked in Platform facts below) |
 | `EXTRACTION_MAX_OUTPUT_TOKENS`, `EXTRACTION_TIMEOUT_SECONDS` | Price List extraction caps, default 16384 tokens and 60 s; on timeout the owner gets a retry message |
 | `GEMINI_ADAPTER=fake` | Local development without credentials: canned Guidance, Shortlist reasons and Price List rows, and no Agent Search call |
 

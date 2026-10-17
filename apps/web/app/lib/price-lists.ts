@@ -27,7 +27,10 @@ export const PRICE_UNITS: readonly PriceUnit[] = ["per_tooth", "per_jaw", "per_v
 /** Rows Gemini read with less confidence than this are highlighted for the owner to check. */
 export const LOW_CONFIDENCE = 0.7;
 
-/** The original document is kept privately this long for disputes, then deleted. */
+/**
+ * The original document is kept privately this long for disputes, then deleted by the
+ * uploads bucket's lifecycle rule; keep in step with its `age` in infra/gcp/setup.sh.
+ */
 export const ORIGINAL_RETENTION_DAYS = 30;
 
 /** A list confirmed longer ago than this shows "mungkin sudah berubah". */

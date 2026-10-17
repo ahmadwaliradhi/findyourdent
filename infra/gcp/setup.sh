@@ -144,7 +144,9 @@ fi
 # Price List originals are kept 30 days for disputes, then deleted (spec 05). The rule
 # is written whole on every run, so it converges. Lifecycle `age` counts days since the
 # object was created, and Cloud Storage acts on it asynchronously, usually within a day
-# (cloud.google.com/storage/docs/lifecycle, checked 17 October 2026).
+# (cloud.google.com/storage/docs/lifecycle, checked 17 October 2026). The file replaces
+# the bucket's whole lifecycle config, so every rule the bucket needs belongs here.
+# Keep the 30 in step with ORIGINAL_RETENTION_DAYS in apps/web/app/lib/price-lists.ts.
 log "Bucket lifecycle (priceLists/ originals, 30 days)"
 LIFECYCLE_FILE="$(mktemp)"
 trap 'rm -f "$LIFECYCLE_FILE"' EXIT
