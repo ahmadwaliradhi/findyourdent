@@ -48,7 +48,7 @@ When the product owner starts it, three pieces of work run during the judging wi
 - Real Testimonies:
   - Target 30 published Testimonies from real Patients in several cities, recruited through the product owner's network over WhatsApp, each written by the Patient themselves through the normal posting journey.
   - No Testimony is written, edited or invented by the team; no incentives that depend on the Testimony being positive.
-- Voice evaluation: 10 short Indonesian voice notes recorded by the team, transcribed by Gemini native audio through the production Guidance call, with and without the dental term list in the Guidance instruction; compare dental term recall, WER and the Emergency Escalation result (docs/evaluations/voice-input.md). ElevenLabs is out of scope (ADR 0010).
+- Voice evaluation: 10 short Indonesian voice notes recorded by the team, transcribed by Gemini native audio through the production Guidance call, with and without the dental term list in the Guidance instruction; compare dental term recall, WER and the Emergency Escalation result (docs/evaluations/voice-input.md). ElevenLabs is out of scope (ADR 0010). Closed on 17 Oct 2026 after a manual check on the live site; the scripted run was not carried out.
 - Results: a results table in the README and the deck, with the date, model version, labeller and pass or fail for each gate.
 
 ## Testing Decisions
