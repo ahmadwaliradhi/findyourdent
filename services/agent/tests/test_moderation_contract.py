@@ -267,7 +267,7 @@ def test_low_confidence_is_held_even_with_no_rule(
     decision = screen(client, a_testimony())
 
     assert decision["decision"] == "hold"
-    assert decision["ruleCodes"] != []
+    assert decision["ruleCodes"] == ["low_confidence"]
 
 
 def test_fourth_author_fix_round_is_held(

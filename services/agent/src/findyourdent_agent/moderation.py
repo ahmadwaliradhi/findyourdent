@@ -222,8 +222,7 @@ class Moderation(NamedTuple):
 
 
 def _hold_for_admin(request: ModerationRequest) -> ModerationDecision:
-    """Hold with no rule hit. The contract has no closer code than model_error, which the
-    admin queue reads as "the model could not decide" (spec 03)."""
+    """Hold because the model gave no usable result, or was not asked (spec 03)."""
     return ModerationDecision(
         decision="hold",
         ruleCodes=["model_error"],
@@ -289,7 +288,7 @@ def _decide(request: ModerationRequest, output: ModelOutput, settings: Settings)
     elif output.confidence < settings.moderation_publish_confidence:
         # No rule fired but the model is not sure enough to publish (ADR-0004).
         decision, outcome = "hold", "low_confidence"
-        rules = ["model_error"]
+        rules = ["low_confidence"]
     else:
         decision = "publish"
 
