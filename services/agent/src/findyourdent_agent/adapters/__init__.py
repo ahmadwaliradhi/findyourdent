@@ -6,6 +6,14 @@ from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 
+class ModelUnavailableError(Exception):
+    """Gemini could not answer (network, server error, safety block)."""
+
+
+class ModelQuotaExhaustedError(ModelUnavailableError):
+    """Gemini returned RESOURCE_EXHAUSTED / HTTP 429: the daily token cap is reached."""
+
+
 @runtime_checkable
 class GeminiAdapter(Protocol):
     """Structured-output call to a Gemini model on the global endpoint (ADR-0003)."""
@@ -18,7 +26,13 @@ class GeminiAdapter(Protocol):
         contents: list[Any],
         response_schema: dict[str, Any],
         temperature: float,
-    ) -> dict[str, Any]: ...
+        max_output_tokens: int | None = None,
+        thinking_level: str | None = None,
+    ) -> dict[str, Any]:
+        """The parsed JSON object Gemini returned. ``contents`` holds google-genai parts
+        or contents. Output tokens are always bounded: ``max_output_tokens`` defaults to
+        the adapter's cap. Raises ModelUnavailableError."""
+        ...
 
 
 @runtime_checkable
@@ -49,4 +63,11 @@ class Adapters:
     places: PlacesAdapter
 
 
-__all__ = ["Adapters", "AgentSearchAdapter", "GeminiAdapter", "PlacesAdapter"]
+__all__ = [
+    "Adapters",
+    "AgentSearchAdapter",
+    "GeminiAdapter",
+    "ModelQuotaExhaustedError",
+    "ModelUnavailableError",
+    "PlacesAdapter",
+]

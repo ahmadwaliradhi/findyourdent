@@ -61,6 +61,12 @@
       "costSource": "Source: {{source}}",
       "bpjsLabel": "BPJS Kesehatan",
       "sourcesLabel": "Sources"
+    },
+    "share": {
+      "title": "Share this guidance",
+      "privacy": "The link contains only the guidance above, not the complaint you wrote.",
+      "whatsapp": "Share on WhatsApp",
+      "open": "Open guidance link"
     }
   },
   "estimate": "estimasi (estimate)",
@@ -112,5 +118,11 @@
   },
   "footer": {
     "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription."
+  },
+  "shared": {
+    "title": "Shared guidance",
+    "metaDescription": "FindYourDent dental guidance shared with you.",
+    "intro": "Someone shared this FindYourDent guidance with you. It does not include their original complaint.",
+    "cta": "Describe your own problem"
   }
 }

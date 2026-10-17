@@ -1,7 +1,8 @@
 """Emergency Escalation, deterministic layer (spec 01, T04).
 
-Driven through the agent HTTP contract with the Gemini adapter faked. The fake has no
-queued output, so any Gemini call raises; tests also assert it recorded no call.
+Driven through the agent HTTP contract with the Gemini adapter faked. Must-escalate
+cases queue no output, so any Gemini call raises; they also assert it recorded no call.
+Must-not-escalate cases queue an ordinary Guidance output for the model layer.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 
-from findyourdent_agent.adapters.fakes import FakeGeminiAdapter
+from findyourdent_agent.adapters.fakes import FakeGeminiAdapter, guidance_model_output
 
 
 def ask(client: TestClient, complaint: str, **extra: Any) -> dict[str, Any]:
@@ -128,7 +129,11 @@ def test_red_flag_escalates_before_any_model_call(
 
 
 @pytest.mark.parametrize("complaint", MUST_NOT_ESCALATE)
-def test_ordinary_complaint_does_not_escalate(client: TestClient, complaint: str) -> None:
+def test_ordinary_complaint_does_not_escalate(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, complaint: str
+) -> None:
+    fake_gemini.outputs.append(guidance_model_output())
+
     body = ask(client, complaint)
 
     assert body["kind"] != "emergency", body.get("redFlags")

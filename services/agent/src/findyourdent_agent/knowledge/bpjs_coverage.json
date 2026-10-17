@@ -1,0 +1,276 @@
+{
+  "version": "2026-10-17.1",
+  "notes": [
+    "BPJS Kesehatan coverage per procedure code (spec 01), from docs/research/facts-2026-10-16.md. Codes must match packages/contracts/data/procedures.json; a test checks every code has an entry. Bump version on every change.",
+    "confidence: confirmed = read in the regulation or BPJS guide; likely = inferred from them; unconfirmed = not verified, and the Patient is told to check with their FKTP.",
+    "The card status is the most restrictive status among the likely procedures (covered_at_fktp < referral_needed < not_covered), ignoring diagnostic procedures unless they are the only ones.",
+    "Never promise a scaling frequency: sources disagree."
+  ],
+  "sources": {
+    "permenkes_3_2023": {
+      "title": "Standar Tarif Pelayanan Kesehatan dalam Penyelenggaraan Program Jaminan Kesehatan",
+      "citation": "Permenkes 3/2023, Pasal 3 ayat (2), Pasal 24",
+      "url": "https://peraturan.bpk.go.id/Details/275518/permenkes-no-3-tahun-2023"
+    },
+    "bpjs_dental_guide": {
+      "title": "Panduan Praktis Pelayanan Gigi & Prothesa Gigi Bagi Peserta JKN",
+      "citation": "BPJS Kesehatan, bab VI"
+    },
+    "perpres_82_2018": {
+      "title": "Jaminan Kesehatan",
+      "citation": "Perpres 82/2018, Pasal 52 dan Pasal 55",
+      "url": "https://peraturan.bpk.go.id/Details/94711"
+    },
+    "perpres_59_2024": {
+      "title": "Perubahan Ketiga atas Perpres 82/2018 tentang Jaminan Kesehatan",
+      "citation": "Perpres 59/2024, Pasal 7",
+      "url": "https://peraturan.bpk.go.id/Details/285181/perpres-no-59-tahun-2024"
+    },
+    "pnpk_1492_2023": {
+      "title": "Pedoman Nasional Pelayanan Kedokteran Tata Laksana Penyakit/Kelainan Jaringan Pulpa dan Periradikuler",
+      "citation": "KMK HK.01.07/MENKES/1492/2023",
+      "url": "https://jdih.kemkes.go.id/documents/keputusan-menteri-kesehatan-nomor-hk0107menkes14922023"
+    }
+  },
+  "statusText": {
+    "covered_at_fktp": {
+      "id": "Perawatan ini termasuk layanan gigi BPJS Kesehatan di FKTP.",
+      "en": "This treatment is part of BPJS Kesehatan dental care at first-level facilities (FKTP)."
+    },
+    "referral_needed": {
+      "id": "Sebagian perawatan ini tidak ada di daftar layanan FKTP, jadi biasanya perlu rujukan dari dokter gigi FKTP ke rumah sakit atas indikasi medis.",
+      "en": "Part of this treatment is not on the FKTP list, so it usually needs a referral from your FKTP dentist to a hospital on medical grounds."
+    },
+    "not_covered": {
+      "id": "Perawatan ini tidak ditanggung BPJS Kesehatan (misalnya perawatan estetik atau ortodonti), jadi biayanya ditanggung sendiri.",
+      "en": "BPJS Kesehatan does not cover this treatment (for example cosmetic or orthodontic care), so you pay for it yourself."
+    }
+  },
+  "fktpRules": {
+    "text": {
+      "id": "Layanan gigi BPJS Kesehatan diberikan di FKTP tempat Anda terdaftar atau dokter gigi jejaringnya, bukan di sembarang klinik. Anda bisa pindah FKTP setelah terdaftar tiga bulan, dan perpindahan berlaku mulai bulan berikutnya.",
+      "en": "BPJS Kesehatan dental care happens at your registered FKTP or its partner dentist, not at any clinic. You can change FKTP after three months registered, and the change starts the next month."
+    },
+    "sources": [
+      "perpres_59_2024",
+      "bpjs_dental_guide"
+    ]
+  },
+  "unconfirmedNote": {
+    "id": "Aturan untuk sebagian perawatan ini belum pasti; tanyakan dulu ke FKTP Anda.",
+    "en": "The rules for part of this treatment are not certain; check with your FKTP first."
+  },
+  "procedures": {
+    "consultation": {
+      "status": "covered_at_fktp",
+      "confidence": "confirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "dental_xray_periapical": {
+      "status": "referral_needed",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "dental_xray_panoramic": {
+      "status": "referral_needed",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "scaling": {
+      "status": "covered_at_fktp",
+      "confidence": "confirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ],
+      "note": {
+        "id": "Scaling ditanggung atas indikasi medis (radang gusi akut); aturan seberapa sering tidak seragam antar sumber, jadi tanyakan ke FKTP Anda.",
+        "en": "Scaling is covered on medical grounds (acute gum inflammation); sources disagree on how often, so ask your FKTP."
+      }
+    },
+    "fluoride_application": {
+      "status": "covered_at_fktp",
+      "confidence": "unconfirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "fissure_sealant": {
+      "status": "covered_at_fktp",
+      "confidence": "unconfirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "tooth_filling": {
+      "status": "covered_at_fktp",
+      "confidence": "confirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "pulpotomy": {
+      "status": "covered_at_fktp",
+      "confidence": "unconfirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "root_canal_treatment": {
+      "status": "referral_needed",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023",
+        "bpjs_dental_guide",
+        "pnpk_1492_2023"
+      ]
+    },
+    "tooth_extraction": {
+      "status": "covered_at_fktp",
+      "confidence": "confirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "surgical_extraction": {
+      "status": "referral_needed",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023",
+        "bpjs_dental_guide"
+      ]
+    },
+    "wisdom_tooth_surgery": {
+      "status": "referral_needed",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023",
+        "bpjs_dental_guide"
+      ]
+    },
+    "abscess_drainage": {
+      "status": "covered_at_fktp",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "tooth_replantation": {
+      "status": "referral_needed",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023",
+        "bpjs_dental_guide"
+      ]
+    },
+    "tooth_splinting": {
+      "status": "referral_needed",
+      "confidence": "unconfirmed",
+      "sources": [
+        "permenkes_3_2023",
+        "bpjs_dental_guide"
+      ]
+    },
+    "periodontal_treatment": {
+      "status": "referral_needed",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023",
+        "bpjs_dental_guide"
+      ]
+    },
+    "dental_crown": {
+      "status": "referral_needed",
+      "confidence": "unconfirmed",
+      "sources": [
+        "permenkes_3_2023",
+        "bpjs_dental_guide"
+      ]
+    },
+    "dental_bridge": {
+      "status": "not_covered",
+      "confidence": "unconfirmed",
+      "sources": [
+        "bpjs_dental_guide"
+      ]
+    },
+    "dental_implant": {
+      "status": "not_covered",
+      "confidence": "likely",
+      "sources": [
+        "bpjs_dental_guide",
+        "perpres_82_2018"
+      ]
+    },
+    "removable_denture": {
+      "status": "covered_at_fktp",
+      "confidence": "confirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ],
+      "note": {
+        "id": "Gigi tiruan ditanggung sampai Rp1.000.000 untuk dua rahang atau Rp500.000 untuk satu rahang, dan rahang yang sama paling cepat dibuat ulang dua tahun sekali.",
+        "en": "Dentures are covered up to Rp1,000,000 for both jaws or Rp500,000 for one jaw, and the same jaw can be redone at most once every two years."
+      }
+    },
+    "denture_repair": {
+      "status": "not_covered",
+      "confidence": "unconfirmed",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    },
+    "orthodontic_braces": {
+      "status": "not_covered",
+      "confidence": "confirmed",
+      "sources": [
+        "bpjs_dental_guide",
+        "perpres_82_2018"
+      ]
+    },
+    "orthodontic_adjustment": {
+      "status": "not_covered",
+      "confidence": "confirmed",
+      "sources": [
+        "bpjs_dental_guide",
+        "perpres_82_2018"
+      ]
+    },
+    "clear_aligners": {
+      "status": "not_covered",
+      "confidence": "confirmed",
+      "sources": [
+        "bpjs_dental_guide",
+        "perpres_82_2018"
+      ]
+    },
+    "teeth_whitening": {
+      "status": "not_covered",
+      "confidence": "confirmed",
+      "sources": [
+        "bpjs_dental_guide",
+        "perpres_82_2018"
+      ]
+    },
+    "dental_veneer": {
+      "status": "not_covered",
+      "confidence": "confirmed",
+      "sources": [
+        "bpjs_dental_guide",
+        "perpres_82_2018"
+      ]
+    },
+    "oral_lesion_treatment": {
+      "status": "covered_at_fktp",
+      "confidence": "likely",
+      "sources": [
+        "permenkes_3_2023"
+      ]
+    }
+  }
+}

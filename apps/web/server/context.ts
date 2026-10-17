@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Firestore } from "firebase-admin/firestore";
 import { type AgentAdapter, createHttpAgentAdapter, createMetadataIdTokenSource } from "./adapters/agent.ts";
 import { createFakeAgentAdapter, createFakeGeminiAdapter, createFakePlacesAdapter } from "./adapters/fakes.ts";
@@ -21,6 +22,8 @@ export interface WebContext {
   requestId: string;
   config: {
     production: boolean;
+    /** Signs shareable Guidance links (app/server/share.server.ts). */
+    shareLinkSecret: string;
   };
 }
 
@@ -38,6 +41,13 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
   const idToken = env.AGENT_AUTH === "id_token" ? createMetadataIdTokenSource({ audience: agentUrl }) : undefined;
   const agent =
     env.AGENT_ADAPTER === "fake" ? createFakeAgentAdapter() : createHttpAgentAdapter({ baseUrl: agentUrl, idToken });
+  let shareLinkSecret = env.SHARE_LINK_SECRET;
+  if (!shareLinkSecret) {
+    // A per-process secret works locally; on Cloud Run, links would break across
+    // instances and restarts, so production needs the secret set.
+    shareLinkSecret = randomBytes(32).toString("base64url");
+    if (env.NODE_ENV === "production") logger.warn("config", { outcome: "share_link_secret_missing" });
+  }
   return {
     adapters: {
       agent,
@@ -47,6 +57,6 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
     },
     firestore: initFirebaseAdmin(env)?.firestore ?? null,
     logger,
-    config: { production: env.NODE_ENV === "production" },
+    config: { production: env.NODE_ENV === "production", shareLinkSecret },
   };
 }

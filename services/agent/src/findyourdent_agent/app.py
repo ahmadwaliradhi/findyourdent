@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .adapters import Adapters
+from .adapters import Adapters, ModelQuotaExhaustedError, ModelUnavailableError
 from .config import Settings
 from .contracts.guidance_request import GuidanceRequest
 from .contracts.guidance_response import GuidanceResponse
@@ -19,12 +19,19 @@ from .contracts.moderation_decision import ModerationDecision
 from .contracts.moderation_request import ModerationRequest
 from .data import procedure_codes
 from .escalation import default_matcher
+from .guidance import AudioNotSupportedError, answer_turn
+from .knowledge import bpjs_coverage, cost_estimates, guidance_safety
 from .moderation import InvalidAttachmentError, moderate
-from .stub import PROCEDURES, stub_guidance
 
 log = logging.getLogger("findyourdent_agent")
 
 REQUEST_ID_HEADER = "X-Request-Id"
+
+
+def _error(request: Request, status: int, code: str) -> JSONResponse:
+    """A friendly retry state for the web app. Never carries Patient text."""
+    request.state.outcome = code
+    return JSONResponse(status_code=status, content={"error": code})
 
 
 def create_app(adapters: Adapters | None = None, settings: Settings | None = None) -> FastAPI:
@@ -34,10 +41,16 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
 
         adapters = production_adapters(settings)
 
+    # Fail at startup, not on a Patient's request, if a knowledge file is broken or
+    # misses a procedure code from the shared list.
     known = procedure_codes()
-    if known and not set(PROCEDURES) <= known:
-        missing = sorted(set(PROCEDURES) - known)
-        log.warning("stub procedure codes missing from procedures.json: %s", missing)
+    for name, covered in (
+        ("cost_estimates.json", set(cost_estimates().ranges)),
+        ("bpjs_coverage.json", set(bpjs_coverage().procedures)),
+    ):
+        if known - covered:
+            log.warning("%s misses procedure codes: %s", name, sorted(known - covered))
+    guidance_safety()
 
     app = FastAPI(
         title="FindYourDent agent service",
@@ -96,16 +109,22 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         response_model=GuidanceResponse,
         response_model_exclude_none=True,
     )
-    async def guidance(body: GuidanceRequest, request: Request) -> GuidanceResponse:
-        turn = body.root
-        # Emergency Escalation runs first and without any model call (spec 01). A voice
-        # note has no text to check here; the model layer covers it once Gemini lands.
-        # Otherwise, walking skeleton: fixed card, no model, Agent Search or Places call.
-        card = red_flags.check(
-            turn.complaintText, turn.followUpAnswer, language=turn.language
-        ) or stub_guidance(turn.language)
-        request.state.outcome = card.kind
-        return GuidanceResponse(root=card)
+    async def guidance(body: GuidanceRequest, request: Request) -> Response:
+        try:
+            result = await answer_turn(
+                body.root, gemini=adapters.gemini, red_flags=red_flags, settings=settings
+            )
+        except AudioNotSupportedError:
+            return _error(request, 501, "audio_not_supported")
+        except ModelQuotaExhaustedError:
+            return _error(request, 503, "model_quota_exhausted")
+        except ModelUnavailableError as error:
+            log.error("gemini unavailable: %s", type(error).__name__)
+            return _error(request, 503, "model_unavailable")
+        request.state.outcome = result.outcome
+        return JSONResponse(
+            GuidanceResponse(root=result.response).model_dump(mode="json", exclude_none=True)
+        )
 
     @app.post(
         "/v1/moderation",
