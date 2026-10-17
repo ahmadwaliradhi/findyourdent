@@ -89,8 +89,8 @@ export function isProcedureCode(code: string): boolean {
 }
 
 /**
- * Kemendagri region codes (data/regions.json): `provinces` and `regencies`
- * (kabupaten/kota). Check `REGIONS.complete` and each province's
- * `regenciesComplete`: the list is not complete yet.
+ * Kemendagri region codes (data/regions.json): all `provinces` and
+ * `regencies` (kabupaten/kota) from Kepmendagri 300.2.2-2138/2025 as amended
+ * by 300.2.2-2430/2025. Kecamatan are not included.
  */
 export const REGIONS: RegionList = regionListJson as RegionList;

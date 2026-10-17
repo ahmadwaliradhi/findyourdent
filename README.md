@@ -67,7 +67,7 @@ The JSON Schemas in `packages/contracts/schemas/` are the single source of truth
 
 Generated files are committed. CI fails when either side is stale (`pnpm contracts:check` and `generate_contracts.py --check`), so a schema change always ships with both regenerated outputs.
 
-`data/regions.json` is incomplete for now: all 38 provinces, but kabupaten/kota only for DKI Jakarta, Jawa Barat, Jawa Tengah, DI Yogyakarta, Jawa Timur, Banten and Bali, plus the main kota elsewhere (see its `notes` and each province's `regenciesComplete`). Kecamatan are not included yet.
+`data/regions.json` holds all 38 provinces and all 514 kabupaten/kota (416 kabupaten, 98 kota) from the annex to Kepmendagri No. 300.2.2-2138 Tahun 2025, as amended by No. 300.2.2-2430 Tahun 2025 (see its `source` and `notes`). Kecamatan are not included yet.
 
 ## Working in parallel lanes
 
