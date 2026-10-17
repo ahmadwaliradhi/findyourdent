@@ -1,4 +1,4 @@
-import type { GuidanceRequest } from "@findyourdent/contracts";
+import type { GuidanceRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
 import { describe, expect, it } from "vitest";
 import { createHttpAgentAdapter, createMetadataIdTokenSource } from "../../server/adapters/agent.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
@@ -30,6 +30,50 @@ describe("HTTP agent adapter", () => {
     expect(agent.seen).toHaveLength(1);
     expect(agent.seen[0]?.url).toBe("https://agent.example/v1/guidance");
     expect(agent.seen[0]?.headers.get("x-request-id")).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
+  });
+});
+
+const REASONS_REQUEST: ShortlistReasonsRequest = {
+  sessionId: "sess-0001-abcd",
+  language: "id",
+  likelyProcedures: ["root_canal_treatment"],
+  providers: [
+    {
+      placeId: "place-klinik-senyum",
+      name: "Klinik Senyum",
+      providerType: "klinik",
+      providerTypeSource: "inferred",
+      rank: 1,
+      testimonies: { count: 0, verifiedVisitCount: 0 },
+    },
+  ],
+};
+
+describe("HTTP agent adapter for Shortlist reasons", () => {
+  it("asks the agent service's reasons endpoint with the same request id and identity token", async () => {
+    const agent = fakeAgent();
+    const adapter = createHttpAgentAdapter({
+      baseUrl: "https://agent.example",
+      fetch: agent.fetch,
+      idToken: async () => "token-for-fyd-web",
+    });
+
+    await adapter.requestShortlistReasons(REASONS_REQUEST, { requestId: "4bf92f3577b34da6a3ce929d0e0e4736" });
+
+    expect(agent.seen[0]?.url).toBe("https://agent.example/v1/shortlist-reasons");
+    expect(agent.seen[0]?.headers.get("x-request-id")).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
+    expect(agent.seen[0]?.headers.get("authorization")).toBe("Bearer token-for-fyd-web");
+  });
+
+  it("reports the agent's retry state as unavailable, so the Shortlist keeps its templated reasons", async () => {
+    const fetch = (async () =>
+      Response.json({ error: "model_unavailable" }, { status: 503 })) as typeof globalThis.fetch;
+    const adapter = createHttpAgentAdapter({ baseUrl: "https://agent.example", fetch });
+
+    await expect(adapter.requestShortlistReasons(REASONS_REQUEST)).rejects.toMatchObject({
+      name: "AgentUnavailableError",
+      status: 503,
+    });
   });
 });
 

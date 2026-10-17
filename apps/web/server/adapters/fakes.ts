@@ -1,4 +1,4 @@
-import type { GuidanceRequest } from "@findyourdent/contracts";
+import type { GuidanceRequest, ShortlistReasonsRequest, ShortlistReasonsResponse } from "@findyourdent/contracts";
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
@@ -47,24 +47,44 @@ export const STUB_GUIDANCE_RESPONSE = {
   },
 } as const;
 
+/** One stub reason per Provider asked about, valid against shortlist-reasons-response.schema.json. */
+export function stubShortlistReasons(request: ShortlistReasonsRequest): ShortlistReasonsResponse {
+  const reason = request.language === "en" ? "Stub reason, not written by Gemini" : "Alasan contoh, bukan dari Gemini";
+  return { reasons: request.providers.map((p) => ({ placeId: p.placeId, reason })) };
+}
+
 export interface FakeAgentAdapter extends AgentAdapter {
   readonly calls: GuidanceRequest[];
+  readonly reasonsCalls: ShortlistReasonsRequest[];
   /** Next value returned (or thrown, if an Error) by requestGuidance. */
   respondWith(response: unknown): void;
+  /** Next value returned (or thrown, if an Error) by requestShortlistReasons; the default is stub reasons. */
+  respondToReasonsWith(response: unknown): void;
 }
 
 export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE): FakeAgentAdapter {
   let next: unknown = initial;
+  let nextReasons: unknown;
   const calls: GuidanceRequest[] = [];
+  const reasonsCalls: ShortlistReasonsRequest[] = [];
   return {
     calls,
+    reasonsCalls,
     respondWith(response) {
       next = response;
+    },
+    respondToReasonsWith(response) {
+      nextReasons = response;
     },
     async requestGuidance(request) {
       calls.push(structuredClone(request));
       if (next instanceof Error) throw next;
       return structuredClone(next);
+    },
+    async requestShortlistReasons(request) {
+      reasonsCalls.push(structuredClone(request));
+      if (nextReasons instanceof Error) throw nextReasons;
+      return nextReasons === undefined ? stubShortlistReasons(request) : structuredClone(nextReasons);
     },
   };
 }

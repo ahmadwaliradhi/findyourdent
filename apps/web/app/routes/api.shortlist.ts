@@ -25,7 +25,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   } catch {
     body = null;
   }
-  const outcome = await buildShortlist(context, { body, language: await detectLanguage(request) });
+  const outcome = await buildShortlist(context, { body, language: await detectLanguage(request), sessionId });
   if (!outcome.ok) return Response.json({ error: outcome.error }, { status: outcome.status, headers });
   return Response.json(outcome.response, { headers });
 }
