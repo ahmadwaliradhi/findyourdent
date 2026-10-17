@@ -2,7 +2,6 @@ import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Firestore } from "firebase-admin/firestore";
-import type { AppLoadContext } from "react-router";
 import { createServer } from "vite";
 import {
   createFakeAgentAdapter,
@@ -13,6 +12,7 @@ import {
   type FakePlacesAdapter,
 } from "../../server/adapters/fakes.ts";
 import { createApp } from "../../server/app.ts";
+import type { BaseContext } from "../../server/context.ts";
 import { initFirebaseAdmin } from "../../server/firebase.ts";
 import type { LogFields, Logger } from "../../server/logger.ts";
 
@@ -86,7 +86,7 @@ export async function startTestServer(): Promise<TestServer> {
     };
   const logger: Logger = { info: record("INFO"), warn: record("WARNING"), error: record("ERROR") };
 
-  const context = (): AppLoadContext => ({
+  const context = (): BaseContext => ({
     adapters: fakes,
     firestore: firebase.firestore,
     logger,

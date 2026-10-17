@@ -3,6 +3,8 @@ An integrated agentic platform that connects dentists, dental clinics, and their
 
 FindYourDent is a dentistry platform for Indonesia, built for the AI Builder Cup 2026. A Patient describes a dental problem and gets Guidance (urgency, likely category, journey, why prices vary, BPJS coverage), with Emergency Escalation to an IGD when red flags appear, then a Shortlist of nearby Providers with Testimonies and price signals. Specs are in [`docs/specs/`](docs/specs/README.md), decisions in [`docs/adr/`](docs/adr/), vocabulary in [`GLOSSARY.md`](GLOSSARY.md).
 
+**Live demo:** https://findyourdent.web.app (Firebase Hosting in front of Cloud Run in Jakarta; deploy with `infra/gcp/deploy.sh`, see [`infra/gcp/README.md`](infra/gcp/README.md)).
+
 ## Repository layout
 
 ```
@@ -16,7 +18,8 @@ packages/contracts/    Shared contracts (@findyourdent/contracts):
   src/firestore.ts     Firestore document types and collection names
   data/                procedures.json (shared procedure codes), regions.json (Kemendagri region codes)
 docs/data-model.md     Firestore collections
-firebase.json          Firebase emulator config (project demo-findyourdent: auth 9099, firestore 8080, storage 9199)
+firebase.json          Firebase Hosting (rewrites to Cloud Run fyd-web) and emulator config (project demo-findyourdent: auth 9099, firestore 8080, storage 9199)
+infra/gcp/             Project setup, deploy, smoke test and monitoring scripts
 .github/workflows/     CI
 ```
 
@@ -53,7 +56,7 @@ The agent service calls Gemini on Vertex AI with Application Default Credentials
 
 ## Test seams
 
-There are two seams, and tests go through them the way real callers do instead of reaching into internal functions.
+There are two seams, and tests go through them the way real callers do instead of reaching into internal functions. Adapters to outside services sit behind the seams, so their own wire behaviour (headers, identity tokens) is unit-tested at the adapter interface with a fake `fetch`, as in `apps/web/test/unit/agent-adapter.test.ts`.
 
 1. **Web API seam** (`apps/web`). Vitest drives the web service over HTTP, against the Firebase emulators (Firestore, Auth, Storage), with the Places, agent and Gemini adapters replaced by fakes. `pnpm --filter web test` starts the emulators with `firebase emulators:exec` and runs Vitest inside it. Tests assert responses and what ends up in the emulators (the example test checks that a Guidance request writes nothing to Firestore and never logs the complaint text).
 2. **Agent contract seam** (`services/agent`). pytest calls the FastAPI HTTP contract with the Gemini, Agent Search and Places adapters replaced by fakes, and checks every response against the shared schemas (the Guidance tests in `test_guidance.py` queue the output a fake Gemini returns and check schema validity, dose rejection, no de-escalation and the redirect).

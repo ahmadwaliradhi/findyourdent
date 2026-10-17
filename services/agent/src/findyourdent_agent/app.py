@@ -98,8 +98,9 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
         ]
         return JSONResponse(status_code=422, content={"detail": detail})
 
-    @app.get("/healthz")
-    async def healthz(request: Request) -> dict[str, str]:
+    # Not /healthz: Cloud Run reserves some paths ending in "z".
+    @app.get("/health")
+    async def health(request: Request) -> dict[str, str]:
         request.state.outcome = "ok"
         return {"status": "ok"}
 
