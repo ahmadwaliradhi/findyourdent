@@ -245,7 +245,7 @@ done
 still_creating=$(creating_indexes)
 if [[ -n "$still_creating" ]]; then
   echo "    indexes still CREATING after 10 minutes (queries on them fail until READY):" >&2
-  sed 's/^/      /' <<<"$still_creating" >&2
+  while read -r index; do printf '      %s\n' "$index"; done <<<"$still_creating" >&2
 else
   echo "    all composite indexes READY"
 fi
