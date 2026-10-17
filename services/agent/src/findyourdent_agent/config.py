@@ -27,6 +27,9 @@ class Settings:
     shortlist_max_output_tokens: int = 1024
     shortlist_thinking_level: str = "LOW"
     moderation_timeout_seconds: float = 20.0
+    # A full price list can be a few hundred rows of JSON.
+    extraction_max_output_tokens: int = 16384
+    extraction_timeout_seconds: float = 60.0
     # Below this, a Testimony with no rule hit is held instead of published (ADR-0004).
     moderation_publish_confidence: float = 0.8
     # Agent Search grounding for Guidance (spec 01): the engine's serving config and
@@ -72,6 +75,14 @@ class Settings:
             ),
             moderation_timeout_seconds=float(
                 os.environ.get("MODERATION_TIMEOUT_SECONDS", defaults.moderation_timeout_seconds)
+            ),
+            extraction_max_output_tokens=int(
+                os.environ.get(
+                    "EXTRACTION_MAX_OUTPUT_TOKENS", defaults.extraction_max_output_tokens
+                )
+            ),
+            extraction_timeout_seconds=float(
+                os.environ.get("EXTRACTION_TIMEOUT_SECONDS", defaults.extraction_timeout_seconds)
             ),
             moderation_publish_confidence=float(
                 os.environ.get(

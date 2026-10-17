@@ -17,6 +17,8 @@ from .contracts.guidance_request import GuidanceRequest
 from .contracts.guidance_response import GuidanceResponse
 from .contracts.moderation_decision import ModerationDecision
 from .contracts.moderation_request import ModerationRequest
+from .contracts.price_list_extraction_request import PriceListExtractionRequest
+from .contracts.price_list_extraction_response import PriceListExtractionResponse
 from .contracts.shortlist_reasons_request import ShortlistReasonsRequest
 from .contracts.shortlist_reasons_response import ShortlistReasonsResponse
 from .data import procedure_codes
@@ -24,6 +26,7 @@ from .escalation import default_matcher
 from .guidance import InvalidAudioError, NoSpeechError, answer_turn
 from .knowledge import bpjs_coverage, cost_estimates, guidance_safety
 from .moderation import InvalidAttachmentError, moderate
+from .price_list import InvalidDocumentError, extract_price_list
 from .shortlist import write_reasons
 
 log = logging.getLogger("findyourdent_agent")
@@ -159,6 +162,22 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             return JSONResponse(status_code=422, content={"detail": [detail]})
         request.state.outcome = result.outcome
         return result.decision
+
+    @app.post(
+        "/v1/price-list-extraction",
+        response_model=PriceListExtractionResponse,
+        response_model_exclude_none=True,
+    )
+    async def price_list_extraction(body: PriceListExtractionRequest, request: Request) -> Response:
+        # The documents and the rows read from them are never logged.
+        try:
+            result = await extract_price_list(body, adapters.gemini, settings)
+        except InvalidDocumentError:
+            request.state.outcome = "invalid_request"
+            detail = {"type": "invalid_base64", "loc": ["body"], "msg": "document is not base64"}
+            return JSONResponse(status_code=422, content={"detail": [detail]})
+        request.state.outcome = result.outcome
+        return JSONResponse(result.response.model_dump(mode="json", exclude_none=True))
 
     @app.post("/v1/shortlist-reasons", response_model=ShortlistReasonsResponse)
     async def shortlist_reasons(body: ShortlistReasonsRequest, request: Request) -> Response:
