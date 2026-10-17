@@ -54,7 +54,7 @@ A Patient opens findyourdent.com (until the domain is bought, the default Fireba
 - Authentication: Firebase Authentication with the Google provider only. No email verification, no phone OTP. Admin access is an allowlist of two email addresses held in configuration.
 - Bot protection: Firebase App Check with reCAPTCHA Enterprise (score-based, no puzzle) on every web API route that can trigger Places, Gemini or a write. Requests without a valid token are refused before any paid call.
 - Rate limits, enforced in the web service and stored in Firestore with time-window counters: per App Check token and per session for each paid route (default 30 Places-backed requests per hour, 10 Guidance sessions per hour), per signed-in user for writes (5 Testimonies per day), and a high per-IP ceiling (300 requests per hour) because Indonesian mobile carriers share IP addresses.
-- Daily quota caps are set in the Google Cloud console per Places method and per Gemini model, sized to the USD 10 per month Places budget in ADR-0005 (spec 02 lists them). The budget alert is USD 100 for the whole account with 50% and 90% notifications.
+- Daily quota caps are set by `infra/gcp/setup.sh` through the Cloud Quotas API, sized to the USD 10 per month Places budget in ADR-0005 (spec 02 lists them). Google caps Places per method, not per SKU, so Place Details calls of every tier share one cap. Gemini on Vertex AI has no requests-per-day quota, so each model gets a daily input-token cap; output tokens have no daily quota, so every Gemini call sets `max_output_tokens`. Places methods the specs never call are capped at 0. The budget alert is about USD 100 for the whole billing account, set in the account's currency (IDR 1,650,000), with 50% and 90% notifications. Live values: `infra/gcp/README.md`.
 - Privacy: complaint text and voice notes are processed in memory only and never persisted or logged; request bodies are excluded from Cloud Logging on both services. The consent notice and privacy page state the purpose (education and navigation, not diagnosis), that text is processed by Google AI on the global endpoint, that it is not stored, and how to contact the team.
 - Internationalisation: Indonesian default, English toggle remembered per browser; every UI string in both languages from day one.
 - Firestore data model (top-level collections, field names indicative):
@@ -82,5 +82,5 @@ A Patient opens findyourdent.com (until the domain is bought, the default Fireba
 
 ## Further Notes
 
-- Human steps: enable billing on the GCP project, create the budget alert, register the reCAPTCHA Enterprise key for App Check, and set the Places and Gemini daily quota caps in the console. Everything else is code or configuration an agent can do.
+- Human steps: sign in to `gcloud` as the billing owner, and enable the Google sign-in provider in the Firebase console. `infra/gcp/setup.sh` does the rest (billing link, budget, reCAPTCHA key and App Check, quota caps).
 - Cost reference: docs/research/cost-comparison-2026-10-17.md (shared numbers, column B2 is closest to this design).

@@ -45,6 +45,12 @@ Before building on these caps, the Places adapter (spec 02) must know:
 - The 83/day Get Place cap is shared. The console cannot stop the Google block from using all 83, so the adapter has to enforce 50 for the block and 33 for reviews.
 - Coordinates lookups (Place Details Essentials) are Get Place calls too, so they eat into the same 83. Run the monthly coordinates refresh in small batches, or raise the cap for that day.
 
+## Platform facts (checked 17 October 2026 via the Cloud Quotas API)
+
+- Places quota IDs are per method: `SearchTextRequestPerDayPerProject`, `GetPlaceRequestPerDayPerProject`, `AutocompletePlacesRequestPerDayPerProject`, and so on. There is no per-SKU quota.
+- Gemini's only daily quota is `GlobalGenerateContentInputTokensPerDayPerBaseModel`. The `base_model` dimension values are `gemini-3.8-flash-qcd` and `gemini-3.5-flash-lite-qcd`. Requests are capped only per minute, and raising that cap needs a contact email, so the script leaves it at the default.
+- The billing account `019521-D61E16-A0C8A3` is billed in IDR, and a budget must use the account's currency.
+
 ## Manual steps
 
 These have no API that works without upgrading to Identity Platform:

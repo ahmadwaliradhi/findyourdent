@@ -68,9 +68,9 @@ gapi() {
 # Start a long-running Firebase operation and wait for it; fails if the
 # operation finishes with an error.
 run_op() {
-  local op i result
+  local op result
   op=$(gapi POST "$1" "$2" | jq -r '.name')
-  for i in $(seq 1 30); do
+  for _ in $(seq 1 30); do
     result=$(gapi GET "${FB}/${op}")
     if [[ "$(jq -r '.done // false' <<<"$result")" == "true" ]]; then
       if jq -e '.error' <<<"$result" >/dev/null; then
@@ -98,6 +98,7 @@ api_key_name() {
 }
 
 gcloud config set project "$PROJECT_ID" >/dev/null 2>&1
+# Only client libraries use ADC; a missing ADC login must not block the gcloud steps.
 gcloud auth application-default set-quota-project "$PROJECT_ID" >/dev/null 2>&1 || true
 
 # 1. Project and billing --------------------------------------------------------
@@ -248,6 +249,7 @@ if ! gcloud secrets describe admin-emails --project "$PROJECT_ID" >/dev/null 2>&
     --replication-policy=user-managed --locations="$REGION"
 fi
 if [[ -n "${ADMIN_EMAILS:-}" ]]; then
+  # A new secret has no version yet; treat that as "no current value".
   current=$(gcloud secrets versions access latest --secret=admin-emails --project "$PROJECT_ID" 2>/dev/null || true)
   if [[ "$current" == "$ADMIN_EMAILS" ]]; then
     skip "admin-emails unchanged"
