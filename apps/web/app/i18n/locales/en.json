@@ -186,5 +186,39 @@
     },
     "asOf": "as of {{date}}",
     "error": "The dentist search failed. Please try again."
+  },
+  "provider": {
+    "metaDescription": "Patient Testimonies for {{name}} in {{region}}: service, hygiene, and materials and equipment.",
+    "metaDescriptionUnlisted": "Dental practice information on FindYourDent.",
+    "unnamed": "Dental practice",
+    "notListed": "FindYourDent has no Testimonies for this place yet. Been here? Your Testimony helps other patients.",
+    "testimoniesTitle": "FindYourDent Testimonies",
+    "testimoniesEmpty": "No Testimonies for this place yet.",
+    "verifiedVisit": "Proven visit",
+    "visit": "Visited {{month}}",
+    "paid": "Paid {{price}}",
+    "reply": "Owner's reply",
+    "pricesTitle": "Prices",
+    "ownerTitle": "From the owner",
+    "googleTitle": "From Google",
+    "googleLoading": "Loading Google info…",
+    "googleUnavailable": "Google info is temporarily unavailable.",
+    "openNow": "Open now",
+    "closedNow": "Closed now",
+    "hours": "Opening hours",
+    "rating": "Google rating {{rating}} from {{count}} reviews",
+    "website": "Website",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "attribution": "Source: Google Maps",
+    "viewPage": "View page",
+    "reviews": {
+      "open": "See Google reviews",
+      "loading": "Loading Google reviews…",
+      "title": "Google reviews",
+      "empty": "No Google reviews yet.",
+      "unavailable": "Google reviews are temporarily unavailable.",
+      "rating": "{{rating}} out of 5"
+    }
   }
 }

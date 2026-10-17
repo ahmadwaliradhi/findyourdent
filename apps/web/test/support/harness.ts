@@ -57,6 +57,8 @@ export interface TestServer {
   /** A new valid App Check token, as a different browser would have. */
   appCheckToken(): string;
   post(pathname: string, body: unknown, init?: PostInit): Promise<Response>;
+  /** A GET as the page's own fetch sends it: with an App Check token unless told otherwise. */
+  get(pathname: string, init?: PostInit): Promise<Response>;
   close(): Promise<void>;
 }
 
@@ -180,6 +182,12 @@ export async function startTestServer(): Promise<TestServer> {
     return fetch(new URL(pathname, baseUrl), { method: "POST", ...init, headers, body: JSON.stringify(body) });
   };
 
+  const get: TestServer["get"] = (pathname, { appCheckToken = defaultToken, ...init } = {}) => {
+    const headers = new Headers(init.headers);
+    if (appCheckToken !== null && !headers.has(APP_CHECK_HEADER)) headers.set(APP_CHECK_HEADER, appCheckToken);
+    return fetch(new URL(pathname, baseUrl), { ...init, headers });
+  };
+
   return {
     baseUrl,
     get fakes() {
@@ -214,6 +222,7 @@ export async function startTestServer(): Promise<TestServer> {
       return fakes.appCheck.issueToken();
     },
     post,
+    get,
     async close() {
       await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
       await vite.close();

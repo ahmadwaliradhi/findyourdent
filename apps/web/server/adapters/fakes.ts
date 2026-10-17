@@ -2,7 +2,17 @@ import type { GuidanceRequest } from "@findyourdent/contracts";
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
-import type { PlaceSummary, PlacesAdapter, TextSearch, TextSearchResult } from "./places.ts";
+import type {
+  GoogleBlock,
+  GoogleBlockResult,
+  GoogleReview,
+  GoogleReviewsResult,
+  PlaceDetailsRequest,
+  PlaceSummary,
+  PlacesAdapter,
+  TextSearch,
+  TextSearchResult,
+} from "./places.ts";
 
 /** A stub Guidance card, valid against guidance-response.schema.json. */
 export const STUB_GUIDANCE_RESPONSE = {
@@ -70,22 +80,48 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
 }
 
 export interface FakePlacesAdapter extends PlacesAdapter {
+  /** Text Searches, in order. */
   readonly calls: TextSearch[];
+  /** Place Details calls, in order, named by the adapter method that made them. */
+  readonly detailsCalls: (PlaceDetailsRequest & { method: "getGoogleBlock" | "getGoogleReviews" })[];
   /** Next answer: places found, or a failed result such as the daily cap being reached. */
   respondWith(answer: PlaceSummary[] | TextSearchResult): void;
+  /** Next Google block: the facts for any place id asked, or a failed result. */
+  respondWithGoogleBlock(answer: Omit<GoogleBlock, "placeId"> | GoogleBlockResult): void;
+  /** Next Google Reviews: the reviews, or a failed result. */
+  respondWithReviews(answer: GoogleReview[] | GoogleReviewsResult): void;
 }
 
 export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlacesAdapter {
   let next: TextSearchResult = { ok: true, places: initial };
+  let nextBlock: Omit<GoogleBlock, "placeId"> | GoogleBlockResult = { displayName: "Fake Google Place", types: [] };
+  let nextReviews: GoogleReviewsResult = { ok: true, reviews: [] };
   const calls: TextSearch[] = [];
+  const detailsCalls: FakePlacesAdapter["detailsCalls"] = [];
   return {
     calls,
+    detailsCalls,
     respondWith(answer) {
       next = Array.isArray(answer) ? { ok: true, places: answer } : answer;
+    },
+    respondWithGoogleBlock(answer) {
+      nextBlock = answer;
+    },
+    respondWithReviews(answer) {
+      nextReviews = Array.isArray(answer) ? { ok: true, reviews: answer } : answer;
     },
     async searchText(search) {
       calls.push(structuredClone(search));
       return structuredClone(next);
+    },
+    async getGoogleBlock(request) {
+      detailsCalls.push({ method: "getGoogleBlock", ...request });
+      if ("ok" in nextBlock) return structuredClone(nextBlock);
+      return { ok: true, block: { placeId: request.placeId, ...structuredClone(nextBlock) } };
+    },
+    async getGoogleReviews(request) {
+      detailsCalls.push({ method: "getGoogleReviews", ...request });
+      return structuredClone(nextReviews);
     },
   };
 }

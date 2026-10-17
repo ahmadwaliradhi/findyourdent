@@ -1,5 +1,7 @@
 import { type KeyboardEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
+import { GoogleReviews } from "~/components/google-reviews";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import type { Language } from "~/i18n/config";
@@ -222,11 +224,17 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
           ))}
         </ul>
       )}
-      <Button asChild variant="outline" size="sm" className="self-start">
-        <a href={provider.googleMapsUri} target="_blank" rel="noreferrer">
-          {t("shortlist.openInMaps")}
-        </a>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm">
+          <Link to={`/provider/${encodeURIComponent(provider.placeId)}`}>{t("provider.viewPage")}</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <a href={provider.googleMapsUri} target="_blank" rel="noreferrer">
+            {t("shortlist.openInMaps")}
+          </a>
+        </Button>
+      </div>
+      <GoogleReviews placeId={provider.placeId} />
     </li>
   );
 }
