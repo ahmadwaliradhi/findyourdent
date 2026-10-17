@@ -24,7 +24,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  const outcome = await createSession(context.auth, idToken);
+  const outcome = await createSession(context.auth, idToken, request.headers.get("cookie"));
   if (!outcome.ok) {
     context.logger.warn("signin", { outcome: outcome.error });
     return Response.json({ error: outcome.error }, { status: outcome.status });
