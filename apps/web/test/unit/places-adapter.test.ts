@@ -178,3 +178,162 @@ describe("Places adapter: daily cap", () => {
     expect(result).toEqual({ ok: false, reason: "unavailable" });
   });
 });
+
+/** What Place Details (New) answers with the Google block's Enterprise field mask. */
+const GOOGLE_DETAILS = {
+  displayName: { text: "Klinik Gigi Senyum Gubeng", languageCode: "id" },
+  types: ["dentist", "health"],
+  formattedAddress: "Jl. Raya Gubeng No. 1, Surabaya",
+  regularOpeningHours: {
+    openNow: true,
+    weekdayDescriptions: ["Senin: 09.00–21.00", "Selasa: 09.00–21.00"],
+  },
+  nationalPhoneNumber: "0812-3456-7890",
+  websiteUri: "https://senyum.example",
+  rating: 4.7,
+  userRatingCount: 132,
+  googleMapsUri: "https://maps.google.com/?cid=1",
+};
+
+describe("Places adapter: Provider Google block", () => {
+  it("sends one Place Details call with exactly the Enterprise field mask, and no reviews or photos", async () => {
+    const places = fakePlaces(() => Response.json(GOOGLE_DETAILS));
+
+    await adapterWith(places).getGoogleBlock({ placeId: "ChIJ-gubeng-dental", language: "id" });
+
+    expect(places.seen).toHaveLength(1);
+    const [call] = places.seen;
+    expect(call?.method).toBe("GET");
+    expect(call?.url).toBe("https://places.googleapis.com/v1/places/ChIJ-gubeng-dental?languageCode=id&regionCode=ID");
+    expect(call?.headers.get("x-goog-fieldmask")).toBe(
+      "displayName,types,formattedAddress,regularOpeningHours,nationalPhoneNumber,websiteUri,rating,userRatingCount,googleMapsUri",
+    );
+  });
+
+  it("returns the live facts the page shows", async () => {
+    const result = await adapterWith(fakePlaces(() => Response.json(GOOGLE_DETAILS))).getGoogleBlock({
+      placeId: "ChIJ-gubeng-dental",
+      language: "id",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      block: {
+        placeId: "ChIJ-gubeng-dental",
+        displayName: "Klinik Gigi Senyum Gubeng",
+        types: ["dentist", "health"],
+        formattedAddress: "Jl. Raya Gubeng No. 1, Surabaya",
+        openNow: true,
+        weekdayHours: ["Senin: 09.00–21.00", "Selasa: 09.00–21.00"],
+        nationalPhoneNumber: "0812-3456-7890",
+        websiteUri: "https://senyum.example",
+        rating: 4.7,
+        userRatingCount: 132,
+        googleMapsUri: "https://maps.google.com/?cid=1",
+      },
+    });
+  });
+
+  it("stops at its own cap of 50 a day, leaving the Place Details room Google Reviews needs", async () => {
+    const places = fakePlaces(() => Response.json(GOOGLE_DETAILS));
+    const adapter = adapterWith(places);
+
+    const results = [];
+    for (let i = 0; i < 51; i++) results.push(await adapter.getGoogleBlock({ placeId: "p", language: "id" }));
+    const reviews = await adapter.getGoogleReviews({ placeId: "p", language: "id" });
+
+    expect(results.filter((r) => r.ok)).toHaveLength(50);
+    expect(results.at(-1)).toEqual({ ok: false, reason: "cap_reached" });
+    expect(reviews.ok).toBe(true);
+  });
+
+  it("treats RESOURCE_EXHAUSTED as cap reached and stops calling for the day", async () => {
+    const places = fakePlaces(() =>
+      Response.json({ error: { code: 429, status: "RESOURCE_EXHAUSTED" } }, { status: 429 }),
+    );
+    const adapter = adapterWith(places);
+
+    const first = await adapter.getGoogleBlock({ placeId: "p", language: "id" });
+    const second = await adapter.getGoogleBlock({ placeId: "p", language: "id" });
+
+    expect([first, second]).toEqual([
+      { ok: false, reason: "cap_reached" },
+      { ok: false, reason: "cap_reached" },
+    ]);
+    expect(places.seen).toHaveLength(1);
+  });
+
+  it("reports a place Google does not know as not found", async () => {
+    const places = fakePlaces(() => Response.json({ error: { code: 404, status: "NOT_FOUND" } }, { status: 404 }));
+
+    expect(await adapterWith(places).getGoogleBlock({ placeId: "gone", language: "id" })).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+});
+
+const GOOGLE_REVIEW = {
+  name: "places/ChIJ-gubeng-dental/reviews/r1",
+  relativePublishTimeDescription: "2 minggu lalu",
+  rating: 5,
+  text: { text: "Dokternya ramah.", languageCode: "id" },
+  originalText: { text: "Dokternya ramah.", languageCode: "id" },
+  authorAttribution: {
+    displayName: "Budi S.",
+    uri: "https://www.google.com/maps/contrib/1",
+    photoUri: "https://lh3.googleusercontent.com/a/photo",
+  },
+  publishTime: "2026-10-01T03:00:00Z",
+  googleMapsUri: "https://www.google.com/maps/reviews/r1",
+};
+
+describe("Places adapter: Google Reviews", () => {
+  it("sends one Place Details call asking for the reviews field only", async () => {
+    const places = fakePlaces(() => Response.json({ reviews: [GOOGLE_REVIEW] }));
+
+    await adapterWith(places).getGoogleReviews({ placeId: "ChIJ-gubeng-dental", language: "en" });
+
+    expect(places.seen).toHaveLength(1);
+    expect(places.seen[0]?.url).toBe(
+      "https://places.googleapis.com/v1/places/ChIJ-gubeng-dental?languageCode=en&regionCode=ID",
+    );
+    expect(places.seen[0]?.headers.get("x-goog-fieldmask")).toBe("reviews");
+  });
+
+  it("returns each review with its author name, photo and link as Google gave them", async () => {
+    const result = await adapterWith(fakePlaces(() => Response.json({ reviews: [GOOGLE_REVIEW] }))).getGoogleReviews({
+      placeId: "ChIJ-gubeng-dental",
+      language: "id",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      reviews: [
+        {
+          rating: 5,
+          text: "Dokternya ramah.",
+          relativeTime: "2 minggu lalu",
+          publishTime: "2026-10-01T03:00:00Z",
+          author: {
+            name: "Budi S.",
+            uri: "https://www.google.com/maps/contrib/1",
+            photoUri: "https://lh3.googleusercontent.com/a/photo",
+          },
+          googleMapsUri: "https://www.google.com/maps/reviews/r1",
+        },
+      ],
+    });
+  });
+
+  it("stops at its own cap of 33 a day", async () => {
+    const places = fakePlaces(() => Response.json({ reviews: [] }));
+    const adapter = adapterWith(places);
+
+    for (let i = 0; i < 33; i++) await adapter.getGoogleReviews({ placeId: "p", language: "id" });
+    const over = await adapter.getGoogleReviews({ placeId: "p", language: "id" });
+
+    expect(places.seen).toHaveLength(33);
+    expect(over).toEqual({ ok: false, reason: "cap_reached" });
+  });
+});

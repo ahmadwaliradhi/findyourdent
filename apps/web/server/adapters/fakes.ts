@@ -2,7 +2,17 @@ import type { GuidanceRequest, ShortlistReasonsRequest, ShortlistReasonsResponse
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
-import type { PlaceSummary, PlacesAdapter, TextSearch, TextSearchResult } from "./places.ts";
+import type {
+  GoogleBlock,
+  GoogleBlockResult,
+  GoogleReview,
+  GoogleReviewsResult,
+  PlaceDetailsRequest,
+  PlaceSummary,
+  PlacesAdapter,
+  TextSearch,
+  TextSearchResult,
+} from "./places.ts";
 
 /** A stub Guidance card, valid against guidance-response.schema.json. */
 export const STUB_GUIDANCE_RESPONSE = {
@@ -90,22 +100,48 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
 }
 
 export interface FakePlacesAdapter extends PlacesAdapter {
+  /** Text Searches, in order. */
   readonly calls: TextSearch[];
+  /** Place Details calls, in order, named by the adapter method that made them. */
+  readonly detailsCalls: (PlaceDetailsRequest & { method: "getGoogleBlock" | "getGoogleReviews" })[];
   /** Next answer: places found, or a failed result such as the daily cap being reached. */
   respondWith(answer: PlaceSummary[] | TextSearchResult): void;
+  /** Next Google block: the facts for any place id asked, or a failed result. */
+  respondWithGoogleBlock(answer: Omit<GoogleBlock, "placeId"> | GoogleBlockResult): void;
+  /** Next Google Reviews: the reviews, or a failed result. */
+  respondWithReviews(answer: GoogleReview[] | GoogleReviewsResult): void;
 }
 
 export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlacesAdapter {
   let next: TextSearchResult = { ok: true, places: initial };
+  let nextBlock: Omit<GoogleBlock, "placeId"> | GoogleBlockResult = { displayName: "Fake Google Place", types: [] };
+  let nextReviews: GoogleReviewsResult = { ok: true, reviews: [] };
   const calls: TextSearch[] = [];
+  const detailsCalls: FakePlacesAdapter["detailsCalls"] = [];
   return {
     calls,
+    detailsCalls,
     respondWith(answer) {
       next = Array.isArray(answer) ? { ok: true, places: answer } : answer;
+    },
+    respondWithGoogleBlock(answer) {
+      nextBlock = answer;
+    },
+    respondWithReviews(answer) {
+      nextReviews = Array.isArray(answer) ? { ok: true, reviews: answer } : answer;
     },
     async searchText(search) {
       calls.push(structuredClone(search));
       return structuredClone(next);
+    },
+    async getGoogleBlock(request) {
+      detailsCalls.push({ method: "getGoogleBlock", ...request });
+      if ("ok" in nextBlock) return structuredClone(nextBlock);
+      return { ok: true, block: { placeId: request.placeId, ...structuredClone(nextBlock) } };
+    },
+    async getGoogleReviews(request) {
+      detailsCalls.push({ method: "getGoogleReviews", ...request });
+      return structuredClone(nextReviews);
     },
   };
 }
@@ -147,6 +183,73 @@ export function createFakeAppCheckVerifier(): FakeAppCheckVerifier {
     },
     async verify(token) {
       return issued.has(token);
+    },
+  };
+}
+
+/** Sample places for local runs and the browser tests (PLACES_ADAPTER=fake). Made up, not Google data. */
+const SAMPLE_PLACES: PlaceSummary[] = [
+  {
+    placeId: "sample-klinik-senyum",
+    displayName: "Klinik Gigi Senyum Contoh",
+    formattedAddress: "Jl. Contoh No. 1, Surabaya",
+    location: { lat: -7.2711, lng: 112.7509 },
+    types: ["dentist", "health"],
+    googleMapsUri: "https://www.google.com/maps/search/?api=1&query=Klinik&query_place_id=sample-klinik-senyum",
+  },
+  {
+    placeId: "sample-drg-ani",
+    displayName: "drg. Ani Contoh",
+    formattedAddress: "Jl. Contoh No. 2, Surabaya",
+    location: { lat: -7.2856, lng: 112.7509 },
+    types: ["dentist", "health"],
+    googleMapsUri: "https://www.google.com/maps/search/?api=1&query=drg&query_place_id=sample-drg-ani",
+  },
+];
+
+const SAMPLE_REVIEWS: GoogleReview[] = [
+  {
+    rating: 5,
+    text: "Contoh ulasan: dokternya sabar dan ruangannya bersih.",
+    relativeTime: "2 minggu lalu",
+    author: { name: "Pengulas Contoh", uri: "https://www.google.com/maps/contrib/sample", photoUri: "/favicon.svg" },
+  },
+];
+
+/**
+ * The fake adapter with SAMPLE_PLACES: every search finds them, each has a Google
+ * block and one review. Any other place id answers like a used-up daily cap, so the
+ * fallback can be seen too.
+ */
+export function createFakeSamplePlacesAdapter(): PlacesAdapter {
+  const known = new Map(SAMPLE_PLACES.map((place) => [place.placeId, place]));
+  return {
+    async searchText() {
+      return { ok: true, places: structuredClone(SAMPLE_PLACES) };
+    },
+    async getGoogleBlock({ placeId }) {
+      const place = known.get(placeId);
+      if (!place) return { ok: false, reason: "cap_reached" };
+      return {
+        ok: true,
+        block: {
+          placeId,
+          displayName: place.displayName,
+          types: place.types,
+          ...(place.formattedAddress ? { formattedAddress: place.formattedAddress } : {}),
+          openNow: true,
+          weekdayHours: ["Senin: 09.00–21.00", "Selasa: 09.00–21.00"],
+          nationalPhoneNumber: "0812-0000-0001",
+          rating: 4.6,
+          userRatingCount: 12,
+          ...(place.googleMapsUri ? { googleMapsUri: place.googleMapsUri } : {}),
+        },
+      };
+    },
+    async getGoogleReviews({ placeId }) {
+      return known.has(placeId)
+        ? { ok: true, reviews: structuredClone(SAMPLE_REVIEWS) }
+        : { ok: false, reason: "cap_reached" };
     },
   };
 }

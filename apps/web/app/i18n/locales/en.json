@@ -277,7 +277,33 @@
     "visitMonth": "Visited {{month}}",
     "procedure": "Procedure: {{procedure}}",
     "pricePaid": "Paid: {{price}}",
-    "ratingsLabel": "Ratings for {{name}}"
+    "ratingsLabel": "Ratings for {{name}}",
+    "metaDescriptionUnlisted": "Dental practice information on FindYourDent.",
+    "unnamed": "Dental practice",
+    "notListed": "FindYourDent has no Testimonies for this place yet. Been here? Your Testimony helps other patients.",
+    "reply": "Owner's reply",
+    "pricesTitle": "Prices",
+    "ownerTitle": "From the owner",
+    "googleTitle": "From Google",
+    "googleLoading": "Loading Google info…",
+    "googleUnavailable": "Google info is temporarily unavailable.",
+    "openNow": "Open now",
+    "closedNow": "Closed now",
+    "hours": "Opening hours",
+    "rating": "Google rating {{rating}} from {{count}} reviews",
+    "website": "Website",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "attribution": "Source: Google Maps",
+    "viewPage": "View page",
+    "reviews": {
+      "open": "See Google reviews",
+      "loading": "Loading Google reviews…",
+      "title": "Google reviews",
+      "empty": "No Google reviews yet.",
+      "unavailable": "Google reviews are temporarily unavailable.",
+      "rating": "{{rating}} out of 5"
+    }
   },
   "shortlist": {
     "reason": {

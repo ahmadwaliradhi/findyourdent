@@ -108,10 +108,13 @@ describe("Listed Provider page", () => {
     expect(html).not.toMatch(/<meta name="robots" content="noindex"/);
   });
 
-  it("returns 404 for a place that is not a Listed Provider, without calling Places", async () => {
-    const { status } = await page("ChIJ-not-listed");
+  it("serves a place that is not a Listed Provider as noindex, without calling Places", async () => {
+    // Shortlist cards link to every Provider; without FindYourDent content the page is noindex (spec 02).
+    const { status, html } = await page("ChIJ-not-listed");
 
-    expect(status).toBe(404);
+    expect(status).toBe(200);
+    expect(html).toMatch(/<meta name="robots" content="noindex"/);
     expect(server.fakes.places.calls).toEqual([]);
+    expect(server.fakes.places.detailsCalls).toEqual([]);
   });
 });

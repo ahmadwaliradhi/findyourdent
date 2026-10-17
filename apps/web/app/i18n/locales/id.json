@@ -277,7 +277,33 @@
     "visitMonth": "Berkunjung {{month}}",
     "procedure": "Tindakan: {{procedure}}",
     "pricePaid": "Biaya: {{price}}",
-    "ratingsLabel": "Penilaian {{name}}"
+    "ratingsLabel": "Penilaian {{name}}",
+    "metaDescriptionUnlisted": "Info tempat praktik dokter gigi di FindYourDent.",
+    "unnamed": "Tempat praktik dokter gigi",
+    "notListed": "FindYourDent belum punya Testimoni untuk tempat ini. Pernah ke sini? Testimoni Anda membantu pasien lain.",
+    "reply": "Balasan pemilik",
+    "pricesTitle": "Harga",
+    "ownerTitle": "Info dari pemilik",
+    "googleTitle": "Info dari Google",
+    "googleLoading": "Memuat info Google…",
+    "googleUnavailable": "Info Google sementara tidak tersedia.",
+    "openNow": "Buka sekarang",
+    "closedNow": "Tutup sekarang",
+    "hours": "Jam buka",
+    "rating": "Rating Google {{rating}} dari {{count}} ulasan",
+    "website": "Situs web",
+    "call": "Telepon",
+    "whatsapp": "WhatsApp",
+    "attribution": "Sumber: Google Maps",
+    "viewPage": "Lihat halaman",
+    "reviews": {
+      "open": "Lihat ulasan Google",
+      "loading": "Memuat ulasan Google…",
+      "title": "Ulasan Google",
+      "empty": "Belum ada ulasan Google.",
+      "unavailable": "Ulasan Google sementara tidak tersedia.",
+      "rating": "{{rating}} dari 5"
+    }
   },
   "shortlist": {
     "reason": {

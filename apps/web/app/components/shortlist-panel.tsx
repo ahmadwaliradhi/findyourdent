@@ -1,12 +1,16 @@
-import { type KeyboardEvent, useId, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link, useLocation } from "react-router";
+import { GoogleReviews } from "~/components/google-reviews";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import type { Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
+import { recallEntry, rememberEntry } from "~/lib/entry-memory";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { formatDistance, formatRupiah } from "~/lib/format";
+import { formatDistance, formatRupiah, formatScore } from "~/lib/format";
+import { providerPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import type { ShortlistProvider, ShortlistResponse } from "~/lib/shortlist";
 
@@ -31,7 +35,22 @@ export function ShortlistPanel(
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   const firebase = useFirebaseConfig();
-  const [state, setState] = useState<State>({ phase: "closed" });
+  // Back from a Provider page shows the same results again, with no second Text Search.
+  // Each Guidance submit is a new history entry, so a panel still mounted from the
+  // last one starts over from whatever the new entry remembers (nothing, at first).
+  const { key: entryKey } = useLocation();
+  const slot = `shortlist:${props.purpose}:${props.guidanceToken ?? ""}`;
+  const recalled = () => recallEntry<State>(entryKey, slot) ?? { phase: "closed" };
+  const [state, setState] = useState<State>(recalled);
+  const [stateEntry, setStateEntry] = useState(entryKey);
+  if (stateEntry !== entryKey) {
+    setStateEntry(entryKey);
+    setState(recalled());
+  }
+  useEffect(() => {
+    // Settled states only: a closed panel stays closed on Back, and results replace older ones.
+    if (state.phase === "done" || state.phase === "closed") rememberEntry(entryKey, slot, state);
+  }, [entryKey, slot, state]);
   const [area, setArea] = useState("");
   const areaId = useId();
   const emergency = props.purpose === "emergency";
@@ -52,7 +71,7 @@ export function ShortlistPanel(
     }
   };
 
-  const useLocation = () => {
+  const shareLocation = () => {
     if (!("geolocation" in navigator)) {
       setState({ phase: "asking", locationDenied: true });
       return;
@@ -96,7 +115,7 @@ export function ShortlistPanel(
     <section className="flex flex-col gap-3" aria-busy={busy} data-testid="shortlist">
       <h3 className="font-semibold">{emergency ? t("shortlist.emergencyTitle") : t("shortlist.title")}</h3>
       <div className="flex flex-col gap-2">
-        <Button type="button" onClick={useLocation} disabled={busy} className="w-full sm:w-auto sm:self-start">
+        <Button type="button" onClick={shareLocation} disabled={busy} className="w-full sm:w-auto sm:self-start">
           {state.phase === "locating" ? t("shortlist.locating") : t("shortlist.useLocation")}
         </Button>
         {state.phase === "asking" && state.locationDenied && (
@@ -159,9 +178,6 @@ function ShortlistProviders({ result, language }: { result: ShortlistResponse; l
   );
 }
 
-const oneDecimal = (value: number, language: Language) =>
-  value.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1 });
-
 function ProviderCard({ provider, language }: { provider: ShortlistProvider; language: Language }) {
   const { t } = useTranslation();
   const { testimonies } = provider;
@@ -193,9 +209,9 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
             {testimonies.averages && (
               <p className="text-muted-foreground">
                 {t("shortlist.aspects", {
-                  service: oneDecimal(testimonies.averages.service, language),
-                  hygiene: oneDecimal(testimonies.averages.hygiene, language),
-                  materials: oneDecimal(testimonies.averages.materialsEquipment, language),
+                  service: formatScore(testimonies.averages.service, language),
+                  hygiene: formatScore(testimonies.averages.hygiene, language),
+                  materials: formatScore(testimonies.averages.materialsEquipment, language),
                 })}
               </p>
             )}
@@ -222,11 +238,17 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
           ))}
         </ul>
       )}
-      <Button asChild variant="outline" size="sm" className="self-start">
-        <a href={provider.googleMapsUri} target="_blank" rel="noreferrer">
-          {t("shortlist.openInMaps")}
-        </a>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm">
+          <Link to={providerPath(provider.placeId)}>{t("provider.viewPage")}</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <a href={provider.googleMapsUri} target="_blank" rel="noreferrer">
+            {t("shortlist.openInMaps")}
+          </a>
+        </Button>
+      </div>
+      <GoogleReviews placeId={provider.placeId} />
     </li>
   );
 }

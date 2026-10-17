@@ -12,6 +12,7 @@ import { VoiceRecorder } from "~/components/voice-recorder";
 import { getI18n } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_FIELD } from "~/lib/app-check";
+import { useEntryMemory } from "~/lib/entry-memory";
 import type { FeedItem, FeedPage } from "~/lib/feed";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
@@ -137,8 +138,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   return data({ complaintText: response.transcript ?? echoed, error: null, response, share }, { headers });
 }
 
-export default function Home({ actionData, loaderData }: Route.ComponentProps) {
+export default function Home({ actionData: freshActionData, loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
+  // Back from a Provider page brings the Guidance card back without asking again.
+  const actionData = useEntryMemory("guidance", freshActionData);
   const navigation = useNavigation();
   // Fetching the App Check token counts as pending too, so a second tap cannot send a second request.
   const [preparing, setPreparing] = useState(false);

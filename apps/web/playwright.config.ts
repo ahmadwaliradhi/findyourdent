@@ -22,7 +22,15 @@ export default defineConfig({
     command: "node server.ts",
     url: `http://127.0.0.1:${port}/health`,
     // No Firebase here: the browser sends the debug token in place of an App Check token.
-    env: { PORT: String(port), AGENT_ADAPTER: "fake", APP_CHECK_DEBUG_TOKEN: "e2e-app-check-debug-token" },
+    env: {
+      PORT: String(port),
+      AGENT_ADAPTER: "fake",
+      PLACES_ADAPTER: "fake",
+      APP_CHECK_DEBUG_TOKEN: "e2e-app-check-debug-token",
+      // Every test shares the one debug token, so the per-browser hourly limits would run out mid-run.
+      RATE_LIMIT_GUIDANCE_PER_HOUR: "1000",
+      RATE_LIMIT_PLACES_PER_HOUR: "1000",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },

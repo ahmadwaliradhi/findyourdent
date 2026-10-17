@@ -107,7 +107,8 @@ function mapsSearchUrl(base: string, where: Where): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-function placeMapsUrl(name: string, placeId: string): string {
+/** A Provider's Google Maps page, as a plain search URL (no API call). */
+export function placeMapsUrl(name: string, placeId: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${encodeURIComponent(placeId)}`;
 }
 
