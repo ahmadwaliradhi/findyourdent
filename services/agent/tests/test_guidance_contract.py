@@ -71,7 +71,11 @@ def test_guidance_carries_the_language_of_the_complaint_not_the_toggle(
 
     response = client.post(
         "/v1/guidance",
-        json={"sessionId": "sess-0001-abcd", "language": "id", "complaintText": "My lower left molar throbs."},
+        json={
+            "sessionId": "sess-0001-abcd",
+            "language": "id",
+            "complaintText": "My lower left molar throbs.",
+        },
     )
 
     assert response.status_code == 200
