@@ -48,7 +48,7 @@ Urgency Tier is the clinical expectation. **Rule on ground truth** is the determ
 | VN-09 | rutin | no | no | Gusi saya makin turun atau mengalami resesi gingiva sampai lapisan dentin dan akar giginya kelihatan, rasanya ngilu banget kalau minum es dan takutnya mengarah ke periodontitis. | resesi gingiva, dentin, akar gigi, periodontitis |
 | VN-10 | rutin | no | no | Sendi rahang dekat telinga saya sering bunyi klik dan terasa kaku waktu bangun tidur karena kebiasaan bruxism atau gemeretak gigi malam hari, apakah ini gangguan temporomandibular? | sendi rahang, bruxism, gemeretak gigi, temporomandibular |
 
-VN-01 does not escalate on the deterministic rule even when heard perfectly: "pipi kiri bawah saya bengkak" has more words between "pipi" and "bengkak" than `max_gap` allows, "menelan dan buka mulut susah" matches no swallowing or trismus phrase, and "trismus" and "abses" are not phrases. Changing the rule is the clinical reviewer's call (see the clinical-review issue linked from #31).
+VN-01 does not escalate on the deterministic rule even when heard perfectly: "pipi kiri bawah saya bengkak" has more words between "pipi" and "bengkak" than `max_gap` allows, "menelan dan buka mulut susah" matches no swallowing or trismus phrase, and "trismus" and "abses" are not phrases. Changing the rule is the clinical reviewer's call (issue #67).
 
 ## Dental term list for run (b)
 
