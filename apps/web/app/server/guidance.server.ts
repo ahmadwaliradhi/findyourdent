@@ -17,6 +17,7 @@ export interface GuidanceInput {
   sessionId: string;
   language: Language | unknown;
   complaintText?: unknown;
+  followUpQuestion?: unknown;
   followUpAnswer?: unknown;
 }
 
@@ -35,8 +36,10 @@ function text(value: unknown): unknown {
 export async function requestGuidance(context: AppLoadContext, input: GuidanceInput): Promise<GuidanceOutcome> {
   const candidate: Record<string, unknown> = { sessionId: input.sessionId, language: input.language };
   const complaintText = text(input.complaintText);
+  const followUpQuestion = text(input.followUpQuestion);
   const followUpAnswer = text(input.followUpAnswer);
   if (complaintText !== undefined) candidate.complaintText = complaintText;
+  if (followUpQuestion !== undefined) candidate.followUpQuestion = followUpQuestion;
   if (followUpAnswer !== undefined) candidate.followUpAnswer = followUpAnswer;
 
   if (!validateGuidanceRequest(candidate)) {

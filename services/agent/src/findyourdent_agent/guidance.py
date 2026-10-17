@@ -164,13 +164,15 @@ async def answer_turn(
         return Outcome(emergency, "emergency")
     if turn.complaintText is None:
         raise AudioNotSupportedError
-    if any(is_injection(t) for t in texts if t):
+    # The question is model text echoed back by the browser, so it is checked for
+    # injection like Patient text, but not for red flags it may only ask about.
+    if any(is_injection(t) for t in (*texts, turn.followUpQuestion) if t):
         return Outcome(_redirect(turn.language), "redirect")
 
     raw = await gemini.generate_structured(
         model=settings.guidance_model,
         instruction=guidance_instruction(),
-        contents=guidance_contents(turn.complaintText, turn.followUpAnswer),
+        contents=guidance_contents(turn.complaintText, turn.followUpAnswer, turn.followUpQuestion),
         response_schema=model_response_schema(),
         temperature=settings.guidance_temperature,
         max_output_tokens=settings.guidance_max_output_tokens,

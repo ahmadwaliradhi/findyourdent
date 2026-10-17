@@ -20,6 +20,7 @@ export function meta({ matches }: Route.MetaArgs) {
 export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const complaintText = form.get("complaintText");
+  const followUpQuestion = form.get("followUpQuestion");
   const followUpAnswer = form.get("followUpAnswer");
   const [language, session] = await Promise.all([detectLanguage(request), getOrCreateSessionId(request)]);
 
@@ -27,6 +28,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     sessionId: session.sessionId,
     language,
     complaintText,
+    followUpQuestion,
     followUpAnswer,
   });
 

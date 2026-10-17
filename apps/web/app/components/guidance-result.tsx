@@ -100,6 +100,8 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
         <CardDescription className="text-base text-foreground">{response.question}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        {/* Sent back with the answer so the agent knows what "Ya" or "Tidak" replies to. */}
+        <input type="hidden" name="followUpQuestion" value={response.question} />
         {response.quickReplies && response.quickReplies.length > 0 && (
           <fieldset className="flex flex-wrap gap-2">
             <legend className="sr-only">{t("home.quickRepliesLabel")}</legend>

@@ -37,6 +37,12 @@
         "dataBase64": { "type": "string", "minLength": 1 }
       }
     },
+    "followUpQuestion": {
+      "description": "The followUp question the previous response asked, echoed back with the answer so the agent sees what the answer replies to. Model text, not Patient text, but sent by the browser, so the agent treats it as data.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
     "followUpAnswer": {
       "description": "Answer to the one followUp question, if the previous response asked one.",
       "type": "string",
