@@ -111,23 +111,22 @@ export function statusForDecision(
   return "held";
 }
 
-/** Whether this decision joins the spot-check sample: only Moderation publishes are sampled. */
-export function isSpotCheck(
-  decision: ModerationDecision["decision"],
-  rate: number,
-  random: () => number = Math.random,
-): boolean {
-  return decision === "publish" && random() < rate;
+/**
+ * Whether this decision joins the spot-check sample. Only Testimonies Moderation
+ * actually published are sampled: a "publish" decision on content that stays with
+ * the admin (the hold switch, an edit of a held or rejected Testimony) is not.
+ */
+export function isSpotCheck(autoPublished: boolean, rate: number, random: () => number = Math.random): boolean {
+  return autoPublished && random() < rate;
 }
 
 /** The stored record of a decision; never the moderated text or images. */
 export function moderationDecisionDoc(
   outcome: ModerationOutcome,
   subject: { subjectType: "testimony" | "testimonyRevision"; subjectId: string; placeId: string },
-  spotCheckRate: number,
+  spotCheck: boolean,
 ): ModerationDecisionDoc {
   const { decision } = outcome;
-  const spotCheck = isSpotCheck(decision.decision, spotCheckRate);
   return {
     ...subject,
     decision: decision.decision,
@@ -139,7 +138,7 @@ export function moderationDecisionDoc(
     model: outcome.model,
     spotCheck,
     // Written only on sampled decisions, so the queue finds open ones with two equality filters.
-    ...(spotCheck ? { spotCheckReviewed: false } : {}),
+    ...(spotCheck ? { spotCheckConfirmed: false } : {}),
     decidedAt: Timestamp.now(),
   };
 }

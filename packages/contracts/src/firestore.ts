@@ -301,7 +301,7 @@ export interface ModerationDecisionDoc {
   /** Part of the 10% admin spot-check sample. */
   spotCheck: boolean;
   /** Sampled decisions only: false until an admin confirms the spot check. */
-  spotCheckReviewed?: boolean;
+  spotCheckConfirmed?: boolean;
   decidedAt: Timestamp;
 }
 

@@ -4,7 +4,6 @@ import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
 import { SPOT_CHECK_RATE } from "../app/lib/admin-queue.ts";
 import type { PublicFirebaseConfig } from "../app/lib/firebase-config.ts";
-
 import { type AgentAdapter, createHttpAgentAdapter, createMetadataIdTokenSource } from "./adapters/agent.ts";
 import {
   type AppCheckVerifier,

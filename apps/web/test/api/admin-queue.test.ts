@@ -234,6 +234,43 @@ describe("admin queue", () => {
   });
 });
 
+describe("admin queue: nothing gets stuck", () => {
+  it("keeps a Testimony hidden from a spot check in the queue until published or removed", async () => {
+    server.setSpotCheckRate(1);
+    const id = await postTestimony("pasien@example.com");
+    const cookie = await adminCookie();
+    expect((await act(cookie, { action: "hide", subjectId: id, reason: "Perlu dicek lagi." })).status).toBe(200);
+
+    const { items } = await queue(cookie);
+    expect(items.map((item) => [item.kind, item.subjectId])).toEqual([["hidden", id]]);
+    expect((await act(cookie, { action: "remove", subjectId: id, reason: "Fitnah." })).status).toBe(200);
+    expect((await queue(cookie)).items).toEqual([]);
+  });
+
+  it("samples only Testimonies that Moderation actually published", async () => {
+    server.setTestimonyModeration("hold");
+    const id = await postTestimony("pasien@example.com");
+    const cookie = await adminCookie();
+    await act(cookie, { action: "reject", subjectId: id, reason: "Tuduhan tanpa bukti." });
+
+    // Moderation now says publish, but an edit of a rejected Testimony stays with the admin.
+    server.setTestimonyModeration("publish");
+    server.setSpotCheckRate(1);
+    const author = await server.signInWithGoogle("pasien@example.com");
+    const form = new FormData();
+    form.set("testimony", JSON.stringify(submission({ text: "Sudah saya perbaiki." })));
+    await fetch(new URL(`/api/testimonies/${id}`, server.baseUrl), {
+      method: "POST",
+      headers: { cookie: author, [APP_CHECK_HEADER]: server.appCheckToken() },
+      body: form,
+    });
+    expect((await testimony(id)).status).toBe("held");
+
+    await act(cookie, { action: "publish", subjectId: id });
+    expect((await queue(cookie)).items).toEqual([]);
+  });
+});
+
 describe("admin actions on a held Testimony", () => {
   it("publishes it, makes the place Listed, counts it and logs who, when and why", async () => {
     server.setTestimonyModeration("hold");

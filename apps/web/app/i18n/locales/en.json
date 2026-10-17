@@ -154,7 +154,8 @@
         "revision": "Held edit",
         "report": "Reports",
         "spotCheck": "Spot check (10%)",
-        "nameCorrection": "Name correction"
+        "nameCorrection": "Name correction",
+        "hidden": "Hidden Testimony"
       },
       "status": {
         "submitted": "Being checked",

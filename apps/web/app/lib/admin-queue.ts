@@ -45,7 +45,8 @@ export interface AdminApiError {
   message: string;
 }
 
-export type QueueItemKind = "held" | "revision" | "report" | "spotCheck" | "nameCorrection";
+/** `hidden`: hidden by an admin with no open report; it still waits for publish or remove. */
+export type QueueItemKind = "held" | "hidden" | "revision" | "report" | "spotCheck" | "nameCorrection";
 
 export interface QueueHistoryEntry {
   /** ISO time. */
@@ -121,7 +122,7 @@ export interface QueueItem {
   correction?: QueueNameCorrection;
 }
 
-/** GET /admin/api/queue: hidden-by-report first, then oldest first. */
+/** GET /admin/api/queue: hidden Testimonies first, then oldest first. */
 export interface AdminQueueResponse {
   items: QueueItem[];
 }

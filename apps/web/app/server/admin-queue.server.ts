@@ -60,7 +60,7 @@ import {
 import { deleteTestimonyMedia } from "./testimony-media.server.ts";
 import { canTransition } from "./testimony-state.ts";
 
-const ID = /^[A-Za-z0-9_-]{1,64}$/;
+const SUBJECT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const TARGET_MS = QUEUE_TARGET_HOURS * 60 * 60 * 1000;
 
 const col = (firestore: Firestore, name: keyof typeof COLLECTIONS) => firestore.collection(COLLECTIONS[name]);
@@ -150,18 +150,20 @@ function item(
   };
 }
 
-/** Everything waiting for an admin: Testimonies hidden by a report first, then oldest first. */
+/** Everything waiting for an admin: hidden Testimonies first (harm is paused, a decision is owed), then oldest first. */
 export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): Promise<AdminQueueResponse> {
-  const [held, revisions, reports, corrections, spotChecks] = await Promise.all([
+  const [held, hidden, revisions, reports, corrections, spotChecks] = await Promise.all([
     col(firestore, "testimonies").where("status", "==", "held").get(),
+    col(firestore, "testimonies").where("status", "==", "hidden").get(),
     col(firestore, "testimonies").where("pendingRevision.status", "==", "held").get(),
     col(firestore, "testimonyReports").where("status", "==", "open").get(),
     col(firestore, "nameCorrections").where("status", "==", "open").get(),
-    col(firestore, "moderationDecisions").where("spotCheck", "==", true).where("spotCheckReviewed", "==", false).get(),
+    col(firestore, "moderationDecisions").where("spotCheck", "==", true).where("spotCheckConfirmed", "==", false).get(),
   ]);
 
   const testimonies = new Map<string, TestimonyDoc>();
-  for (const doc of [...held.docs, ...revisions.docs]) testimonies.set(doc.id, doc.data() as TestimonyDoc);
+  for (const doc of [...held.docs, ...hidden.docs, ...revisions.docs])
+    testimonies.set(doc.id, doc.data() as TestimonyDoc);
   const reportsByTestimony = new Map<string, Array<{ id: string; report: TestimonyReportDoc }>>();
   for (const doc of reports.docs) {
     const report = doc.data() as TestimonyReportDoc;
@@ -235,6 +237,17 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
       ),
     );
   }
+  for (const doc of hidden.docs) {
+    // Hidden with open reports is a report item below. Hidden without (an admin hid it)
+    // still waits for publish or remove, so it never drops out of the queue.
+    if (reportsByTestimony.has(doc.id)) continue;
+    const t = testimonies.get(doc.id) as TestimonyDoc;
+    items.push(
+      view(doc.id).then((testimony) =>
+        item({ id: doc.id, kind: "hidden", subjectId: doc.id, testimony }, t.updatedAt, nowMs),
+      ),
+    );
+  }
   for (const doc of revisions.docs) {
     const t = testimonies.get(doc.id) as TestimonyDoc;
     // Only a published Testimony keeps a pending revision; anything else is a held Testimony above.
@@ -276,7 +289,17 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
     if (testimonies.get(decision.subjectId)?.status !== "published") continue;
     items.push(
       view(decision.subjectId).then((testimony) =>
-        item({ id: doc.id, kind: "spotCheck", subjectId: decision.subjectId, testimony }, decision.decidedAt, nowMs),
+        item(
+          // The sampled decision, which may not be the Testimony's latest one.
+          {
+            id: doc.id,
+            kind: "spotCheck",
+            subjectId: decision.subjectId,
+            testimony: { ...testimony, moderation: moderationView(decision) },
+          },
+          decision.decidedAt,
+          nowMs,
+        ),
       ),
     );
   }
@@ -305,7 +328,7 @@ export async function loadAdminQueue(firestore: Firestore, nowMs = Date.now()): 
   }
 
   const resolved = await Promise.all(items);
-  const hiddenFirst = (i: QueueItem) => (i.kind === "report" && i.testimony?.status === "hidden" ? 0 : 1);
+  const hiddenFirst = (i: QueueItem) => (i.testimony?.status === "hidden" ? 0 : 1);
   resolved.sort((a, b) => hiddenFirst(a) - hiddenFirst(b) || Date.parse(a.createdAt) - Date.parse(b.createdAt));
   return { items: resolved };
 }
@@ -342,7 +365,7 @@ function parseAction(body: unknown): AdminActionRequest | null {
   if (!body || typeof body !== "object") return null;
   const { action, subjectId, reason } = body as Record<string, unknown>;
   if (typeof action !== "string" || !ACTIONS.has(action)) return null;
-  if (typeof subjectId !== "string" || !ID.test(subjectId)) return null;
+  if (typeof subjectId !== "string" || !SUBJECT_ID.test(subjectId)) return null;
   if (reason !== undefined && typeof reason !== "string") return null;
   const trimmed = reason?.trim() ?? "";
   if (trimmed.length > ADMIN_REASON_MAX_CHARS) return null;
@@ -370,6 +393,13 @@ function logAction(
     createdAt: Timestamp.now(),
   };
   tx.create(acting.actionRef, doc);
+}
+
+/** GET /admin/api/queue. */
+export async function adminQueueResponse(context: AppLoadContext, request: Request): Promise<Response> {
+  if (!context.admin) return errorResponse(request, 403, "not_allowed");
+  if (!context.firestore) return errorResponse(request, 503, "unavailable");
+  return Response.json(await loadAdminQueue(context.firestore), { headers: { "Cache-Control": "no-store" } });
 }
 
 /** POST /admin/api/actions: one admin decision, applied and logged together. */
@@ -459,6 +489,13 @@ async function testimonyAction(context: AppLoadContext, acting: Acting, action: 
     const published = publicChanges ? await tx.get(publishedOf(firestore, testimony.placeId)) : null;
     const resolution = to === "published" ? "kept" : to === "removed" ? "removed" : null;
     const openReports = resolution ? await tx.get(openReportsOf(firestore, ref.id)) : null;
+    // Any decision on the Testimony settles its open spot check too.
+    const openSpotChecks = await tx.get(
+      col(firestore, "moderationDecisions")
+        .where("subjectId", "==", ref.id)
+        .where("spotCheck", "==", true)
+        .where("spotCheckConfirmed", "==", false),
+    );
 
     const now = Timestamp.now();
     const update: Record<string, unknown> = { status: to, updatedAt: now };
@@ -493,6 +530,7 @@ async function testimonyAction(context: AppLoadContext, acting: Acting, action: 
       { status: from, verifiedVisit: testimony.verifiedVisit },
       { status: to, verifiedVisit: testimony.verifiedVisit },
     );
+    for (const decision of openSpotChecks.docs) tx.update(decision.ref, { spotCheckConfirmed: true });
     for (const report of openReports?.docs ?? []) {
       tx.update(report.ref, { status: "resolved", resolution, resolvedBy: acting.admin.email ?? "", resolvedAt: now });
     }
@@ -652,8 +690,8 @@ async function resolveNameCorrection(tx: Transaction, acting: Acting) {
 async function confirmSpotCheck(tx: Transaction, acting: Acting) {
   const ref = col(acting.firestore, "moderationDecisions").doc(acting.request.subjectId);
   const decision = (await tx.get(ref)).data() as ModerationDecisionDoc | undefined;
-  if (!decision?.spotCheck || decision.spotCheckReviewed !== false) throw new AdminRefusal(404, "not_found");
-  tx.update(ref, { spotCheckReviewed: true });
+  if (!decision?.spotCheck || decision.spotCheckConfirmed !== false) throw new AdminRefusal(404, "not_found");
+  tx.update(ref, { spotCheckConfirmed: true });
   logAction(tx, acting, {
     subjectType: "moderationDecision",
     subjectId: ref.id,

@@ -7,6 +7,7 @@ import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import {
+  HIDING_CATEGORIES,
   REPORT_CATEGORIES,
   REPORT_DETAILS_MAX_CHARS,
   type ReportApiError,
@@ -86,7 +87,7 @@ export function ReportButton({ testimonyId, onHidden }: { testimonyId: string; o
             />
             <span>
               {t(`report.categories.${value}`)}
-              {(value === "personalData" || value === "threat") && (
+              {HIDING_CATEGORIES.has(value) && (
                 <span className="block text-xs text-muted-foreground">{t("report.hidesAtOnce")}</span>
               )}
             </span>

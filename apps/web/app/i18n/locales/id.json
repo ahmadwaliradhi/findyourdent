@@ -154,7 +154,8 @@
         "revision": "Perubahan ditahan",
         "report": "Laporan",
         "spotCheck": "Cek acak (10%)",
-        "nameCorrection": "Koreksi nama"
+        "nameCorrection": "Koreksi nama",
+        "hidden": "Testimoni disembunyikan"
       },
       "status": {
         "submitted": "Diperiksa",

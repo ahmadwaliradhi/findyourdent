@@ -60,6 +60,7 @@ import {
 } from "./testimony-media.server.ts";
 import {
   buildModerationRequest,
+  isSpotCheck,
   type ModerationOutcome,
   moderateTestimony,
   moderationDecisionDoc,
@@ -388,7 +389,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         moderationDecisionDoc(
           outcome,
           { subjectType: "testimony", subjectId: ref.id, placeId: value.placeId },
-          context.config.spotCheckRate,
+          isSpotCheck(decided === "published", context.config.spotCheckRate),
         ),
       );
       const doc: TestimonyDoc = {
@@ -537,7 +538,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
             subjectId: testimonyId,
             placeId: before.placeId,
           },
-          context.config.spotCheckRate,
+          isSpotCheck(status === "published", context.config.spotCheckRate),
         ),
       );
 
