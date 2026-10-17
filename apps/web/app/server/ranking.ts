@@ -1,5 +1,6 @@
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import type { AspectRatings, ProcedureCode, ProviderType } from "@findyourdent/contracts/firestore";
+import { aspectPrior, type ScorePrior, shrunkAspectScore } from "~/lib/scores";
 
 /**
  * Deterministic, explainable Shortlist ranking (spec 02), computed after Places
@@ -40,16 +41,12 @@ export const SHORTLIST_SIZE = 5;
 
 /** After fit: Testimonies weigh most, then price and distance equally. */
 const WEIGHTS = { testimonies: 0.6, price: 0.2, distance: 0.2 };
-/** Pseudo-Testimonies at the overall mean added to every Provider, so one 5-star visit is not a sure win. */
-const SHRINKAGE = 3;
 const VERIFIED_BONUS_PER_VISIT = 0.02;
 const VERIFIED_BONUS_MAX = 0.1;
 /** Beyond this, distance stops counting against a Provider. */
 const DISTANCE_HORIZON_METERS = 10_000;
 /** Score for a factor with no data: neither helps nor hurts. */
 const NEUTRAL = 0.5;
-/** Prior when no candidate has a Testimony yet; every Provider gets it, so it never changes the order. */
-const DEFAULT_MEAN_RATING = 4;
 
 /** Specialist and surgical referrals: a Hospital fits; a Klinik or Private Dentist only if it lists the procedure. */
 export const HOSPITAL_PROCEDURES: ReadonlySet<ProcedureCode> = new Set([
@@ -71,10 +68,6 @@ export function isDiagnostic(code: ProcedureCode): boolean {
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
-export function meanRating(ratings: AspectRatings): number {
-  return (ratings.service + ratings.hygiene + ratings.materialsEquipment) / 3;
-}
-
 function procedureFit(candidate: RankingCandidate, need: RankingNeed): { score: number; fits: ProcedureCode[] } {
   if (need.purpose === "emergency") return { score: candidate.providerType === "hospital" ? 1 : 0, fits: [] };
   const relevant = need.likelyProcedures.filter((code) => !isDiagnostic(code));
@@ -90,11 +83,11 @@ function procedureFit(candidate: RankingCandidate, need: RankingNeed): { score: 
   return { score: total / relevant.length, fits };
 }
 
-function testimonyScore(candidate: RankingCandidate, overallMean: number): number {
+/** The shrunk aspect score shared with the directory (lib/scores.ts), plus a small Kunjungan terbukti bonus. */
+function testimonyScore(candidate: RankingCandidate, prior: ScorePrior): number {
   const { count, verifiedVisitCount, averages } = candidate.testimonies;
-  const n = averages ? count : 0;
-  const average = averages ? meanRating(averages) : overallMean;
-  const shrunk = (n * average + SHRINKAGE * overallMean) / (n + SHRINKAGE);
+  // An unrated Provider sits at the overall mean: neither helped nor hurt.
+  const shrunk = shrunkAspectScore({ averages, testimonyCount: count }, prior) ?? prior.mean;
   const bonus = Math.min(VERIFIED_BONUS_MAX, verifiedVisitCount * VERIFIED_BONUS_PER_VISIT);
   return clamp01((shrunk - 1) / 4 + bonus);
 }
@@ -115,27 +108,18 @@ function distanceScore(candidate: RankingCandidate): number {
   return 1 - Math.min(candidate.distanceMeters, DISTANCE_HORIZON_METERS) / DISTANCE_HORIZON_METERS;
 }
 
-/** Testimony-weighted mean rating over the candidates: the "overall mean" Testimonies shrink toward. */
-function overallMeanRating(candidates: RankingCandidate[]): number {
-  let sum = 0;
-  let count = 0;
-  for (const { testimonies } of candidates) {
-    if (!testimonies.averages || testimonies.count === 0) continue;
-    sum += meanRating(testimonies.averages) * testimonies.count;
-    count += testimonies.count;
-  }
-  return count === 0 ? DEFAULT_MEAN_RATING : sum / count;
-}
-
 /** The top five, best first. */
 export function rankProviders(candidates: RankingCandidate[], need: RankingNeed): RankedProvider[] {
   const pool = need.purpose === "emergency" ? candidates.filter((c) => c.providerType === "hospital") : candidates;
-  const overallMean = overallMeanRating(pool);
+  // The overall mean Testimonies shrink toward, over this pool of candidates.
+  const prior = aspectPrior(
+    pool.map(({ testimonies }) => ({ averages: testimonies.averages, testimonyCount: testimonies.count })),
+  );
   const scored = pool.map((candidate) => {
     const fit = procedureFit(candidate, need);
     const scores = {
       fit: fit.score,
-      testimonies: testimonyScore(candidate, overallMean),
+      testimonies: testimonyScore(candidate, prior),
       price: need.purpose === "emergency" ? NEUTRAL : priceScore(candidate, need),
       distance: distanceScore(candidate),
     };

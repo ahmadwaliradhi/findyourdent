@@ -100,7 +100,7 @@ const GOOGLE_REVIEW: GoogleReview = {
 };
 
 async function page(placeId: string) {
-  const response = await fetch(new URL(`/provider/${placeId}`, server.baseUrl));
+  const response = await fetch(new URL(`/tempat/${placeId}`, server.baseUrl));
   return { response, html: await response.text() };
 }
 
@@ -112,7 +112,7 @@ async function everyStoredDocument(): Promise<string> {
   return JSON.stringify(dump);
 }
 
-describe("GET /provider/:placeId", () => {
+describe("GET /tempat/:placeId", () => {
   it("server-renders a Listed Provider's name, Region, published Testimonies and prices, and is indexable", async () => {
     await seed(
       listedProvider(),

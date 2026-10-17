@@ -6,6 +6,7 @@ import {
 } from "@findyourdent/contracts";
 import type { AppLoadContext } from "react-router";
 import type { Language } from "~/i18n/config";
+import { recordGuidanceSessionCompleted } from "~/server/impact.server";
 
 export type GuidanceErrorCode = "invalid_request" | "agent_unavailable" | "invalid_agent_response";
 
@@ -64,5 +65,22 @@ export async function requestGuidance(context: AppLoadContext, input: GuidanceIn
     return { ok: false, status: 502, error: "invalid_agent_response" };
   }
   context.logger.info("guidance", { outcome: "ok", kind: raw.kind });
+  if (raw.kind !== "followUp") await countCompletedSession(context);
   return { ok: true, response: raw };
+}
+
+/**
+ * A Guidance card or an Emergency Escalation ends the session: bump the impact
+ * counter and nothing else. A counter failure never costs the Patient their answer.
+ */
+async function countCompletedSession(context: AppLoadContext): Promise<void> {
+  if (!context.firestore) return;
+  try {
+    await recordGuidanceSessionCompleted(context.firestore);
+  } catch (error) {
+    context.logger.warn("impactCounter", {
+      outcome: "increment_failed",
+      errorName: error instanceof Error ? error.name : "unknown",
+    });
+  }
 }

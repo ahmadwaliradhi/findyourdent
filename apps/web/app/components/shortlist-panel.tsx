@@ -9,6 +9,7 @@ import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatDistance, formatRupiah, formatScore } from "~/lib/format";
+import { providerPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import type { ShortlistProvider, ShortlistResponse } from "~/lib/shortlist";
 
@@ -223,7 +224,7 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
       )}
       <div className="flex flex-wrap gap-2">
         <Button asChild size="sm">
-          <Link to={`/provider/${encodeURIComponent(provider.placeId)}`}>{t("provider.viewPage")}</Link>
+          <Link to={providerPath(provider.placeId)}>{t("provider.viewPage")}</Link>
         </Button>
         <Button asChild variant="outline" size="sm">
           <a href={provider.googleMapsUri} target="_blank" rel="noreferrer">

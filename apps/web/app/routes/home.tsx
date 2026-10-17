@@ -1,25 +1,78 @@
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { data, Form, useNavigation, useSubmit } from "react-router";
+import { data, Form, Link, type ShouldRevalidateFunctionArgs, useNavigation, useSubmit } from "react-router";
 import { GuidanceResult } from "~/components/guidance-result";
+import { ImpactCounter } from "~/components/impact-counter";
+import { ListingFiltersForm } from "~/components/listing-filters-form";
+import { TestimonyCard } from "~/components/testimony-card";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_FIELD } from "~/lib/app-check";
+import type { FeedItem, FeedPage } from "~/lib/feed";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
+import { type ListingFilters, listingFiltersToParams, parseListingFilters } from "~/lib/listing-filters";
+import { provinceName, regionLabel } from "~/lib/regions";
+import { openGraphMeta } from "~/lib/seo";
+import { loadFeedPage } from "~/server/feed.server";
 import { requestGuidance } from "~/server/guidance.server";
+import { readImpactCounter } from "~/server/impact.server";
 import { guidanceRoute, protectPaidRequest, setRetryAfter } from "~/server/protection.server";
 import { getOrCreateSessionId } from "~/server/session.server";
 import { sharePath } from "~/server/share.server";
 import type { Route } from "./+types/home";
 
-export function meta({ matches }: Route.MetaArgs) {
+/** "Kota Bandung, Jawa Barat" or "Jawa Barat" when the feed is filtered by area. */
+function filterArea(filters: ListingFilters): string | null {
+  if (filters.provinceCode && filters.regencyCode) {
+    return regionLabel({ provinceCode: filters.provinceCode, regencyCode: filters.regencyCode });
+  }
+  return filters.provinceCode ? provinceName(filters.provinceCode) : null;
+}
+
+export function meta({ matches, loaderData }: Route.MetaArgs) {
   const language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
-  return [{ title: t("meta.title") }, { name: "description", content: t("meta.description") }];
+  const filters = loaderData?.filters;
+  const area = filters ? filterArea(filters) : null;
+  const url = loaderData?.url;
+  const preview = (title: string, description: string) => (url ? openGraphMeta({ title, description, url }) : []);
+  if (!filters || !area) {
+    return [
+      { title: t("meta.title") },
+      { name: "description", content: t("meta.description") },
+      ...preview(t("meta.title"), t("meta.description")),
+    ];
+  }
+  // Province and kota views are the indexable ones; finer combinations are left out of search.
+  const fineGrained = filters.districtCode || filters.procedureCode || filters.providerType || filters.verifiedOnly;
+  return [
+    { title: t("feed.metaTitle", { area }) },
+    { name: "description", content: t("feed.metaDescription", { area }) },
+    ...(fineGrained ? [{ name: "robots", content: "noindex, follow" }] : []),
+    ...preview(t("feed.metaTitle", { area }), t("feed.metaDescription", { area })),
+  ];
+}
+
+/** Server-renders the first feed page for the filters in the URL; later pages come from /api/feed. */
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  const filters = parseListingFilters(url.searchParams);
+  const [feed, impact] = await Promise.all([
+    context.firestore
+      ? loadFeedPage(context.firestore, filters)
+      : Promise.resolve<FeedPage>({ items: [], nextCursor: null }),
+    readImpactCounter(context.firestore),
+  ]);
+  return { filters, feed, impact, url: `${url.origin}${url.pathname}${url.search}` };
+}
+
+/** A Guidance submit changes nothing in the feed, so it does not re-read it. */
+export function shouldRevalidate({ formMethod, defaultShouldRevalidate }: ShouldRevalidateFunctionArgs) {
+  return formMethod?.toUpperCase() === "POST" ? false : defaultShouldRevalidate;
 }
 
 /** Form submission from the home page; the browser never calls the agent itself. */
@@ -72,7 +125,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   return data({ complaintText: echoed, error: null, response, share }, { headers });
 }
 
-export default function Home({ actionData }: Route.ComponentProps) {
+export default function Home({ actionData, loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
   const navigation = useNavigation();
   // Fetching the App Check token counts as pending too, so a second tap cannot send a second request.
@@ -152,6 +205,103 @@ export default function Home({ actionData }: Route.ComponentProps) {
           )}
         </div>
       </Form>
+
+      <ImpactCounter counts={loaderData.impact} />
+
+      <Feed filters={loaderData.filters} feed={loaderData.feed} />
     </div>
+  );
+}
+
+function Feed({ filters, feed }: { filters: ListingFilters; feed: FeedPage }) {
+  const { t } = useTranslation();
+  const area = filterArea(filters);
+  const query = listingFiltersToParams(filters).toString();
+
+  return (
+    <section aria-labelledby="feed-title" className="flex flex-col gap-4 border-t pt-6">
+      <div className="flex flex-col gap-1">
+        <h2 id="feed-title" className="text-xl font-bold">
+          {area ? t("feed.titleIn", { area }) : t("feed.title")}
+        </h2>
+        <p className="text-sm text-muted-foreground">{t("feed.intro")}</p>
+      </div>
+      <details className="rounded-md border px-4 py-3" open={query !== ""}>
+        <summary className="cursor-pointer font-medium">{t("filters.title")}</summary>
+        <div className="pt-4">
+          <ListingFiltersForm filters={filters} action="/" />
+        </div>
+      </details>
+      {/* Keyed on the filters, so appended pages reset when the filters change. */}
+      <FeedList key={query} query={query} feed={feed} />
+    </section>
+  );
+}
+
+function FeedList({ query, feed }: { query: string; feed: FeedPage }) {
+  const { t } = useTranslation();
+  const [items, setItems] = useState<FeedItem[]>(feed.items);
+  const [cursor, setCursor] = useState(feed.nextCursor);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed px-5 py-6">
+        <p className="font-semibold">{t("feed.emptyTitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("feed.emptyBody")}</p>
+        {/* Testimony posting arrives with its own ticket. */}
+        <Button asChild>
+          <Link to="/tulis">{t("feed.writeCta")}</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const loadMore = async () => {
+    if (!cursor || loading) return;
+    setLoading(true);
+    setFailed(false);
+    try {
+      const params = new URLSearchParams(query);
+      params.set("cursor", cursor);
+      const response = await fetch(`/api/feed?${params}`);
+      if (!response.ok) throw new Error(`feed ${response.status}`);
+      const page = (await response.json()) as FeedPage;
+      setItems((current) => [...current, ...page.items]);
+      setCursor(page.nextCursor);
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <ul className="flex flex-col gap-4" aria-busy={loading}>
+        {items.map((item) => (
+          <li key={item.id}>
+            <TestimonyCard item={item} />
+          </li>
+        ))}
+      </ul>
+      {failed && (
+        <p role="alert" className="text-sm text-destructive">
+          {t("feed.loadError")}
+        </p>
+      )}
+      {cursor && (
+        <Button
+          type="button"
+          variant="outline"
+          className="self-center"
+          disabled={loading}
+          onClick={() => void loadMore()}
+        >
+          {loading ? t("feed.loading") : t("feed.loadMore")}
+        </Button>
+      )}
+    </>
   );
 }
