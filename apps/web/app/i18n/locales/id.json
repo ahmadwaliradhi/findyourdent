@@ -144,8 +144,63 @@
   "admin": {
     "title": "Admin",
     "signedInAs": "Masuk sebagai {{email}}",
-    "empty": "Antrean moderasi dan klaim akan muncul di sini.",
-    "signOut": "Keluar"
+    "signOut": "Keluar",
+    "queue": {
+      "summary": "{{count}} item menunggu keputusan.",
+      "overdueCount": "{{count}} melewati target 24 jam.",
+      "empty": "Antrean kosong. Tidak ada yang perlu diputuskan.",
+      "kind": {
+        "held": "Testimoni ditahan",
+        "revision": "Perubahan ditahan",
+        "report": "Laporan",
+        "spotCheck": "Cek acak (10%)",
+        "nameCorrection": "Koreksi nama"
+      },
+      "status": {
+        "submitted": "Diperiksa",
+        "published": "Tayang",
+        "needsAuthorFix": "Perlu diperbaiki penulis",
+        "held": "Ditahan",
+        "rejected": "Ditolak",
+        "hidden": "Disembunyikan",
+        "removed": "Diturunkan",
+        "deleted": "Dihapus"
+      },
+      "due": "Target {{due}}",
+      "overdue": "Terlambat, target {{due}}",
+      "reports": "Laporan",
+      "hidByReport": "menyembunyikan Testimoni",
+      "gemini": "Gemini:",
+      "confidence": "keyakinan {{value}}",
+      "revision": "Perubahan yang ditahan",
+      "publicVersion": "Versi yang sedang tayang",
+      "viewPublic": "Lihat di halaman tempat",
+      "history": "Riwayat",
+      "historyKind": {
+        "moderation": "Moderasi",
+        "report": "Laporan",
+        "admin": "Admin"
+      },
+      "photo": "Foto {{number}}",
+      "correction": {
+        "current": "Sekarang",
+        "suggested": "Usulan"
+      },
+      "actions": {
+        "publish": "Tayangkan",
+        "reject": "Tolak",
+        "sendBackToAuthor": "Kembalikan ke penulis",
+        "hide": "Sembunyikan",
+        "remove": "Turunkan",
+        "dismissReport": "Abaikan laporan",
+        "applyNameCorrection": "Terapkan koreksi",
+        "dismissNameCorrection": "Abaikan koreksi",
+        "spotCheckConfirm": "Sudah dicek, tetap tayang"
+      },
+      "reasonFor": "Alasan untuk \"{{action}}\" (dicatat; penulis melihatnya kecuali saat disembunyikan)",
+      "logged": "Setiap tindakan dicatat dengan nama admin, waktu dan alasan.",
+      "failed": "Tindakan gagal. Silakan coba lagi."
+    }
   },
   "footer": {
     "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat."
@@ -560,5 +615,43 @@
     "deleting": "Menghapus…",
     "deleteFailed": "Testimoni belum terhapus. Silakan coba lagi.",
     "deleted": "Testimoni sudah dihapus."
+  },
+  "reportApi": {
+    "errors": {
+      "app_check_required": "Muat ulang halaman lalu coba lagi.",
+      "rate_limited": "Terlalu banyak laporan dari perangkat ini. Coba lagi nanti.",
+      "invalid_report": "Pilih alasan laporan. Keterangan maksimal 1000 karakter.",
+      "not_found": "Testimoni ini tidak ditemukan atau sudah tidak tayang.",
+      "unavailable": "Layanan laporan sedang tidak tersedia. Silakan coba lagi sebentar lagi."
+    }
+  },
+  "adminApi": {
+    "errors": {
+      "invalid_action": "Permintaan tindakan tidak dikenali.",
+      "reason_required": "Tulis alasan untuk tindakan ini.",
+      "not_found": "Item ini tidak ditemukan atau sudah diputuskan.",
+      "not_allowed": "Tindakan ini tidak bisa dilakukan pada status sekarang.",
+      "unavailable": "Layanan admin sedang tidak tersedia."
+    }
+  },
+  "report": {
+    "open": "Laporkan",
+    "title": "Kenapa Anda melaporkan Testimoni ini?",
+    "categories": {
+      "personalData": "Berisi data pribadi (nomor HP, alamat, nama pasien lain)",
+      "threat": "Berisi ancaman",
+      "falseClaim": "Klaim yang tidak benar",
+      "spam": "Spam atau iklan",
+      "conflictOfInterest": "Ditulis pemilik, staf, atau pesaing",
+      "other": "Lainnya"
+    },
+    "hidesAtOnce": "Testimoni langsung disembunyikan sampai tim meninjaunya.",
+    "details": "Keterangan (opsional)",
+    "submit": "Kirim laporan",
+    "sending": "Mengirim…",
+    "cancel": "Batal",
+    "sent": "Terima kasih. Tim FindYourDent akan meninjau laporan ini dalam 24 jam.",
+    "sentHidden": "Terima kasih. Testimoni ini disembunyikan dan akan ditinjau tim FindYourDent dalam 24 jam.",
+    "failed": "Laporan belum terkirim. Silakan coba lagi."
   }
 }

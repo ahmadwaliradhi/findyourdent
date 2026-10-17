@@ -144,8 +144,63 @@
   "admin": {
     "title": "Admin",
     "signedInAs": "Signed in as {{email}}",
-    "empty": "The moderation and Claim queues will appear here.",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "queue": {
+      "summary": "{{count}} items waiting for a decision.",
+      "overdueCount": "{{count}} past the 24-hour target.",
+      "empty": "The queue is empty. Nothing to decide.",
+      "kind": {
+        "held": "Held Testimony",
+        "revision": "Held edit",
+        "report": "Reports",
+        "spotCheck": "Spot check (10%)",
+        "nameCorrection": "Name correction"
+      },
+      "status": {
+        "submitted": "Being checked",
+        "published": "Live",
+        "needsAuthorFix": "Needs the author's fix",
+        "held": "Held",
+        "rejected": "Rejected",
+        "hidden": "Hidden",
+        "removed": "Removed",
+        "deleted": "Deleted"
+      },
+      "due": "Due {{due}}",
+      "overdue": "Overdue, due {{due}}",
+      "reports": "Reports",
+      "hidByReport": "hid the Testimony",
+      "gemini": "Gemini:",
+      "confidence": "confidence {{value}}",
+      "revision": "Held edit",
+      "publicVersion": "Version currently live",
+      "viewPublic": "View on the Provider page",
+      "history": "History",
+      "historyKind": {
+        "moderation": "Moderation",
+        "report": "Report",
+        "admin": "Admin"
+      },
+      "photo": "Photo {{number}}",
+      "correction": {
+        "current": "Current",
+        "suggested": "Suggested"
+      },
+      "actions": {
+        "publish": "Publish",
+        "reject": "Reject",
+        "sendBackToAuthor": "Send back to author",
+        "hide": "Hide",
+        "remove": "Remove",
+        "dismissReport": "Dismiss report",
+        "applyNameCorrection": "Apply correction",
+        "dismissNameCorrection": "Dismiss correction",
+        "spotCheckConfirm": "Checked, keep live"
+      },
+      "reasonFor": "Reason for \"{{action}}\" (logged; the author sees it except for hide)",
+      "logged": "Every action is logged with the admin, time and reason.",
+      "failed": "The action failed. Please try again."
+    }
   },
   "footer": {
     "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription."
@@ -560,5 +615,43 @@
     "deleting": "Deleting…",
     "deleteFailed": "The Testimony was not deleted. Please try again.",
     "deleted": "The Testimony was deleted."
+  },
+  "reportApi": {
+    "errors": {
+      "app_check_required": "Reload the page and try again.",
+      "rate_limited": "Too many reports from this device. Try again later.",
+      "invalid_report": "Choose a reason for the report. Details can be up to 1000 characters.",
+      "not_found": "This Testimony was not found or is no longer public.",
+      "unavailable": "Reporting is unavailable right now. Please try again shortly."
+    }
+  },
+  "adminApi": {
+    "errors": {
+      "invalid_action": "Unknown action request.",
+      "reason_required": "Write a reason for this action.",
+      "not_found": "This item was not found or has already been decided.",
+      "not_allowed": "This action is not possible in the current state.",
+      "unavailable": "The admin service is unavailable right now."
+    }
+  },
+  "report": {
+    "open": "Report",
+    "title": "Why are you reporting this Testimony?",
+    "categories": {
+      "personalData": "Contains personal data (phone number, address, another patient's name)",
+      "threat": "Contains a threat",
+      "falseClaim": "False claim",
+      "spam": "Spam or advertising",
+      "conflictOfInterest": "Written by the owner, staff or a competitor",
+      "other": "Other"
+    },
+    "hidesAtOnce": "The Testimony is hidden at once until the team reviews it.",
+    "details": "Details (optional)",
+    "submit": "Send report",
+    "sending": "Sending…",
+    "cancel": "Cancel",
+    "sent": "Thank you. The FindYourDent team will review this report within 24 hours.",
+    "sentHidden": "Thank you. This Testimony is now hidden and the FindYourDent team will review it within 24 hours.",
+    "failed": "The report was not sent. Please try again."
   }
 }

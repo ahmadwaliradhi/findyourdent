@@ -73,6 +73,8 @@ export function isAdmin(user: SignedInUser | null, adminEmails: readonly string[
 
 // Case-insensitive, like React Router's own route matching.
 const ADMIN_PATH = /^\/admin(?:[./]|$)/i;
+// The admin JSON API answers 401 rather than sending a fetch to the sign-in page.
+const ADMIN_API_PATH = /^\/admin\/api(?:[./]|$)/i;
 
 /**
  * Express gate in front of every admin URL: the page, its `.data` requests,
@@ -88,7 +90,7 @@ export function adminGate(context: () => BaseContext): express.RequestHandler {
       res.locals.admin = user;
       return next();
     }
-    if (!user && req.method === "GET" && !req.path.endsWith(".data")) {
+    if (!user && req.method === "GET" && !req.path.endsWith(".data") && !ADMIN_API_PATH.test(req.path)) {
       return res.redirect(302, `/signin?redirectTo=${encodeURIComponent(req.originalUrl)}`);
     }
     res

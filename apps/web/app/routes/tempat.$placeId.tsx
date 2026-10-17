@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
+import { ReportButton } from "~/components/report-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -338,6 +339,7 @@ function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; la
             <p className="whitespace-pre-line break-words">{testimony.reply}</p>
           </div>
         )}
+        <ReportButton testimonyId={testimony.id} />
       </CardContent>
     </Card>
   );

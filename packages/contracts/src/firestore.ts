@@ -300,6 +300,8 @@ export interface ModerationDecisionDoc {
   model: string;
   /** Part of the 10% admin spot-check sample. */
   spotCheck: boolean;
+  /** Sampled decisions only: false until an admin confirms the spot check. */
+  spotCheckReviewed?: boolean;
   decidedAt: Timestamp;
 }
 
@@ -343,7 +345,15 @@ export type AdminActionType =
 /** Append-only audit log of every admin decision. */
 export interface AdminActionDoc {
   action: AdminActionType;
-  subjectType: "testimony" | "reply" | "testimonyReport" | "claim" | "provider" | "providerFacts" | "nameCorrection";
+  subjectType:
+    | "testimony"
+    | "reply"
+    | "testimonyReport"
+    | "claim"
+    | "provider"
+    | "providerFacts"
+    | "nameCorrection"
+    | "moderationDecision";
   subjectId: string;
   placeId?: PlaceId;
   /** Allowlisted admin email. */

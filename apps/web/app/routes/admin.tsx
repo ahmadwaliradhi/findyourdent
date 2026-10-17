@@ -1,7 +1,27 @@
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Form } from "react-router";
+import { Form, useRevalidator } from "react-router";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { getI18n } from "~/i18n/config";
+import { Textarea } from "~/components/ui/textarea";
+import { getI18n, type Language } from "~/i18n/config";
+import {
+  ADMIN_REASON_MAX_CHARS,
+  type AdminActionRequest,
+  type AdminApiError,
+  type QueueItem,
+  type QueueModeration,
+  type QueueTestimony,
+  type QueueTestimonyContent,
+  REASON_REQUIRED,
+  type TestimonyAction,
+} from "~/lib/admin-queue";
+import { ASPECTS } from "~/lib/aspects";
+import { formatRupiah, formatVisitMonth } from "~/lib/format";
+import { providerPath } from "~/lib/paths";
+import { procedureLabel } from "~/lib/procedures";
+import { regionLabel } from "~/lib/regions";
+import { loadAdminQueue } from "~/server/admin-queue.server";
 import type { Route } from "./+types/admin";
 
 export function meta({ matches }: Route.MetaArgs) {
@@ -11,28 +31,358 @@ export function meta({ matches }: Route.MetaArgs) {
 }
 
 /**
- * Admin home. Only allowlisted accounts get here: the Express gate (server/auth.ts)
- * refuses everyone else on every /admin URL before React Router runs.
+ * Admin queue (spec 03). Only allowlisted accounts get here: the Express gate
+ * (server/auth.ts) refuses everyone else on every /admin URL before React Router runs.
+ * Actions go to POST /admin/api/actions, behind the same gate.
  */
-export function loader({ context }: Route.LoaderArgs) {
+export async function loader({ context }: Route.LoaderArgs) {
   if (!context.admin) throw new Response(null, { status: 403 });
-  return { email: context.admin.email };
+  const { items } = context.firestore ? await loadAdminQueue(context.firestore) : { items: [] };
+  return { email: context.admin.email, items };
 }
 
 export default function Admin({ loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
+  const { items } = loaderData;
+  const overdue = items.filter((item) => item.overdue).length;
   return (
     <section className="flex flex-col gap-4" aria-labelledby="admin-title">
-      <h1 id="admin-title" className="text-2xl font-bold">
-        {t("admin.title")}
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 id="admin-title" className="text-2xl font-bold">
+          {t("admin.title")}
+        </h1>
+        <Form method="post" action="/auth/signout">
+          <Button type="submit" variant="outline" size="sm">
+            {t("admin.signOut")}
+          </Button>
+        </Form>
+      </div>
       <p className="text-muted-foreground">{t("admin.signedInAs", { email: loaderData.email })}</p>
-      <p>{t("admin.empty")}</p>
-      <Form method="post" action="/auth/signout">
-        <Button type="submit" variant="outline">
-          {t("admin.signOut")}
-        </Button>
-      </Form>
+      <p>
+        {t("admin.queue.summary", { count: items.length })}
+        {overdue > 0 && (
+          <strong className="text-destructive"> {t("admin.queue.overdueCount", { count: overdue })}</strong>
+        )}
+      </p>
+      {items.length === 0 ? (
+        <p>{t("admin.queue.empty")}</p>
+      ) : (
+        <ul className="flex flex-col gap-4">
+          {items.map((item) => (
+            <li key={`${item.kind}-${item.id}`}>
+              <QueueCard item={item} />
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
+  );
+}
+
+function useLanguage(): Language {
+  const { i18n } = useTranslation();
+  return i18n.language === "en" ? "en" : "id";
+}
+
+function formatTime(iso: string, language: Language) {
+  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(iso));
+}
+
+function QueueCard({ item }: { item: QueueItem }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const headingId = `queue-${item.kind}-${item.id}`;
+  return (
+    <article aria-labelledby={headingId} className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id={headingId} className="text-lg font-semibold">
+          {t(`admin.queue.kind.${item.kind}`)}
+          {item.testimony && <span className="font-normal"> · {item.testimony.providerName}</span>}
+        </h2>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {item.testimony && <Badge variant="secondary">{t(`admin.queue.status.${item.testimony.status}`)}</Badge>}
+          <Badge variant={item.overdue ? "destructive" : "outline"}>
+            {item.overdue
+              ? t("admin.queue.overdue", { due: formatTime(item.dueAt, language) })
+              : t("admin.queue.due", { due: formatTime(item.dueAt, language) })}
+          </Badge>
+        </div>
+      </header>
+
+      {item.reports && (
+        <section aria-label={t("admin.queue.reports")} className="flex flex-col gap-2">
+          <h3 className="font-medium">{t("admin.queue.reports")}</h3>
+          <ul className="flex flex-col gap-2 text-sm">
+            {item.reports.map((report) => (
+              <li key={report.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted p-2">
+                <span>
+                  <strong>{t(`report.categories.${report.category}`)}</strong>
+                  {report.hidTestimony && <> · {t("admin.queue.hidByReport")}</>} ·{" "}
+                  {formatTime(report.createdAt, language)}
+                  {report.details && <span className="block whitespace-pre-line">{report.details}</span>}
+                </span>
+                {item.testimony?.status !== "hidden" && (
+                  <ActionButton request={{ action: "dismissReport", subjectId: report.id }} />
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {item.testimony && <TestimonyView testimony={item.testimony} />}
+      {item.correction && (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          <dt className="text-muted-foreground">{t("admin.queue.correction.current")}</dt>
+          <dd>
+            <a href={providerPath(item.correction.placeId)} className="underline">
+              {item.correction.currentName}
+            </a>{" "}
+            · {regionLabel(item.correction.currentRegion)}
+          </dd>
+          <dt className="text-muted-foreground">{t("admin.queue.correction.suggested")}</dt>
+          <dd>
+            {item.correction.suggestedName ?? item.correction.currentName} ·{" "}
+            {regionLabel(item.correction.suggestedRegion ?? item.correction.currentRegion)}
+          </dd>
+        </dl>
+      )}
+
+      <Actions item={item} />
+    </article>
+  );
+}
+
+/** The moderated text with Gemini's flagged spans marked. */
+function FlaggedText({ text, moderation }: { text: string; moderation: QueueModeration | null }) {
+  const spans = [...(moderation?.flaggedSpans ?? [])]
+    .filter((span) => span.start >= 0 && span.end <= text.length && span.start < span.end)
+    .sort((a, b) => a.start - b.start);
+  const parts: React.ReactNode[] = [];
+  let at = 0;
+  for (const span of spans) {
+    if (span.start < at) continue;
+    parts.push(text.slice(at, span.start));
+    parts.push(
+      <mark key={span.start} title={span.ruleCode} className="rounded bg-yellow-200 px-0.5 text-black">
+        {text.slice(span.start, span.end)}
+      </mark>,
+    );
+    at = span.end;
+  }
+  parts.push(text.slice(at));
+  return <p className="whitespace-pre-line break-words">{parts}</p>;
+}
+
+function ContentView({ content, moderation }: { content: QueueTestimonyContent; moderation: QueueModeration | null }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
+        {content.displayName} · {t("provider.visitMonth", { month: formatVisitMonth(content.visitMonth, language) })}
+        {content.procedureCode && <> · {procedureLabel(content.procedureCode, language)}</>}
+        {content.pricePaidRupiah !== undefined && <> · {formatRupiah(content.pricePaidRupiah, language)}</>}
+      </p>
+      <dl className="flex flex-wrap gap-x-4 text-sm">
+        {ASPECTS.map((aspect) => (
+          <div key={aspect} className="flex gap-1">
+            <dt className="text-muted-foreground">{t(`provider.aspects.${aspect}`)}</dt>
+            <dd className="font-medium">{content.ratings[aspect]}/5</dd>
+          </div>
+        ))}
+      </dl>
+      <FlaggedText text={content.text} moderation={moderation} />
+      {content.photoUrls.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {content.photoUrls.map((url, index) => {
+            const flagged = moderation?.flaggedPhotos?.find((photo) => photo.photoIndex === index);
+            return (
+              <li key={url} className="flex flex-col gap-1 text-xs">
+                <a href={url} target="_blank" rel="noreferrer">
+                  <img
+                    src={url}
+                    alt={t("admin.queue.photo", { number: index + 1 })}
+                    className={`h-24 w-24 rounded-md object-cover ${flagged ? "ring-2 ring-destructive" : ""}`}
+                  />
+                </a>
+                {flagged && <span className="text-destructive">{flagged.ruleCode}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function TestimonyView({ testimony }: { testimony: QueueTestimony }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const { moderation } = testimony;
+  return (
+    <div className="flex flex-col gap-3">
+      {moderation && (
+        <p className="text-sm">
+          <span className="text-muted-foreground">{t("admin.queue.gemini")}</span>{" "}
+          <strong>{moderation.decision}</strong>
+          {moderation.ruleCodes.length > 0 && <> · {moderation.ruleCodes.join(", ")}</>} ·{" "}
+          {t("admin.queue.confidence", { value: moderation.confidence.toFixed(2) })} · {moderation.model}
+        </p>
+      )}
+      {testimony.revision ? (
+        <>
+          <h3 className="font-medium">{t("admin.queue.revision")}</h3>
+          <ContentView content={testimony.revision} moderation={moderation} />
+          <details>
+            <summary className="cursor-pointer text-sm">{t("admin.queue.publicVersion")}</summary>
+            <ContentView content={testimony} moderation={null} />
+          </details>
+        </>
+      ) : (
+        <ContentView content={testimony} moderation={moderation} />
+      )}
+      {testimony.status === "published" && (
+        <a href={providerPath(testimony.placeId)} className="text-sm underline">
+          {t("admin.queue.viewPublic")}
+        </a>
+      )}
+      <details>
+        <summary className="cursor-pointer text-sm">{t("admin.queue.history")}</summary>
+        <ol className="mt-2 flex flex-col gap-1 text-sm">
+          {testimony.history.map((entry) => (
+            <li key={`${entry.at}-${entry.kind}-${entry.label}`}>
+              {formatTime(entry.at, language)} · {t(`admin.queue.historyKind.${entry.kind}`)}: {entry.label}
+              {entry.detail && <> · {entry.detail}</>}
+              {entry.by && <> · {entry.by}</>}
+            </li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  );
+}
+
+/** Testimony actions the item offers, in the order the admin usually needs them. */
+function testimonyActions(item: QueueItem): TestimonyAction[] {
+  const status = item.testimony?.status;
+  if (item.kind === "held" || item.kind === "revision") return ["publish", "reject", "sendBackToAuthor"];
+  if (status === "hidden") return ["publish", "remove"];
+  if (status === "published") return ["hide", "remove"];
+  return [];
+}
+
+function Actions({ item }: { item: QueueItem }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-2 border-t pt-3">
+      <div className="flex flex-wrap gap-2">
+        {testimonyActions(item).map((action) => (
+          <ActionButton key={action} request={{ action, subjectId: item.subjectId }} />
+        ))}
+        {item.kind === "spotCheck" && <ActionButton request={{ action: "spotCheckConfirm", subjectId: item.id }} />}
+        {item.kind === "nameCorrection" && (
+          <>
+            <ActionButton request={{ action: "applyNameCorrection", subjectId: item.id }} />
+            <ActionButton request={{ action: "dismissNameCorrection", subjectId: item.id }} />
+          </>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">{t("admin.queue.logged")}</p>
+    </div>
+  );
+}
+
+/** One admin action. Actions that need a reason open a reason field first. */
+function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason"> }) {
+  const { t } = useTranslation();
+  const revalidator = useRevalidator();
+  const id = useId();
+  const needsReason = REASON_REQUIRED.has(request.action);
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const label = t(`admin.queue.actions.${request.action}`);
+  const destructive = request.action === "remove" || request.action === "reject";
+
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const body: AdminActionRequest = { ...request, ...(reason.trim() ? { reason: reason.trim() } : {}) };
+      const response = await fetch("/admin/api/actions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.ok) {
+        setAsking(false);
+        await revalidator.revalidate();
+        return;
+      }
+      const failure = (await response.json().catch(() => null)) as AdminApiError | null;
+      setError(failure?.message ?? t("admin.queue.failed"));
+    } catch {
+      setError(t("admin.queue.failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (needsReason && asking) {
+    return (
+      <div className="flex w-full flex-col gap-2 rounded-md border p-2">
+        <label htmlFor={id} className="text-sm font-medium">
+          {t("admin.queue.reasonFor", { action: label })}
+        </label>
+        <Textarea
+          id={id}
+          value={reason}
+          maxLength={ADMIN_REASON_MAX_CHARS}
+          onChange={(event) => setReason(event.target.value)}
+          className="min-h-16"
+        />
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={destructive ? "destructive" : "default"}
+            disabled={busy || !reason.trim()}
+            onClick={send}
+          >
+            {label}
+          </Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => setAsking(false)}>
+            {t("report.cancel")}
+          </Button>
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+  return (
+    <span className="flex flex-col gap-1">
+      <Button
+        size="sm"
+        variant={destructive ? "destructive" : request.action === "publish" ? "default" : "outline"}
+        disabled={busy}
+        onClick={needsReason ? () => setAsking(true) : send}
+      >
+        {label}
+      </Button>
+      {error && (
+        <span role="alert" className="text-sm text-destructive">
+          {error}
+        </span>
+      )}
+    </span>
   );
 }

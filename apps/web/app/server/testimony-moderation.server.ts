@@ -111,12 +111,23 @@ export function statusForDecision(
   return "held";
 }
 
+/** Whether this decision joins the spot-check sample: only Moderation publishes are sampled. */
+export function isSpotCheck(
+  decision: ModerationDecision["decision"],
+  rate: number,
+  random: () => number = Math.random,
+): boolean {
+  return decision === "publish" && random() < rate;
+}
+
 /** The stored record of a decision; never the moderated text or images. */
 export function moderationDecisionDoc(
   outcome: ModerationOutcome,
   subject: { subjectType: "testimony" | "testimonyRevision"; subjectId: string; placeId: string },
+  spotCheckRate: number,
 ): ModerationDecisionDoc {
   const { decision } = outcome;
+  const spotCheck = isSpotCheck(decision.decision, spotCheckRate);
   return {
     ...subject,
     decision: decision.decision,
@@ -126,8 +137,9 @@ export function moderationDecisionDoc(
     confidence: decision.confidence,
     ...(decision.proofOfVisit ? { proofOfVisit: decision.proofOfVisit } : {}),
     model: outcome.model,
-    // The 10% spot-check sample of auto-published Testimonies arrives with T13/T14.
-    spotCheck: false,
+    spotCheck,
+    // Written only on sampled decisions, so the queue finds open ones with two equality filters.
+    ...(spotCheck ? { spotCheckReviewed: false } : {}),
     decidedAt: Timestamp.now(),
   };
 }
