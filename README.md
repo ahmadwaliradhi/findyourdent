@@ -3,6 +3,8 @@ An integrated agentic platform that connects dentists, dental clinics, and their
 
 FindYourDent is a dentistry platform for Indonesia, built for the AI Builder Cup 2026. A Patient describes a dental problem and gets Guidance (urgency, likely category, journey, why prices vary, BPJS coverage), with Emergency Escalation to an IGD when red flags appear, then a Shortlist of nearby Providers with Testimonies and price signals. Specs are in [`docs/specs/`](docs/specs/README.md), decisions in [`docs/adr/`](docs/adr/), vocabulary in [`GLOSSARY.md`](GLOSSARY.md).
 
+**Live demo:** https://findyourdent.web.app (Firebase Hosting in front of Cloud Run in Jakarta; deploy with `infra/gcp/deploy.sh`, see [`infra/gcp/README.md`](infra/gcp/README.md)).
+
 ## Repository layout
 
 ```
@@ -16,7 +18,8 @@ packages/contracts/    Shared contracts (@findyourdent/contracts):
   src/firestore.ts     Firestore document types and collection names
   data/                procedures.json (shared procedure codes), regions.json (Kemendagri region codes)
 docs/data-model.md     Firestore collections
-firebase.json          Firebase emulator config (project demo-findyourdent: auth 9099, firestore 8080, storage 9199)
+firebase.json          Firebase Hosting (rewrites to Cloud Run fyd-web) and emulator config (project demo-findyourdent: auth 9099, firestore 8080, storage 9199)
+infra/gcp/             Project setup, deploy, smoke test and monitoring scripts
 .github/workflows/     CI
 ```
 
