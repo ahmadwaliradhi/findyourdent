@@ -147,13 +147,19 @@ export async function action({ request, context }: Route.ActionArgs) {
   return data({ complaintText: response.transcript ?? echoed, error: null, response, share }, { headers });
 }
 
-export default function Home({ actionData: freshActionData, loaderData }: Route.ComponentProps) {
+export default function Home({ actionData: routeActionData, loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
+  const navigation = useNavigation();
+  // The router hands over the answer while it still revalidates the loaders, before the new
+  // history entry exists. Shown then, a tap on the card (opening the Shortlist) would belong
+  // to the old entry and be undone when the new one lands, and the answer would be remembered
+  // for the old entry. So the answer shows once its own entry is current.
+  const revalidatingAfterSubmit = navigation.state === "loading" && navigation.formAction === "/?index";
+  const freshActionData = revalidatingAfterSubmit ? undefined : routeActionData;
   // Back from a Provider page brings the Guidance card back without asking again; a reload rebuilds it.
   const remembered = useEntryMemory("guidance", freshActionData);
   const restored = useGuidanceAcrossReload(remembered);
   const actionData = remembered ?? restored;
-  const navigation = useNavigation();
   // Fetching the App Check token counts as pending too, so a second tap cannot send a second request.
   const [preparing, setPreparing] = useState(false);
   // A typed submit mid-recording would race the voice note, so it waits.
