@@ -30,7 +30,12 @@ COPY --from=prod-deps /repo/apps/web/node_modules ./node_modules
 COPY --from=build /repo/apps/web/build ./build
 COPY apps/web/package.json apps/web/server.ts apps/web/refresh-coordinates.ts ./
 COPY apps/web/server ./server
+# server/ runs unbundled, so what it imports at runtime must be here too: the plain
+# modules it shares with the app, and the contracts package its pnpm symlink
+# (node_modules/@findyourdent/contracts) points at.
+COPY apps/web/app/lib ./app/lib
+COPY packages/contracts /repo/packages/contracts
 USER node
 EXPOSE 8080
-# Node 24 runs server.ts directly (type stripping); the contracts package is bundled into build/.
+# Node 24 runs server.ts directly (type stripping); the React Router build bundles its own copy of contracts.
 CMD ["node", "server.ts"]
