@@ -14,14 +14,14 @@ ADMIN_EMAILS="a@example.com,b@example.com" infra/gcp/setup.sh
 
 | Thing | Value |
 | --- | --- |
-| Project | `findmydent` (number 855924446362) |
+| Project | `findyourdent` (number 1001413011907) |
 | Billing account | `019521-D61E16-A0C8A3` (billed in IDR) |
 | Region | `asia-southeast2` (Jakarta) |
 | Firestore | `(default)`, Native mode, Jakarta |
-| Bucket | `gs://findmydent-uploads`, uniform access, public access prevented |
-| Firebase web app | `1:855924446362:web:96da14cf25757512e17b23` |
-| reCAPTCHA Enterprise site key (App Check) | `6LfbCfMtAAAAAPAei2zMHtYHPXei7ydTKmJoFcSF` (score-based; public by design) |
-| Service accounts | `fyd-web@findmydent.iam.gserviceaccount.com`, `fyd-agent@findmydent.iam.gserviceaccount.com` |
+| Bucket | `gs://findyourdent-uploads`, uniform access, public access prevented |
+| Firebase web app | `1:1001413011907:web:d59beb8fb53f70f21d3576` |
+| reCAPTCHA Enterprise site key (App Check) | `6LeFCfMtAAAAACLP7NiG2xaEClvTnRY5qqTPFdxC` (score-based; public by design) |
+| Service accounts | `fyd-web@findyourdent.iam.gserviceaccount.com`, `fyd-agent@findyourdent.iam.gserviceaccount.com` |
 | Secrets (Secret Manager, Jakarta) | `places-api-key` (API key restricted to Places API (New)), `admin-emails` (comma-separated allowlist) |
 | Budget | `findyourdent-usd100`: IDR 1,650,000 (about USD 100) on the whole billing account, alerts at 50% and 90% |
 
