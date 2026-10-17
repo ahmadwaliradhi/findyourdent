@@ -72,6 +72,7 @@ Before building on these caps, the Places adapter (spec 02) must know:
 
 - The 83/day Get Place cap is shared. The console cannot stop the Google block from using all 83, so the adapter has to enforce 50 for the block and 33 for reviews.
 - Coordinates lookups (Place Details Essentials) are Get Place calls too, so they eat into the same 83. Run the monthly coordinates refresh in small batches, or raise the cap for that day.
+- Moderation's lookup of Google's live name (Place Details, `displayName` only, one per Testimony submission) is a Get Place call too. The web adapter caps it at 15 a day (`MODERATION_NAME_DAILY_CAP`); past that, or when Google's 83 runs out first, Moderation checks rule R6 and the Proof of Visit against the typed name alone.
 
 ## Platform facts (checked 17 October 2026 via the Cloud Quotas API)
 

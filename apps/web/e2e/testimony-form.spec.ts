@@ -74,3 +74,89 @@ test("posting form: fills up to Kirim, keeps a draft across a reload, and asks t
   await page.reload();
   await expect(page.getByLabel("Cerita Anda")).toHaveValue("Dokternya sabar, ruang tunggunya bersih.");
 });
+
+const PHONE_TEXT = "Dokternya sabar. Hubungi saja 0812-3456-7890 untuk janji.";
+
+/** Fills a complete form for a place that is not Listed yet. */
+async function fillForm(page: Page, text: string) {
+  await page.goto("/ceritakan");
+  // Kirim is enabled once the form has hydrated; the picker only searches after that.
+  await expect(page.getByRole("button", { name: "Kirim" })).toBeEnabled();
+  await page.getByRole("combobox", { name: "Tempat praktik" }).fill("klinik");
+  await page.getByText("Klinik Gigi Senyum Contoh").click();
+  await page.getByLabel("Nama tempat sesuai papan nama atau yang kamu kenal").fill("Klinik Senyum Gubeng");
+  await page.getByLabel("Provinsi").selectOption({ label: "Jawa Timur" });
+  await page.getByLabel("Kota/Kabupaten").selectOption({ label: "Kota Surabaya" });
+  await rate(page, "Pelayanan", 5);
+  await rate(page, "Kebersihan", 4);
+  await rate(page, "Bahan dan alat", 4);
+  await page.getByLabel("Cerita Anda").fill(text);
+  await page.getByLabel("Tahun").selectOption({ index: 2 });
+  await page.getByLabel("Bulan", { exact: true }).selectOption("01");
+  await page.getByLabel("Nama yang ditampilkan").fill("Siti R.");
+  await page.getByLabel("Ini pengalaman saya sendiri, saya tulis dengan jujur.").check();
+  await page.getByLabel("Tulisan dan foto saya tidak memuat data pribadi orang lain.").check();
+}
+
+test("fix before submit: shows the flagged sentence and reason, then sends the fixed Testimony", async ({ page }) => {
+  // The submit API is answered here (no Firebase sign-in in browser tests), as Moderation would.
+  const sentTexts: string[] = [];
+  await page.route("**/api/testimonies", async (route) => {
+    const json = route.request().postDataBuffer()?.toString("latin1") ?? "";
+    sentTexts.push(json.includes("0812-3456-7890") ? "phone" : "fixed");
+    if (sentTexts.length === 1) {
+      await route.fulfill({
+        json: {
+          status: "needsAuthorFix",
+          message: "Mohon hapus nomor telepon sebelum mengirim.",
+          text: PHONE_TEXT,
+          ruleCodes: ["r1_personal_data"],
+          flaggedSpans: [{ start: 30, end: 44, text: "0812-3456-7890", ruleCode: "r1_personal_data" }],
+          roundsLeft: 2,
+        },
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 201,
+      json: { testimonyId: "t-1", status: "published", message: "Terima kasih!", verifiedVisit: false },
+    });
+  });
+
+  await fillForm(page, PHONE_TEXT);
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  const panel = page.getByRole("alert");
+  await expect(panel).toContainText("Sedikit perbaikan sebelum terkirim");
+  await expect(panel.getByRole("blockquote")).toHaveText("Hubungi saja 0812-3456-7890 untuk janji.");
+  await expect(panel.locator("mark")).toHaveText("0812-3456-7890");
+  await expect(panel).toContainText("Berisi data pribadi");
+  await expect(panel).toContainText("Anda masih bisa memperbaiki 2 kali lagi.");
+  await expect(page.getByLabel("Cerita Anda")).toHaveAttribute("aria-invalid", "true");
+  await noHorizontalScroll(page);
+
+  await page.getByLabel("Cerita Anda").fill("Dokternya sabar dan ruangannya bersih.");
+  await page.getByRole("button", { name: "Kirim" }).click();
+  await expect(page.getByRole("heading", { name: "Testimoni Anda sudah terbit" })).toBeVisible();
+  expect(sentTexts).toEqual(["phone", "fixed"]);
+});
+
+test("held: shows the plain reason and the 24-hour target", async ({ page }) => {
+  await page.route("**/api/testimonies", (route) =>
+    route.fulfill({
+      status: 201,
+      json: {
+        testimonyId: "t-2",
+        status: "held",
+        message:
+          "Pemeriksaan otomatis kami belum bisa menyelesaikannya. Tim FindYourDent akan memutuskan dalam 24 jam.",
+        verifiedVisit: false,
+      },
+    }),
+  );
+
+  await fillForm(page, "Dokternya sabar dan ruangannya bersih.");
+  await page.getByRole("button", { name: "Kirim" }).click();
+  await expect(page.getByRole("heading", { name: "Testimoni Anda sedang ditinjau" })).toBeVisible();
+  await expect(page.getByText("Tim FindYourDent akan memutuskan dalam 24 jam.")).toBeVisible();
+});

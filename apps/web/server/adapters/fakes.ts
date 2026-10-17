@@ -5,6 +5,7 @@ import type {
   ShortlistReasonsRequest,
   ShortlistReasonsResponse,
 } from "@findyourdent/contracts";
+import { MAX_AUTHOR_FIX_ROUNDS } from "../../app/lib/testimony.ts";
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
@@ -13,6 +14,7 @@ import type {
   AutocompleteResult,
   AutocompleteSuggestion,
   CoordinatesResult,
+  DisplayNameResult,
   GoogleBlock,
   GoogleBlockResult,
   GoogleReview,
@@ -74,28 +76,46 @@ export function stubShortlistReasons(request: ShortlistReasonsRequest): Shortlis
   return { reasons: request.providers.map((p) => ({ placeId: p.placeId, reason })) };
 }
 
+/** Indonesian mobile numbers ("0812-3456-7890", "+62 812 3456 7890"): what the stub flags in a Testimony. */
+const STUB_PHONE_NUMBER = /(?:\+62|0)\s?8\d(?:[\s-]?\d){6,10}/;
 /** What the stub holds owner facts and replies for: the promotional words spec 05 names. */
 const STUB_PROMOTIONAL = /\b(terbaik|termurah|diskon|promo)\b/i;
 
 /**
- * A stub Moderation decision, valid against moderation-decision.schema.json:
- * promotional wording holds, anything else publishes. Lets local runs with
- * AGENT_ADAPTER=fake walk the owner-facts and reply flows without Gemini.
+ * A stub Moderation decision, valid against moderation-decision.schema.json. A
+ * Testimony with an Indonesian mobile number is an R1 authorFix (a hold after three
+ * rounds); owner facts or a reply with promotional wording are held (a practice's own
+ * phone is expected there). Anything else publishes, and a Proof of Visit is always
+ * accepted. Lets local runs and browser tests walk both flows without Gemini.
  */
 export function stubModeration(request: ModerationRequest): ModerationDecision {
   const en = request.language === "en";
+  if (request.subjectType !== "testimony") return stubOwnerModeration(request, en);
+  const proofOfVisit = request.proofOfVisit ? "accepted" : "notProvided";
+  const phone = STUB_PHONE_NUMBER.exec(request.text);
+  if (!phone) {
+    const authorMessage = en ? "Thank you! Your Testimony is live." : "Terima kasih! Testimoni Anda sudah tayang.";
+    return { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.95, authorMessage, proofOfVisit };
+  }
+  const span = { start: phone.index, end: phone.index + phone[0].length, text: phone[0], ruleCode: "r1_personal_data" };
+  const fixable = (request.authorFixRound ?? 0) < MAX_AUTHOR_FIX_ROUNDS;
+  return {
+    decision: fixable ? "authorFix" : "hold",
+    ruleCodes: ["r1_personal_data"],
+    flaggedSpans: [span] as ModerationDecision["flaggedSpans"],
+    confidence: 0.9,
+    authorMessage: en
+      ? "Please remove the phone number before sending."
+      : "Mohon hapus nomor telepon sebelum mengirim.",
+    proofOfVisit,
+  };
+}
+
+function stubOwnerModeration(request: ModerationRequest, en: boolean): ModerationDecision {
   const hit = STUB_PROMOTIONAL.exec(request.text);
   if (!hit) {
-    return {
-      decision: "publish",
-      ruleCodes: [],
-      flaggedSpans: [],
-      confidence: 0.95,
-      authorMessage: en ? "Thank you, it is live." : "Terima kasih, sudah tayang.",
-      ...(request.subjectType === "testimony"
-        ? { proofOfVisit: request.proofOfVisit ? "accepted" : "notProvided" }
-        : {}),
-    };
+    const authorMessage = en ? "Thank you, it is live." : "Terima kasih, sudah tayang.";
+    return { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.95, authorMessage };
   }
   return {
     decision: "hold",
@@ -178,6 +198,10 @@ export interface FakePlacesAdapter extends PlacesAdapter {
   readonly coordinatesCalls: string[];
   /** Next coordinates answer. Defaults to a point in Jakarta. */
   respondWithCoordinates(answer: CoordinatesResult): void;
+  /** Google-name lookups for Moderation, in order. */
+  readonly displayNameCalls: PlaceDetailsRequest[];
+  /** Next Google name for Moderation. Defaults to "Fake Google Place". */
+  respondWithDisplayName(answer: DisplayNameResult): void;
 }
 
 export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlacesAdapter {
@@ -186,6 +210,8 @@ export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlace
   let nextReviews: GoogleReviewsResult = { ok: true, reviews: [] };
   let nextSuggestions: AutocompleteResult = { ok: true, suggestions: [] };
   let nextCoordinates: CoordinatesResult = { ok: true, location: { lat: -6.1754, lng: 106.8272 } };
+  let nextDisplayName: DisplayNameResult = { ok: true, displayName: "Fake Google Place" };
+  const displayNameCalls: PlaceDetailsRequest[] = [];
   const calls: TextSearch[] = [];
   const detailsCalls: FakePlacesAdapter["detailsCalls"] = [];
   const autocompleteCalls: AutocompleteRequest[] = [];
@@ -195,6 +221,14 @@ export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlace
     detailsCalls,
     autocompleteCalls,
     coordinatesCalls,
+    displayNameCalls,
+    respondWithDisplayName(answer) {
+      nextDisplayName = answer;
+    },
+    async getDisplayName(request) {
+      displayNameCalls.push(structuredClone(request));
+      return structuredClone(nextDisplayName);
+    },
     respondWithSuggestions(answer) {
       nextSuggestions = Array.isArray(answer) ? { ok: true, suggestions: answer } : answer;
     },
@@ -349,6 +383,10 @@ export function createFakeSamplePlacesAdapter(): PlacesAdapter {
         }),
       );
       return { ok: true, suggestions };
+    },
+    async getDisplayName({ placeId }) {
+      const place = known.get(placeId);
+      return place ? { ok: true, displayName: place.displayName } : { ok: false, reason: "not_found" };
     },
     async getCoordinates(placeId) {
       const location = known.get(placeId)?.location;

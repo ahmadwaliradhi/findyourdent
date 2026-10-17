@@ -1,5 +1,6 @@
-// The Testimony posting form (spec 03, user stories 9 to 21): mobile first, a draft
-// kept in the browser, and Google sign-in only when the Patient presses Kirim.
+// The Testimony posting form (spec 03, user stories 9 to 23): mobile first, a draft
+// kept in the browser, Google sign-in only when the Patient presses Kirim, and the
+// fix-before-submit loop when Moderation flags something the author can fix.
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import type * as React from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -12,16 +13,20 @@ import { Textarea } from "~/components/ui/textarea";
 import { isLanguage, type Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { ASPECTS } from "~/lib/aspects";
+import { type FixIssue, issuesBySentence, rulesWithoutSpan } from "~/lib/author-fix";
 import { getAppCheckToken, signInWithGoogle } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { providerPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import {
+  isAuthorFixable,
   PHOTO_MIME_TYPES,
   PROOF_MIME_TYPES,
   SUBMISSION_FIELDS,
   TESTIMONY_LIMITS,
   type TestimonyApiError,
+  type TestimonyAuthorFixResponse,
+  type TestimonyStoredResponse,
   type TestimonySubmission,
   type TestimonySubmitResponse,
 } from "~/lib/testimony";
@@ -117,7 +122,8 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [phase, setPhase] = useState<Phase>("editing");
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [result, setResult] = useState<TestimonySubmitResponse | null>(null);
+  const [result, setResult] = useState<{ response: TestimonyStoredResponse; proofSent: boolean } | null>(null);
+  const [fix, setFix] = useState<TestimonyAuthorFixResponse | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
   // The create draft loads after hydration; nothing is saved before it has.
   const [draftLoaded, setDraftLoaded] = useState(mode !== "create");
@@ -127,6 +133,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   // so a popup blocker does not stop it.
   const [signInFirst, setSignInFirst] = useState(false);
   const problemRef = useRef<HTMLDivElement>(null);
+  const fixRef = useRef<HTMLDivElement>(null);
   const photosRef = useRef(photos);
   photosRef.current = photos;
   const now = useMemo(() => new Date(), []);
@@ -163,6 +170,10 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   useEffect(() => {
     if (problem) problemRef.current?.focus();
   }, [problem]);
+
+  useEffect(() => {
+    if (fix) fixRef.current?.focus();
+  }, [fix]);
 
   const update = (patch: Partial<TestimonyFormState>) => setState((current) => ({ ...current, ...patch }));
   const message = (error: FormError) => t(`testimonyForm.${error.key}`, error.values);
@@ -251,7 +262,14 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
 
   const handleResponse = async (response: Response) => {
     if (response.ok) {
-      setResult((await response.json()) as TestimonySubmitResponse);
+      const body = (await response.json()) as TestimonySubmitResponse;
+      if (body.status === "needsAuthorFix") {
+        // Nothing was stored: the form, photos and Proof of Visit stay for the next Kirim.
+        setFix(body);
+        return;
+      }
+      setFix(null);
+      setResult({ response: body, proofSent: proof !== null });
       if (mode === "create") writeDraft(null);
       for (const photo of photos) URL.revokeObjectURL(photo.url);
       setPhotos([]);
@@ -312,7 +330,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
     }
   };
 
-  if (result) return <Result result={result} mode={mode} placeId={placeId} />;
+  if (result) return <Result {...result} mode={mode} placeId={placeId} />;
 
   const providerErrors = Object.fromEntries(
     Object.entries(errors).filter(([field]) => PROVIDER_ERROR_KEYS.includes(field)),
@@ -388,6 +406,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
             onChange={(event) => update({ text: event.currentTarget.value })}
             className="min-h-40"
             {...fieldProps("text", id("text-hint"))}
+            {...(fix ? { "aria-invalid": true } : {})}
           />
           <p className="self-end text-xs text-muted-foreground" aria-live="polite">
             {t("testimonyForm.textCounter", {
@@ -396,6 +415,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
             })}
           </p>
           {fieldError("text")}
+          {fix && <AuthorFixPanel fix={fix} panelRef={fixRef} />}
         </div>
 
         <section className="flex flex-col gap-4" aria-labelledby={id("details-title")}>
@@ -711,13 +731,87 @@ function RatingGroup(props: {
   );
 }
 
-/** What the Patient sees once the Testimony is in (spec 03, user story 21). */
+/**
+ * Fix before submit (spec 03, user story 22): each flagged sentence with the flagged
+ * part marked and the reason, then how many rounds are left before the team decides.
+ */
+function AuthorFixPanel({
+  fix: response,
+  panelRef,
+}: {
+  fix: TestimonyAuthorFixResponse;
+  panelRef: React.Ref<HTMLDivElement>;
+}) {
+  const { t } = useTranslation();
+  const issues = issuesBySentence(response.text, response.flaggedSpans);
+  const unspanned = rulesWithoutSpan(response.ruleCodes, response.flaggedSpans);
+  const reason = (code: string) =>
+    isAuthorFixable(code) ? t(`testimonyForm.fix.reasons.${code}`) : t("testimonyForm.fix.reasons.other");
+
+  return (
+    <div
+      ref={panelRef}
+      tabIndex={-1}
+      role="alert"
+      className="flex flex-col gap-3 rounded-md border border-amber-500/50 bg-amber-50 px-4 py-3 text-sm outline-none dark:bg-amber-950/30"
+    >
+      <p className="font-semibold">{t("testimonyForm.fix.title")}</p>
+      <p>{t("testimonyForm.fix.intro")}</p>
+      {response.message && <p>{response.message}</p>}
+      {issues.length > 0 && (
+        <ul className="flex flex-col gap-3" aria-label={t("testimonyForm.fix.flagged")}>
+          {issues.map((issue) => (
+            <li key={`${issue.sentence}-${issue.marks[0]?.start}`} className="flex flex-col gap-1">
+              <blockquote className="border-l-2 border-amber-500 pl-3 break-words">
+                <MarkedSentence issue={issue} />
+              </blockquote>
+              {issue.ruleCodes.map((code) => (
+                <p key={code} className="text-muted-foreground">
+                  {reason(code)}
+                </p>
+              ))}
+            </li>
+          ))}
+        </ul>
+      )}
+      {unspanned.map((code) => (
+        <p key={code}>{reason(code)}</p>
+      ))}
+      <p className="text-muted-foreground">
+        {response.roundsLeft > 0
+          ? t("testimonyForm.fix.roundsLeft", { count: response.roundsLeft })
+          : t("testimonyForm.fix.lastRound")}
+      </p>
+    </div>
+  );
+}
+
+function MarkedSentence({ issue }: { issue: FixIssue }) {
+  const parts: React.ReactNode[] = [];
+  let at = 0;
+  for (const mark of issue.marks) {
+    if (mark.start < at) continue;
+    if (mark.start > at) parts.push(issue.sentence.slice(at, mark.start));
+    parts.push(
+      <mark key={mark.start} className="rounded-sm bg-amber-200 px-0.5 dark:bg-amber-700/60 dark:text-white">
+        {issue.sentence.slice(mark.start, mark.end)}
+      </mark>,
+    );
+    at = mark.end;
+  }
+  if (at < issue.sentence.length) parts.push(issue.sentence.slice(at));
+  return <>{parts}</>;
+}
+
+/** What the Patient sees once the Testimony is stored (spec 03, user stories 21 and 23). */
 function Result({
-  result,
+  response,
+  proofSent,
   mode,
   placeId,
 }: {
-  result: TestimonySubmitResponse;
+  response: TestimonyStoredResponse;
+  proofSent: boolean;
   mode: "create" | "edit";
   placeId: string;
 }) {
@@ -725,27 +819,27 @@ function Result({
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => headingRef.current?.focus(), []);
 
-  const published = result.status === "published";
-  const needsFix = result.status === "needsAuthorFix";
-  const title = published
-    ? t("testimonyForm.result.publishedTitle")
-    : needsFix
-      ? t("testimonyForm.result.fixTitle")
-      : t("testimonyForm.result.reviewTitle");
-  const body = published
-    ? t("testimonyForm.result.publishedBody")
-    : needsFix
-      ? t("testimonyForm.result.fixBody")
-      : mode === "edit"
-        ? t("testimonyForm.result.editReviewBody")
-        : t("testimonyForm.result.reviewBody");
+  const published = response.status === "published";
+  const title = published ? t("testimonyForm.result.publishedTitle") : t("testimonyForm.result.reviewTitle");
 
   return (
     <section className="flex flex-col gap-4 rounded-xl border px-5 py-6" aria-live="polite">
       <h2 ref={headingRef} tabIndex={-1} className="text-xl font-bold outline-none">
         {title}
       </h2>
-      <p>{body}</p>
+      {/* On held, the server's message carries the reason and the 24-hour target. */}
+      <p>{published ? t("testimonyForm.result.publishedBody") : response.message}</p>
+      {!published && mode === "edit" && <p>{t("testimonyForm.result.editReviewNote")}</p>}
+      {response.ownHealthDataWarning && (
+        <p className="text-sm text-muted-foreground">{t("testimonyForm.result.ownHealthDataNote")}</p>
+      )}
+      {proofSent && (
+        <p className="text-sm text-muted-foreground">
+          {response.verifiedVisit
+            ? t("testimonyForm.result.verifiedVisit")
+            : t("testimonyForm.result.proofNotVerified")}
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
         {published && placeId && (
           <Button asChild>

@@ -16,10 +16,7 @@ import type { Language } from "~/i18n/config";
 import { procedureLabel } from "~/lib/procedures";
 import { regionLabel } from "~/lib/regions";
 import type { OwnerFactsValues } from "./claims.server.ts";
-import { FALLBACK_MODEL } from "./testimony-moderation.server.ts";
-
-/** The agent's Moderation model; its response does not name the model it used. */
-export const AGENT_MODERATION_MODEL = "gemini-3.5-flash-lite";
+import { FALLBACK_MODEL, MODERATION_MODEL } from "./testimony-moderation.server.ts";
 
 export interface OwnerModerationOutcome {
   /** Only publish or hold: an authorFix from the agent is a hold here. */
@@ -82,7 +79,7 @@ export async function moderateOwnerContent(
   }
   const decision = body.decision === "publish" ? "publish" : "hold";
   context.logger.info("owner_moderation", { outcome: decision, subjectType: request.subjectType });
-  return { decision: { ...body, decision }, model: AGENT_MODERATION_MODEL };
+  return { decision: { ...body, decision }, model: MODERATION_MODEL };
 }
 
 /** The stored record of a decision; never the moderated text. */

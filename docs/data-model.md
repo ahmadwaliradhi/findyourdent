@@ -43,9 +43,9 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `authorUid`, `displayName` | Uid is never shown; display name defaults to first name plus initial. |
 | `ratings` | `service`, `hygiene`, `materialsEquipment`, each 1 to 5. |
 | `text`, `visitMonth`, `procedureCode`, `pricePaidRupiah`, `photoPaths` | Text up to 10,000 characters; up to four photos, EXIF stripped. |
-| `status` | `submitted`, `published`, `needsAuthorFix`, `held`, `rejected`, `hidden`, `removed`, `deleted` (state machine in spec 03). |
+| `status` | `submitted`, `published`, `needsAuthorFix`, `held`, `rejected`, `hidden`, `removed`, `deleted` (state machine in spec 03). Moderation's authorFix stores nothing, so `needsAuthorFix` comes only from the admin queue's "send back to the author". |
 | `verifiedVisit`, `proofOfVisit` | Kunjungan terbukti and the check result with its date. The Proof of Visit file itself is deleted right after the check. |
-| `authorFixRounds` | Held after three rounds. |
+| `authorFixRounds` | authorFix rounds used before this version was stored (the next authorFix after three is held). An authorFix itself stores nothing on the Testimony; the count waits in `counters` meanwhile. |
 | `pendingRevision` | Edit of a published Testimony under Moderation; the public fields stay visible until it is decided. |
 | `reply` | The claimed Provider's one public reply (editable), with its own Moderation status and the `claimId` it was written under; shown only while that Claim is the place's current one. |
 | `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply are removed. |
@@ -84,6 +84,7 @@ Single-value counters (`{ value, updatedAt, expiresAt? }`), incremented with `Fi
 
 - Impact counters (spec 04), ids in `IMPACT_COUNTERS`: `impact.testimoniesPublished`, `impact.listedProviders`, `impact.guidanceSessionsCompleted`, `impact.verifiedVisits`. The Listed Provider count and the distinct kota/kabupaten count are computed from `providers` when read, so `impact.listedProviders` is not written.
 - Daily paid-API usage for the adapter-side caps (spec 02): `quota.places.<method>.<YYYY-MM-DD>` and `quota.gemini.<model>.<YYYY-MM-DD>`, Asia/Jakarta date, built with `dailyQuotaCounterId`. `expiresAt` lets a Firestore TTL policy delete old days.
+- Fix-before-submit rounds (spec 03): `authorFix.<uid>.<placeId>`, built with `authorFixCounterId`. Counts the authorFix answers a Patient has had on their Testimony for one place, since nothing else is stored for them; deleted when a submission is stored, else gone 30 days later through `expiresAt`.
 
 ### `rateLimits`
 

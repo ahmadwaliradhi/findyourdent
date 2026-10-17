@@ -1,4 +1,4 @@
-import type { GuidanceRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
+import type { GuidanceRequest, ModerationRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
 import { describe, expect, it } from "vitest";
 import { createHttpAgentAdapter, createMetadataIdTokenSource } from "../../server/adapters/agent.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
@@ -146,5 +146,44 @@ describe("identity token from the Cloud Run metadata server", () => {
     nowMs += 6 * 60 * 1000;
     await idToken();
     expect(asked).toHaveLength(2);
+  });
+});
+
+const MODERATION_REQUEST: ModerationRequest = {
+  subjectType: "testimony",
+  language: "id",
+  text: "Dokternya sabar dan ruangannya bersih.",
+  visitMonth: "2026-09",
+  authorFixRound: 0,
+};
+
+describe("HTTP agent adapter for Moderation", () => {
+  it("posts the Testimony to the agent's Moderation endpoint with the request id and identity token", async () => {
+    const agent = fakeAgent();
+    const adapter = createHttpAgentAdapter({
+      baseUrl: "https://agent.example",
+      fetch: agent.fetch,
+      idToken: async () => "token-for-fyd-web",
+    });
+
+    await adapter.requestModeration(MODERATION_REQUEST, { requestId: "4bf92f3577b34da6a3ce929d0e0e4736" });
+
+    expect(agent.seen[0]?.url).toBe("https://agent.example/v1/moderation");
+    expect(agent.seen[0]?.headers.get("x-request-id")).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
+    expect(agent.seen[0]?.headers.get("authorization")).toBe("Bearer token-for-fyd-web");
+  });
+
+  it("reports a refused attachment (422 invalid_base64) as unavailable, so the web service never publishes on it", async () => {
+    const fetch = (async () =>
+      Response.json(
+        { detail: [{ type: "invalid_base64", loc: ["body"], msg: "attachment is not base64" }] },
+        { status: 422 },
+      )) as typeof globalThis.fetch;
+    const adapter = createHttpAgentAdapter({ baseUrl: "https://agent.example", fetch });
+
+    await expect(adapter.requestModeration(MODERATION_REQUEST)).rejects.toMatchObject({
+      name: "AgentUnavailableError",
+      status: 422,
+    });
   });
 });

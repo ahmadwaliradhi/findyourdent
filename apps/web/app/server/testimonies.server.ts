@@ -1,6 +1,6 @@
-// Posting, editing and deleting a Testimony (spec 03, T11), and the author's own
-// list for 'Testimoni saya'. Moderation goes through testimony-moderation.server.ts
-// (a switch until T13); the state machine is testimony-state.ts.
+// Posting, editing and deleting a Testimony (spec 03, T11 and T13), and the author's
+// own list for 'Testimoni saya'. Moderation goes through testimony-moderation.server.ts;
+// the state machine is testimony-state.ts.
 //
 // Rules decided here:
 // - One Testimony per Patient per Provider among Testimonies that are not `deleted`:
@@ -12,8 +12,12 @@
 // - Provider type for a new Listed Provider: the spec 02 rule (`inferProviderType`) on
 //   the typed name alone, with no Google types (no extra paid call): "drg. Nama" →
 //   privateDentist, anything else → klinik; `providerTypeSource` "inferred".
+// - Fix before submit: an authorFix decision is answered with the flagged spans and
+//   stores nothing (no Testimony, no decision, no photos); only the round count is kept,
+//   per Patient and place (`authorFixCounterId`), until a submission is stored.
 import {
   type AspectRatings,
+  authorFixCounterId,
   COLLECTIONS,
   type ProviderDoc,
   type ProviderType,
@@ -37,11 +41,14 @@ import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { normalizeName } from "~/lib/normalize-name";
 import {
+  MAX_AUTHOR_FIX_ROUNDS,
   SUBMISSION_FIELDS,
   TESTIMONY_TERMS_VERSION,
   type TestimonyApiError,
+  type TestimonyAuthorFixResponse,
+  type TestimonyDeleteResponse,
+  type TestimonyStoredResponse,
   type TestimonySubmission,
-  type TestimonySubmitResponse,
 } from "~/lib/testimony";
 import { testimonyPhotoUrl } from "~/lib/testimony-photos";
 import type { LatLng } from "../../server/adapters/places.ts";
@@ -59,7 +66,7 @@ import {
   storeTestimonyMedia,
 } from "./testimony-media.server.ts";
 import {
-  buildModerationRequest,
+  holdMessage,
   isSpotCheck,
   type ModerationOutcome,
   moderateTestimony,
@@ -165,29 +172,104 @@ function contentUpdate(content: TestimonyContent): Record<string, unknown> {
   };
 }
 
-/** Moderates, then deletes the Proof of Visit file whatever happened (spec 03). */
+/**
+ * Moderates the content with every photo it will have, then deletes the Proof of
+ * Visit file whatever happened (spec 03).
+ */
 async function moderate(
   context: AppLoadContext,
   writerInfo: Writer,
-  input: { value: CheckedSubmission; typedProviderName?: string; authorFixRound: number; media: StoredMedia },
+  input: {
+    value: CheckedSubmission;
+    typedProviderName?: string;
+    authorFixRound: number;
+    /** Edit only: stored photos the edit keeps, screened with the new ones. */
+    keptPhotoPaths?: string[];
+    media: StoredMedia;
+  },
 ): Promise<ModerationOutcome> {
   try {
-    const request = buildModerationRequest({
+    return await moderateTestimony(context, {
+      placeId: input.value.placeId,
       language: writerInfo.language,
       text: input.value.text,
-      typedProviderName: input.typedProviderName,
-      procedureCode: input.value.procedureCode,
+      ...(input.typedProviderName ? { typedProviderName: input.typedProviderName } : {}),
+      ...(input.value.procedureCode ? { procedureCode: input.value.procedureCode } : {}),
       visitMonth: input.value.visitMonth,
       authorFixRound: input.authorFixRound,
-    });
-    return await moderateTestimony(context, {
-      request,
-      photoPaths: input.media.photoPaths,
+      photoPaths: [...(input.keptPhotoPaths ?? []), ...input.media.photoPaths],
       ...(input.media.proofPath ? { proofPath: input.media.proofPath } : {}),
     });
   } finally {
     if (input.media.proofPath) await deleteTestimonyMedia(writerInfo.uploads, [input.media.proofPath]);
   }
+}
+
+/** An unused round count expires (Firestore TTL on `counters.expiresAt`) after this long. */
+const AUTHOR_FIX_COUNTER_DAYS = 30;
+
+const authorFixCounter = (firestore: Firestore, uid: string, placeId: string) =>
+  firestore.collection(COLLECTIONS.counters).doc(authorFixCounterId(uid, placeId));
+
+async function authorFixRoundsUsed(firestore: Firestore, uid: string, placeId: string): Promise<number> {
+  const snapshot = await authorFixCounter(firestore, uid, placeId).get();
+  return (snapshot.get("value") as number | undefined) ?? 0;
+}
+
+/**
+ * The authorFix answer: spans and message back to the author, nothing stored but the
+ * round count. The new photos go; the Proof of Visit is already deleted.
+ */
+async function authorFixResponse(
+  writerInfo: Writer,
+  input: {
+    placeId: string;
+    /** The text as screened; the span offsets point into it. */
+    text: string;
+    roundsUsed: number;
+    outcome: ModerationOutcome;
+    newPhotoPaths: string[];
+    testimonyId?: string;
+  },
+): Promise<Response> {
+  // A leftover photo is private and unreferenced; the author still gets their answer.
+  await deleteTestimonyMedia(writerInfo.uploads, input.newPhotoPaths).catch(() => {});
+  const now = Date.now();
+  await authorFixCounter(writerInfo.firestore, writerInfo.user.uid, input.placeId).set(
+    {
+      value: FieldValue.increment(1),
+      updatedAt: Timestamp.fromMillis(now),
+      expiresAt: Timestamp.fromMillis(now + AUTHOR_FIX_COUNTER_DAYS * 24 * 60 * 60 * 1000),
+    },
+    { merge: true },
+  );
+  const { decision } = input.outcome;
+  const body: TestimonyAuthorFixResponse = {
+    status: "needsAuthorFix",
+    ...(input.testimonyId ? { testimonyId: input.testimonyId } : {}),
+    message: decision.authorMessage,
+    text: input.text,
+    ruleCodes: decision.ruleCodes,
+    flaggedSpans: decision.flaggedSpans,
+    roundsLeft: Math.max(0, MAX_AUTHOR_FIX_ROUNDS - (input.roundsUsed + 1)),
+  };
+  return Response.json(body);
+}
+
+/** What the author reads once the decision is stored. */
+function storedFeedback(
+  t: TFunction,
+  status: "published" | "held",
+  outcome: ModerationOutcome,
+  options: { withAdmin?: boolean; authorFixRound: number },
+): Pick<TestimonyStoredResponse, "message" | "ownHealthDataWarning"> {
+  return {
+    message:
+      status === "published"
+        ? t("testimonyApi.moderation.published")
+        : holdMessage(t, outcome.decision.ruleCodes, options),
+    ...(outcome.decision.ownHealthDataWarning ? { ownHealthDataWarning: true } : {}),
+  };
 }
 
 /** The kept Proof of Visit result: only when the check ran, never the file. */
@@ -332,21 +414,40 @@ export async function createTestimony(context: AppLoadContext, request: Request)
   if (existing) return errorResponse(request, 409, "already_posted", { testimonyId: existing });
 
   const ref = testimonies(firestore).doc();
+  const roundsUsed = await authorFixRoundsUsed(firestore, user.uid, value.placeId);
   const media = await storeTestimonyMedia(uploads, ref.id, files.files);
-  let status: TestimonyStatus;
+  let status: "published" | "held";
+  let outcome: ModerationOutcome;
+  let verifiedVisit = false;
   try {
     const listedName = listedAtStart ? (providerAtStart?.get("name") as string) : undefined;
-    const outcome = await moderate(context, gate, {
+    outcome = await moderate(context, gate, {
       value,
       typedProviderName: listedName ?? value.providerName,
-      authorFixRound: 0,
+      authorFixRound: roundsUsed,
       media,
     });
-    // TODO(T13): authorFix returns the flagged spans to the author without storing anything.
-    status = statusForDecision(outcome.decision.decision);
+  } catch (error) {
+    await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
+    throw error;
+  }
+  const { decision: moderation } = outcome;
+  if (moderation.decision === "authorFix") {
+    context.logger.info("testimony", { outcome: "author_fix", round: roundsUsed + 1 });
+    return authorFixResponse(gate, {
+      placeId: value.placeId,
+      text: value.text,
+      roundsUsed,
+      outcome,
+      newPhotoPaths: media.photoPaths,
+    });
+  }
+  try {
+    status = statusForDecision(moderation.decision);
     const location = status === "published" && !listedAtStart ? await coordinatesFor(context, value.placeId) : null;
     const decisionRef = firestore.collection(COLLECTIONS.moderationDecisions).doc();
     const decided = status;
+    const decidedOutcome = outcome;
 
     await firestore.runTransaction(async (tx) => {
       const mine = await tx.get(
@@ -358,7 +459,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
       const published = decided === "published" ? await tx.get(publishedOf(firestore, value.placeId)) : null;
 
       const now = Timestamp.now();
-      const verifiedVisit = outcome.decision.proofOfVisit === "accepted";
+      verifiedVisit = moderation.proofOfVisit === "accepted";
       const content = contentOf(value, media.photoPaths);
       let region: RegionRef;
       let providerType: ProviderType;
@@ -387,11 +488,12 @@ export async function createTestimony(context: AppLoadContext, request: Request)
       tx.create(
         decisionRef,
         moderationDecisionDoc(
-          outcome,
+          decidedOutcome,
           { subjectType: "testimony", subjectId: ref.id, placeId: value.placeId },
           isSpotCheck(decided === "published", context.config.spotCheckRate),
         ),
       );
+      tx.delete(authorFixCounter(firestore, user.uid, value.placeId));
       const doc: TestimonyDoc = {
         ...content,
         placeId: value.placeId,
@@ -402,9 +504,9 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         displayName: value.displayName,
         status: decided,
         verifiedVisit,
-        ...proofRecord(outcome, now),
+        ...proofRecord(decidedOutcome, now),
         consent: { termsVersion: TESTIMONY_TERMS_VERSION, acceptedAt: now },
-        authorFixRounds: decided === "needsAuthorFix" ? 1 : 0,
+        authorFixRounds: roundsUsed,
         moderationDecisionId: decisionRef.id,
         createdAt: now,
         updatedAt: now,
@@ -419,7 +521,12 @@ export async function createTestimony(context: AppLoadContext, request: Request)
   }
 
   context.logger.info("testimony", { outcome: "created", status });
-  const body: TestimonySubmitResponse = { testimonyId: ref.id, status };
+  const body: TestimonyStoredResponse = {
+    testimonyId: ref.id,
+    status,
+    ...storedFeedback(t, status, outcome, { authorFixRound: roundsUsed }),
+    verifiedVisit,
+  };
   return Response.json(body, { status: 201 });
 }
 
@@ -493,22 +600,43 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
   }
   const value = checked.value;
 
+  const roundsUsed = await authorFixRoundsUsed(firestore, user.uid, current.placeId);
   const media = await storeTestimonyMedia(uploads, testimonyId, files.files);
   const editingPublished = current.status === "published";
-  let decided: TestimonyStatus;
-  let orphaned: string[] = [];
+  const proposedName = value.providerName ?? current.proposedProviderName;
+  let outcome: ModerationOutcome;
   try {
-    const proposedName = value.providerName ?? current.proposedProviderName;
     const typedProviderName = listedAtStart ? (providerAtStart.data() as ProviderDoc).name : proposedName;
-    const outcome = await moderate(context, gate, {
+    outcome = await moderate(context, gate, {
       value,
       typedProviderName,
-      authorFixRound: current.authorFixRounds,
+      authorFixRound: roundsUsed,
+      keptPhotoPaths: keep,
       media,
     });
-    // A held or rejected Testimony waits for an admin (ADR-0004): an edit is screened
-    // again but cannot Moderate its way past that, so it stays held for the queue.
-    decided = ADMIN_DECIDES.has(current.status) ? "held" : statusForDecision(outcome.decision.decision);
+  } catch (error) {
+    await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
+    throw error;
+  }
+  if (outcome.decision.decision === "authorFix") {
+    // The Testimony stays exactly as it was until the author sends a fixed edit.
+    context.logger.info("testimony", { outcome: "author_fix", round: roundsUsed + 1, revision: editingPublished });
+    return authorFixResponse(gate, {
+      placeId: current.placeId,
+      text: value.text,
+      roundsUsed,
+      outcome,
+      newPhotoPaths: media.photoPaths,
+      testimonyId,
+    });
+  }
+  // A held or rejected Testimony waits for an admin (ADR-0004): an edit is screened
+  // again but cannot Moderate its way past that, so it stays held for the queue.
+  const withAdmin = ADMIN_DECIDES.has(current.status);
+  const decided: "published" | "held" = withAdmin ? "held" : statusForDecision(outcome.decision.decision);
+  let verifiedVisitAfter = current.verifiedVisit;
+  let orphaned: string[] = [];
+  try {
     const status = decided;
     const becomesPublished = !editingPublished && status === "published";
     const location = becomesPublished && !listedAtStart ? await coordinatesFor(context, current.placeId) : null;
@@ -566,10 +694,11 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
           ...proofRecord(outcome, now),
           moderationDecisionId: decisionRef.id,
           pendingRevision: FieldValue.delete(),
-          authorFixRounds: before.authorFixRounds + (status === "needsAuthorFix" ? 1 : 0),
+          authorFixRounds: roundsUsed,
           updatedAt: now,
         };
         after = { photoPaths: content.photoPaths, pending: [] };
+        verifiedVisitAfter = verifiedVisit;
         let region = before.region;
         let providerType = before.providerType;
         if (!provider.exists && value.region) region = regionValue(value.region);
@@ -599,6 +728,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
         );
       }
       tx.update(ref, update);
+      tx.delete(authorFixCounter(firestore, user.uid, before.placeId));
       const kept = new Set([...after.photoPaths, ...after.pending]);
       orphaned = storedPhotoPaths(before).filter((path) => !kept.has(path));
     });
@@ -609,7 +739,12 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
 
   await deleteTestimonyMedia(uploads, orphaned);
   context.logger.info("testimony", { outcome: "edited", status: decided, revision: editingPublished });
-  const body: TestimonySubmitResponse = { testimonyId, status: decided };
+  const body: TestimonyStoredResponse = {
+    testimonyId,
+    status: decided,
+    ...storedFeedback(t, decided, outcome, { withAdmin, authorFixRound: roundsUsed }),
+    verifiedVisit: verifiedVisitAfter,
+  };
   return Response.json(body);
 }
 
@@ -666,7 +801,7 @@ export async function deleteTestimony(context: AppLoadContext, request: Request,
 
   await deleteTestimonyMedia(uploads, removedPaths);
   context.logger.info("testimony", { outcome: "deleted" });
-  const body: TestimonySubmitResponse = { testimonyId, status: "deleted" };
+  const body: TestimonyDeleteResponse = { testimonyId, status: "deleted" };
   return Response.json(body);
 }
 
