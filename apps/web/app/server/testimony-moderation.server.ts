@@ -211,10 +211,20 @@ export function holdMessage(
   return [...sentences, t("testimonyApi.moderation.holdTarget")].join(" ");
 }
 
+/**
+ * Whether this decision joins the spot-check sample. Only Testimonies Moderation
+ * actually published are sampled: a "publish" decision on content that stays with
+ * the admin (an edit of a held or rejected Testimony) is not.
+ */
+export function isSpotCheck(autoPublished: boolean, rate: number, random: () => number = Math.random): boolean {
+  return autoPublished && random() < rate;
+}
+
 /** The stored record of a decision; never the moderated text or images. */
 export function moderationDecisionDoc(
   outcome: ModerationOutcome,
   subject: { subjectType: "testimony" | "testimonyRevision"; subjectId: string; placeId: string },
+  spotCheck: boolean,
 ): ModerationDecisionDoc {
   const { decision } = outcome;
   return {
@@ -226,8 +236,9 @@ export function moderationDecisionDoc(
     confidence: decision.confidence,
     ...(decision.proofOfVisit ? { proofOfVisit: decision.proofOfVisit } : {}),
     model: outcome.model,
-    // The 10% spot-check sample of auto-published Testimonies arrives with the admin queue (T14).
-    spotCheck: false,
+    spotCheck,
+    // Written only on sampled decisions, so the queue finds open ones with two equality filters.
+    ...(spotCheck ? { spotCheckConfirmed: false } : {}),
     decidedAt: Timestamp.now(),
   };
 }

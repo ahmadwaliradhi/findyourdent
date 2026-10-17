@@ -50,6 +50,8 @@ export interface TestServer {
   clock: { advance(seconds: number): void };
   /** Override rate limits until the next reset. */
   setLimits(limits: Partial<RateLimits>): void;
+  /** Spot-check sample rate until the next reset (default 0, so tests are deterministic). */
+  setSpotCheckRate(rate: number): void;
   /** Fresh fakes, empty logs, default limits, empty emulator Firestore, Auth and uploads bucket. */
   reset(): Promise<void>;
   /** A Firebase ID token from the Auth emulator, as the browser gets right after signing in. */
@@ -154,6 +156,7 @@ export async function startTestServer(): Promise<TestServer> {
 
   let nowMs = Date.now();
   let limits = { ...DEFAULT_RATE_LIMITS };
+  let spotCheckRate = 0;
   const rateLimiter = createFirestoreRateLimiter(firebase.firestore, { salt: "test-salt", now: () => nowMs });
 
   const context = (): BaseContext => ({
@@ -169,6 +172,7 @@ export async function startTestServer(): Promise<TestServer> {
       adminEmails: ADMIN_EMAILS,
       firebaseWeb: NO_FIREBASE,
       shareLinkSecret: "test-share-link-secret",
+      spotCheckRate,
     },
   });
 
@@ -205,6 +209,7 @@ export async function startTestServer(): Promise<TestServer> {
       defaultToken = fakes.appCheck.issueToken();
       nowMs = Date.now();
       limits = { ...DEFAULT_RATE_LIMITS };
+      spotCheckRate = 0;
       logs.length = 0;
       await clearEmulators(firebase.projectId, firebase.uploads);
     },
@@ -215,6 +220,9 @@ export async function startTestServer(): Promise<TestServer> {
     },
     setLimits(overrides) {
       limits = { ...limits, ...overrides };
+    },
+    setSpotCheckRate(rate) {
+      spotCheckRate = rate;
     },
     emulatorIdToken,
     async signInWithGoogle(email) {

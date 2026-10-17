@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { App } from "firebase-admin/app";
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
+import { SPOT_CHECK_RATE } from "../app/lib/admin-queue.ts";
 import type { PublicFirebaseConfig } from "../app/lib/firebase-config.ts";
 import { type AgentAdapter, createHttpAgentAdapter, createMetadataIdTokenSource } from "./adapters/agent.ts";
 import {
@@ -31,6 +32,8 @@ export interface RateLimits {
   placesPerHour: number;
   /** Per signed-in account. RATE_LIMIT_TESTIMONIES_PER_DAY */
   testimoniesPerDay: number;
+  /** Testimony reports, per App Check token. RATE_LIMIT_REPORTS_PER_HOUR */
+  reportsPerHour: number;
   /** High on purpose: Indonesian mobile carriers put many people behind one IP. RATE_LIMIT_IP_PER_HOUR */
   ipPerHour: number;
 }
@@ -39,6 +42,7 @@ export const DEFAULT_RATE_LIMITS: RateLimits = {
   guidanceSessionsPerHour: 10,
   placesPerHour: 30,
   testimoniesPerDay: 5,
+  reportsPerHour: 10,
   ipPerHour: 300,
 };
 
@@ -77,6 +81,8 @@ export interface WebContext {
     firebaseWeb: PublicFirebaseConfig;
     /** Signs shareable Guidance links (app/server/share.server.ts). */
     shareLinkSecret: string;
+    /** Share of auto-published Testimonies sampled for the admin spot check (spec 03: 10%). */
+    spotCheckRate: number;
   };
 }
 
@@ -128,6 +134,7 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
         .filter(Boolean),
       firebaseWeb: firebaseWebFromEnv(env, production, firebase?.projectId ?? null),
       shareLinkSecret,
+      spotCheckRate: SPOT_CHECK_RATE,
     },
   };
 }
@@ -173,6 +180,7 @@ function rateLimitsFromEnv(env: NodeJS.ProcessEnv): RateLimits {
     guidanceSessionsPerHour: read("RATE_LIMIT_GUIDANCE_PER_HOUR", DEFAULT_RATE_LIMITS.guidanceSessionsPerHour),
     placesPerHour: read("RATE_LIMIT_PLACES_PER_HOUR", DEFAULT_RATE_LIMITS.placesPerHour),
     testimoniesPerDay: read("RATE_LIMIT_TESTIMONIES_PER_DAY", DEFAULT_RATE_LIMITS.testimoniesPerDay),
+    reportsPerHour: read("RATE_LIMIT_REPORTS_PER_HOUR", DEFAULT_RATE_LIMITS.reportsPerHour),
     ipPerHour: read("RATE_LIMIT_IP_PER_HOUR", DEFAULT_RATE_LIMITS.ipPerHour),
   };
 }

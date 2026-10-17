@@ -112,7 +112,11 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
       {item.pendingStatus ? (
         <p className="text-sm">{t(`myTestimonies.pendingRevision.${item.pendingStatus}`)}</p>
       ) : null}
-      {item.adminReason && (item.status === "rejected" || item.status === "removed") ? (
+      {item.adminReason &&
+      (item.status === "rejected" ||
+        item.status === "removed" ||
+        item.status === "needsAuthorFix" ||
+        item.pendingStatus === "needsAuthorFix") ? (
         <p className="text-sm">{t("myTestimonies.reason", { reason: item.adminReason })}</p>
       ) : null}
       <p className="line-clamp-4 whitespace-pre-line">{item.text}</p>

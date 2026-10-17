@@ -7,7 +7,9 @@ import { Button } from "./ui/button";
 
 /**
  * Visible on every page (rendered by the root layout). Posts to /language, so it works without JavaScript.
- * The redirect lands as a new history entry, which takes over what this one showed.
+ * The redirect lands as a new history entry, which takes over what this one showed. It is
+ * pushed, not replaced: the router would replace a redirect back to the same URL, and Back
+ * would then skip the entry the Patient switched from.
  */
 export function LanguageToggle({ language }: { language: Language }) {
   const { t } = useTranslation();
@@ -19,7 +21,13 @@ export function LanguageToggle({ language }: { language: Language }) {
     if (state === "idle") dropCarry();
   }, [state]);
   return (
-    <Form method="post" action="/language" preventScrollReset onSubmit={() => carryEntryToNext(location.key)}>
+    <Form
+      method="post"
+      action="/language"
+      replace={false}
+      preventScrollReset
+      onSubmit={() => carryEntryToNext(location.key)}
+    >
       <input type="hidden" name="lang" value={other} />
       <input type="hidden" name="redirectTo" value={`${location.pathname}${location.search}`} />
       <Button type="submit" variant="outline" size="sm" lang={other} aria-label={t("language.switchToLabel")}>

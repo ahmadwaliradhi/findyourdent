@@ -1,6 +1,6 @@
 import { COLLECTIONS, type TestimonyDoc } from "@findyourdent/contracts/firestore";
 import { testimonyPhotoPath } from "~/lib/testimony-photos";
-import { readSession } from "../../server/auth.ts";
+import { isAdmin, readSession } from "../../server/auth.ts";
 import type { Route } from "./+types/foto.$testimonyId.$photoId";
 
 const notFound = () => new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
@@ -9,7 +9,7 @@ const notFound = () => new Response("Not found", { status: 404, headers: { "Cach
  * A stored Testimony photo (the uploads bucket is private, so photos go through here).
  * Public while the Testimony is published and the photo is in its public version; its
  * author also sees their own photos in any state but deleted (for 'Testimoni saya' and
- * editing). Everything else is a 404, so nothing reveals that a Testimony exists.
+ * editing), and so do the admins (for the queue). Everything else is a 404, so nothing reveals that a Testimony exists.
  */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const path = testimonyPhotoPath(params.testimonyId, params.photoId);
@@ -25,7 +25,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   } else {
     const user = await readSession(context.auth, request.headers.get("cookie"));
     const ownPhotos = [...testimony.photoPaths, ...(testimony.pendingRevision?.photoPaths ?? [])];
-    if (!user || user.uid !== testimony.authorUid || testimony.status === "deleted" || !ownPhotos.includes(path)) {
+    const mayView = user && (user.uid === testimony.authorUid || isAdmin(user, context.config.adminEmails));
+    if (!mayView || testimony.status === "deleted" || !ownPhotos.includes(path)) {
       return notFound();
     }
     cacheControl = "private, no-store";
