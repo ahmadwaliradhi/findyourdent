@@ -5,11 +5,11 @@ No network: a stub client records the config the adapter builds.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
 from google.genai import types
 
 from findyourdent_agent.adapters.real import GoogleGeminiAdapter
@@ -18,11 +18,6 @@ from findyourdent_agent.agents import shortlist as shortlist_agent
 from findyourdent_agent.config import Settings
 
 SCHEMA = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
 
 
 @dataclass
@@ -34,16 +29,17 @@ class _Models:
         return SimpleNamespace(text='{"ok": true}', candidates=[])
 
 
-@pytest.mark.anyio
-async def test_the_adapter_sends_no_temperature_to_gemini() -> None:
-    # Ignored from Gemini 3.6 Flash and 3.5 Flash-Lite, and a later generation
-    # rejects it with HTTP 400 (ai.google.dev/gemini-api/docs/whats-new-gemini-3.6).
+def test_the_adapter_sends_no_temperature_to_gemini() -> None:
+    # Ignored from Gemini 3.6 Flash and 3.5 Flash-Lite, and a future generation
+    # will reject it with HTTP 400 (ai.google.dev/gemini-api/docs/whats-new-gemini-3.6).
     models = _Models()
     client = SimpleNamespace(aio=SimpleNamespace(models=models))
     adapter = GoogleGeminiAdapter(settings=Settings(), _client=client)  # type: ignore[arg-type]
 
-    output = await adapter.generate_structured(
-        model="gemini-3.5-flash-lite", instruction="", contents=[], response_schema=SCHEMA
+    output = asyncio.run(
+        adapter.generate_structured(
+            model="gemini-3.5-flash-lite", instruction="", contents=[], response_schema=SCHEMA
+        )
     )
 
     assert output == {"ok": True}
