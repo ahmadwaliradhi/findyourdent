@@ -5,6 +5,19 @@ FindYourDent is a dentistry platform for Indonesia, built for the AI Builder Cup
 
 **Live demo:** https://findyourdent.web.app (Firebase Hosting in front of Cloud Run in Jakarta; deploy with `infra/gcp/deploy.sh`, see [`infra/gcp/README.md`](infra/gcp/README.md)).
 
+## Google AI in the product
+
+Gemini does the judgement work; deterministic code and versioned knowledge files do everything that must never be wrong. Each model call has a fallback that keeps the Patient safe when the model errs.
+
+| Where | What runs | What keeps it safe |
+| --- | --- | --- |
+| Guidance ([spec 01](docs/specs/01-guidance-and-emergency-escalation.md)) | Gemini 3.8 Flash on Vertex AI (global endpoint, [ADR-0003](docs/adr/0003-gemini-global-endpoint.md)), one call per turn with structured JSON output validated against the shared schema. The same call is packaged as a Google ADK agent ([`agents/guidance.py`](services/agent/src/findyourdent_agent/agents/guidance.py)) for `adk web` and `adk eval`. | Red-flag check runs before Gemini and the model can never lower its urgency; dose and medicine patterns swap the card for a safe fallback; prompt-injection phrases are redirected with no model call. |
+| Grounding | Cost, BPJS coverage and safety rules come from curated knowledge files that cite their regulation, not from the model. Agent Search (formerly Vertex AI Search) over the national dental guideline and BPJS rules is planned behind the same adapter. | A clinical reviewer can correct a file without touching code. |
+| Moderation ([spec 03](docs/specs/03-testimonies-and-moderation.md), [ADR-0004](docs/adr/0004-ai-publishes-humans-remove.md)) | Gemini 3.5 Flash-Lite reads each Testimony and reports which moderation rules fired (personal data, accusation stated as fact, harassment, not first-hand, medical advice, wrong Provider). | The decision to publish, ask the author to fix, or hold is derived in code from those rules. Any model error, timeout or invalid output becomes a hold. Humans can remove; the AI never deletes. |
+| Evaluation ([spec 06](docs/specs/06-post-deployment-evaluation.md)) | Planned during judging: `adk eval` (tool trajectory, response match, LLM judge) and Gen AI evaluation for safety, on Indonesian cases labelled by a dentist outside the team. | Results and who labelled them go in this README. |
+
+On Google Cloud: two Cloud Run services in Jakarta (the agent is private, callable only by the web service), Firebase Hosting in front, Firestore and Cloud Storage in Jakarta, Firebase Auth, App Check with reCAPTCHA Enterprise, Secret Manager, Cloud Scheduler and Workflows for the warm instance, Cloud Monitoring uptime checks and a billing budget.
+
 ## Repository layout
 
 ```
