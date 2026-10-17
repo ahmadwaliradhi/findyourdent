@@ -105,7 +105,6 @@ export const SHORTLIST_SEARCH_FIELD_MASK = [
  * heading and its inferred type.
  */
 export const PROVIDER_GOOGLE_BLOCK_FIELD_MASK = [
-  "id",
   "displayName",
   "types",
   "formattedAddress",
@@ -175,7 +174,6 @@ function toSummary(place: GooglePlace): PlaceSummary | null {
 }
 
 interface GooglePlaceDetails {
-  id?: string;
   displayName?: { text?: string };
   types?: string[];
   formattedAddress?: string;
@@ -205,7 +203,7 @@ function defined<T extends object>(value: T): T {
 function toBlock(placeId: string, place: GooglePlaceDetails): GoogleBlock {
   const hours = place.regularOpeningHours;
   return defined<GoogleBlock>({
-    placeId: place.id ?? placeId,
+    placeId,
     displayName: place.displayName?.text ?? "",
     types: place.types ?? [],
     formattedAddress: place.formattedAddress,

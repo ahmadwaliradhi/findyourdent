@@ -225,7 +225,7 @@ export async function providerGoogleReviews(
 /**
  * GET handler shared by the two Google routes: App Check and the Places rate limits
  * first, so a crawler or a refused caller never reaches the adapter. Google content
- * must not be cached, so every answer is no-store.
+ * must not be cached, so every answer past the gate is no-store.
  */
 export async function googleRouteResponse(
   context: AppLoadContext,

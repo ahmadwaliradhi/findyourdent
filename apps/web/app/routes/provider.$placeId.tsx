@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data } from "react-router";
-import { fetchGoogleRoute, GoogleReviews } from "~/components/google-reviews";
+import { GoogleReviews } from "~/components/google-reviews";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { getI18n, type Language } from "~/i18n/config";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { formatRupiah } from "~/lib/format";
+import { formatRupiah, formatScore } from "~/lib/format";
+import { fetchGoogleRoute } from "~/lib/google-routes";
 import { procedureLabel } from "~/lib/procedures";
 import type { GoogleBlockResponse, ProviderGoogleBlock, ProviderPageData, PublicTestimony } from "~/lib/provider";
 import type { PriceSignal } from "~/lib/shortlist";
@@ -45,9 +46,6 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
     { property: "og:description", content: description },
   ];
 }
-
-const oneDecimal = (value: number, language: Language) =>
-  value.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1 });
 
 type BlockState = { phase: "loading" } | { phase: "done"; result: GoogleBlockResponse } | { phase: "error" };
 
@@ -156,9 +154,9 @@ function Testimonies({ page, language }: { page: ProviderPageData; language: Lan
           {testimonies.averages && (
             <p className="text-muted-foreground">
               {t("shortlist.aspects", {
-                service: oneDecimal(testimonies.averages.service, language),
-                hygiene: oneDecimal(testimonies.averages.hygiene, language),
-                materials: oneDecimal(testimonies.averages.materialsEquipment, language),
+                service: formatScore(testimonies.averages.service, language),
+                hygiene: formatScore(testimonies.averages.hygiene, language),
+                materials: formatScore(testimonies.averages.materialsEquipment, language),
               })}
             </p>
           )}
@@ -190,9 +188,9 @@ function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; la
       </div>
       <p className="text-muted-foreground">
         {t("shortlist.aspects", {
-          service: oneDecimal(ratings.service, language),
-          hygiene: oneDecimal(ratings.hygiene, language),
-          materials: oneDecimal(ratings.materialsEquipment, language),
+          service: formatScore(ratings.service, language),
+          hygiene: formatScore(ratings.hygiene, language),
+          materials: formatScore(ratings.materialsEquipment, language),
         })}
       </p>
       {(testimony.procedureCode || testimony.pricePaidRupiah !== undefined) && (
@@ -248,7 +246,7 @@ function GoogleFacts({ block, language }: { block: ProviderGoogleBlock; language
       {block.rating !== undefined && (
         <p>
           {t("provider.rating", {
-            rating: oneDecimal(block.rating, language),
+            rating: formatScore(block.rating, language),
             count: block.userRatingCount ?? 0,
           })}
         </p>

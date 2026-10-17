@@ -1,24 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "~/components/ui/button";
-import { APP_CHECK_HEADER } from "~/lib/app-check";
-import { getAppCheckToken } from "~/lib/firebase.client";
-import { type PublicFirebaseConfig, useFirebaseConfig } from "~/lib/firebase-config";
+import { useFirebaseConfig } from "~/lib/firebase-config";
+import { fetchGoogleRoute } from "~/lib/google-routes";
 import type { GoogleReviewsResponse, PublicGoogleReview } from "~/lib/provider";
-
-/** GET one of the Provider's Google routes with this browser's App Check token. */
-export async function fetchGoogleRoute<T>(
-  firebase: PublicFirebaseConfig,
-  placeId: string,
-  part: "google" | "reviews",
-): Promise<T> {
-  const token = await getAppCheckToken(firebase).catch(() => "");
-  const response = await fetch(`/api/providers/${encodeURIComponent(placeId)}/${part}`, {
-    headers: { [APP_CHECK_HEADER]: token },
-  });
-  if (!response.ok) throw new Error(`${part} ${response.status}`);
-  return (await response.json()) as T;
-}
 
 type State =
   | { phase: "closed" }

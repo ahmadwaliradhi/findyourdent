@@ -181,7 +181,6 @@ describe("Places adapter: daily cap", () => {
 
 /** What Place Details (New) answers with the Google block's Enterprise field mask. */
 const GOOGLE_DETAILS = {
-  id: "ChIJ-gubeng-dental",
   displayName: { text: "Klinik Gigi Senyum Gubeng", languageCode: "id" },
   types: ["dentist", "health"],
   formattedAddress: "Jl. Raya Gubeng No. 1, Surabaya",
@@ -207,7 +206,7 @@ describe("Places adapter: Provider Google block", () => {
     expect(call?.method).toBe("GET");
     expect(call?.url).toBe("https://places.googleapis.com/v1/places/ChIJ-gubeng-dental?languageCode=id&regionCode=ID");
     expect(call?.headers.get("x-goog-fieldmask")).toBe(
-      "id,displayName,types,formattedAddress,regularOpeningHours,nationalPhoneNumber,websiteUri,rating,userRatingCount,googleMapsUri",
+      "displayName,types,formattedAddress,regularOpeningHours,nationalPhoneNumber,websiteUri,rating,userRatingCount,googleMapsUri",
     );
   });
 

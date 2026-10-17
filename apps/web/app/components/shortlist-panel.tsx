@@ -8,7 +8,7 @@ import type { Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { formatDistance, formatRupiah } from "~/lib/format";
+import { formatDistance, formatRupiah, formatScore } from "~/lib/format";
 import { procedureLabel } from "~/lib/procedures";
 import type { ShortlistProvider, ShortlistResponse } from "~/lib/shortlist";
 
@@ -161,9 +161,6 @@ function ShortlistProviders({ result, language }: { result: ShortlistResponse; l
   );
 }
 
-const oneDecimal = (value: number, language: Language) =>
-  value.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1 });
-
 function ProviderCard({ provider, language }: { provider: ShortlistProvider; language: Language }) {
   const { t } = useTranslation();
   const { testimonies } = provider;
@@ -195,9 +192,9 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
             {testimonies.averages && (
               <p className="text-muted-foreground">
                 {t("shortlist.aspects", {
-                  service: oneDecimal(testimonies.averages.service, language),
-                  hygiene: oneDecimal(testimonies.averages.hygiene, language),
-                  materials: oneDecimal(testimonies.averages.materialsEquipment, language),
+                  service: formatScore(testimonies.averages.service, language),
+                  hygiene: formatScore(testimonies.averages.hygiene, language),
+                  materials: formatScore(testimonies.averages.materialsEquipment, language),
                 })}
               </p>
             )}
