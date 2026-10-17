@@ -23,7 +23,7 @@ export function meta({ matches }: Route.MetaArgs) {
   ];
 }
 
-export default function SharedGuidance({ loaderData }: Route.ComponentProps) {
+export default function SharedGuidance({ loaderData, params }: Route.ComponentProps) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-6">
@@ -31,7 +31,7 @@ export default function SharedGuidance({ loaderData }: Route.ComponentProps) {
         <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{t("shared.title")}</h1>
         <p className="text-muted-foreground">{t("shared.intro")}</p>
       </div>
-      <GuidanceCard guidance={loaderData.guidance} share={null} />
+      <GuidanceCard guidance={loaderData.guidance} share={null} guidanceToken={params.token} />
       <Button asChild size="lg" className="w-full sm:w-auto sm:self-start">
         <Link to="/">{t("shared.cta")}</Link>
       </Button>

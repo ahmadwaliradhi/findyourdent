@@ -11,10 +11,11 @@ import {
 } from "./adapters/app-check.ts";
 import { createFakeAgentAdapter, createFakeGeminiAdapter, createFakePlacesAdapter } from "./adapters/fakes.ts";
 import type { GeminiAdapter } from "./adapters/gemini.ts";
-import type { PlacesAdapter } from "./adapters/places.ts";
+import { createGooglePlacesAdapter, type PlacesAdapter } from "./adapters/places.ts";
 import type { SignedInUser } from "./auth.ts";
 import { initFirebaseAdmin } from "./firebase.ts";
 import { type Logger, logger } from "./logger.ts";
+import { createFirestoreDailyQuota, createMemoryDailyQuota } from "./quota.ts";
 import { createFirestoreRateLimiter, createMemoryRateLimiter, type RateLimiter } from "./rate-limit.ts";
 
 /** Rate limits from spec 00. Each can be overridden by the environment variable named beside it. */
@@ -98,8 +99,8 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
   return {
     adapters: {
       agent,
-      // Real Places and Gemini adapters arrive with specs 02, 03 and 05.
-      places: createFakePlacesAdapter(),
+      places: placesAdapter(env, firebase?.firestore ?? null),
+      // The real Gemini adapter arrives with specs 03 and 05.
       gemini: createFakeGeminiAdapter(),
       appCheck: appCheckVerifier(env, production, firebase?.app ?? null),
     },
@@ -118,6 +119,16 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
       shareLinkSecret,
     },
   };
+}
+
+/**
+ * Real Places only with a key (the `places-api-key` secret) and PLACES_ADAPTER not
+ * set to fake. Daily caps count in Firestore so every instance shares them.
+ */
+function placesAdapter(env: NodeJS.ProcessEnv, firestore: Firestore | null): PlacesAdapter {
+  if (env.PLACES_ADAPTER === "fake" || !env.PLACES_API_KEY) return createFakePlacesAdapter();
+  const quota = firestore ? createFirestoreDailyQuota(firestore) : createMemoryDailyQuota();
+  return createGooglePlacesAdapter({ apiKey: env.PLACES_API_KEY, quota });
 }
 
 /**
