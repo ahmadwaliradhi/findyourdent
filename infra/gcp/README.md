@@ -49,6 +49,7 @@ Before building on these caps, the Places adapter (spec 02) must know:
 
 - Places quota IDs are per method: `SearchTextRequestPerDayPerProject`, `GetPlaceRequestPerDayPerProject`, `AutocompletePlacesRequestPerDayPerProject`, and so on. There is no per-SKU quota.
 - Gemini's only daily quota is `GlobalGenerateContentInputTokensPerDayPerBaseModel`. The `base_model` dimension values are `gemini-3.8-flash-qcd` and `gemini-3.5-flash-lite-qcd`. Requests are capped only per minute, and raising that cap needs a contact email, so the script leaves it at the default.
+- Autocomplete (New) sessions: an IDs-only Place Details call is free but does not end the session for billing, so the Autocomplete requests revert to per-request pricing, the same as making no call ([session pricing](https://developers.google.com/maps/documentation/places/web-service/session-pricing)). Autocomplete Requests get 10,000 free a month, then USD 2.83 per 1,000 ([pricing](https://developers.google.com/maps/billing-and-pricing/pricing)), so the 300-a-day cap stays free.
 - The billing account `019521-D61E16-A0C8A3` is billed in IDR, and a budget must use the account's currency.
 
 ## Manual steps
