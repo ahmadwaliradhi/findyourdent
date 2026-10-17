@@ -474,13 +474,16 @@ export async function buildShortlist(
     },
   );
   const byId = new Map(joined.map((j) => [j.candidate.placeId, j]));
-  const templated = ranked.map((r) => toShortlistProvider(r, byId.get(r.placeId) as Joined, request, input.language));
+  // Reasons follow the language of the Patient's complaint, which the Guidance
+  // records; the emergency list and older Guidance links follow the toggle (spec 02).
+  const language = request.guidance?.language ?? input.language;
+  const templated = ranked.map((r) => toShortlistProvider(r, byId.get(r.placeId) as Joined, request, language));
 
   // The emergency Hospital list is never held for Gemini: it keeps its templated
   // reasons so the Patient can leave at once (spec 02, user story 27).
   const reasons =
     request.purpose === "shortlist" && templated.length > 0
-      ? await geminiReasons(context, reasonsRequest(templated, ranked, request, input.sessionId, input.language))
+      ? await geminiReasons(context, reasonsRequest(templated, ranked, request, input.sessionId, language))
       : null;
   // Order and membership come from the ranking alone: a reason for a placeId the
   // ranking did not choose is ignored, and a missing one keeps its template.

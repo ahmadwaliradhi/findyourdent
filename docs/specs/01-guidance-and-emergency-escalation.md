@@ -63,6 +63,7 @@ The Patient describes the problem in their own words, typed or as a voice note, 
   - `bpjs`: `covered_at_fktp`, `referral_needed`, or `not_covered`, with a one-paragraph explanation including the FKTP rules (care at the registered FKTP or its partner dentist; change after three months, effective the next month).
   - `sources`: the grounding documents cited.
   - `disclaimer`: the education-not-diagnosis line in the Patient's language.
+  - `language`: `id` or `en`, the language of the complaint that every text above is written in. Spec 02's Shortlist reasons follow it rather than the UI toggle.
 - Emergency Escalation runs in two layers and escalates if either fires:
   1. A deterministic rule before any model call: Indonesian, regional and English phrases for facial or neck swelling, fever, difficulty swallowing, difficulty breathing, inability to open the mouth (trismus), uncontrolled bleeding, and trauma with a knocked-out permanent tooth, including common slang and misspellings.
   2. A model check inside the Guidance call that can raise but never lower urgency.

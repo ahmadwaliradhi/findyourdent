@@ -213,7 +213,12 @@
             }
           }
         },
-        "disclaimer": { "type": "string", "minLength": 1 }
+        "disclaimer": { "type": "string", "minLength": 1 },
+        "language": {
+          "description": "Language of the Patient's complaint, which every text in this Guidance is written in. Shortlist reasons follow it rather than the UI toggle (spec 02). Absent on Guidance links made before it existed.",
+          "type": "string",
+          "enum": ["id", "en"]
+        }
       }
     }
   }

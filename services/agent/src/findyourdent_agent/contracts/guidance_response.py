@@ -92,6 +92,10 @@ class Guidance(BaseModel):
     bpjs: Bpjs
     sources: Annotated[list[Source], Field(min_length=1)]
     disclaimer: Annotated[str, Field(min_length=1)]
+    language: Literal["id", "en"] | None = None
+    """
+    Language of the Patient's complaint, which every text in this Guidance is written in. Shortlist reasons follow it rather than the UI toggle (spec 02). Absent on Guidance links made before it existed.
+    """
 
 
 class GuidanceCardResponse(BaseModel):

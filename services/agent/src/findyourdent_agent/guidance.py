@@ -200,6 +200,7 @@ def _card(
         bpjs=bpjs,
         sources=_sources(retrieved, source_keys),
         disclaimer=guidance_safety().disclaimer(language),
+        language=language,
     )
     return GuidanceCardResponse(kind="guidance", guidance=guidance)
 
