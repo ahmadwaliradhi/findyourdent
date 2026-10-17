@@ -1,0 +1,3 @@
+# Gemini runs on the global endpoint while stored data stays in Jakarta
+
+Cloud Run, Firestore and Cloud Storage run in `asia-southeast2` (Jakarta) so stored data stays in Indonesia, but the newest GA Gemini Flash is offered only on the global, US and EU endpoints (checked 16 Oct 2026; the only GA Flash in Singapore costs about twice as much). We call Gemini on the global endpoint because Patient complaint text is never stored or logged, and the consent line and privacy note disclose that text is processed by Google AI outside Indonesia. Revisit if a current Flash model becomes available in asia-southeast1 or asia-southeast2.
