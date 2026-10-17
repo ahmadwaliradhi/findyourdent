@@ -282,6 +282,49 @@ fi
 gcloud secrets add-iam-policy-binding share-link-secret --project "$PROJECT_ID" \
   --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
 
+# Rate-limit salt: the web service hashes IPs, tokens and session ids with it
+# before storing counters, so it must be secret and shared by every instance.
+log "Secret rate-limit-salt"
+if ! gcloud secrets describe rate-limit-salt --project "$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud secrets create rate-limit-salt --project "$PROJECT_ID" \
+    --replication-policy=user-managed --locations="$REGION"
+fi
+if gcloud secrets versions list rate-limit-salt --project "$PROJECT_ID" --filter='state=ENABLED' \
+  --limit=1 --format='value(name)' | grep -q .; then
+  skip "rate-limit-salt has a version"
+else
+  openssl rand -hex 32 | tr -d '\n' | gcloud secrets versions add rate-limit-salt --project "$PROJECT_ID" --data-file=-
+fi
+gcloud secrets add-iam-policy-binding rate-limit-salt --project "$PROJECT_ID" \
+  --member="serviceAccount:${WEB_SA}" --role=roles/secretmanager.secretAccessor >/dev/null
+
+# App Check debug token for the post-deploy smoke test (T03): smoke.sh swaps it for
+# a real App Check token, so its Guidance round trip passes the App Check gate.
+# The token (a UUID4, input-only in the API) lives in Secret Manager.
+log "App Check debug token for the smoke test"
+if ! gcloud secrets describe app-check-debug-token --project "$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud secrets create app-check-debug-token --project "$PROJECT_ID" \
+    --replication-policy=user-managed --locations="$REGION"
+fi
+if gcloud secrets versions list app-check-debug-token --project "$PROJECT_ID" --filter='state=ENABLED' \
+  --limit=1 --format='value(name)' | grep -q .; then
+  skip "app-check-debug-token has a version"
+else
+  uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '\n' \
+    | gcloud secrets versions add app-check-debug-token --project "$PROJECT_ID" --data-file=-
+fi
+DEBUG_TOKENS_URL="https://firebaseappcheck.googleapis.com/v1/projects/${PROJECT_ID}/apps/${WEB_APP_ID}/debugTokens"
+if gapi GET "$DEBUG_TOKENS_URL" | jq -e '[.debugTokens[]? | select(.displayName == "smoke-test")] | length > 0' >/dev/null; then
+  skip "debug token smoke-test registered"
+else
+  # The body holds the secret, so it goes through a private temp file, not argv.
+  body_file=$(mktemp)
+  gcloud secrets versions access latest --secret=app-check-debug-token --project "$PROJECT_ID" \
+    | jq -R '{displayName: "smoke-test", token: .}' >"$body_file"
+  gapi POST "$DEBUG_TOKENS_URL" "@${body_file}" >/dev/null
+  rm -f "$body_file"
+fi
+
 # 9. Budget ---------------------------------------------------------------------
 log "Budget ${BUDGET_NAME} (${BUDGET_AMOUNT}, 50% and 90%)"
 budgets=$(gcloud billing budgets list --billing-account="$BILLING_ACCOUNT" --format='value(displayName)')

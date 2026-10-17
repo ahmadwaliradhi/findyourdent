@@ -1,4 +1,5 @@
 import { requestGuidance } from "~/server/guidance.server";
+import { guidanceRoute, protectionRefusalResponse, protectPaidRequest } from "~/server/protection.server";
 import { getOrCreateSessionId } from "~/server/session.server";
 import type { Route } from "./+types/api.guidance";
 
@@ -18,9 +19,14 @@ export async function action({ request, context }: Route.ActionArgs) {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "invalid_request" }, { status: 400, headers });
+    body = null;
   }
   const input = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+
+  const route = guidanceRoute(input.followUpAnswer, setCookie !== null);
+  const protection = await protectPaidRequest(context, { request, route, sessionId });
+  if (!protection.ok) return protectionRefusalResponse(request, protection);
+  if (body === null) return Response.json({ error: "invalid_request" }, { status: 400, headers });
 
   const outcome = await requestGuidance(context, {
     sessionId,

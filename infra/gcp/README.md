@@ -22,10 +22,24 @@ ADMIN_EMAILS="a@example.com,b@example.com" infra/gcp/setup.sh
 | Firebase web app | `1:1001413011907:web:d59beb8fb53f70f21d3576` |
 | reCAPTCHA Enterprise site key (App Check) | `6LeFCfMtAAAAACLP7NiG2xaEClvTnRY5qqTPFdxC` (score-based; public by design) |
 | Service accounts | `fyd-web@findyourdent.iam.gserviceaccount.com`, `fyd-agent@findyourdent.iam.gserviceaccount.com` |
-| Secrets (Secret Manager, Jakarta) | `places-api-key` (API key restricted to Places API (New)), `admin-emails` (comma-separated allowlist), `share-link-secret` (random key that signs shareable Guidance links; created once by `setup.sh`, mounted on the web service as `SHARE_LINK_SECRET`; rotating it breaks links already shared) |
+| Secrets (Secret Manager, Jakarta) | `places-api-key` (API key restricted to Places API (New)), `admin-emails` (comma-separated allowlist), `share-link-secret` (random key that signs shareable Guidance links; created once by `setup.sh`, mounted on the web service as `SHARE_LINK_SECRET`; rotating it breaks links already shared), `rate-limit-salt` (web service rate-limit key hashes), `app-check-debug-token` (registered with App Check as `smoke-test`; `smoke.sh` exchanges it for an App Check token) |
 | Budget | `findyourdent-usd100`: IDR 1,650,000 (about USD 100) on the whole billing account, alerts at 50% and 90% |
 
 The admin allowlist is kept in Secret Manager instead of the repository because the repository is public and the addresses are personal data.
+
+## Web service environment
+
+The web service (T03) reads these at start-up:
+
+| Variable | Source |
+| --- | --- |
+| `FIREBASE_ENABLED=true`, `GCLOUD_PROJECT=findyourdent` | Plain env |
+| `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_APP_ID`, `RECAPTCHA_SITE_KEY` | Plain env; public values (Firebase console web app config and the site key above) |
+| `ADMIN_EMAILS` | Secret `admin-emails`, mounted as an env var |
+| `RATE_LIMIT_SALT` | Secret `rate-limit-salt` (random, created once by `setup.sh`), so rate-limit key hashes can't be reversed and every instance shares counters. Required in production |
+| `TRUST_PROXY_HOPS` | Proxies in front of the service that append to `X-Forwarded-For`: 1 for Cloud Run alone (default), 2 behind Firebase Hosting. The per-IP ceiling reads the client IP this many hops from the right, so a client can't fake it |
+
+`APP_CHECK_DEBUG_TOKEN` is for local runs and CI only; production ignores it. The deployed service only accepts real App Check tokens, so the smoke test gets one by exchanging the registered `app-check-debug-token` (App Check API `exchangeDebugToken`, checked against the API discovery document on 17 October 2026). Rate limits default to spec 00 and can be overridden with `RATE_LIMIT_*` (see `apps/web/.env.example`). The `rateLimits.expiresAt` TTL policy is still a manual step (docs/data-model.md).
 
 ## Daily caps
 
@@ -69,7 +83,7 @@ infra/gcp/smoke.sh           # on its own at any time
 | --- | --- |
 | Public URL | https://findyourdent.web.app (Hosting rewrites every path to `fyd-web`) |
 | Artifact Registry | `asia-southeast2-docker.pkg.dev/findyourdent/findyourdent/{web,agent}:<commit>` |
-| `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS` from Secret Manager |
+| `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS`, `RATE_LIMIT_SALT` from Secret Manager; public Firebase web config and reCAPTCHA site key looked up at deploy; `TRUST_PROXY_HOPS=2` |
 | `fyd-agent` | `--no-allow-unauthenticated`; `roles/run.invoker` only for `fyd-web` and the Monitoring service agent (uptime check); maximum 4 instances |
 | Warm agent instance | service-level minimum 1 from 19 October to 7 November 2026 (Jakarta time), 0 otherwise |
 | Uptime checks | `fyd-web health` (through Hosting) and `fyd-agent health` (with an identity token), `/health` every minute from three regions |

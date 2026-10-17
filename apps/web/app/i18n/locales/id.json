@@ -33,7 +33,9 @@
     "retry": "Coba lagi",
     "invalid_request": "Keluhan belum terbaca. Tulis keluhan Anda (maksimal 4000 karakter) lalu kirim lagi.",
     "agent_unavailable": "Layanan panduan sedang tidak tersedia. Silakan coba lagi sebentar lagi.",
-    "invalid_agent_response": "Layanan panduan memberi jawaban yang tidak dapat ditampilkan. Silakan coba lagi."
+    "invalid_agent_response": "Layanan panduan memberi jawaban yang tidak dapat ditampilkan. Silakan coba lagi.",
+    "app_check_required": "Kami belum bisa memastikan permintaan ini dari peramban Anda. Muat ulang halaman lalu coba lagi.",
+    "rate_limited": "Terlalu banyak permintaan dalam waktu singkat. Silakan coba lagi nanti."
   },
   "card": {
     "transcriptLabel": "Yang kami pahami dari pesan suara Anda",
@@ -115,6 +117,20 @@
     "trismus": "Mulut sulit dibuka",
     "uncontrolled_bleeding": "Perdarahan yang tidak berhenti",
     "knocked_out_permanent_tooth": "Gigi permanen copot karena benturan"
+  },
+  "signin": {
+    "title": "Masuk",
+    "intro": "Masuk dengan akun Google Anda. Tidak perlu verifikasi email atau nomor telepon.",
+    "google": "Masuk dengan Google",
+    "pending": "Sedang masuk…",
+    "failed": "Gagal masuk. Silakan coba lagi.",
+    "unavailable": "Masuk dengan Google belum tersedia di sini."
+  },
+  "admin": {
+    "title": "Admin",
+    "signedInAs": "Masuk sebagai {{email}}",
+    "empty": "Antrean moderasi dan klaim akan muncul di sini.",
+    "signOut": "Keluar"
   },
   "footer": {
     "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat."

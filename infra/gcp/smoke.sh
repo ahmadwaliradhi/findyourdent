@@ -6,8 +6,8 @@
 #   BASE_URL=https://<web>.run.app infra/gcp/smoke.sh
 #
 # Checks the landing page, the language toggle, both health routes, that the agent
-# refuses anonymous calls, and one Guidance round trip from web to agent. The
-# Guidance stub calls no paid API.
+# refuses anonymous calls, and one Guidance round trip from web to agent with an
+# App Check token from the registered debug token. The Guidance stub calls no paid API.
 set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:-findyourdent}"
@@ -63,10 +63,27 @@ agent_health=$(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-identity
   | curl -sS --max-time 30 -H @- "${AGENT_URL}/health" || true)
 check "agent /health with an identity token" health_ok "$agent_health"
 
-guidance=$(curl -sS --max-time 60 -H 'Content-Type: application/json' \
-  -d "$(jq -nc '{complaintText: "Uji asap: gigi ngilu", language: "id"}')" \
-  "${BASE_URL}/api/guidance" || true)
-# When App Check guards /api/guidance (spec 00), this check needs a debug token.
+# App Check guards /api/guidance (T03). Swap the registered debug token (setup.sh)
+# for a real App Check token; both travel through stdin, never argv.
+web_app_id=$(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)" \
+  | curl -sS --fail-with-body -H @- -H "x-goog-user-project: ${PROJECT_ID}" \
+    "https://firebase.googleapis.com/v1beta1/projects/${PROJECT_ID}/webApps" \
+  | jq -r '[.apps[]? | select(.displayName == "findyourdent-web")][0].appId // empty')
+exchange_body=$(mktemp)
+trap 'rm -f "$exchange_body"' EXIT
+gcloud secrets versions access latest --secret=app-check-debug-token --project "$PROJECT_ID" \
+  | jq -Rc '{debugToken: .}' >"$exchange_body"
+app_check_token=$(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)" \
+  | curl -sS --fail-with-body -X POST -H @- -H "x-goog-user-project: ${PROJECT_ID}" \
+    -H 'Content-Type: application/json' -d "@${exchange_body}" \
+    "https://firebaseappcheck.googleapis.com/v1/projects/${PROJECT_ID}/apps/${web_app_id}:exchangeDebugToken" \
+  | jq -r '.token // empty' || true)
+check "App Check debug token exchanged for an App Check token" test -n "$app_check_token"
+
+guidance=$(printf 'X-Firebase-AppCheck: %s\n' "$app_check_token" \
+  | curl -sS --max-time 60 -H @- -H 'Content-Type: application/json' \
+    -d "$(jq -nc '{complaintText: "Uji asap: gigi ngilu", language: "id"}')" \
+    "${BASE_URL}/api/guidance" || true)
 check "web reaches the agent with its identity token (Guidance round trip)" \
   guidance_ok "$guidance"
 

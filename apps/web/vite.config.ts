@@ -8,6 +8,11 @@ export default defineConfig({
   resolve: {
     alias: { "~": fileURLToPath(new URL("./app", import.meta.url)) },
   },
+  optimizeDeps: {
+    // Loaded with import() on submit or sign-in, so the dev server would otherwise
+    // discover them late and reload the page mid-interaction.
+    include: ["firebase/app", "firebase/app-check", "firebase/auth"],
+  },
   ssr: {
     // Workspace package shipped as TypeScript source: bundle it into the server build.
     noExternal: ["@findyourdent/contracts"],

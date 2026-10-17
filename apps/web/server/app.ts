@@ -5,14 +5,23 @@ import compression from "compression";
 import express from "express";
 import type { ServerBuild } from "react-router";
 import type { ViteDevServer } from "vite";
+import { adminGate, type SignedInUser } from "./auth.ts";
 import type { BaseContext } from "./context.ts";
 import { withFields } from "./logger.ts";
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-export type CreateAppOptions =
+export type CreateAppOptions = (
   | { mode: "development"; vite: ViteDevServer; context: () => BaseContext }
-  | { mode: "production"; build: ServerBuild; context: () => BaseContext };
+  | { mode: "production"; build: ServerBuild; context: () => BaseContext }
+) & {
+  /**
+   * Proxies in front that append to X-Forwarded-For (Cloud Run alone: 1; behind
+   * Firebase Hosting: 2). `req.ip` is read that many hops from the right, so a client
+   * cannot pick its own IP for the per-IP ceiling. Default 1.
+   */
+  trustProxyHops?: number;
+};
 
 const TRACE_ID = /^[0-9a-f]{32}$/i;
 
@@ -30,13 +39,14 @@ function requestIdOf(req: express.Request): string {
 }
 
 /**
- * The one Express app for local dev, tests and Cloud Run. Cross-cutting middleware
- * (App Check verification, rate limits) belongs here, ahead of the React Router handler.
+ * The one Express app for local dev, tests and Cloud Run. The admin allowlist gate
+ * runs here, ahead of the React Router handler; App Check and rate limits run in
+ * each paid route (app/server/protection.server.ts), which knows its own limits.
  */
 export function createApp(options: CreateAppOptions): express.Express {
   const app = express();
   app.disable("x-powered-by");
-  app.set("trust proxy", true);
+  app.set("trust proxy", options.trustProxyHops ?? 1);
   app.use(compression());
 
   // One access line per request: id, method, path (no query string), status and
@@ -63,6 +73,8 @@ export function createApp(options: CreateAppOptions): express.Express {
     res.json({ status: "ok" });
   });
 
+  app.use(adminGate(options.context));
+
   let build: ServerBuild | (() => Promise<ServerBuild>);
   if (options.mode === "development") {
     app.use(options.vite.middlewares);
@@ -78,10 +90,16 @@ export function createApp(options: CreateAppOptions): express.Express {
     createRequestHandler({
       build,
       mode: options.mode,
-      getLoadContext: (_req, res) => {
+      getLoadContext: (req, res) => {
         const base = options.context();
         const requestId = String(res.locals.requestId);
-        return { ...base, requestId, logger: withFields(base.logger, { request_id: requestId }) };
+        return {
+          ...base,
+          requestId,
+          logger: withFields(base.logger, { request_id: requestId }),
+          clientIp: req.ip ?? "unknown",
+          admin: (res.locals.admin as SignedInUser | undefined) ?? null,
+        };
       },
     }),
   );

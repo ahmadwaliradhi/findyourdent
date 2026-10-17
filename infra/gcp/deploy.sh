@@ -178,13 +178,35 @@ fi
 AGENT_URL=$(service_url "$AGENT_SERVICE")
 [[ -n "$AGENT_URL" ]] || { echo "deploy the agent first: infra/gcp/deploy.sh agent" >&2; exit 1; }
 
+# Public values the browser needs for Google sign-in and App Check (T03). Looked up
+# here instead of committed, so a recreated web app or key needs no code change.
+log "Firebase web config"
+WEB_APP_NAME="${WEB_APP_NAME:-findyourdent-web}"
+FB="https://firebase.googleapis.com/v1beta1"
+gapi() {
+  printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)" \
+    | curl -sS --fail-with-body "$1" -H @- -H "x-goog-user-project: ${PROJECT_ID}"
+}
+WEB_APP_ID=$(gapi "${FB}/projects/${PROJECT_ID}/webApps" \
+  | jq -r --arg n "$WEB_APP_NAME" '[.apps[]? | select(.displayName == $n)][0].appId // empty')
+[[ -n "$WEB_APP_ID" ]] || { echo "no Firebase web app ${WEB_APP_NAME}: run infra/gcp/setup.sh" >&2; exit 1; }
+WEB_CONFIG=$(gapi "${FB}/projects/${PROJECT_ID}/webApps/${WEB_APP_ID}/config")
+WEB_API_KEY=$(jq -r '.apiKey' <<<"$WEB_CONFIG")
+WEB_AUTH_DOMAIN=$(jq -r '.authDomain' <<<"$WEB_CONFIG")
+SITE_KEY=$(gcloud recaptcha keys list --project "$PROJECT_ID" \
+  --filter="displayName=${WEB_APP_NAME}-appcheck" --format='value(name)' | head -1 | sed 's#.*/##')
+[[ -n "$SITE_KEY" ]] || { echo "no reCAPTCHA key ${WEB_APP_NAME}-appcheck: run infra/gcp/setup.sh" >&2; exit 1; }
+echo "    web app ${WEB_APP_ID}, site key ${SITE_KEY}"
+
 log "Cloud Run ${WEB_SERVICE}"
+# TRUST_PROXY_HOPS=2: Firebase Hosting and Cloud Run's front end each append to
+# X-Forwarded-For, so the client IP for the per-IP ceiling is two from the right.
 gcloud run deploy "$WEB_SERVICE" --project "$PROJECT_ID" --region "$REGION" \
   --image "$IMAGE" --service-account "$WEB_SA" \
   --allow-unauthenticated --ingress=all \
   --cpu=1 --memory=512Mi --concurrency=80 --timeout=60 --min-instances=0 --max-instances=4 \
-  --set-env-vars="AGENT_URL=${AGENT_URL},AGENT_AUTH=id_token,FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
-  --set-secrets="PLACES_API_KEY=places-api-key:latest,ADMIN_EMAILS=admin-emails:latest,SHARE_LINK_SECRET=share-link-secret:latest" \
+  --set-env-vars="AGENT_URL=${AGENT_URL},AGENT_AUTH=id_token,FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID},TRUST_PROXY_HOPS=2,FIREBASE_WEB_API_KEY=${WEB_API_KEY},FIREBASE_WEB_APP_ID=${WEB_APP_ID},FIREBASE_AUTH_DOMAIN=${WEB_AUTH_DOMAIN},RECAPTCHA_SITE_KEY=${SITE_KEY}" \
+  --set-secrets="PLACES_API_KEY=places-api-key:latest,ADMIN_EMAILS=admin-emails:latest,RATE_LIMIT_SALT=rate-limit-salt:latest,SHARE_LINK_SECRET=share-link-secret:latest" \
   --quiet
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).
