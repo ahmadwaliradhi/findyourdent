@@ -174,8 +174,34 @@ export const EMERGENCY_RESERVE = 20;
 export const PROVIDER_GOOGLE_BLOCK_DAILY_CAP = 50;
 export const GOOGLE_REVIEWS_DAILY_CAP = 33;
 
+/**
+ * Autocomplete (New) for the Testimony provider picker (spec 03): only the place id
+ * and Google's two display lines, so no Place Details field is billed with it.
+ */
+export const AUTOCOMPLETE_FIELD_MASK = [
+  "suggestions.placePrediction.placeId",
+  "suggestions.placePrediction.structuredFormat",
+].join(",");
+
+/** Place Details, Essentials tier: coordinates only, for a new Listed Provider. */
+export const COORDINATES_FIELD_MASK = "location";
+
+/** Matches the project quota `AutocompletePlacesRequestPerDayPerProject` (infra/gcp/README.md). */
+export const AUTOCOMPLETE_DAILY_CAP = 300;
+
+/**
+ * Coordinates lookups are Get Place calls too, so they share Google's 83-a-day cap
+ * with the Google block (50) and Google Reviews (33), which already use it all. Ten a
+ * day bounds how much they can take from the Provider page; past it, a new Listed
+ * Provider is created without coordinates, and the monthly refresh fills them in.
+ */
+export const COORDINATES_DAILY_CAP = 10;
+
 const TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places/";
+const AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete";
+/** Table A types; Autocomplete (New) takes up to five. */
+const PICKER_PRIMARY_TYPES = ["dentist", "hospital"];
 const PAGE_SIZE = 20;
 
 export interface GooglePlacesAdapterOptions {
@@ -209,7 +235,30 @@ function toSummary(place: GooglePlace): PlaceSummary | null {
   };
 }
 
+interface GoogleAutocompleteJson {
+  suggestions?: Array<{
+    placePrediction?: {
+      placeId?: string;
+      structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } };
+    };
+  }>;
+}
+
+/** Place suggestions only: a query prediction has no place to pick. */
+function toSuggestions(json: GoogleAutocompleteJson): AutocompleteSuggestion[] {
+  const suggestions: AutocompleteSuggestion[] = [];
+  for (const { placePrediction } of json.suggestions ?? []) {
+    const placeId = placePrediction?.placeId;
+    const mainText = placePrediction?.structuredFormat?.mainText?.text;
+    if (!placeId || !mainText) continue;
+    const secondaryText = placePrediction.structuredFormat?.secondaryText?.text;
+    suggestions.push({ placeId, mainText, ...(secondaryText ? { secondaryText } : {}) });
+  }
+  return suggestions;
+}
+
 interface GooglePlaceDetails {
+  location?: { latitude?: number; longitude?: number };
   displayName?: { text?: string };
   types?: string[];
   formattedAddress?: string;
@@ -279,10 +328,12 @@ export function createGooglePlacesAdapter(options: GooglePlacesAdapterOptions): 
     method: PlacesMethod,
     methodCap: number,
     fieldMask: string,
-    { placeId, language }: PlaceDetailsRequest,
+    { placeId, language }: { placeId: string; language?: Language },
   ): Promise<{ ok: true; place: GooglePlaceDetails } | PlaceDetailsFailure> {
     if (!(await options.quota.tryConsume(method, methodCap))) return { ok: false, reason: "cap_reached" };
-    const url = `${PLACE_DETAILS_URL}${encodeURIComponent(placeId)}?languageCode=${language}&regionCode=ID`;
+    // Coordinates carry no text, so they ask for no language.
+    const query = language ? `languageCode=${language}&regionCode=ID` : "regionCode=ID";
+    const url = `${PLACE_DETAILS_URL}${encodeURIComponent(placeId)}?${query}`;
     let response: Response;
     try {
       response = await doFetch(url, {
@@ -374,13 +425,59 @@ export function createGooglePlacesAdapter(options: GooglePlacesAdapterOptions): 
       return result.ok ? { ok: true, reviews: (result.place.reviews ?? []).map(toReview) } : result;
     },
 
-    // TODO(T11 picker): real Autocomplete (New) and Essentials coordinates calls.
-    async autocomplete() {
-      return { ok: false, reason: "unavailable" };
+    async autocomplete(request) {
+      const method: PlacesMethod = "autocomplete";
+      if (!(await options.quota.tryConsume(method, AUTOCOMPLETE_DAILY_CAP)))
+        return { ok: false, reason: "cap_reached" };
+
+      const body: Record<string, unknown> = {
+        input: request.input,
+        sessionToken: request.sessionToken,
+        includedPrimaryTypes: PICKER_PRIMARY_TYPES,
+        includedRegionCodes: ["id"],
+        languageCode: request.language,
+        regionCode: "ID",
+      };
+      if (request.locationBias) {
+        const { center, radiusMeters } = request.locationBias;
+        body.locationBias = {
+          circle: { center: { latitude: center.lat, longitude: center.lng }, radius: radiusMeters },
+        };
+      }
+
+      let response: Response;
+      try {
+        response = await doFetch(AUTOCOMPLETE_URL, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": options.apiKey,
+            "x-goog-fieldmask": AUTOCOMPLETE_FIELD_MASK,
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch {
+        return { ok: false, reason: "unavailable" };
+      }
+      if (response.status === 429) {
+        await options.quota.markExhausted(method, AUTOCOMPLETE_DAILY_CAP);
+        return { ok: false, reason: "cap_reached" };
+      }
+      if (!response.ok) return { ok: false, reason: "unavailable" };
+      try {
+        return { ok: true, suggestions: toSuggestions((await response.json()) as GoogleAutocompleteJson) };
+      } catch {
+        return { ok: false, reason: "unavailable" };
+      }
     },
 
-    async getCoordinates() {
-      return { ok: false, reason: "unavailable" };
+    async getCoordinates(placeId) {
+      const result = await placeDetails("coordinates", COORDINATES_DAILY_CAP, COORDINATES_FIELD_MASK, { placeId });
+      if (!result.ok) return result;
+      const { latitude, longitude } = result.place.location ?? {};
+      if (typeof latitude !== "number" || typeof longitude !== "number") return { ok: false, reason: "unavailable" };
+      return { ok: true, location: { lat: latitude, lng: longitude } };
     },
   };
 }

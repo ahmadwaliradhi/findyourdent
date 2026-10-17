@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createGooglePlacesAdapter, type TextSearch } from "../../server/adapters/places.ts";
+import {
+  type AutocompleteRequest,
+  COORDINATES_DAILY_CAP,
+  createGooglePlacesAdapter,
+  type TextSearch,
+} from "../../server/adapters/places.ts";
 import { createMemoryDailyQuota } from "../../server/quota.ts";
 
 interface SeenRequest {
@@ -335,5 +340,171 @@ describe("Places adapter: Google Reviews", () => {
 
     expect(places.seen).toHaveLength(33);
     expect(over).toEqual({ ok: false, reason: "cap_reached" });
+  });
+});
+
+const GOOGLE_SUGGESTIONS = {
+  suggestions: [
+    {
+      placePrediction: {
+        placeId: "ChIJ-gubeng-dental",
+        structuredFormat: {
+          mainText: { text: "Klinik Gigi Senyum Gubeng" },
+          secondaryText: { text: "Jl. Raya Gubeng No. 1, Surabaya" },
+        },
+      },
+    },
+    { placePrediction: { placeId: "ChIJ-no-secondary", structuredFormat: { mainText: { text: "drg. Ani" } } } },
+    // A query prediction carries no place: the picker cannot use it.
+    { queryPrediction: { text: { text: "klinik gigi dekat saya" } } },
+  ],
+};
+
+const PICKER: AutocompleteRequest = { input: "klinik senyum", sessionToken: "token-1234abcd", language: "id" };
+
+describe("Places adapter: Testimony provider picker (Autocomplete)", () => {
+  it("sends one Autocomplete (New) call restricted to Indonesia and dentist and hospital types, with the session token", async () => {
+    const places = fakePlaces(() => Response.json(GOOGLE_SUGGESTIONS));
+
+    await adapterWith(places).autocomplete(PICKER);
+
+    expect(places.seen).toHaveLength(1);
+    const [call] = places.seen;
+    expect(call?.url).toBe("https://places.googleapis.com/v1/places:autocomplete");
+    expect(call?.method).toBe("POST");
+    expect(call?.headers.get("x-goog-api-key")).toBe("test-places-key");
+    expect(call?.headers.get("x-goog-fieldmask")).toBe(
+      "suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat",
+    );
+    expect(call?.body).toEqual({
+      input: "klinik senyum",
+      sessionToken: "token-1234abcd",
+      includedPrimaryTypes: ["dentist", "hospital"],
+      includedRegionCodes: ["id"],
+      languageCode: "id",
+      regionCode: "ID",
+    });
+  });
+
+  it("biases to a circle only when the Patient shared their location", async () => {
+    const places = fakePlaces(() => Response.json(GOOGLE_SUGGESTIONS));
+
+    await adapterWith(places).autocomplete({
+      ...PICKER,
+      locationBias: { center: { lat: -7.2756, lng: 112.7509 }, radiusMeters: 20_000 },
+    });
+
+    expect(places.seen[0]?.body.locationBias).toEqual({
+      circle: { center: { latitude: -7.2756, longitude: 112.7509 }, radius: 20_000 },
+    });
+    const unbiased = fakePlaces(() => Response.json(GOOGLE_SUGGESTIONS));
+    await adapterWith(unbiased).autocomplete(PICKER);
+    expect(unbiased.seen[0]?.body).not.toHaveProperty("locationBias");
+  });
+
+  it("returns place suggestions with Google's main and secondary text, skipping query predictions", async () => {
+    const result = await adapterWith(fakePlaces(() => Response.json(GOOGLE_SUGGESTIONS))).autocomplete(PICKER);
+
+    expect(result).toEqual({
+      ok: true,
+      suggestions: [
+        {
+          placeId: "ChIJ-gubeng-dental",
+          mainText: "Klinik Gigi Senyum Gubeng",
+          secondaryText: "Jl. Raya Gubeng No. 1, Surabaya",
+        },
+        { placeId: "ChIJ-no-secondary", mainText: "drg. Ani" },
+      ],
+    });
+  });
+
+  it("answers no suggestions when Google has none", async () => {
+    const result = await adapterWith(fakePlaces(() => Response.json({}))).autocomplete(PICKER);
+
+    expect(result).toEqual({ ok: true, suggestions: [] });
+  });
+
+  it("stops calling Google once the Autocomplete cap of 300 a day is used up", async () => {
+    const places = fakePlaces(() => Response.json(GOOGLE_SUGGESTIONS));
+    const adapter = adapterWith(places);
+
+    for (let i = 0; i < 300; i++) await adapter.autocomplete(PICKER);
+    const over = await adapter.autocomplete(PICKER);
+
+    expect(places.seen).toHaveLength(300);
+    expect(over).toEqual({ ok: false, reason: "cap_reached" });
+  });
+
+  it("treats RESOURCE_EXHAUSTED as cap reached and stops calling for the day", async () => {
+    const places = fakePlaces(() => new Response("{}", { status: 429 }));
+    const adapter = adapterWith(places);
+
+    const first = await adapter.autocomplete(PICKER);
+    const second = await adapter.autocomplete(PICKER);
+
+    expect(first).toEqual({ ok: false, reason: "cap_reached" });
+    expect(second).toEqual({ ok: false, reason: "cap_reached" });
+    expect(places.seen).toHaveLength(1);
+  });
+
+  it("reports Google being down, a bad answer or a network error as unavailable", async () => {
+    const down = await adapterWith(fakePlaces(() => new Response("{}", { status: 503 }))).autocomplete(PICKER);
+    const garbled = await adapterWith(fakePlaces(() => new Response("not json"))).autocomplete(PICKER);
+    const offline = await createGooglePlacesAdapter({
+      apiKey: "k",
+      quota: createMemoryDailyQuota(),
+      fetch: (async () => {
+        throw new TypeError("fetch failed");
+      }) as typeof fetch,
+    }).autocomplete(PICKER);
+
+    expect(down).toEqual({ ok: false, reason: "unavailable" });
+    expect(garbled).toEqual({ ok: false, reason: "unavailable" });
+    expect(offline).toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it("never makes a Place Details call", async () => {
+    const places = fakePlaces(() => Response.json(GOOGLE_SUGGESTIONS));
+
+    await adapterWith(places).autocomplete(PICKER);
+
+    expect(places.seen.every((call) => call.url.endsWith("places:autocomplete"))).toBe(true);
+  });
+});
+
+describe("Places adapter: coordinates for a new Listed Provider", () => {
+  it("sends one Place Details call with the Essentials field mask `location` only", async () => {
+    const places = fakePlaces(() => Response.json({ location: { latitude: -7.2756, longitude: 112.7509 } }));
+
+    const result = await adapterWith(places).getCoordinates("ChIJ-gubeng-dental");
+
+    expect(places.seen).toHaveLength(1);
+    const [call] = places.seen;
+    expect(call?.method).toBe("GET");
+    expect(call?.url.startsWith("https://places.googleapis.com/v1/places/ChIJ-gubeng-dental")).toBe(true);
+    expect(call?.headers.get("x-goog-fieldmask")).toBe("location");
+    expect(result).toEqual({ ok: true, location: { lat: -7.2756, lng: 112.7509 } });
+  });
+
+  it("stops at its own small daily cap, so the Provider page keeps most of the shared Place Details quota", async () => {
+    const places = fakePlaces(() => Response.json({ location: { latitude: 1, longitude: 2 } }));
+    const adapter = adapterWith(places);
+
+    for (let i = 0; i < COORDINATES_DAILY_CAP; i++) await adapter.getCoordinates("p");
+    const over = await adapter.getCoordinates("p");
+
+    expect(COORDINATES_DAILY_CAP).toBeLessThanOrEqual(20);
+    expect(places.seen).toHaveLength(COORDINATES_DAILY_CAP);
+    expect(over).toEqual({ ok: false, reason: "cap_reached" });
+  });
+
+  it("treats RESOURCE_EXHAUSTED as cap reached, an unknown place as not found, and an answer without a location as unavailable", async () => {
+    const exhausted = await adapterWith(fakePlaces(() => new Response("{}", { status: 429 }))).getCoordinates("p");
+    const unknown = await adapterWith(fakePlaces(() => new Response("{}", { status: 404 }))).getCoordinates("p");
+    const empty = await adapterWith(fakePlaces(() => Response.json({}))).getCoordinates("p");
+
+    expect(exhausted).toEqual({ ok: false, reason: "cap_reached" });
+    expect(unknown).toEqual({ ok: false, reason: "not_found" });
+    expect(empty).toEqual({ ok: false, reason: "unavailable" });
   });
 });

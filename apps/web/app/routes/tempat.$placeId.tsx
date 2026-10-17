@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { data } from "react-router";
+import { data, Link } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -137,6 +137,13 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
       </header>
 
       {provider ? <Aspects provider={provider} language={language} /> : <p>{t("provider.notListed")}</p>}
+
+      <div className="flex flex-col items-start gap-2 rounded-md border border-dashed px-4 py-3">
+        <p className="text-sm text-muted-foreground">{t("testimonyForm.entryHint")}</p>
+        <Button asChild size="sm">
+          <Link to={`/ceritakan?placeId=${encodeURIComponent(placeId)}`}>{t("testimonyForm.entryCta")}</Link>
+        </Button>
+      </div>
 
       {provider && provider.priceSignals.length > 0 && <Prices signals={provider.priceSignals} language={language} />}
 

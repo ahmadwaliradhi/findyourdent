@@ -74,6 +74,8 @@ export interface TestimonyApiError {
     | "already_posted"
     | "not_found"
     | "forbidden"
+    /** Edit refused: the Testimony is hidden (a report is under review) or removed. Delete still works. */
+    | "not_editable"
     | "unavailable";
   /** Friendly message in the Patient's language. */
   message: string;
