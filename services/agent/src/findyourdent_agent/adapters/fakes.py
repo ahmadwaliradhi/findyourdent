@@ -21,6 +21,9 @@ class FakeGeminiAdapter:
         instruction: str,
         contents: list[Any],
         response_schema: dict[str, Any],
+        temperature: float,
+        max_output_tokens: int | None = None,
+        thinking_level: str | None = None,
     ) -> dict[str, Any]:
         self.calls.append(
             {
@@ -28,6 +31,9 @@ class FakeGeminiAdapter:
                 "instruction": instruction,
                 "contents": contents,
                 "response_schema": response_schema,
+                "temperature": temperature,
+                "max_output_tokens": max_output_tokens,
+                "thinking_level": thinking_level,
             }
         )
         if not self.outputs:
@@ -116,5 +122,8 @@ class CannedGeminiAdapter:
         instruction: str,
         contents: list[Any],
         response_schema: dict[str, Any],
+        temperature: float,
+        max_output_tokens: int | None = None,
+        thinking_level: str | None = None,
     ) -> dict[str, Any]:
         return guidance_model_output()

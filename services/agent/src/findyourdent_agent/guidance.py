@@ -172,6 +172,9 @@ async def answer_turn(
         instruction=guidance_instruction(),
         contents=guidance_contents(turn.complaintText, turn.followUpAnswer),
         response_schema=model_response_schema(),
+        temperature=settings.guidance_temperature,
+        max_output_tokens=settings.guidance_max_output_tokens,
+        thinking_level=settings.guidance_thinking_level,
     )
     try:
         model = ModelTurn.model_validate(raw)

@@ -25,9 +25,13 @@ class GeminiAdapter(Protocol):
         instruction: str,
         contents: list[Any],
         response_schema: dict[str, Any],
+        temperature: float,
+        max_output_tokens: int | None = None,
+        thinking_level: str | None = None,
     ) -> dict[str, Any]:
-        """The parsed JSON object Gemini returned. ``contents`` holds
-        ``{"role": ..., "text": ...}`` turns. Raises ModelUnavailableError."""
+        """The parsed JSON object Gemini returned. ``contents`` holds google-genai parts
+        or contents. Output tokens are always bounded: ``max_output_tokens`` defaults to
+        the adapter's cap. Raises ModelUnavailableError."""
         ...
 
 

@@ -150,31 +150,27 @@ def model_response_schema() -> dict[str, Any]:
     return json.loads(_response_schema_json())
 
 
-def guidance_contents(complaint: str, follow_up_answer: str | None) -> list[dict[str, str]]:
+def guidance_contents(complaint: str, follow_up_answer: str | None) -> list[types.Content]:
     """The Patient turn, after the stable instruction. The complaint always comes first
     so the follow-up turn shares the first turn's prefix."""
-    contents = [{"role": "user", "text": f"<complaint>\n{complaint}\n</complaint>"}]
+    texts = [f"<complaint>\n{complaint}\n</complaint>"]
     if follow_up_answer:
-        contents.append(
-            {
-                "role": "user",
-                "text": (
-                    "<follow_up_answer>\n"
-                    f"{follow_up_answer}\n"
-                    "</follow_up_answer>\n"
-                    "This answers the one follow-up question you asked about this "
-                    "complaint. Do not ask another question: set followUp to null."
-                ),
-            }
+        texts.append(
+            "<follow_up_answer>\n"
+            f"{follow_up_answer}\n"
+            "</follow_up_answer>\n"
+            "This answers the one follow-up question you asked about this "
+            "complaint. Do not ask another question: set followUp to null."
         )
-    return contents
+    return [types.Content(role="user", parts=[types.Part.from_text(text=t)]) for t in texts]
 
 
 def generation_config(
     settings: Settings, response_schema: dict[str, Any], instruction: str | None = None
 ) -> types.GenerateContentConfig:
     """Low temperature, JSON output, bounded output tokens (thinking tokens count as
-    output and have no daily quota), shared by the adapter and the ADK agent."""
+    output and have no daily quota). The ADK agent's equivalent of the adapter call
+    in guidance.py."""
     return types.GenerateContentConfig(
         system_instruction=instruction,
         temperature=settings.guidance_temperature,
