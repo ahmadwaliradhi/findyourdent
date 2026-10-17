@@ -99,11 +99,6 @@ export function recordTestimonyTransition(
   applyImpactDelta(firestore, writer, impactDeltaForStatusChange(before, after));
 }
 
-/** Call in the transaction that creates a Listed Provider (first published Testimony or a Claim). */
-export function recordListedProviderCreated(firestore: Firestore, writer: ImpactWriter): void {
-  applyImpactDelta(firestore, writer, { listedProviders: 1 });
-}
-
 /**
  * A Guidance session ended with a terminal answer (a Guidance card or an
  * Emergency Escalation). Only the counter moves; nothing about the session is stored.
@@ -114,7 +109,9 @@ export async function recordGuidanceSessionCompleted(firestore: Firestore): Prom
   await batch.commit();
 }
 
-const STORED_KEYS = Object.keys(IMPACT_COUNTERS) as ImpactCounterKey[];
+// Listed Providers and the kota they cover are counted from the `providers` read
+// below, so they cannot drift from the directory.
+const STORED_KEYS = (Object.keys(IMPACT_COUNTERS) as ImpactCounterKey[]).filter((key) => key !== "listedProviders");
 
 /** Reads the public impact counter. Missing counters read 0; a counter never shows below 0. */
 export async function readImpactCounter(firestore: Firestore | null): Promise<ImpactCounts> {
@@ -141,5 +138,6 @@ export async function readImpactCounter(firestore: Firestore | null): Promise<Im
     if (typeof code === "string" && code !== "") kota.add(code);
   }
   counts.kotaCovered = kota.size;
+  counts.listedProviders = providers.size;
   return counts;
 }

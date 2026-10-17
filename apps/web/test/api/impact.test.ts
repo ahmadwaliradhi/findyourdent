@@ -1,11 +1,7 @@
 import { COLLECTIONS, type TestimonyStatus } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  type ImpactCounts,
-  recordListedProviderCreated,
-  recordTestimonyTransition,
-} from "../../app/server/impact.server.ts";
+import { type ImpactCounts, recordTestimonyTransition } from "../../app/server/impact.server.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
 import { seedProvider, seedTestimony } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
@@ -90,14 +86,9 @@ describe("GET /dampak", () => {
     expect(await impact()).toMatchObject({ testimoniesPublished: 1, verifiedVisits: 1 });
   });
 
-  it("counts Listed Providers created and the distinct kota/kabupaten they cover", async () => {
-    const created = async (regencyCode: string) => {
-      await server.firestore.runTransaction(async (tx) => {
-        const ref = server.firestore.collection(COLLECTIONS.providers).doc(`place-${regencyCode}-${Math.random()}`);
-        tx.set(ref, { placeId: ref.id, region: { provinceCode: regencyCode.slice(0, 2), regencyCode } });
-        recordListedProviderCreated(server.firestore, tx);
-      });
-    };
+  it("counts Listed Providers and the distinct kota/kabupaten they cover", async () => {
+    const created = (regencyCode: string) =>
+      seedProvider(server.firestore, { region: { provinceCode: regencyCode.slice(0, 2), regencyCode } });
     await created("35.78");
     await created("35.78");
     await created("31.71");
