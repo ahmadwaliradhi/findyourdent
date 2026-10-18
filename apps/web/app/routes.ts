@@ -36,6 +36,9 @@ export default [
   route("tempat/:placeId/daftar-harga", "routes/tempat.$placeId.daftar-harga.tsx"),
   route("dampak", "routes/dampak.ts"),
   route("sitemap.xml", "routes/sitemap.xml.ts"),
+  route("tentang", "routes/tentang.tsx"),
+  route("privasi", "routes/privasi.tsx"),
+  route("syarat", "routes/syarat.tsx"),
   route("ceritakan", "routes/ceritakan.tsx"),
   route("foto/:testimonyId/:photoId", "routes/foto.$testimonyId.$photoId.ts"),
 ] satisfies RouteConfig;

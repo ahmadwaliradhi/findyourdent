@@ -2,6 +2,9 @@ import type { MetaDescriptor } from "react-router";
 
 export const SITE_NAME = "FindYourDent";
 
+/** Where business and privacy questions go; shown in the footer, About, Privacy and Terms. */
+export const BUSINESS_EMAIL = "business@findyourdent.com";
+
 /**
  * Open Graph and Twitter tags for link previews (WhatsApp reads Open Graph).
  * `url` must be absolute. Pass only first-party text: never Google content.
