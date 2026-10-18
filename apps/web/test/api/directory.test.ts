@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { MIN_PROVEN_TESTIMONIES } from "../../app/lib/scores.ts";
 import { seedProvider, seedTestimony } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
@@ -17,10 +18,11 @@ beforeEach(async () => {
 });
 
 const flat = (score: number) => ({ service: score, hygiene: score, materialsEquipment: score });
-const rated = (testimonyCount: number, score: number, verifiedVisitCount = 0) => ({
-  testimonyCount,
-  verifiedVisitCount,
-  averages: flat(score),
+/** Aggregates as spec 09 stores them: `score` over the Proven Testimonies, null below the minimum. */
+const rated = (proven: number, score: number, unproven = 0) => ({
+  testimonyCount: proven + unproven,
+  verifiedVisitCount: proven,
+  averages: proven >= MIN_PROVEN_TESTIMONIES ? flat(score) : null,
   procedurePrices: {} as never,
 });
 
@@ -94,8 +96,12 @@ describe("GET /direktori", () => {
 
   it("narrows by Provider type and by Kunjungan terbukti", async () => {
     await seedProvider(server.firestore, { placeId: "rs", providerType: "hospital", aggregates: rated(3, 4, 1) });
-    await seedProvider(server.firestore, { placeId: "drg", providerType: "privateDentist", aggregates: rated(2, 4) });
-    await seedProvider(server.firestore, { placeId: "klinik", providerType: "klinik", aggregates: rated(1, 4, 1) });
+    await seedProvider(server.firestore, {
+      placeId: "drg",
+      providerType: "privateDentist",
+      aggregates: rated(0, 4, 2),
+    });
+    await seedProvider(server.firestore, { placeId: "klinik", providerType: "klinik", aggregates: rated(1, 4) });
 
     expect((await directory("?jenis=privateDentist")).rows).toEqual(["drg"]);
     expect((await directory("?terbukti=1")).rows).toEqual(["rs", "klinik"]);
@@ -111,16 +117,20 @@ describe("GET /direktori", () => {
     expect((await directory("?q=sehat")).rows).toEqual([]);
   });
 
-  it("sorts by number of Testimonies by default and by shrunk aspect score on request", async () => {
-    await seedProvider(server.firestore, { placeId: "one-perfect", aggregates: rated(1, 5) });
+  it("sorts by number of Proven Testimonies by default and by shrunk aspect score on request", async () => {
+    // Most Testimonies in all, but most of them unproven.
+    await seedProvider(server.firestore, { placeId: "few-perfect", aggregates: rated(3, 5, 30) });
     await seedProvider(server.firestore, { placeId: "many-great", aggregates: rated(20, 4.8) });
     await seedProvider(server.firestore, { placeId: "mediocre", aggregates: rated(10, 3) });
-    await seedProvider(server.firestore, { placeId: "unrated", aggregates: { ...rated(0, 0), averages: null } });
+    await seedProvider(server.firestore, { placeId: "unrated", aggregates: rated(0, 0, 8) });
 
-    expect((await directory()).rows).toEqual(["many-great", "mediocre", "one-perfect", "unrated"]);
-    expect((await directory("?urut=skor")).rows).toEqual(["many-great", "one-perfect", "mediocre", "unrated"]);
+    const { html, rows } = await directory();
+    expect(rows).toEqual(["many-great", "mediocre", "few-perfect", "unrated"]);
+    // The label says what the sort counts.
+    expect(html).toMatch(/<option value="testimoni"[^>]*>Testimoni terbukti terbanyak<\/option>/);
+    expect((await directory("?urut=skor")).rows).toEqual(["many-great", "few-perfect", "mediocre", "unrated"]);
     // Distance is sorted in the browser; the server sends the default order.
-    expect((await directory("?urut=jarak")).rows).toEqual(["many-great", "mediocre", "one-perfect", "unrated"]);
+    expect((await directory("?urut=jarak")).rows).toEqual(["many-great", "mediocre", "few-perfect", "unrated"]);
   });
 
   it("shows the area, an inferred type as perkiraan, counts, and Diklaim pemilik for claimed Providers", async () => {
@@ -129,7 +139,7 @@ describe("GET /direktori", () => {
       name: "Klinik Diklaim",
       claimStatus: "claimed",
       providerTypeSource: "claimed",
-      aggregates: rated(7, 4, 3),
+      aggregates: rated(3, 4, 4),
     });
     const { html: claimedHtml } = await directory("?q=klinik%20diklaim");
     expect(claimedHtml).toContain("Diklaim pemilik");
