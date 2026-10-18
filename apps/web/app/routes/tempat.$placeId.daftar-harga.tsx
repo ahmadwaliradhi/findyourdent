@@ -3,10 +3,9 @@ import type { PriceListRow, ProcedureCode } from "@findyourdent/contracts/firest
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
-import { fieldClassName } from "~/components/listing-filters-form";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { FieldError } from "~/components/ui/field";
+import { FieldError, fieldClassName } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import { useFirebaseConfig } from "~/lib/firebase-config";

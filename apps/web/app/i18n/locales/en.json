@@ -265,13 +265,6 @@
   },
   "filters": {
     "title": "Filter",
-    "province": "Province",
-    "allProvinces": "All provinces",
-    "regency": "City/regency",
-    "allRegencies": "All cities/regencies",
-    "chooseProvinceFirst": "Choose a province first",
-    "district": "District code",
-    "districtHint": "Optional, Kemendagri code, e.g. 31.71.01.",
     "procedure": "Procedure",
     "allProcedures": "All procedures",
     "providerType": "Provider type",
@@ -284,6 +277,15 @@
     "verifiedOnly": "Verified visits only",
     "apply": "Apply",
     "reset": "Clear filters"
+  },
+  "regionFields": {
+    "province": "Province",
+    "regency": "City/Regency",
+    "allProvinces": "All provinces",
+    "allRegencies": "All cities/regencies",
+    "chooseProvince": "Choose a province",
+    "chooseRegency": "Choose a city/regency",
+    "chooseProvinceFirst": "Choose a province first"
   },
   "directory": {
     "metaTitle": "Directory of dentists and dental clinics | FindYourDent",
@@ -566,11 +568,6 @@
     "listingFailed": "Could not check the place yet. Try picking it again.",
     "nameLabel": "Place name as on its signboard or as you know it",
     "nameHint": "Type the name yourself. This name will appear on FindYourDent.",
-    "provinceLabel": "Province",
-    "provincePlaceholder": "Choose a province",
-    "regencyLabel": "City/Regency",
-    "regencyPlaceholder": "Choose a city/regency",
-    "regencyNeedsProvince": "Choose a province first",
     "listedNote": "This place is already listed on FindYourDent.",
     "storedName": "Place name",
     "storedRegion": "Area",
@@ -763,7 +760,6 @@
     "submit": "Send claim",
     "sending": "Sending…",
     "failed": "Sending failed. Check your connection and try again.",
-    "choose": "Choose",
     "status": {
       "submitted": "Your claim is being checked. The FindYourDent team checks the document and phones the number on Google Maps within {{days}} working days. The result shows on this page.",
       "rejected": "Your previous claim was rejected: {{reason}}. You can send a new claim with the right document.",
@@ -778,8 +774,6 @@
       "name": "Practice name",
       "providerType": "Type",
       "region": "Region",
-      "province": "Province",
-      "regency": "City or regency",
       "address": "Address",
       "phone": "Phone",
       "whatsapp": "WhatsApp",

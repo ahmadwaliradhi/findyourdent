@@ -6,16 +6,13 @@ import type * as React from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, Link } from "react-router";
+import { RegionFields, type RegionFieldsValue } from "~/components/region-fields";
 import { Button } from "~/components/ui/button";
+import { fieldClassName } from "~/components/ui/field";
 import { isLanguage } from "~/i18n/config";
 import { FILTER_PARAMS, hasActiveFilters, type ListingFilters } from "~/lib/listing-filters";
-import { PROVINCES, REGENCIES } from "~/lib/regions";
 
 const PROVIDER_TYPES: readonly ProviderType[] = ["klinik", "privateDentist", "hospital"];
-
-/** Native controls styled like the other inputs, so they stay keyboard and screen-reader friendly. */
-export const fieldClassName =
-  "min-h-touch w-full rounded-md border border-input bg-card px-3 text-base shadow-xs focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50";
 
 export function ListingFiltersForm(props: { filters: ListingFilters; action: string; children?: React.ReactNode }) {
   const { filters, action, children } = props;
@@ -23,71 +20,31 @@ export function ListingFiltersForm(props: { filters: ListingFilters; action: str
   const language = isLanguage(i18n.language) ? i18n.language : "id";
   // The kota list follows the chosen province. Without JavaScript it lists the
   // province from the URL, so choosing a province and applying shows its kota.
-  const [provinceCode, setProvinceCode] = useState(filters.provinceCode ?? "");
-  const regencies = provinceCode ? REGENCIES.filter((r) => r.provinceCode === provinceCode) : [];
-  const keepsRegency = provinceCode === (filters.provinceCode ?? "");
+  const fromUrl: RegionFieldsValue = {
+    provinceCode: filters.provinceCode ?? "",
+    regencyCode: filters.regencyCode ?? "",
+  };
+  const [region, setRegion] = useState(fromUrl);
+  // A new URL (applied filters, Reset, back) replaces what was chosen but not applied.
+  const [lastUrl, setLastUrl] = useState(fromUrl);
+  if (lastUrl.provinceCode !== fromUrl.provinceCode || lastUrl.regencyCode !== fromUrl.regencyCode) {
+    setLastUrl(fromUrl);
+    setRegion(fromUrl);
+  }
+  // No kecamatan select yet: a kecamatan from the URL is kept while its kota stays chosen.
+  const keepsDistrict = Boolean(filters.districtCode) && region.regencyCode === filters.regencyCode;
 
   return (
     <Form method="get" action={action} className="flex flex-col gap-4" aria-label={t("filters.title")}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-province" className="text-sm font-medium">
-            {t("filters.province")}
-          </label>
-          <select
-            id="filter-province"
-            name={FILTER_PARAMS.provinceCode}
-            value={provinceCode}
-            onChange={(event) => setProvinceCode(event.currentTarget.value)}
-            className={fieldClassName}
-          >
-            <option value="">{t("filters.allProvinces")}</option>
-            {PROVINCES.map((p) => (
-              <option key={p.code} value={p.code}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-regency" className="text-sm font-medium">
-            {t("filters.regency")}
-          </label>
-          <select
-            // Remounts when the province changes, so a kota from another province is not kept.
-            key={provinceCode}
-            id="filter-regency"
-            name={FILTER_PARAMS.regencyCode}
-            defaultValue={keepsRegency ? (filters.regencyCode ?? "") : ""}
-            className={fieldClassName}
-          >
-            <option value="">{provinceCode ? t("filters.allRegencies") : t("filters.chooseProvinceFirst")}</option>
-            {regencies.map((r) => (
-              <option key={r.code} value={r.code}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-district" className="text-sm font-medium">
-            {t("filters.district")}
-          </label>
-          <input
-            id="filter-district"
-            name={FILTER_PARAMS.districtCode}
-            defaultValue={filters.districtCode ?? ""}
-            inputMode="decimal"
-            pattern="\d{2}\.\d{2}\.\d{2}"
-            placeholder="31.71.01"
-            aria-describedby="filter-district-hint"
-            className={fieldClassName}
+        <div className="sm:col-span-2">
+          <RegionFields
+            mode="filter"
+            value={region}
+            onChange={setRegion}
+            names={{ province: FILTER_PARAMS.provinceCode, regency: FILTER_PARAMS.regencyCode }}
           />
-          <p id="filter-district-hint" className="text-xs text-muted-foreground">
-            {t("filters.districtHint")}
-          </p>
+          {keepsDistrict && <input type="hidden" name={FILTER_PARAMS.districtCode} value={filters.districtCode} />}
         </div>
 
         <div className="flex flex-col gap-1.5">
