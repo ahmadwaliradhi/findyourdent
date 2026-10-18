@@ -543,11 +543,11 @@ function RowEditor({
         {t("priceList.notes")}
         <Textarea
           id={`${id}-notes`}
-          rows={2}
+          rows={1}
           value={row.notes}
           maxLength={PRICE_LIST_LIMITS.notesMax}
           onChange={(e) => set({ notes: e.currentTarget.value })}
-          className="font-normal"
+          className="min-h-touch font-normal"
         />
       </label>
       <Button
