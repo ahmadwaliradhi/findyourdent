@@ -86,12 +86,13 @@ describe("decideProof", () => {
         extraction: facts({ clinicNameMatches: false, proofDate: "2026-05-02" }),
         visitMonth: "2026-09",
         today: TODAY,
-        reuse: { matched: true },
+        reused: true,
       }),
     ).toEqual({ result: "pending", reasons: ["nameMismatch", "dateMismatch", "possibleReuse"] });
-    expect(decideProof({ extraction: facts(), visitMonth: "2026-09", today: TODAY, reuse: { matched: true } })).toEqual(
-      { result: "pending", reasons: ["possibleReuse"] },
-    );
+    expect(decideProof({ extraction: facts(), visitMonth: "2026-09", today: TODAY, reused: true })).toEqual({
+      result: "pending",
+      reasons: ["possibleReuse"],
+    });
   });
 
   it("measures today in the calendar, also across a leap day and the year end", () => {

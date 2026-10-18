@@ -184,13 +184,22 @@ export type ProofPendingReason = "nameMismatch" | "dateMismatch" | "possibleReus
 /** Why a Proof of Visit was not accepted (spec 09). */
 export type ProofRejectedReason = "unreadable" | "notAProof" | "tooOld" | "adminRejected" | "expired";
 
+/** The facts the agent read from a Proof of Visit, as printed (spec 09). Never the patient's name. */
+export interface ProofFacts {
+  clinicNameOnProof?: string;
+  /** YYYY-MM-DD when a day was printed, else YYYY-MM. */
+  proofDate?: string;
+  totalRupiah?: number;
+}
+
 /**
- * The Proof of Visit check on a Testimony (spec 09). The file is deleted right after an
- * `accepted` or `rejected` result; a `pending` one stays in the private uploads bucket
- * (`proof-of-visit/{testimonyId}/`) for an admin. Never the patient's name. Proofs
- * checked before spec 09 carry only `result` (accepted or rejected) and `checkedAt`.
+ * The Proof of Visit check on a Testimony (spec 09), with the facts read from it. The
+ * file is deleted right after an `accepted` or `rejected` result; a `pending` one stays
+ * in the private uploads bucket (`proof-of-visit/{testimonyId}/`) for an admin. Never
+ * the patient's name. Proofs checked before spec 09 carry only `result` (accepted or
+ * rejected) and `checkedAt`.
  */
-export interface ProofOfVisitRecord {
+export interface ProofOfVisitRecord extends ProofFacts {
   result: "accepted" | "pending" | "rejected";
   /** `pending` only: every reason it waits for an admin. */
   reasons?: ProofPendingReason[];
@@ -200,11 +209,6 @@ export interface ProofOfVisitRecord {
   adminReason?: string;
   /** When the agent read it and `decideProof` decided; a pending proof entered the admin queue then. */
   checkedAt: Timestamp;
-  /** Facts the agent read from the proof, as printed. */
-  clinicNameOnProof?: string;
-  /** YYYY-MM-DD when a day was printed, else YYYY-MM. */
-  proofDate?: string;
-  totalRupiah?: number;
   /** Proofs checked for this Testimony, the one sent with it included; at most 3. */
   attempts?: number;
   /**

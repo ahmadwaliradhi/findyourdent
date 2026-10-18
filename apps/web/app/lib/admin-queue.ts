@@ -5,6 +5,7 @@ import type {
   ClaimDoc,
   ModerationDecisionDoc,
   ProcedureCode,
+  ProofFacts,
   ProofPendingReason,
   ProviderType,
   RegionRef,
@@ -226,10 +227,10 @@ export interface QueueProofMatch {
 }
 
 /**
- * A Proof of Visit waiting for the team (spec 09): the file, what the agent read from
- * it (never a patient name) and why it waits. Its Testimony stays as it is meanwhile.
+ * A Proof of Visit waiting for the team (spec 09): the file, the facts the agent read
+ * from it (never a patient name) and why it waits. Its Testimony stays as it is meanwhile.
  */
-export interface QueueProof {
+export interface QueueProof extends ProofFacts {
   testimonyId: string;
   placeId: string;
   /** The Listed name, or the name the author typed while the place is not Listed. */
@@ -244,10 +245,6 @@ export interface QueueProof {
   /** Admin-only route that streams the private file; null once it is gone. */
   fileUrl: string | null;
   fileType?: "image" | "pdf";
-  clinicNameOnProof?: string;
-  /** YYYY-MM-DD when a day was printed, else YYYY-MM. */
-  proofDate?: string;
-  totalRupiah?: number;
   reasons: ProofPendingReason[];
   /** Proofs checked for this Testimony so far, this one included. */
   attempts: number;

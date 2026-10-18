@@ -15,13 +15,13 @@ import {
 import type { Firestore, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import type { AppLoadContext } from "react-router";
 import type { ProofAction, QueueItem, QueueProofMatch } from "~/lib/admin-queue";
+import { proofFacts } from "~/lib/proof-decision";
 import type { Bucket } from "../../server/firebase.ts";
 import { deleteProofFile, isPdfProof } from "../../server/proof-files.ts";
 import { decidedRecord, rejectWaitingProof } from "../../server/waiting-proof.ts";
 import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
-import { recordTestimonyTransition } from "./impact.server.ts";
 import { matchingTestimonyIds, placeFingerprints } from "./proof-fingerprint.server.ts";
-import { publishedOf, writeProviderOnPublish } from "./testimonies.server.ts";
+import { markProven, readPublicSide } from "./testimonies.server.ts";
 
 const TESTIMONY_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -118,9 +118,7 @@ export async function loadProofQueue(
             displayName: t.displayName,
             fileUrl: path ? proofFileUrl(doc.id) : null,
             ...(path ? { fileType: isPdfProof(path) ? ("pdf" as const) : ("image" as const) } : {}),
-            ...(proof.clinicNameOnProof ? { clinicNameOnProof: proof.clinicNameOnProof } : {}),
-            ...(proof.proofDate ? { proofDate: proof.proofDate } : {}),
-            ...(proof.totalRupiah !== undefined ? { totalRupiah: proof.totalRupiah } : {}),
+            ...proofFacts(proof),
             reasons: proof.reasons ?? [],
             attempts: proof.attempts ?? 1,
             matchingTestimonies: matches.get(doc.id) ?? [],
@@ -194,26 +192,11 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
     }
 
     if (action === "acceptProof") {
-      if (testimony.status === "published") {
-        const provider = await tx.get(firestore.collection(COLLECTIONS.providers).doc(testimony.placeId));
-        const published = await tx.get(publishedOf(firestore, testimony.placeId));
-        writeProviderOnPublish(tx, {
-          placeId: testimony.placeId,
-          provider,
-          published,
-          testimonyId: ref.id,
-          self: { ...testimony, verifiedVisit: true },
-          proposal: null,
-        });
-      }
+      const publicSide =
+        testimony.status === "published" ? await readPublicSide(tx, firestore, testimony.placeId) : null;
+      markProven(tx, firestore, ref.id, testimony, publicSide);
       // `updatedAt` stays: a held or hidden Testimony's queue target counts from it.
       tx.update(ref, { proofOfVisit: decidedRecord(proof, { result: "accepted" }), verifiedVisit: true });
-      recordTestimonyTransition(
-        firestore,
-        tx,
-        { status: testimony.status, verifiedVisit: testimony.verifiedVisit },
-        { status: testimony.status, verifiedVisit: true },
-      );
     } else {
       const note = acting.request.reason;
       rejectWaitingProof(tx, firestore, ref, proof, {

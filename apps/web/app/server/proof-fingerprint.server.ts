@@ -17,7 +17,12 @@
 // one equality query, compared here.
 import { createHash } from "node:crypto";
 import type { ProofExtraction } from "@findyourdent/contracts";
-import { COLLECTIONS, type ProofFingerprintDoc, type ProofOfVisitRecord } from "@findyourdent/contracts/firestore";
+import {
+  COLLECTIONS,
+  type ProofFacts,
+  type ProofFingerprintDoc,
+  type ProofOfVisitRecord,
+} from "@findyourdent/contracts/firestore";
 import type { Firestore, QuerySnapshot, Timestamp, Transaction } from "firebase-admin/firestore";
 import sharp from "sharp";
 import { normalizeName } from "~/lib/normalize-name";
@@ -52,7 +57,7 @@ export async function fingerprintStoredProof(
 }
 
 /** The key from the facts read, or undefined when it is too weak to match on. */
-export function fieldsKey({ clinicNameOnProof, proofDate, totalRupiah }: ProofExtraction): string | undefined {
+export function fieldsKey({ clinicNameOnProof, proofDate, totalRupiah }: ProofFacts): string | undefined {
   if (!proofDate) return undefined;
   const monthOnly = proofDate.length === "YYYY-MM".length;
   if (monthOnly && totalRupiah === undefined) return undefined;
