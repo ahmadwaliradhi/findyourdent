@@ -79,6 +79,8 @@
   --shadow-sm: var(--shadow-sm-value);
   --shadow-md: var(--shadow-md-value);
   --spacing-touch: 44px;
+  /* The desktop layout (header nav, 40px gutter, two-column splits) starts here. */
+  --breakpoint-desktop: 900px;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

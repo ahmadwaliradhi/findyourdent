@@ -11,10 +11,11 @@ import {
   ScrollRestoration,
   useRouteLoaderData,
 } from "react-router";
-import { LanguageToggle } from "~/components/language-toggle";
+import { pageWrap, SiteFooter, SiteHeader } from "~/components/site-shell";
 import { Button } from "~/components/ui/button";
 import { DEFAULT_LANGUAGE, getI18n, type Language } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
+import { cn } from "~/lib/utils";
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -45,7 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="min-h-dvh">
+      <body>
         <I18nextProvider i18n={i18n}>
           <a
             href="#main"
@@ -53,18 +54,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             {t("nav.skipToContent")}
           </a>
-          <header className="border-b bg-card">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
-              <Link to="/" aria-label={t("nav.home")} className="inline-flex min-h-11 items-center rounded-md">
-                <img src="/brand/wordmark.svg" alt="" width={140} height={28} className="h-7 w-auto" />
-              </Link>
-              <LanguageToggle language={language} />
-            </div>
-          </header>
-          <main id="main" className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
-            {children}
-          </main>
-          <footer className="mx-auto max-w-2xl px-4 pb-8 text-xs text-muted-foreground">{t("footer.note")}</footer>
+          <div className="flex min-h-dvh flex-col">
+            <SiteHeader language={language} />
+            <main id="main" className={cn(pageWrap, "flex-1 py-6 desktop:py-10")}>
+              {children}
+            </main>
+            <SiteFooter />
+          </div>
         </I18nextProvider>
         <ScrollRestoration />
         <Scripts />

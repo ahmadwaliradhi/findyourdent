@@ -5,11 +5,18 @@
   },
   "nav": {
     "skipToContent": "Langsung ke konten",
-    "home": "FindYourDent, halaman utama"
+    "home": "FindYourDent, halaman utama",
+    "main": "Utama",
+    "guidance": "Panduan",
+    "directory": "Direktori",
+    "myTestimonies": "Testimoni saya",
+    "share": "Ceritakan pengalamanmu"
   },
   "language": {
-    "switchTo": "English",
-    "switchToLabel": "Ganti bahasa ke English"
+    "switchToLabel": "Ganti bahasa ke English",
+    "group": "Pilih bahasa",
+    "id": "Indonesia",
+    "en": "English"
   },
   "home": {
     "headline": "Sakit gigi? Pahami dulu sebelum ke dokter gigi.",
@@ -227,7 +234,8 @@
     }
   },
   "footer": {
-    "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat."
+    "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat.",
+    "links": "Tautan kaki"
   },
   "shared": {
     "title": "Panduan yang dibagikan",

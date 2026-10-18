@@ -5,11 +5,18 @@
   },
   "nav": {
     "skipToContent": "Skip to content",
-    "home": "FindYourDent, home"
+    "home": "FindYourDent, home",
+    "main": "Main",
+    "guidance": "Guidance",
+    "directory": "Directory",
+    "myTestimonies": "My Testimonies",
+    "share": "Share your experience"
   },
   "language": {
-    "switchTo": "Bahasa Indonesia",
-    "switchToLabel": "Switch language to Bahasa Indonesia"
+    "switchToLabel": "Switch language to Bahasa Indonesia",
+    "group": "Choose language",
+    "id": "Indonesia",
+    "en": "English"
   },
   "home": {
     "headline": "Toothache? Understand it before you see a dentist.",
@@ -227,7 +234,8 @@
     }
   },
   "footer": {
-    "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription."
+    "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription.",
+    "links": "Footer"
   },
   "shared": {
     "title": "Shared guidance",
