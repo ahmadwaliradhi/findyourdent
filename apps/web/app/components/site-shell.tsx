@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router";
 import type { Language } from "~/i18n/config";
+import { BUSINESS_EMAIL } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import { LanguageToggle } from "./language-toggle";
-import { BUSINESS_EMAIL } from "./legal-page";
 import { buttonVariants } from "./ui/button";
 
 /** Content width every page shares: 1200px, 16px gutter on phones, 40px from the desktop breakpoint. */
@@ -106,21 +106,21 @@ export function SiteFooter() {
       >
         <p>{t("footer.note")}</p>
         <nav aria-label={t("footer.links")} className="flex flex-wrap gap-x-4">
-          <Link to="/tentang" className={linkClass}>
+          <NavLink to="/tentang" className={linkClass}>
             {t("nav.about")}
-          </Link>
+          </NavLink>
           <a href={`mailto:${BUSINESS_EMAIL}`} className={linkClass}>
             {BUSINESS_EMAIL}
           </a>
-          <Link to="/direktori" className={linkClass}>
+          <NavLink to="/direktori" className={linkClass}>
             {t("nav.directory")}
-          </Link>
-          <Link to="/privasi" className={linkClass}>
+          </NavLink>
+          <NavLink to="/privasi" className={linkClass}>
             {t("footer.privacy")}
-          </Link>
-          <Link to="/syarat" className={linkClass}>
+          </NavLink>
+          <NavLink to="/syarat" className={linkClass}>
             {t("footer.terms")}
-          </Link>
+          </NavLink>
         </nav>
       </div>
     </footer>

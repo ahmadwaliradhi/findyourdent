@@ -3,9 +3,8 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { buttonVariants } from "~/components/ui/button";
+import { BUSINESS_EMAIL } from "~/lib/seo";
 import { cn } from "~/lib/utils";
-
-export const BUSINESS_EMAIL = "business@findyourdent.com";
 
 /** A paragraph, a bulleted list, or a boxed callout (the Terms emergency note). */
 type LegalBlock = string | readonly string[] | { readonly box: string };
@@ -75,7 +74,7 @@ function Block({ block }: { block: LegalBlock }) {
 
 function Contents({ sections }: { sections: readonly LegalSection[] }) {
   return (
-    <ol className="flex flex-col gap-0.5">
+    <ol className="flex flex-col gap-2">
       {sections.map((section, i) => (
         <li key={section.title}>
           <a
@@ -118,7 +117,7 @@ export function LegalPage({
           <span>{t("legal.updated")}</span>
         </p>
         <p className="flex items-start gap-2.5 rounded-md border border-warning-line bg-warning-soft p-3 text-sm">
-          <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+          <Info aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0 text-warning" />
           <span>{t("legal.draft")}</span>
         </p>
       </header>

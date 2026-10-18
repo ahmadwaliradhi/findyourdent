@@ -16,11 +16,10 @@ import {
 import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { BUSINESS_EMAIL } from "~/components/legal-page";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { getI18n, type Language } from "~/i18n/config";
-import { openGraphMeta, SITE_NAME } from "~/lib/seo";
+import { BUSINESS_EMAIL, openGraphMeta, SITE_NAME } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/tentang";
 
