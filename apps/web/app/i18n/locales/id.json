@@ -835,7 +835,9 @@
         "rejected": "Ditolak"
       }
     },
-    "priceListCta": "Unggah daftar harga"
+    "priceListCta": "Unggah daftar harga",
+    "howItWorks": "Cara kerjanya",
+    "formTitle": "Data klaim"
   },
   "priceListApi": {
     "errors": {
@@ -874,7 +876,6 @@
     "notes": "Catatan",
     "deleteRow": "Hapus baris",
     "addRow": "Tambah baris",
-    "rowInvalid": "Isi nama tindakan dan harga; harga terendah tidak boleh melebihi harga tertinggi.",
     "noRows": "Tambahkan setidaknya satu baris.",
     "confirm": "Konfirmasi dan tayangkan",
     "confirming": "Menyimpan…",
@@ -886,6 +887,16 @@
       "per_jaw": "per rahang",
       "per_visit": "per kunjungan",
       "per_package": "per paket"
-    }
+    },
+    "steps": {
+      "label": "Langkah",
+      "upload": "Unggah",
+      "review": "Periksa baris harga",
+      "publish": "Tayang",
+      "done": "selesai"
+    },
+    "rowMissing": "Baris {{row}}: isi nama tindakan dan harga terendah.",
+    "rowRange": "Baris {{row}}: harga terendah tidak boleh melebihi harga tertinggi.",
+    "rowTooHigh": "Baris {{row}}: harga terlalu tinggi. Periksa jumlah angka nol."
   }
 }

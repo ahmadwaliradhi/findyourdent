@@ -46,6 +46,10 @@ function Field({
 const fieldClassName =
   "min-h-touch w-full rounded-md border border-input bg-card px-3 text-base shadow-xs focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-2 aria-invalid:border-destructive";
 
+/** A native file input whose picker button is a full touch target. */
+const fileInputClassName =
+  "w-full text-sm text-muted-foreground file:mr-3 file:min-h-touch file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-card file:px-4 file:text-sm file:font-semibold file:text-foreground disabled:cursor-not-allowed disabled:opacity-50";
+
 /** An error line under an input: an icon and what to do, in danger text. */
 function FieldError({ className, children, ...props }: React.ComponentProps<"p">) {
   return (
@@ -56,4 +60,4 @@ function FieldError({ className, children, ...props }: React.ComponentProps<"p">
   );
 }
 
-export { Field, FieldError, fieldClassName };
+export { Field, FieldError, fieldClassName, fileInputClassName };
