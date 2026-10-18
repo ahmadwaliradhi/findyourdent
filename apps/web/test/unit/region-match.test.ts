@@ -89,4 +89,31 @@ describe("Region suggestion from a picked place's address", () => {
     });
     expect(matchRegion("Bogor Regency, West Java")).toEqual({ provinceCode: "32", regencyCode: "32.01" });
   });
+
+  it("reads Google's English names for the Jakarta kota and kabupaten", () => {
+    const jakartaPusat = districtsOf("31.71") ?? [];
+    expect(
+      matchRegion("Jl. Medan Merdeka Utara No.3, Gambir, Central Jakarta City, Jakarta 10110", jakartaPusat),
+    ).toEqual({ provinceCode: "31", regencyCode: "31.71", districtCode: "31.71.01" });
+    expect(matchRegion("Jl. Contoh, Central Jakarta, Jakarta")).toEqual({ provinceCode: "31", regencyCode: "31.71" });
+    expect(matchRegion("North Jakarta City, Jakarta")).toEqual({ provinceCode: "31", regencyCode: "31.72" });
+    expect(matchRegion("West Jakarta City, Jakarta")).toEqual({ provinceCode: "31", regencyCode: "31.73" });
+    expect(matchRegion("South Jakarta City, Special Capital Region of Jakarta")).toEqual({
+      provinceCode: "31",
+      regencyCode: "31.74",
+    });
+    expect(matchRegion("East Jakarta City, Jakarta")).toEqual({ provinceCode: "31", regencyCode: "31.75" });
+    expect(matchRegion("Thousand Islands Regency, Jakarta")).toEqual({ provinceCode: "31", regencyCode: "31.01" });
+    expect(matchRegion("Kepulauan Seribu Regency, Jakarta")).toEqual({ provinceCode: "31", regencyCode: "31.01" });
+  });
+
+  it("still reads the Indonesian Jakarta names", () => {
+    const jakartaPusat = districtsOf("31.71") ?? [];
+    expect(
+      matchRegion(
+        "Jl. Medan Merdeka Utara No.3, Kec. Gambir, Kota Jakarta Pusat, Daerah Khusus Ibukota Jakarta 10110",
+        jakartaPusat,
+      ),
+    ).toEqual({ provinceCode: "31", regencyCode: "31.71", districtCode: "31.71.01" });
+  });
 });

@@ -6,6 +6,7 @@ import type { RegionRef } from "@findyourdent/contracts/firestore";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FieldError, fieldClassName } from "~/components/ui/field";
+import { fetchDistricts } from "~/lib/fetch-districts";
 import { type DistrictOption, type InitialDistricts, PROVINCES, regenciesOf } from "~/lib/regions";
 
 /** `districtCode` is absent, never "", when no kecamatan is chosen. */
@@ -29,23 +30,6 @@ export interface RegionFieldsProps {
   errors?: { province?: string; regency?: string; district?: string };
   /** One level per row at every width, for a narrow column such as the Directory's filter sidebar. */
   stacked?: boolean;
-}
-
-// The kecamatan lists fetched in this page view, shared by every Region fields on it
-// and by the Testimony form's Region pre-fill.
-const districtRequests = new Map<string, Promise<DistrictOption[]>>();
-
-export function fetchDistricts(regencyCode: string): Promise<DistrictOption[]> {
-  let request = districtRequests.get(regencyCode);
-  if (!request) {
-    request = fetch(`/api/regions/${encodeURIComponent(regencyCode)}/districts`)
-      .then((response) => (response.ok ? (response.json() as Promise<{ districts: DistrictOption[] }>) : null))
-      .then((body) => body?.districts ?? []);
-    // A failed request is not kept, so choosing the kota again retries it.
-    request.catch(() => districtRequests.delete(regencyCode));
-    districtRequests.set(regencyCode, request);
-  }
-  return request;
 }
 
 /** The kecamatan of `regencyCode`, or null while they load (and for no kota). */

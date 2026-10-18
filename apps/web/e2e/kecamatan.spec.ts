@@ -1,9 +1,29 @@
 import { expect, type Page, test } from "@playwright/test";
+import type { Firestore } from "firebase-admin/firestore";
+import { test as seeded, seedProvider, seedTestimony } from "./seeded";
 
-// The Kecamatan level of the Region fields (spec 08). The e2e server has no Firestore, so
-// the listing pages come back empty; that a kecamatan filter is a strict match is proven
-// by the API tests (test/api/directory.test.ts, test/api/feed.test.ts). Here: the select
-// waits for a kota/kabupaten, lists its kecamatan by name, and narrows the page to one.
+// The Kecamatan level of the Region fields (spec 08): the select waits for a
+// kota/kabupaten, lists its kecamatan by name, and narrows the page to one. The listing
+// specs run on the emulator-backed server with a Provider in Gambir and one in Menteng,
+// both in Jakarta Pusat, so the narrowing shows on the page.
+
+const GAMBIR = { provinceCode: "31", regencyCode: "31.71", districtCode: "31.71.01" };
+const MENTENG = { provinceCode: "31", regencyCode: "31.71", districtCode: "31.71.06" };
+
+async function seedGambirAndMenteng(firestore: Firestore, unique: string) {
+  return {
+    inGambir: await seedProvider(firestore, {
+      placeId: `gambir-${unique}`,
+      name: `Klinik Gambir ${unique}`,
+      region: GAMBIR,
+    }),
+    inMenteng: await seedProvider(firestore, {
+      placeId: `menteng-${unique}`,
+      name: `Klinik Menteng ${unique}`,
+      region: MENTENG,
+    }),
+  };
+}
 
 async function chooseKota(page: Page) {
   // A choice racing hydration can be lost (the kota select then stays disabled); choose again until it lands.
@@ -14,30 +34,51 @@ async function chooseKota(page: Page) {
   await page.getByLabel("Kota/Kabupaten").selectOption({ label: "Kota Administrasi Jakarta Pusat" });
 }
 
-test("Directory: Kecamatan waits for a kota/kabupaten, then narrows the directory to one", async ({ page }) => {
-  await page.goto("/direktori");
-  const kecamatan = page.getByLabel("Kecamatan");
-  await expect(kecamatan).toBeDisabled();
-  await expect(kecamatan.locator("option:checked")).toHaveText("Pilih kota/kabupaten dulu");
+seeded(
+  "Directory: Kecamatan waits for a kota/kabupaten, then narrows the directory to one",
+  async ({ page, firestore, unique }) => {
+    const { inGambir, inMenteng } = await seedGambirAndMenteng(firestore, unique);
 
-  await chooseKota(page);
-  await expect(kecamatan).toBeEnabled();
-  await expect(kecamatan.locator("option:checked")).toHaveText("Semua kecamatan");
-  await kecamatan.selectOption({ label: "Gambir" });
-  await page.getByRole("button", { name: "Terapkan" }).click();
+    await page.goto("/direktori?provinsi=31&kota=31.71");
+    await expect(page.getByText(inGambir.name)).toBeVisible();
+    await expect(page.getByText(inMenteng.name)).toBeVisible();
 
-  await expect(page).toHaveURL(/kecamatan=31\.71\.01/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Tempat perawatan gigi di Gambir, Kota Administrasi Jakarta Pusat",
-  );
-  await expect(page.getByLabel("Kecamatan")).toHaveValue("31.71.01");
+    await page.goto("/direktori");
+    const kecamatan = page.getByLabel("Kecamatan");
+    await expect(kecamatan).toBeDisabled();
+    await expect(kecamatan.locator("option:checked")).toHaveText("Pilih kota/kabupaten dulu");
 
-  // A new province drops the kota, and with it the kecamatan.
-  await page.getByLabel("Provinsi").selectOption({ label: "Jawa Barat" });
-  await expect(page.getByLabel("Kecamatan")).toBeDisabled();
-});
+    await chooseKota(page);
+    await expect(kecamatan).toBeEnabled();
+    await expect(kecamatan.locator("option:checked")).toHaveText("Semua kecamatan");
+    await kecamatan.selectOption({ label: "Gambir" });
+    await page.getByRole("button", { name: "Terapkan" }).click();
 
-test("Home: the feed filter offers the Kecamatan too", async ({ page }) => {
+    await expect(page).toHaveURL(/kecamatan=31\.71\.01/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Tempat perawatan gigi di Gambir, Kota Administrasi Jakarta Pusat",
+    );
+    await expect(page.getByLabel("Kecamatan")).toHaveValue("31.71.01");
+    await expect(page.getByText(inGambir.name)).toBeVisible();
+    await expect(page.getByText(inMenteng.name)).toHaveCount(0);
+
+    // A new province drops the kota, and with it the kecamatan.
+    await page.getByLabel("Provinsi").selectOption({ label: "Jawa Barat" });
+    await expect(page.getByLabel("Kecamatan")).toBeDisabled();
+  },
+);
+
+seeded("Home: the feed filter's Kecamatan narrows the Testimonies to one", async ({ page, firestore, unique }) => {
+  const { inGambir, inMenteng } = await seedGambirAndMenteng(firestore, unique);
+  const gambirText = `Cerita dari Gambir ${unique}: dokternya sabar dan ruangannya bersih.`;
+  const mentengText = `Cerita dari Menteng ${unique}: antrenya singkat dan biayanya jelas.`;
+  await seedTestimony(firestore, inGambir, { text: gambirText, publishedAt: new Date() });
+  await seedTestimony(firestore, inMenteng, { text: mentengText, publishedAt: new Date() });
+
+  await page.goto("/?provinsi=31&kota=31.71");
+  await expect(page.getByText(gambirText)).toBeVisible();
+  await expect(page.getByText(mentengText)).toBeVisible();
+
   await page.goto("/");
   // The feed filters sit folded under "Saring" until a filter is applied.
   await page.locator("summary", { hasText: "Saring" }).click();
@@ -47,6 +88,8 @@ test("Home: the feed filter offers the Kecamatan too", async ({ page }) => {
   await page.getByRole("button", { name: "Terapkan" }).click();
   await expect(page).toHaveURL(/kecamatan=31\.71\.06/);
   await expect(page.getByLabel("Kecamatan")).toHaveValue("31.71.06");
+  await expect(page.getByText(mentengText)).toBeVisible();
+  await expect(page.getByText(gambirText)).toHaveCount(0);
 });
 
 test.describe("without JavaScript", () => {

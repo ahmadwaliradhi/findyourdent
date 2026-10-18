@@ -8,10 +8,11 @@
 import type { RegionRef } from "@findyourdent/contracts/firestore";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { fetchDistricts, RegionFields } from "~/components/region-fields";
+import { RegionFields } from "~/components/region-fields";
 import { Button } from "~/components/ui/button";
 import { FieldError as ErrorLine, fieldClassName } from "~/components/ui/field";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
+import { fetchDistricts } from "~/lib/fetch-districts";
 import { getAppCheckToken, signInWithGoogle } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { matchRegion } from "~/lib/region-match";
@@ -527,7 +528,7 @@ function CorrectionForm(props: { placeId: string; onClose(): void }) {
       </div>
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-sm font-medium">{t("providerFields.correction.regionLabel")}</legend>
-        <RegionFields mode="pick" value={region} onChange={setRegion} />
+        <RegionFields mode="pick" withDistrict value={region} onChange={setRegion} />
       </fieldset>
       {errorMessage ? <ErrorLine role="alert">{errorMessage}</ErrorLine> : null}
       <div className="flex flex-wrap gap-2">
