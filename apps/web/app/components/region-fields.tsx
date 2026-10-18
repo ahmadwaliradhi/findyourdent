@@ -24,16 +24,27 @@ export interface RegionFieldsProps {
   /** Form field names, for a plain form that submits the codes (the listing filters' GET form). */
   names?: { province: string; regency: string };
   errors?: { province?: string; regency?: string };
+  /** One level per row at every width, for a narrow column such as the Directory's filter sidebar. */
+  stacked?: boolean;
 }
 
-export function RegionFields({ value, onChange, mode, required, disabled, names, errors = {} }: RegionFieldsProps) {
+export function RegionFields({
+  value,
+  onChange,
+  mode,
+  required,
+  disabled,
+  names,
+  errors = {},
+  stacked,
+}: RegionFieldsProps) {
   const { t } = useTranslation();
   const id = useId();
   const regencies = value.provinceCode ? regenciesOf(value.provinceCode) : [];
   const filter = mode === "filter";
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className={stacked ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${id}-province`} className="text-sm font-medium">
           {t("regionFields.province")}
