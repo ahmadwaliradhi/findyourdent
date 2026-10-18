@@ -87,6 +87,7 @@ describe(`GET ${PATH}`, () => {
     expect(text).toMatch(/tidak boleh menawarkan apa pun sebagai imbalan/);
     expect(text).toMatch(/hanya Pasien tertentu/);
     expect(text).toMatch(/ditampilkan secara publik/);
+    expect(text).toMatch(/Pelanggaran kebijakan testimoni/);
   });
 
   it("switches to English with the language toggle", async () => {
