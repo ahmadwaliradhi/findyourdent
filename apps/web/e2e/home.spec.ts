@@ -55,9 +55,11 @@ test("on desktop the Summary panel sits beside the Guidance and links to the Sho
   const toShortlist = summary.getByRole("link", { name: "Lihat dokter gigi terdekat" });
   await expect(toShortlist).toHaveAttribute("href", "#shortlist");
   await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toHaveCount(1);
+  // One click does what "Gunakan lokasi saya" does: share the location and search.
+  await page.context().grantPermissions(["geolocation"]);
+  await page.context().setGeolocation({ latitude: -7.2655, longitude: 112.7522 });
   await toShortlist.click();
   await expect(page.getByRole("region", { name: "Dokter gigi terdekat untuk keluhan Anda" })).toBeInViewport();
-  // The link opens the Shortlist too, landing on its first step rather than a second button to press.
-  await expect(page.getByRole("button", { name: "Gunakan lokasi saya" })).toBeFocused();
+  await expect(page.getByText("Klinik Gigi Senyum Contoh")).toBeVisible();
   await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toHaveCount(0);
 });
