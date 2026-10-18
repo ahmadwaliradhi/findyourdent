@@ -6,7 +6,7 @@ The submission video (issue #24) is put together by [`compose.ts`](compose.ts) f
 node docs/submission/video/compose.ts
 ```
 
-The script writes `findyourdent-demo.mp4` next to itself (1920 × 1080, H.264, 25 fps, AAC 48 kHz, loudness normalised to -16 LUFS) and its working files to `build/`. Both are gitignored, so run it again to get the file. It takes about a minute and needs `ffmpeg` and the Playwright Chromium that `apps/web` installs (`pnpm install`). The run fails if the video is shorter than 3:00 or longer than 4:00. Run the tests with `node --test docs/submission/video/`.
+The script writes `findyourdent-demo.mp4` next to itself (1920 × 1080, H.264, 25 fps, AAC 48 kHz, loudness normalised to -16 LUFS) and its working files to `build/`. Both are gitignored, so run it again to get the file. It takes about a minute and needs `ffmpeg` and the Playwright Chromium that `apps/web` installs (`pnpm install`). The run fails if the video is shorter than 3:00 or longer than 4:00. Run the tests with `node --test docs/submission/video/*.test.ts`.
 
 The issue asked for Claude Motion. That tool could not be reached from the agent session, so the composition is scripted here instead. Every shot, title and caption below is data in `compose.ts`, so changing one means editing that file and running the script again.
 
