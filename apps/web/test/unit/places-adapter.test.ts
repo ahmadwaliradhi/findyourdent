@@ -364,7 +364,7 @@ const GOOGLE_SUGGESTIONS = {
 const PICKER: AutocompleteRequest = { input: "klinik senyum", sessionToken: "token-1234abcd", language: "id" };
 
 describe("Places adapter: Testimony provider picker (Autocomplete)", () => {
-  it("sends one Autocomplete (New) call restricted to Indonesia and dentist and hospital types, with the session token", async () => {
+  it("sends one Autocomplete (New) call restricted to Indonesia and dental and hospital primary types, with the session token", async () => {
     const places = fakePlaces(() => Response.json(GOOGLE_SUGGESTIONS));
 
     await adapterWith(places).autocomplete(PICKER);
@@ -380,7 +380,7 @@ describe("Places adapter: Testimony provider picker (Autocomplete)", () => {
     expect(call?.body).toEqual({
       input: "klinik senyum",
       sessionToken: "token-1234abcd",
-      includedPrimaryTypes: ["dentist", "hospital"],
+      includedPrimaryTypes: ["dentist", "dental_clinic", "hospital", "general_hospital", "medical_clinic"],
       includedRegionCodes: ["id"],
       languageCode: "id",
       regionCode: "ID",
