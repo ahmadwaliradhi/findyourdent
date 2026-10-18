@@ -87,6 +87,9 @@ describe(`GET ${PATH}`, () => {
     expect(text).toMatch(/tidak boleh menawarkan apa pun sebagai imbalan/);
     expect(text).toMatch(/hanya Pasien tertentu/);
     expect(text).toMatch(/ditampilkan secara publik/);
+    // A person confirms a violation: nothing on the page claims enforcement is automatic.
+    expect(text).toContain("Jika tim FindYourDent memastikan ada pelanggaran");
+    expect(text).not.toMatch(/otomatis/i);
     expect(text).toMatch(/Pelanggaran kebijakan testimoni/);
   });
 
