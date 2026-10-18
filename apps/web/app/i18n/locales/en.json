@@ -71,7 +71,10 @@
       "action": "Go to the nearest hospital emergency department (IGD) now. Do not wait for a dentist appointment."
     },
     "followUp": {
-      "title": "One more question"
+      "title": "One more question",
+      "badge": "Your answer needed",
+      "hint": "Answer first so the guidance fits your situation.",
+      "orWrite": "or write your own answer"
     },
     "guidance": {
       "title": "Guidance for your problem",

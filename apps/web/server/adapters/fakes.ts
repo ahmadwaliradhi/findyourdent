@@ -232,6 +232,33 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
   };
 }
 
+/** The question the scripted fake asks; the follow-up card's e2e spec answers it. */
+export const STUB_FOLLOW_UP_RESPONSE = {
+  kind: "followUp",
+  question: "Apakah saat ini terasa nyeri hebat berdenyut atau gusi di sekitarnya membengkak?",
+  quickReplies: ["Nyeri hebat", "Gusi bengkak", "Tidak ada nyeri"],
+};
+
+/** A complaint naming a loose tooth ("goyang") gets one follow-up question before the Guidance. */
+export const FAKE_FOLLOW_UP_TRIGGER = "goyang";
+
+/**
+ * The fake the dev and e2e servers run (AGENT_ADAPTER=fake): the stub Guidance, except that a
+ * complaint containing FAKE_FOLLOW_UP_TRIGGER is asked STUB_FOLLOW_UP_RESPONSE first.
+ */
+export function createScriptedFakeAgentAdapter(): FakeAgentAdapter {
+  const fake = createFakeAgentAdapter();
+  const requestGuidance = fake.requestGuidance;
+  fake.requestGuidance = async (request, options) => {
+    const asksFollowUp =
+      request.followUpAnswer === undefined && request.complaintText?.toLowerCase().includes(FAKE_FOLLOW_UP_TRIGGER);
+    if (!asksFollowUp) return requestGuidance(request, options);
+    fake.calls.push(structuredClone(request));
+    return structuredClone(STUB_FOLLOW_UP_RESPONSE);
+  };
+  return fake;
+}
+
 export interface FakePlacesAdapter extends PlacesAdapter {
   /** Text Searches, in order. */
   readonly calls: TextSearch[];

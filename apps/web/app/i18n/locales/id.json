@@ -71,7 +71,10 @@
       "action": "Segera pergi ke Instalasi Gawat Darurat (IGD) rumah sakit terdekat. Jangan menunggu jadwal dokter gigi."
     },
     "followUp": {
-      "title": "Satu pertanyaan lagi"
+      "title": "Satu pertanyaan lagi",
+      "badge": "Perlu jawaban Anda",
+      "hint": "Jawab dulu agar panduannya sesuai dengan kondisi Anda.",
+      "orWrite": "atau tulis jawaban sendiri"
     },
     "guidance": {
       "title": "Panduan untuk keluhan Anda",
