@@ -569,8 +569,6 @@
       "publishedBody": "Thank you. Your Testimony now helps other patients choose.",
       "viewProvider": "See it on the practice page",
       "reviewTitle": "Your Testimony is being reviewed",
-      "verifiedVisit": "Your proof of visit matched, so this Testimony shows Verified visit. We have deleted the file.",
-      "proofNotVerified": "We could not match your proof of visit, so this Testimony shows without Verified visit. We have deleted the file.",
       "editReviewNote": "The previous version stays visible until then.",
       "ownHealthDataNote": "You shared your own health details. They show in your Testimony, and you can change them any time in My Testimonies."
     },
@@ -734,6 +732,21 @@
       "needsAuthorFix": "Change the marked part, then send it again.",
       "held": "The FindYourDent team decides, usually within 24 hours."
     }
+  },
+  "proofStatus": {
+    "title": "Proof of visit",
+    "accepted": "Your proof of visit was accepted, so this Testimony shows Verified visit. We have deleted the file.",
+    "pending": "Your proof of visit is waiting for the FindYourDent team to check it. Until then, this Testimony does not show Verified visit.",
+    "notChecked": "We could not check your proof of visit this time, so we deleted the file. Please send it again later.",
+    "rejected": {
+      "unreadable": "Your proof of visit was not accepted because its text could not be read.",
+      "notAProof": "Your proof of visit was not accepted because it is not a receipt, invoice or appointment record from a dental practice.",
+      "tooOld": "Your proof of visit was not accepted because its date is more than 12 months ago.",
+      "adminRejected": "Your proof of visit was not accepted after the FindYourDent team checked it.",
+      "expired": "The team could not check your proof of visit within 7 days.",
+      "other": "Your proof of visit was not accepted."
+    },
+    "tryAnother": "We have deleted the file. You can try another document."
   },
   "reportApi": {
     "errors": {

@@ -2,6 +2,7 @@
 // Plain types and limits only, so it stays light in the browser bundle.
 import type { FlaggedSpan, ModerationRuleCode } from "@findyourdent/contracts";
 import type { AspectRatings, RegionRef, YearMonth } from "@findyourdent/contracts/firestore";
+import type { ProofOfVisitStatus } from "./proof-decision";
 
 export const TESTIMONY_LIMITS = {
   /** Technical cap; there is no product limit on length. */
@@ -82,6 +83,8 @@ export interface TestimonyStoredResponse {
   message: string;
   /** Whether the Testimony shows Kunjungan terbukti. */
   verifiedVisit: boolean;
+  /** Present when a Proof of Visit was sent with this submission: what became of it (spec 09). */
+  proof?: ProofOfVisitStatus;
   /** The author shared their own health details: a gentle note only, never a hold (R8). */
   ownHealthDataWarning?: boolean;
 }

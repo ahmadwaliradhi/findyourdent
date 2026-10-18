@@ -113,6 +113,32 @@ describe("Moderation", () => {
     expect(validateModerationDecision({ ...base, decision: "delete" })).toBe(false);
     expect(validateModerationDecision({ ...base, decision: "hold", ruleCodes: ["r99"] })).toBe(false);
   });
+
+  describe("Proof of Visit extraction", () => {
+    const base = { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.9, authorMessage: "ok" };
+    const facts = {
+      readable: true,
+      isProofOfVisit: true,
+      clinicNameOnProof: "Klinik Gigi Senyum",
+      proofDate: "2026-08-14",
+      totalRupiah: 350_000,
+      clinicNameMatches: true,
+    };
+
+    it("accepts the facts with a day or a month, and without the optional ones", () => {
+      expect(validateModerationDecision({ ...base, proofExtraction: facts })).toBe(true);
+      expect(validateModerationDecision({ ...base, proofExtraction: { ...facts, proofDate: "2026-08" } })).toBe(true);
+      const unreadable = { readable: false, isProofOfVisit: false, clinicNameMatches: false };
+      expect(validateModerationDecision({ ...base, proofExtraction: unreadable })).toBe(true);
+    });
+
+    it("has no place for the patient's name, an accept/reject verdict or a malformed date", () => {
+      for (const extra of [{ patientName: "Budi" }, { result: "accepted" }, { proofDate: "14/08/2026" }]) {
+        expect(validateModerationDecision({ ...base, proofExtraction: { ...facts, ...extra } })).toBe(false);
+      }
+      expect(validateModerationDecision({ ...base, proofOfVisit: "accepted" })).toBe(false);
+    });
+  });
 });
 
 describe("Price List extraction", () => {
