@@ -7,3 +7,6 @@ export function providerPath(placeId: string): string {
 export function testimonyPath(placeId: string, testimonyId: string): string {
   return `${providerPath(placeId)}#testimoni-${encodeURIComponent(testimonyId)}`;
 }
+
+/** The transparency page "Cara kami memverifikasi testimoni" (spec 09). */
+export const VERIFICATION_PATH = "/verifikasi-testimoni";

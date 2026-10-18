@@ -20,7 +20,7 @@ import { ASPECTS } from "~/lib/aspects";
 import { type FixIssue, issuesBySentence, rulesWithoutSpan } from "~/lib/author-fix";
 import { getAppCheckToken, signInWithGoogle } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { providerPath } from "~/lib/paths";
+import { providerPath, VERIFICATION_PATH } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import {
   isAuthorFixable,
@@ -638,6 +638,12 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
               <p id={id("proof-hint")} className="text-sm text-muted-foreground">
                 {t("testimonyForm.proofHint")}
               </p>
+              <Link
+                to={VERIFICATION_PATH}
+                className="inline-flex min-h-touch items-center text-sm font-medium text-primary underline underline-offset-4"
+              >
+                {t("nav.verification")}
+              </Link>
             </div>
             {fieldError("proof")}
           </div>

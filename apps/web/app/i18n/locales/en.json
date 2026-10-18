@@ -11,7 +11,8 @@
     "directory": "Directory",
     "myTestimonies": "My Testimonies",
     "share": "Share your experience",
-    "about": "About us"
+    "about": "About us",
+    "verification": "How we verify Testimonies"
   },
   "language": {
     "switchToLabel": "Switch language to Bahasa Indonesia",
@@ -1006,6 +1007,70 @@
     "contactBody": "For partnerships and business enquiries, email the FindYourDent team.",
     "sendEmail": "Send an email",
     "start": "Start with your complaint"
+  },
+  "verification": {
+    "metaTitle": "How we verify Testimonies",
+    "metaDescription": "Only Testimonies with an accepted proof of visit shape ratings, order and prices on FindYourDent. Read how we check proof and our Testimony rules.",
+    "eyebrow": "Testimonies",
+    "title": "How we verify Testimonies",
+    "lead": "Ratings on FindYourDent are only useful if they come from visits that really happened. That is why only Testimonies with an accepted proof of visit count. You can still read every other Testimony.",
+    "countTitle": "Only Testimonies with a verified visit count",
+    "count": [
+      {
+        "title": "Verified visit",
+        "body": "A Testimony whose proof of visit was accepted. Only these count toward the service, hygiene, and materials and equipment ratings, the Directory order and the list of dentists near you, and the price stats."
+      },
+      {
+        "title": "Not yet verified",
+        "body": "A Testimony without an accepted proof of visit is still published and can be read, labelled Not yet verified. It changes no rating, order or price."
+      },
+      {
+        "title": "At least {{min}} verified Testimonies",
+        "body": "A star average appears only once a practice has {{min}} Testimonies with a verified visit. Until then it shows Not enough verified Testimonies yet, with their count."
+      },
+      {
+        "title": "One rule for everyone",
+        "body": "Every practice is rated under this rule, including Testimonies published before it took effect. There is no paid ranking."
+      }
+    ],
+    "checkTitle": "How a proof of visit is checked",
+    "checkLead": "A proof of visit is a receipt, invoice or appointment card, as an image or a PDF. Attach it when you write your Testimony, or later from My Testimonies.",
+    "checkSteps": [
+      "AI reads your document: whether it is readable, and whether it really shows a visit to a dental practice.",
+      "We match the clinic name on the document with the place you wrote about, and its date with the visit month you entered. The document must be less than 12 months old.",
+      "If everything matches, your Testimony is marked Verified visit. If something is doubtful, the FindYourDent team checks it, and your Testimony stays published as Not yet verified while it waits.",
+      "If the document is unreadable, is not a proof of visit, or is too old, you see the reason and can try another document.",
+      "One proof counts for one Testimony only. We keep a digital fingerprint of the proof, not the document, so one receipt cannot be used again and again."
+    ],
+    "keepTitle": "How long the proof file is kept",
+    "keep": [
+      {
+        "title": "Never shown",
+        "body": "A proof of visit is private. A Testimony shows only its mark: Verified visit or Not yet verified."
+      },
+      {
+        "title": "Deleted after the check",
+        "body": "The proof file is deleted right after it is accepted or turned down. If our team needs to look at it, the file is kept privately for at most 7 days, then deleted."
+      },
+      {
+        "title": "Your name is not recorded",
+        "body": "From the document we record only the clinic name, the date and the total, with its digital fingerprint. Your name on the document is never recorded."
+      },
+      {
+        "title": "Deleted with your Testimony",
+        "body": "If you delete your Testimony, the record and fingerprint of its proof are deleted too."
+      }
+    ],
+    "policyTitle": "Testimony policy",
+    "policyLead": "A Testimony can only be trusted if it is written freely. These rules apply to FindYourDent and to every practice on it.",
+    "policy": [
+      "FindYourDent never pays for or rewards Testimonies.",
+      "A practice may not offer anything in exchange for a Testimony, such as money, a discount, a gift or free treatment.",
+      "A practice may not ask only selected Patients, such as only satisfied ones, to write a Testimony.",
+      "A confirmed violation is shown publicly on that practice’s page with a Testimony policy violation mark, and the Testimonies from that period stop counting. Before a decision, the practice is told and can explain."
+    ],
+    "reportTitle": "Offered something in exchange for a Testimony?",
+    "reportBody": "Tell the FindYourDent team by email. Include the practice’s name and what was offered."
   },
   "legal": {
     "effective": "Effective from: [effective date]",

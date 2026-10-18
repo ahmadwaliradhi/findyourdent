@@ -17,7 +17,7 @@ beforeEach(async () => {
 });
 
 describe("GET /sitemap.xml", () => {
-  it("lists exactly the Listed Provider pages, plus the landing page, the directory and About", async () => {
+  it("lists exactly the Listed Provider pages, plus the landing page, the directory, About and the Testimony verification page", async () => {
     const first = await seedProvider(server.firestore, { placeId: "ChIJ-first" });
     await seedProvider(server.firestore, { placeId: "ChIJ second&odd" });
 
@@ -34,6 +34,7 @@ describe("GET /sitemap.xml", () => {
         `${server.baseUrl}/`,
         `${server.baseUrl}/direktori`,
         `${server.baseUrl}/tentang`,
+        `${server.baseUrl}/verifikasi-testimoni`,
         `${server.baseUrl}/tempat/${first.placeId}`,
         `${server.baseUrl}/tempat/ChIJ%20second%26odd`,
       ].sort(),
@@ -52,6 +53,6 @@ describe("GET /sitemap.xml", () => {
   it("is still valid with no Listed Providers yet", async () => {
     const xml = await (await fetch(new URL("/sitemap.xml", server.baseUrl))).text();
 
-    expect([...xml.matchAll(/<loc>/g)]).toHaveLength(3);
+    expect([...xml.matchAll(/<loc>/g)]).toHaveLength(4);
   });
 });
