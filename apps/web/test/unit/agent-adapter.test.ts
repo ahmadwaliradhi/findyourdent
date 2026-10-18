@@ -1,4 +1,9 @@
-import type { GuidanceRequest, ModerationRequest, ShortlistReasonsRequest } from "@findyourdent/contracts";
+import type {
+  GuidanceRequest,
+  ModerationRequest,
+  ProofCheckRequest,
+  ShortlistReasonsRequest,
+} from "@findyourdent/contracts";
 import { describe, expect, it } from "vitest";
 import { createHttpAgentAdapter, createMetadataIdTokenSource } from "../../server/adapters/agent.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
@@ -184,6 +189,35 @@ describe("HTTP agent adapter for Moderation", () => {
     await expect(adapter.requestModeration(MODERATION_REQUEST)).rejects.toMatchObject({
       name: "AgentUnavailableError",
       status: 422,
+    });
+  });
+
+  it("posts a proof attached later to the proof-only endpoint, and an unchecked proof (503) throws", async () => {
+    const agent = fakeAgent();
+    const adapter = createHttpAgentAdapter({
+      baseUrl: "https://agent.example",
+      fetch: agent.fetch,
+      idToken: async () => "token-for-fyd-web",
+    });
+    const proofCheck: ProofCheckRequest = {
+      typedProviderName: "Klinik Gigi Senyum",
+      proofOfVisit: { mimeType: "application/pdf", dataBase64: "JVBERi0x" },
+    };
+
+    await adapter.requestProofCheck(proofCheck, { requestId: "4bf92f3577b34da6a3ce929d0e0e4736" });
+
+    expect(agent.seen[0]?.url).toBe("https://agent.example/v1/moderation/proof-check");
+    expect(agent.seen[0]?.headers.get("x-request-id")).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
+    expect(agent.seen[0]?.headers.get("authorization")).toBe("Bearer token-for-fyd-web");
+
+    const unchecked = createHttpAgentAdapter({
+      baseUrl: "https://agent.example",
+      fetch: (async () => Response.json({ error: "model_timeout" }, { status: 503 })) as typeof globalThis.fetch,
+    });
+    await expect(unchecked.requestProofCheck(proofCheck)).rejects.toMatchObject({
+      name: "AgentUnavailableError",
+      status: 503,
+      code: "model_timeout",
     });
   });
 });

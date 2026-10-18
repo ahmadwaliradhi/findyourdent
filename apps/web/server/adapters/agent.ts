@@ -2,6 +2,7 @@ import type {
   GuidanceRequest,
   ModerationRequest,
   PriceListExtractionRequest,
+  ProofCheckRequest,
   ShortlistReasonsRequest,
 } from "@findyourdent/contracts";
 
@@ -19,6 +20,13 @@ export interface AgentAdapter {
    * non-200, a 422 for a broken attachment included, throws: never publish on it.
    */
   requestModeration(request: ModerationRequest, options?: AgentCallOptions): Promise<unknown>;
+  /**
+   * Moderation in proof-only mode (spec 09): the facts on a Proof of Visit attached
+   * later, nothing else screened. The caller validates the body against the
+   * ProofCheckResponse contract. Any non-200 throws, the agent's 503 for an unusable
+   * model answer included: the proof was not checked.
+   */
+  requestProofCheck(request: ProofCheckRequest, options?: AgentCallOptions): Promise<unknown>;
   /**
    * The caller validates the body against the PriceListExtractionResponse contract.
    * A failed read is a 200 with kind "failed"; any non-200 throws.
@@ -74,8 +82,8 @@ export interface HttpAgentAdapterOptions {
 }
 
 /**
- * Real adapter: POST {AGENT_URL}/v1/guidance, /v1/shortlist-reasons, /v1/moderation and
- * /v1/price-list-extraction.
+ * Real adapter: POST {AGENT_URL}/v1/guidance, /v1/shortlist-reasons, /v1/moderation,
+ * /v1/moderation/proof-check and /v1/price-list-extraction.
  * Never logs or echoes the request body.
  */
 export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentAdapter {
@@ -121,6 +129,9 @@ export function createHttpAgentAdapter(options: HttpAgentAdapterOptions): AgentA
     },
     requestModeration(request, callOptions = {}) {
       return post("/v1/moderation", request, moderationTimeoutMs, callOptions);
+    },
+    requestProofCheck(request, callOptions = {}) {
+      return post("/v1/moderation/proof-check", request, moderationTimeoutMs, callOptions);
     },
     requestPriceListExtraction(request, callOptions = {}) {
       return post("/v1/price-list-extraction", request, extractionTimeoutMs, callOptions);

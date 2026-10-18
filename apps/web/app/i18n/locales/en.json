@@ -654,6 +654,10 @@
       "not_found": "This Testimony was not found or has been deleted.",
       "forbidden": "Only the author can edit or delete this Testimony.",
       "not_editable": "This Testimony is under review by the team or was taken down, so it cannot be edited. You can still delete it.",
+      "proof_not_attachable": "A Proof of Visit can only be attached to a published Testimony.",
+      "proof_already_accepted": "The Proof of Visit for this Testimony is already accepted.",
+      "proof_attempts_used": "A Proof of Visit was sent 3 times for this Testimony, so no more can be sent. Wait for the team's decision if the last one is being checked, or delete this Testimony and write a new one.",
+      "proof_check_unavailable": "We could not check your Proof of Visit right now. We deleted the file and it does not count as an attempt. Please try again later.",
       "unavailable": "Testimonies are unavailable right now. Please try again shortly."
     },
     "fields": {
@@ -671,7 +675,9 @@
       "pricePaidRupiah": "Enter the price in rupiah without dots or commas, or leave it empty.",
       "displayName": "Enter the name to show (up to {{max}} characters).",
       "consent": "Tick both statements before sending.",
-      "keepPhotoPaths": "A photo is no longer stored. Reload the page and try again."
+      "keepPhotoPaths": "A photo is no longer stored. Reload the page and try again.",
+      "proofMissing": "Choose a photo or PDF of your Proof of Visit.",
+      "proofAttemptsUsed": "A Proof of Visit was already sent 3 times. Remove this file to save your other changes."
     },
     "moderation": {
       "published": "Thank you! Your Testimony is now live.",
@@ -731,6 +737,16 @@
     "deleting": "Deleting…",
     "deleteFailed": "The Testimony was not deleted. Please try again.",
     "deleted": "The Testimony was deleted.",
+    "attachProof": {
+      "title": "Attach a Proof of Visit",
+      "hint": "A photo or PDF of a receipt, invoice or appointment card. Only Testimonies with an accepted proof count toward the score. Your Testimony stays published and is not checked again.",
+      "attemptsLeft_one": "{{count}} try left.",
+      "attemptsLeft": "{{count}} tries left.",
+      "choose": "Choose a file",
+      "send": "Send proof",
+      "sending": "Checking the proof…",
+      "failed": "The proof was not sent. Please try again."
+    },
     "legend": {
       "title": "What the statuses mean",
       "published": "Shown on the practice page and on the home page.",
@@ -751,7 +767,8 @@
       "expired": "The team could not check your proof of visit within 7 days.",
       "other": "Your proof of visit was not accepted."
     },
-    "tryAnother": "We have deleted the file. You can try another document."
+    "tryAnother": "We have deleted the file. You can try another document.",
+    "noAttemptsLeft": "We have deleted the file. A proof was sent 3 times for this Testimony, so no more can be sent."
   },
   "reportApi": {
     "errors": {

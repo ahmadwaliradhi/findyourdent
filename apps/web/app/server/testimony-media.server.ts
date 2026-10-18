@@ -95,28 +95,41 @@ export async function readTestimonyFiles(
     }
   }
 
-  let proof: File | null = null;
-  const pickedProof = pickedFiles(formData, SUBMISSION_FIELDS.proof);
-  if (pickedProof === "notFiles" || pickedProof.length > 1) {
-    fieldErrors.proof = t("testimonyForm.fileErrors.proofType");
-  } else if (pickedProof[0]) {
-    const file = pickedProof[0];
-    const type = await sniffType(file);
-    if (file.size > TESTIMONY_LIMITS.proofMaxBytes) {
-      fieldErrors.proof = t("testimonyForm.fileErrors.proofSize", { mb: megabytes("proof") });
-    } else if (
-      !includes(PROOF_MIME_TYPES, file.type) ||
-      !includes(PROOF_MIME_TYPES, type) ||
-      (type !== "application/pdf" && !(await decodes(file)))
-    ) {
-      fieldErrors.proof = t("testimonyForm.fileErrors.proofType");
-    } else {
-      proof = new File([file], file.name, { type });
-    }
-  }
+  const proof = await readProofFile(formData, { language });
+  if (!proof.ok) Object.assign(fieldErrors, proof.fieldErrors);
 
-  if (Object.keys(fieldErrors).length > 0) return { ok: false, fieldErrors };
-  return { ok: true, files: { photos, proof } };
+  if (Object.keys(fieldErrors).length > 0 || !proof.ok) return { ok: false, fieldErrors };
+  return { ok: true, files: { photos, proof: proof.proof } };
+}
+
+/**
+ * Reads the one `proof` file of a form, if any, and checks it (size, declared and sniffed
+ * type, images decode). Used by the submit body and by a proof attached later.
+ */
+export async function readProofFile(
+  formData: FormData,
+  options: { language?: Language } = {},
+): Promise<{ ok: true; proof: File | null } | { ok: false; fieldErrors: { proof: string } }> {
+  const language = options.language ?? DEFAULT_LANGUAGE;
+  const t = getI18n(language).getFixedT(language);
+  const picked = pickedFiles(formData, SUBMISSION_FIELDS.proof);
+  if (picked === "notFiles" || picked.length > 1) {
+    return { ok: false, fieldErrors: { proof: t("testimonyForm.fileErrors.proofType") } };
+  }
+  const file = picked[0];
+  if (!file) return { ok: true, proof: null };
+  if (file.size > TESTIMONY_LIMITS.proofMaxBytes) {
+    return { ok: false, fieldErrors: { proof: t("testimonyForm.fileErrors.proofSize", { mb: megabytes("proof") }) } };
+  }
+  const type = await sniffType(file);
+  if (
+    !includes(PROOF_MIME_TYPES, file.type) ||
+    !includes(PROOF_MIME_TYPES, type) ||
+    (type !== "application/pdf" && !(await decodes(file)))
+  ) {
+    return { ok: false, fieldErrors: { proof: t("testimonyForm.fileErrors.proofType") } };
+  }
+  return { ok: true, proof: new File([file], file.name, { type }) };
 }
 
 function megabytes(kind: "photo" | "proof"): number {
