@@ -16,6 +16,12 @@ export interface ScorePrior {
   weight: number;
 }
 
+/**
+ * Proven Testimonies a Provider needs before a star average is shown (spec 09, ADR-0011).
+ * One constant for aggregates, ranking, display and the transparency page.
+ */
+export const MIN_PROVEN_TESTIMONIES = 3;
+
 /** Pull of the prior, in Testimonies. */
 export const DEFAULT_PRIOR_WEIGHT = 3;
 /** Prior mean when no Provider is rated yet: the middle of the 1 to 5 scale. */

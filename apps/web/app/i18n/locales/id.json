@@ -11,7 +11,8 @@
     "directory": "Direktori",
     "myTestimonies": "Testimoni saya",
     "share": "Ceritakan pengalamanmu",
-    "about": "Tentang kami"
+    "about": "Tentang kami",
+    "verification": "Cara kami memverifikasi testimoni"
   },
   "language": {
     "switchToLabel": "Ganti bahasa ke English",
@@ -993,6 +994,70 @@
     "contactBody": "Untuk kerja sama dan pertanyaan bisnis, kirim email ke tim FindYourDent.",
     "sendEmail": "Kirim email",
     "start": "Mulai dari keluhan Anda"
+  },
+  "verification": {
+    "metaTitle": "Cara kami memverifikasi testimoni",
+    "metaDescription": "Hanya Testimoni dengan bukti kunjungan yang diterima yang menentukan nilai, urutan, dan harga di FindYourDent. Baca cara kami memeriksa bukti dan aturan Testimoni kami.",
+    "eyebrow": "Testimoni",
+    "title": "Cara kami memverifikasi testimoni",
+    "lead": "Nilai di FindYourDent hanya berguna jika berasal dari kunjungan yang benar-benar terjadi. Karena itu, hanya Testimoni dengan bukti kunjungan yang diterima yang dihitung. Testimoni lainnya tetap bisa Anda baca.",
+    "countTitle": "Hanya Testimoni terbukti yang dihitung",
+    "count": [
+      {
+        "title": "Kunjungan terbukti",
+        "body": "Testimoni yang bukti kunjungannya diterima. Hanya Testimoni ini yang dihitung dalam nilai pelayanan, kebersihan, serta bahan dan alat, dalam urutan Direktori dan daftar dokter gigi terdekat, dan dalam statistik harga."
+      },
+      {
+        "title": "Belum terbukti",
+        "body": "Testimoni tanpa bukti kunjungan yang diterima tetap terbit dan bisa dibaca, dengan tanda Belum terbukti. Testimoni ini tidak mengubah nilai, urutan, maupun harga."
+      },
+      {
+        "title": "Minimal {{min}} Testimoni terbukti",
+        "body": "Rata-rata bintang baru tampil setelah tempat praktik punya {{min}} Testimoni terbukti. Sebelum itu, yang tampil adalah Belum cukup testimoni terbukti beserta jumlahnya."
+      },
+      {
+        "title": "Aturan yang sama untuk semua",
+        "body": "Setiap tempat praktik dinilai dengan aturan ini, termasuk Testimoni yang terbit sebelum aturan ini berlaku. Tidak ada urutan berbayar."
+      }
+    ],
+    "checkTitle": "Cara bukti kunjungan diperiksa",
+    "checkLead": "Bukti kunjungan adalah struk, kuitansi, atau kartu janji temu, berupa gambar atau PDF. Lampirkan saat menulis Testimoni, atau nanti dari halaman Testimoni saya.",
+    "checkSteps": [
+      "AI membaca dokumen Anda: apakah terbaca, dan apakah benar bukti kunjungan ke tempat praktik dokter gigi.",
+      "Kami mencocokkan nama klinik di dokumen dengan tempat yang Anda ceritakan, dan tanggalnya dengan bulan kunjungan yang Anda isi. Dokumen harus berumur kurang dari 12 bulan.",
+      "Jika semuanya cocok, Testimoni Anda ditandai Kunjungan terbukti. Jika ada yang meragukan, tim FindYourDent memeriksanya, dan Testimoni Anda tetap terbit sebagai Belum terbukti selama menunggu.",
+      "Jika dokumen tidak terbaca, bukan bukti kunjungan, atau sudah terlalu lama, Anda melihat alasannya dan bisa mencoba dokumen lain.",
+      "Satu bukti hanya untuk satu Testimoni. Kami menyimpan sidik digital bukti, bukan dokumennya, supaya satu struk tidak bisa dipakai berulang kali."
+    ],
+    "keepTitle": "Berapa lama file bukti disimpan",
+    "keep": [
+      {
+        "title": "Tidak pernah ditampilkan",
+        "body": "Bukti kunjungan bersifat pribadi. Yang tampil di Testimoni hanya tandanya: Kunjungan terbukti atau Belum terbukti."
+      },
+      {
+        "title": "Dihapus setelah diperiksa",
+        "body": "File bukti langsung dihapus setelah diterima atau ditolak. Jika tim kami perlu melihatnya, file disimpan secara privat paling lama 7 hari, lalu dihapus."
+      },
+      {
+        "title": "Nama Anda tidak dicatat",
+        "body": "Dari dokumen, kami hanya mencatat nama klinik, tanggal, dan total biaya, beserta sidik digitalnya. Nama Anda di dokumen tidak pernah dicatat."
+      },
+      {
+        "title": "Ikut terhapus bersama Testimoni",
+        "body": "Jika Anda menghapus Testimoni, catatan dan sidik digital buktinya ikut dihapus."
+      }
+    ],
+    "policyTitle": "Kebijakan Testimoni",
+    "policyLead": "Testimoni hanya bisa dipercaya jika ditulis dengan bebas. Aturan ini berlaku untuk FindYourDent dan setiap tempat praktik.",
+    "policy": [
+      "FindYourDent tidak pernah membayar atau memberi imbalan untuk Testimoni.",
+      "Tempat praktik tidak boleh menawarkan apa pun sebagai imbalan Testimoni, seperti uang, diskon, hadiah, atau perawatan gratis.",
+      "Tempat praktik tidak boleh meminta hanya Pasien tertentu, misalnya yang puas saja, untuk menulis Testimoni.",
+      "Pelanggaran yang terbukti ditampilkan secara publik di halaman tempat praktik tersebut dengan tanda Pelanggaran kebijakan testimoni, dan Testimoni dari periode itu tidak dihitung. Sebelum diputuskan, tempat praktik diberi tahu dan bisa memberi penjelasan."
+    ],
+    "reportTitle": "Ditawari imbalan untuk menulis Testimoni?",
+    "reportBody": "Beri tahu tim FindYourDent lewat email. Sertakan nama tempat praktik dan apa yang ditawarkan."
   },
   "legal": {
     "effective": "Berlaku sejak: [tanggal berlaku]",

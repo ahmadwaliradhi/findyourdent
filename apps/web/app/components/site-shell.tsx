@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router";
 import type { Language } from "~/i18n/config";
+import { VERIFICATION_PATH } from "~/lib/paths";
 import { BUSINESS_EMAIL } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import { LanguageToggle } from "./language-toggle";
@@ -114,6 +115,9 @@ export function SiteFooter() {
           </a>
           <NavLink to="/direktori" className={linkClass}>
             {t("nav.directory")}
+          </NavLink>
+          <NavLink to={VERIFICATION_PATH} className={linkClass}>
+            {t("nav.verification")}
           </NavLink>
           <NavLink to="/privasi" className={linkClass}>
             {t("footer.privacy")}
