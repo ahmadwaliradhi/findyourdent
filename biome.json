@@ -19,6 +19,7 @@
       "!packages/contracts/src/generated",
       "!services",
       "!docs",
+      "!learning",
       "!pnpm-lock.yaml"
     ]
   },
