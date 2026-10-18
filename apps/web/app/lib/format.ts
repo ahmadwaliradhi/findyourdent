@@ -36,6 +36,18 @@ export function formatVisitMonth(visitMonth: string, language: Language): string
   );
 }
 
+/** "2026-09-12" as "12 September 2026"; UTC so server and browser agree. */
+export function formatDate(date: string, language: Language): string {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return date;
+  return new Intl.DateTimeFormat(locale(language), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 /** "450 m" or "1,2 km". */
 export function formatDistance(meters: number, language: Language): string {
   if (meters < 1000) return `${Math.round(meters / 10) * 10} m`;

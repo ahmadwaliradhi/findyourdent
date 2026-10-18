@@ -369,7 +369,7 @@
     "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni.",
     "metaDescriptionNoScores": "{{name}} di {{area}}. Baca testimoni pasien dan ceritakan pengalamanmu di FindYourDent.",
     "type": {
-      "klinik": "Klinik",
+      "klinik": "Klinik Gigi",
       "privateDentist": "Dokter gigi praktik mandiri",
       "hospital": "Rumah sakit"
     },
@@ -388,8 +388,6 @@
     "noTestimonies": "Belum ada testimoni yang terbit untuk tempat ini.",
     "verifiedVisit": "Kunjungan terbukti",
     "visitMonth": "Berkunjung {{month}}",
-    "procedure": "Tindakan: {{procedure}}",
-    "pricePaid": "Biaya: {{price}}",
     "ratingsLabel": "Penilaian {{name}}",
     "metaDescriptionUnlisted": "Info tempat praktik dokter gigi di FindYourDent.",
     "unnamed": "Tempat praktik dokter gigi",
@@ -421,10 +419,12 @@
     "claimCta": "Klaim halaman ini",
     "ownerHint": "Pemilik tempat ini?",
     "manageCta": "Kelola halaman",
-    "services": "Layanan: {{services}}",
+    "services": "Layanan",
     "priceListTitle": "Daftar harga dari pemilik",
     "priceListConfirmed": "Dikonfirmasi pemilik {{date}}",
-    "possiblyOutdated": "mungkin sudah berubah"
+    "possiblyOutdated": "mungkin sudah berubah",
+    "address": "Alamat",
+    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit."
   },
   "shortlist": {
     "reason": {
@@ -477,7 +477,6 @@
     "metaTitle": "Ceritakan pengalaman Anda",
     "metaDescription": "Tulis Testimoni tentang dokter gigi yang pernah Anda kunjungi.",
     "entryCta": "Ceritakan pengalamanmu",
-    "entryHint": "Pernah ke dokter gigi? Ceritakan pengalamanmu supaya pasien lain bisa memilih dengan tenang.",
     "title": "Ceritakan pengalaman Anda",
     "editTitle": "Ubah Testimoni",
     "intro": "Tulis sejujurnya tentang tempat praktik dokter gigi yang pernah Anda kunjungi. Anda baru diminta masuk dengan Google saat menekan Kirim.",
