@@ -3,12 +3,11 @@ import { Link, NavLink } from "react-router";
 import type { Language } from "~/i18n/config";
 import { cn } from "~/lib/utils";
 import { LanguageToggle } from "./language-toggle";
+import { BUSINESS_EMAIL } from "./legal-page";
 import { buttonVariants } from "./ui/button";
 
 /** Content width every page shares: 1200px, 16px gutter on phones, 40px from the desktop breakpoint. */
 export const pageWrap = "mx-auto w-full max-w-[1200px] px-4 desktop:px-10";
-
-const BUSINESS_EMAIL = "business@findyourdent.com";
 
 /** The Testimony form with no place picked. */
 const SHARE_PATH = "/ceritakan";
@@ -21,10 +20,11 @@ function useNavItems() {
   const directory = { to: "/direktori", label: t("nav.directory") };
   const myTestimonies = { to: "/testimoni-saya", label: t("nav.myTestimonies") };
   const share = { to: SHARE_PATH, label: t("nav.share") };
+  const about = { to: "/tentang", label: t("nav.about") };
   return {
-    desktop: [guidance, directory, myTestimonies],
+    desktop: [guidance, directory, myTestimonies, about],
     // On phones the pill row carries the share link too, in the mockup's order.
-    pills: [guidance, directory, share, myTestimonies],
+    pills: [guidance, directory, share, myTestimonies, about],
   };
 }
 
@@ -106,11 +106,20 @@ export function SiteFooter() {
       >
         <p>{t("footer.note")}</p>
         <nav aria-label={t("footer.links")} className="flex flex-wrap gap-x-4">
+          <Link to="/tentang" className={linkClass}>
+            {t("nav.about")}
+          </Link>
           <a href={`mailto:${BUSINESS_EMAIL}`} className={linkClass}>
             {BUSINESS_EMAIL}
           </a>
           <Link to="/direktori" className={linkClass}>
             {t("nav.directory")}
+          </Link>
+          <Link to="/privasi" className={linkClass}>
+            {t("footer.privacy")}
+          </Link>
+          <Link to="/syarat" className={linkClass}>
+            {t("footer.terms")}
           </Link>
         </nav>
       </div>
