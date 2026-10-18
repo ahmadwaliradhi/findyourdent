@@ -12,7 +12,7 @@ Screen captures for the demo video (issue #111), one clip per scene of the [narr
 | `scene-5-impact.mp4` | 5. Architecture and impact | The live "Dampak FindYourDent" counter |
 | `architecture.png` | 5. Architecture and impact | The README architecture diagram as a still (3970 × 2414) |
 
-`clips.json` lists each clip with its length and when and where it was recorded. The clips are H.264 MP4 at 720 × 1560 with no audio; the narration is in `../audio/`. The Scene 1 title card and the roadmap slide are made in the video editor, not recorded.
+`clips.json` lists each clip with its length and when and where it was recorded. The clips are H.264 MP4 at 720 × 1560 with no audio, but the page fills only their top-left 360 × 780 (see [composition.md](../composition.md#capture-defect)); the narration is in `../audio/`. The Scene 1 title card and the roadmap slide are rendered by `../compose.ts`, not recorded.
 
 ## Re-recording
 
