@@ -21,7 +21,7 @@ ADMIN_EMAILS="a@example.com,b@example.com" infra/gcp/setup.sh
 | Bucket | `gs://findyourdent-uploads`, uniform access, public access prevented; lifecycle rule deletes `priceLists/` objects 30 days after upload (Price List originals, spec 05) |
 | Firebase web app | `1:1001413011907:web:d59beb8fb53f70f21d3576` |
 | reCAPTCHA Enterprise site key (App Check) | `6LeFCfMtAAAAACLP7NiG2xaEClvTnRY5qqTPFdxC` (score-based; public by design) |
-| Service accounts | `fyd-web@findyourdent.iam.gserviceaccount.com`, `fyd-agent@findyourdent.iam.gserviceaccount.com` |
+| Service accounts | `fyd-web@findyourdent.iam.gserviceaccount.com` (with the custom role `fydWebSession`: `firebaseauth.users.createSession` and `firebaseauth.users.get`, for the Google sign-in session cookie), `fyd-agent@findyourdent.iam.gserviceaccount.com` |
 | Secrets (Secret Manager, Jakarta) | `places-api-key` (API key restricted to Places API (New)), `admin-emails` (comma-separated allowlist), `share-link-secret` (random key that signs shareable Guidance links; created once by `setup.sh`, mounted on the web service as `SHARE_LINK_SECRET`; rotating it breaks links already shared), `rate-limit-salt` (web service rate-limit key hashes), `app-check-debug-token` (registered with App Check as `smoke-test`; `smoke.sh` exchanges it for an App Check token) |
 | Agent Search (grounding) | Data store `findyourdent-grounding` (global, `default_collection`, layout-based chunking, 14 source documents with `structData` title, publisher, source_url, licence, language) behind the Standard-tier search engine `findyourdent-guidance`, created in H02 |
 | Budget | `findyourdent-usd100`: IDR 1,650,000 (about USD 100) on the whole billing account, alerts at 50% and 90% |
