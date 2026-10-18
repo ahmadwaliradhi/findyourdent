@@ -27,6 +27,7 @@ export const COLLECTIONS = {
   claims: "claims",
   priceLists: "priceLists",
   moderationDecisions: "moderationDecisions",
+  proofFingerprints: "proofFingerprints",
   nameCorrections: "nameCorrections",
   adminActions: "adminActions",
   counters: "counters",
@@ -206,6 +207,30 @@ export interface ProofOfVisitRecord {
   totalRupiah?: number;
   /** Proofs checked for this Testimony, the one sent with it included; at most 3. */
   attempts?: number;
+}
+
+// proofFingerprints/{testimonyId} ----------------------------------------------
+
+/**
+ * Proof Fingerprint (spec 09): what is kept of an `accepted` or `pending` Proof of Visit
+ * so one receipt cannot unlock several Testimonies. Document id = the Testimony id; one
+ * per Testimony, replaced by a newer proof, deleted when the proof is rejected or the
+ * Testimony deleted. Never the file, never the patient's name. Queried by `placeId`
+ * alone (the reuse check compares in the web service).
+ */
+export interface ProofFingerprintDoc {
+  testimonyId: string;
+  placeId: PlaceId;
+  /** Images: 64-bit DCT perceptual hash (pHash) of the stored file, 16 hex digits. */
+  perceptualHash?: string;
+  /** PDFs: SHA-256 of the file's bytes, 64 hex digits. */
+  fileSha256?: string;
+  /**
+   * `normalisedClinicName|proofDate|totalRupiah` (an absent part empty). Absent when too
+   * weak to tell two visits apart: no date, or a month without a total.
+   */
+  fieldsKey?: string;
+  createdAt: Timestamp;
 }
 
 /**

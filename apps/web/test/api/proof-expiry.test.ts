@@ -41,8 +41,19 @@ async function waitingProof(checkedAgoMs: number, overrides: Partial<ProofOfVisi
   if (proofOfVisit.result !== "pending") delete proofOfVisit.reasons;
   const { id } = await seedTestimony(server.firestore, provider, { proofOfVisit: proofOfVisit as never });
   await server.uploads.file(`proof-of-visit/${id}/struk.jpg`).save(Buffer.from("receipt"));
+  if (proofOfVisit.result !== "rejected") {
+    await fingerprints().doc(id).set({
+      testimonyId: id,
+      placeId: provider.placeId,
+      perceptualHash: "c3a5f00f0ff0a5c3",
+      createdAt: proofOfVisit.checkedAt,
+    });
+  }
   return id;
 }
+
+const fingerprints = () => server.firestore.collection(COLLECTIONS.proofFingerprints);
+const hasFingerprint = async (id: string) => (await fingerprints().doc(id).get()).exists;
 
 async function proofOf(id: string): Promise<{ proofOfVisit?: ProofOfVisitRecord; verifiedVisit: boolean }> {
   const snapshot = await server.firestore.collection(COLLECTIONS.testimonies).doc(id).get();
@@ -58,7 +69,7 @@ const run = () =>
   expireProofs({ firestore: server.firestore, uploads: server.uploads, logger: silentLogger, now: () => NOW });
 
 describe("proof expiry job", () => {
-  it("rejects a proof waiting more than 7 days as expired and deletes its file; a younger one waits on", async () => {
+  it("rejects a proof waiting more than 7 days as expired and deletes its file and fingerprint; a younger one waits on", async () => {
     const old = await waitingProof(7 * DAY_MS + 60_000);
     const young = await waitingProof(5 * DAY_MS);
 
@@ -75,9 +86,11 @@ describe("proof expiry job", () => {
     });
     expect(expired.proofOfVisit?.reasons).toBeUndefined();
     expect(await storedObjects(`proof-of-visit/${old}/`)).toEqual([]);
+    expect(await hasFingerprint(old)).toBe(false);
 
     expect((await proofOf(young)).proofOfVisit?.result).toBe("pending");
     expect(await storedObjects(`proof-of-visit/${young}/`)).toHaveLength(1);
+    expect(await hasFingerprint(young)).toBe(true);
   });
 
   it("runs hourly, so it also expires a proof that would pass 7 days before the next run", async () => {
@@ -98,6 +111,7 @@ describe("proof expiry job", () => {
     expect(await run()).toEqual({ expired: 1, failed: 0 });
 
     expect((await proofOf(accepted)).proofOfVisit?.result).toBe("accepted");
+    expect(await hasFingerprint(accepted)).toBe(true);
     expect((await proofOf(rejected)).proofOfVisit).toMatchObject({ result: "rejected", reason: "tooOld" });
     expect(await proofOf(old)).toMatchObject({ verifiedVisit: false, proofOfVisit: { result: "rejected" } });
   });

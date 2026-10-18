@@ -20,7 +20,7 @@ export const MAX_PROOF_ATTEMPTS = 3;
 
 /**
  * Whether the proof matches another Testimony's Proof Fingerprint at the same Provider
- * (ticket #130). Until that check exists, nothing matches.
+ * (app/server/proof-fingerprint.server.ts: same key, same PDF, or a near-identical image).
  */
 export interface ReuseCheck {
   matched: boolean;

@@ -244,7 +244,7 @@ export interface QueueProof {
   reasons: ProofPendingReason[];
   /** Proofs checked for this Testimony so far, this one included. */
   attempts: number;
-  /** Testimonies whose Proof Fingerprint matched; empty until the reuse check (#130) fills it. */
+  /** Other Testimonies whose Proof Fingerprint matches this proof's, as of loading the queue. */
   matchingTestimonies: QueueProofMatch[];
 }
 

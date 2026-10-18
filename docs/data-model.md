@@ -44,11 +44,11 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `ratings` | `service`, `hygiene`, `materialsEquipment`, each 1 to 5. |
 | `text`, `visitMonth`, `procedureCode`, `pricePaidRupiah`, `photoPaths` | Text up to 10,000 characters; up to four photos, EXIF stripped. |
 | `status` | `submitted`, `published`, `needsAuthorFix`, `held`, `rejected`, `hidden`, `removed`, `deleted` (state machine in spec 03). Moderation's authorFix stores nothing, so `needsAuthorFix` comes only from the admin queue's "send back to the author". |
-| `verifiedVisit`, `proofOfVisit` | Kunjungan terbukti (true only when the result is `accepted`) and the check result: `notProvided` (no `proofOfVisit` at all, also when the agent could not read the proof), `accepted`, `pending` with reasons (`nameMismatch`, `dateMismatch`, `possibleReuse`) or `rejected` with a reason (`unreadable`, `notAProof`, `tooOld`, `adminRejected` with the admin's note the author reads in `adminReason`, `expired`), its date (`checkedAt`, also when a pending proof entered the admin queue), the extracted clinic name, proof date and total (never the patient's name), and `attempts` (at most 3). The file is deleted right after an `accepted` or `rejected` result; a `pending` file stays for the admin at most 7 days under `proof-of-visit/{testimonyId}/` (spec 09): an admin accepts or rejects it (`acceptProof`, `rejectProof` in `adminActions`), or the hourly `proof-expiry` job turns it into `rejected` (`expired`); the file goes with either, and the bucket lifecycle rule deletes anything left after 7 days. Type `ProofOfVisitRecord`. |
+| `verifiedVisit`, `proofOfVisit` | Kunjungan terbukti (true only when the result is `accepted`) and the check result: `notProvided` (no `proofOfVisit` at all, also when the agent could not read the proof), `accepted`, `pending` with reasons (`nameMismatch`, `dateMismatch`, `possibleReuse`) or `rejected` with a reason (`unreadable`, `notAProof`, `tooOld`, `adminRejected` with the admin's note the author reads in `adminReason`, `expired`), its date (`checkedAt`, also when a pending proof entered the admin queue), the extracted clinic name, proof date and total (never the patient's name), and `attempts` (at most 3). The file is deleted right after an `accepted` or `rejected` result; a `pending` file stays for the admin at most 7 days under `proof-of-visit/{testimonyId}/` (spec 09): an admin accepts or rejects it (`acceptProof`, `rejectProof` in `adminActions`), or the hourly `proof-expiry` job turns it into `rejected` (`expired`); the file goes with either, and the bucket lifecycle rule deletes anything left after 7 days. An `accepted` or `pending` proof also keeps a Proof Fingerprint in `proofFingerprints`, and the reuse check can make a proof `pending` (`possibleReuse`). Type `ProofOfVisitRecord`. |
 | `authorFixRounds` | authorFix rounds used before this version was stored (the next authorFix after three is held). An authorFix itself stores nothing on the Testimony; the count waits in `counters` meanwhile. |
 | `pendingRevision` | Edit of a published Testimony under Moderation; the public fields stay visible until it is decided. |
 | `reply` | The claimed Provider's one public reply (editable), with its own Moderation status and the `claimId` it was written under; shown only while that Claim is the place's current one. |
-| `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply are removed. |
+| `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply, a waiting proof file and the Proof Fingerprint (`proofFingerprints`) are removed. |
 
 Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`, `providerType`, `verifiedVisit` combinations for feed filters; `placeId` + `status` + `publishedAt desc` (Provider page); `authorUid` + `placeId` (uniqueness).
 
@@ -72,9 +72,21 @@ Queries: `placeId` + `status` (the current list of a place; `in` on `placeId` fo
 
 One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). It never stores the moderated text or images, nor the Proof of Visit facts (those live on the Testimony's `proofOfVisit`, spec 09; decisions written before spec 09 may still carry a `proofOfVisit` result). Type `ModerationDecisionDoc`.
 
-### `proofFingerprints` (spec 09, not yet in contracts)
+### `proofFingerprints`
 
-One per Testimony with an `accepted` or `pending` Proof of Visit: `testimonyId`, `placeId`, `perceptualHash` (64-bit, images) or `fileSha256` (PDFs), and `fieldsKey` (normalised clinic name, proof date and total). No image and no patient name. Deleted when the Testimony is deleted or its proof is rejected. Queried by `placeId` for the reuse check.
+Proof Fingerprints (spec 09). **Document id = the Testimony id**: one per Testimony with an `accepted` or `pending` Proof of Visit, written in the same transaction as the proof result and computed from the stored file before it is deleted. A newer proof for the same Testimony (edit or attached later) replaces it. Type `ProofFingerprintDoc`.
+
+| Field | Notes |
+| --- | --- |
+| `testimonyId`, `placeId` | |
+| `perceptualHash` | Images: 64-bit DCT perceptual hash (pHash: 32x32 greyscale, the 8x8 lowest frequencies against their median), 16 hex digits. |
+| `fileSha256` | PDFs: SHA-256 of the file as sent, 64 hex digits. |
+| `fieldsKey` | `clinic\|date\|total`: the clinic name on the proof through `normalizeName` (lower case, accents and punctuation stripped), `proofDate` as read (`YYYY-MM-DD` or `YYYY-MM`) and `totalRupiah` as digits, an absent part left empty. Not stored when it is too weak to tell two visits apart: no date (name and total alone repeat with every standard price), or a month-only date without a total (every visit that month). |
+| `createdAt` | |
+
+No image, no patient name. Deleted when the proof is rejected (by the decision, an admin or the 7-day expiry job) or the Testimony is deleted; an accepted proof keeps it, also when the Testimony is later hidden or removed. Proofs accepted before spec 09 have none (their files are gone).
+
+Reuse check: the proof decision reads every fingerprint with the same `placeId` (single-field equality, no composite index) inside the transaction that stores the result, so two Testimonies sent at once with one receipt cannot both pass, and compares in the web service: the same `fieldsKey`, the same `fileSha256`, or `perceptualHash` within 10 bits (Hamming distance) of another Testimony's makes it `pending` with `possibleReuse`. The admin proof review item lists the Testimonies whose fingerprints match. Like every collection, server-only (deny-all `firestore.rules`).
 
 ### `submissionSignals` (spec 09 part 2, not yet in contracts)
 

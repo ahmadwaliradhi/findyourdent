@@ -1,21 +1,25 @@
 // Admin proof review (spec 09, ticket #129): a Proof of Visit the decision sent to the
 // team waits in the admin queue with its private file, the facts the agent read and the
-// reasons. An admin accepts it (the Testimony becomes Proven) or rejects it with a note
-// the author reads; either way the file goes. Nobody deciding within 7 days is the
-// proof expiry job's business (server/proof-expiry.ts): never an accept.
+// reasons, and with the Testimonies whose Proof Fingerprints match it (ticket #130). An
+// admin accepts it (the Testimony becomes Proven, the fingerprint stays) or rejects it
+// with a note the author reads (the fingerprint goes); either way the file goes. Nobody
+// deciding within 7 days is the proof expiry job's business (server/proof-expiry.ts):
+// never an accept.
 import {
   COLLECTIONS,
+  type ProofFingerprintDoc,
   type ProofOfVisitRecord,
   type ProviderDoc,
   type TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
-import type { Firestore } from "firebase-admin/firestore";
+import type { Firestore, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import type { AppLoadContext } from "react-router";
-import type { ProofAction, QueueItem } from "~/lib/admin-queue";
+import type { ProofAction, QueueItem, QueueProofMatch } from "~/lib/admin-queue";
 import type { Bucket } from "../../server/firebase.ts";
 import { deleteStoredProofs, storedProofPaths } from "../../server/proof-files.ts";
 import { type Acting, AdminRefusal, logAction, queueItem } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
+import { fingerprintRef, matchingTestimonyIds, placeFingerprints } from "./proof-fingerprint.server.ts";
 import { publishedOf, writeProviderOnPublish } from "./testimonies.server.ts";
 
 const TESTIMONY_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -82,6 +86,8 @@ export async function loadProofQueue(
   );
   const names = new Map(providers.filter((s) => s.exists).map((s) => [s.id, (s.data() as ProviderDoc).name] as const));
 
+  const matches = await matchingTestimonies(firestore, docs);
+
   return Promise.all(
     docs.map(async (doc) => {
       const t = doc.data() as TestimonyDoc;
@@ -108,7 +114,7 @@ export async function loadProofQueue(
             ...(proof.totalRupiah !== undefined ? { totalRupiah: proof.totalRupiah } : {}),
             reasons: proof.reasons ?? [],
             attempts: proof.attempts ?? 1,
-            matchingTestimonies: [],
+            matchingTestimonies: matches.get(doc.id) ?? [],
           },
         },
         proof.checkedAt,
@@ -116,6 +122,46 @@ export async function loadProofQueue(
       );
     }),
   );
+}
+
+/**
+ * For each waiting proof, the other Testimonies whose Proof Fingerprints match its own:
+ * the reuse check's comparison run again when the queue loads, so a match deleted since
+ * is gone and a later copy of the receipt shows up. One equality query per place.
+ */
+async function matchingTestimonies(
+  firestore: Firestore,
+  docs: QueryDocumentSnapshot[],
+): Promise<Map<string, QueueProofMatch[]>> {
+  const placeIds = [...new Set(docs.map((doc) => doc.get("placeId") as string))];
+  const byPlace = new Map(
+    await Promise.all(
+      placeIds.map(async (placeId) => [placeId, await placeFingerprints(firestore, placeId).get()] as const),
+    ),
+  );
+  const matchedIds = new Map(
+    docs.map((doc) => {
+      const place = byPlace.get(doc.get("placeId") as string);
+      const own = place?.docs.find((fingerprint) => fingerprint.id === doc.id);
+      const ids = own && place ? matchingTestimonyIds(own.data() as ProofFingerprintDoc, place, doc.id) : [];
+      return [doc.id, ids] as const;
+    }),
+  );
+
+  const ids = [...new Set([...matchedIds.values()].flat())];
+  const matched = ids.length > 0 ? await firestore.getAll(...ids.map((id) => testimonies(firestore).doc(id))) : [];
+  const links = new Map<string, QueueProofMatch>();
+  for (const snapshot of matched) {
+    const testimony = snapshot.data() as TestimonyDoc | undefined;
+    if (!testimony || testimony.status === "deleted") continue;
+    links.set(snapshot.id, {
+      testimonyId: snapshot.id,
+      placeId: testimony.placeId,
+      displayName: testimony.displayName,
+      status: testimony.status,
+    });
+  }
+  return new Map([...matchedIds].map(([id, list]) => [id, list.flatMap((match) => links.get(match) ?? [])]));
 }
 
 /**
@@ -164,6 +210,8 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
         ...(acting.request.reason ? { adminReason: acting.request.reason } : {}),
       };
       tx.update(ref, { proofOfVisit: rejected });
+      // A rejected proof keeps no Proof Fingerprint; an accepted one keeps it.
+      tx.delete(fingerprintRef(firestore, ref.id));
     }
     logAction(tx, acting, {
       subjectType: "proofOfVisit",

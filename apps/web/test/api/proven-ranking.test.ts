@@ -2,7 +2,6 @@
 // Testimonies go in through the posting API, so every order below comes from the
 // aggregates the app itself computed, not from seeded numbers.
 import type { Guidance } from "@findyourdent/contracts";
-import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonySubmission } from "../../app/lib/testimony.ts";
@@ -11,6 +10,7 @@ import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
 import type { PlaceSummary } from "../../server/adapters/places.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
+import { receiptJpeg } from "../support/receipts.ts";
 
 let server: TestServer;
 
@@ -58,16 +58,6 @@ async function cookieFor(author: string): Promise<string> {
   return cookie;
 }
 
-/** A receipt-like JPEG with printed text, so no two receipts look alike to the Proof Fingerprint. */
-async function receipt(label: string): Promise<Buffer> {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="640">
-    <rect width="100%" height="100%" fill="#fdfcf7"/>
-    <text x="24" y="60" font-size="28" font-family="sans-serif">${label}</text>
-    <text x="24" y="120" font-size="20" font-family="monospace">${TODAY}  Scaling  Rp300.000</text>
-  </svg>`;
-  return sharp(Buffer.from(svg)).jpeg().toBuffer();
-}
-
 /**
  * Posts a published Testimony rating every aspect `score`. Proven means it carries a
  * Proof of Visit, which the stub Moderation reads as matching the Provider.
@@ -88,7 +78,8 @@ async function post(author: string, provider: PlaceSummary, score: number, prove
   const form = new FormData();
   form.set("testimony", JSON.stringify(body));
   if (proven) {
-    const bytes = await receipt(`${provider.displayName}, struk ${author}`);
+    // The author's own receipt: no two look alike to the Proof Fingerprint.
+    const bytes = await receiptJpeg(`${provider.displayName}, struk ${author}`);
     form.set("proof", new File([new Uint8Array(bytes)], "struk", { type: "image/jpeg" }));
   }
   const response = await fetch(new URL("/api/testimonies", server.baseUrl), {
