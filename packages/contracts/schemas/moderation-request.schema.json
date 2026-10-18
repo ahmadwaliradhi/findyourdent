@@ -46,7 +46,7 @@
       "items": { "$ref": "#/$defs/ModerationImage" }
     },
     "proofOfVisit": {
-      "description": "Optional private Proof of Visit, deleted by the web service right after this call.",
+      "description": "Optional private Proof of Visit (Testimonies only). Read in its own model call for the facts in `proofExtraction`; never screened as a photo. The web service deletes the file once the proof is decided, or keeps it for an admin while pending (spec 09).",
       "title": "ModerationProofOfVisit",
       "type": "object",
       "additionalProperties": false,

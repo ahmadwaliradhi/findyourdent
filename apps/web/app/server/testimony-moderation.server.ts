@@ -1,6 +1,7 @@
 // The Moderation step of posting (spec 03): the agent service's Moderation endpoint,
 // called with the Testimony, Google's live name (in memory only, for R6 and the Proof
-// of Visit match), the stored EXIF-stripped photos and the private Proof of Visit.
+// of Visit match), the stored EXIF-stripped photos and the private Proof of Visit, whose
+// printed facts come back for the web service's own proof decision (spec 09).
 // Whatever goes wrong (agent error, a 422 for a broken attachment, a timeout, an
 // answer that does not validate) becomes `hold` with `model_error`: never publish on
 // an answer we could not trust.
@@ -40,7 +41,7 @@ export interface ModerationInput {
   authorFixRound: number;
   /** Stored, EXIF-stripped photo object paths (the uploads bucket), for the photo rules. */
   photoPaths: readonly string[];
-  /** Stored private Proof of Visit, deleted by the caller right after this call. */
+  /** Stored private Proof of Visit; the caller deletes it once the proof is decided (spec 09). */
   proofPath?: string;
 }
 
@@ -117,10 +118,10 @@ function modelErrorHold(t: TFunction): ModerationOutcome {
 }
 
 /**
- * Screens one Testimony (or an edit of one). Never throws: anything that fails or
- * does not validate becomes `hold` with `model_error`, and then `proofOfVisit` is
- * absent: not verified. An authorFix past the third round is held here even if the
- * agent did not hold it.
+ * Screens one Testimony (or an edit of one) and reads its Proof of Visit. Never throws:
+ * anything that fails or does not validate becomes `hold` with `model_error`, and then
+ * `proofExtraction` is absent: the proof was not checked. An authorFix past the third
+ * round is held here even if the agent did not hold it.
  */
 export async function moderateTestimony(context: AppLoadContext, input: ModerationInput): Promise<ModerationOutcome> {
   const t = getI18n(input.language).getFixedT(input.language);
@@ -234,7 +235,8 @@ export function moderationDecisionDoc(
     flaggedSpans: decision.flaggedSpans,
     ...(decision.flaggedPhotos ? { flaggedPhotos: decision.flaggedPhotos } : {}),
     confidence: decision.confidence,
-    ...(decision.proofOfVisit ? { proofOfVisit: decision.proofOfVisit } : {}),
+    // The Proof of Visit facts are not a Moderation result: they are kept on the
+    // Testimony with its proof decision (spec 09), never here.
     model: outcome.model,
     spotCheck,
     // Written only on sampled decisions, so the queue finds open ones with two equality filters.

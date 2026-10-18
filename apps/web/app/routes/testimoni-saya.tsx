@@ -2,6 +2,7 @@ import type { TestimonyStatus } from "@findyourdent/contracts/firestore";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, redirect } from "react-router";
+import { ProofStatusNote } from "~/components/proof-status";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -182,6 +183,7 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
         </div>
       ) : null}
       <p className="line-clamp-4 whitespace-pre-line">{item.text}</p>
+      {item.proof ? <ProofStatusNote status={item.proof} /> : null}
       {item.reply ? (
         <div className="flex flex-col gap-1 rounded-md border bg-muted px-4 py-3 text-sm">
           <span className="font-semibold">{t("myTestimonies.reply")}</span>

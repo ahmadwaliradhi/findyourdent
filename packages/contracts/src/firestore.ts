@@ -178,6 +178,33 @@ export interface TestimonyReply {
   updatedAt: Timestamp;
 }
 
+/** Why a Proof of Visit waits for an admin (spec 09); they accumulate. */
+export type ProofPendingReason = "nameMismatch" | "dateMismatch" | "possibleReuse";
+/** Why a Proof of Visit was not accepted (spec 09). */
+export type ProofRejectedReason = "unreadable" | "notAProof" | "tooOld" | "adminRejected" | "expired";
+
+/**
+ * The Proof of Visit check on a Testimony (spec 09). The file is deleted right after an
+ * `accepted` or `rejected` result; a `pending` one stays in the private uploads bucket
+ * (`proof-of-visit/{testimonyId}/`) for an admin. Never the patient's name. Proofs
+ * checked before spec 09 carry only `result` (accepted or rejected) and `checkedAt`.
+ */
+export interface ProofOfVisitRecord {
+  result: "accepted" | "pending" | "rejected";
+  /** `pending` only: every reason it waits for an admin. */
+  reasons?: ProofPendingReason[];
+  /** `rejected` only. */
+  reason?: ProofRejectedReason;
+  checkedAt: Timestamp;
+  /** Facts the agent read from the proof, as printed. */
+  clinicNameOnProof?: string;
+  /** YYYY-MM-DD when a day was printed, else YYYY-MM. */
+  proofDate?: string;
+  totalRupiah?: number;
+  /** Proofs checked for this Testimony, the one sent with it included; at most 3. */
+  attempts?: number;
+}
+
 /**
  * One per author per Provider (enforced in a transaction querying
  * authorUid + placeId). Random document id, so the uid never appears in URLs.
@@ -200,10 +227,13 @@ export interface TestimonyDoc extends TestimonyContent {
   /** Public name chosen by the author (default: first name plus initial). */
   displayName: string;
   status: TestimonyStatus;
-  /** Kunjungan terbukti. */
+  /** Kunjungan terbukti: true only when `proofOfVisit.result` is `accepted` (spec 09). */
   verifiedVisit: boolean;
-  /** Result only; the Proof of Visit file is deleted right after the check. */
-  proofOfVisit?: { result: "accepted" | "rejected"; checkedAt: Timestamp };
+  /**
+   * The Proof of Visit check, kept after its file is deleted. Absent when no proof was
+   * sent (`notProvided`) or the proof could not be checked (the agent failed).
+   */
+  proofOfVisit?: ProofOfVisitRecord;
   consent: { termsVersion: string; acceptedAt: Timestamp };
   /** authorFix rounds so far; after three the Testimony is held. */
   authorFixRounds: number;
@@ -328,7 +358,6 @@ export interface ModerationDecisionDoc {
   flaggedSpans: ModerationDecision["flaggedSpans"];
   flaggedPhotos?: ModerationDecision["flaggedPhotos"];
   confidence: number;
-  proofOfVisit?: ModerationDecision["proofOfVisit"];
   /** Model id from configuration, or "fallback" when the call failed. */
   model: string;
   /** Part of the 10% admin spot-check sample. */

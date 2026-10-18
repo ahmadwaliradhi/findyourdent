@@ -141,7 +141,7 @@ test("fix before submit: shows the flagged sentence and reason, then sends the f
   expect(sentTexts).toEqual(["phone", "fixed"]);
 });
 
-test("held: shows the plain reason and the 24-hour target", async ({ page }) => {
+test("held: shows the plain reason and the 24-hour target, and that the proof waits for the team", async ({ page }) => {
   await page.route("**/api/testimonies", (route) =>
     route.fulfill({
       status: 201,
@@ -151,6 +151,7 @@ test("held: shows the plain reason and the 24-hour target", async ({ page }) => 
         message:
           "Pemeriksaan otomatis kami belum bisa menyelesaikannya. Tim FindYourDent akan memutuskan dalam 24 jam.",
         verifiedVisit: false,
+        proof: { result: "pending" },
       },
     }),
   );
@@ -159,4 +160,37 @@ test("held: shows the plain reason and the 24-hour target", async ({ page }) => 
   await page.getByRole("button", { name: "Kirim" }).click();
   await expect(page.getByRole("heading", { name: "Testimoni Anda sedang ditinjau" })).toBeVisible();
   await expect(page.getByText("Tim FindYourDent akan memutuskan dalam 24 jam.")).toBeVisible();
+  await expect(page.getByText(/Bukti kunjungan Anda menunggu pemeriksaan tim FindYourDent/)).toBeVisible();
+});
+
+test("Proof of Visit: sent with Kirim, accepted, and the Testimony shows Kunjungan terbukti", async ({ page }) => {
+  // Answered here as the web service would after the proof decision (no Firebase sign-in in browser tests).
+  let sentProof = false;
+  await page.route("**/api/testimonies", async (route) => {
+    sentProof = (route.request().postDataBuffer()?.toString("latin1") ?? "").includes('name="proof"');
+    await route.fulfill({
+      status: 201,
+      json: {
+        testimonyId: "t-3",
+        status: "published",
+        message: "Terima kasih!",
+        verifiedVisit: true,
+        proof: { result: "accepted" },
+      },
+    });
+  });
+
+  await fillForm(page, "Dokternya sabar dan ruangannya bersih.");
+  await page.getByLabel("Pilih file bukti").setInputFiles({
+    name: "struk.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n%%EOF\n"),
+  });
+  await expect(page.getByText("struk.pdf")).toBeVisible();
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  await expect(page.getByRole("heading", { name: "Testimoni Anda sudah terbit" })).toBeVisible();
+  await expect(page.getByText(/Testimoni ini ditandai Kunjungan terbukti/)).toBeVisible();
+  expect(sentProof).toBe(true);
+  await noHorizontalScroll(page);
 });
