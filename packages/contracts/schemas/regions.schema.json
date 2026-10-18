@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://findyourdent.com/schemas/regions.schema.json",
   "title": "RegionList",
-  "description": "Shape of data/regions.json: Kemendagri administrative region codes (province NN, kabupaten/kota NN.NN). Kecamatan (NN.NN.NN) are not shipped yet.",
+  "description": "Shape of data/regions.json: Kemendagri administrative region codes (province NN, kabupaten/kota NN.NN). Kecamatan (NN.NN.NN) are in data/districts.json.",
   "type": "object",
   "additionalProperties": false,
   "required": ["source", "version", "complete", "notes", "provinces", "regencies"],

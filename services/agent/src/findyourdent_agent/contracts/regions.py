@@ -35,7 +35,7 @@ class Regency(BaseModel):
 
 class RegionList(BaseModel):
     """
-    Shape of data/regions.json: Kemendagri administrative region codes (province NN, kabupaten/kota NN.NN). Kecamatan (NN.NN.NN) are not shipped yet.
+    Shape of data/regions.json: Kemendagri administrative region codes (province NN, kabupaten/kota NN.NN). Kecamatan (NN.NN.NN) are in data/districts.json.
     """
 
     model_config = ConfigDict(
