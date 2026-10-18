@@ -9,9 +9,6 @@
   "properties": {
     "typedProviderName": { "$ref": "moderation-request.schema.json#/properties/typedProviderName" },
     "googleDisplayName": { "$ref": "moderation-request.schema.json#/properties/googleDisplayName" },
-    "proofOfVisit": {
-      "$ref": "moderation-request.schema.json#/properties/proofOfVisit",
-      "title": "ProofCheckFile"
-    }
+    "proofOfVisit": { "$ref": "moderation-request.schema.json#/properties/proofOfVisit" }
   }
 }
