@@ -143,16 +143,24 @@ else
   gcloud storage buckets create "gs://${BUCKET}" --project "$PROJECT_ID" \
     --location="$REGION" --uniform-bucket-level-access --public-access-prevention
 fi
-# Price List originals are kept 30 days for disputes, then deleted (spec 05). The rule
-# is written whole on every run, so it converges. Lifecycle `age` counts days since the
-# object was created, and Cloud Storage acts on it asynchronously, usually within a day
-# (cloud.google.com/storage/docs/lifecycle, checked 17 October 2026). The file replaces
-# the bucket's whole lifecycle config, so every rule the bucket needs belongs here.
-# Keep the 30 in step with ORIGINAL_RETENTION_DAYS in apps/web/app/lib/price-lists.ts.
-log "Bucket lifecycle (priceLists/ originals, 30 days)"
+# Price List originals are kept 30 days for disputes, then deleted (spec 05). A Proof
+# of Visit waiting for the team is kept at most 7 days (spec 09): the hourly proof-expiry
+# job deletes it on time, and this rule is the backstop for any file it missed. The
+# rules are written whole on every run, so they converge. Lifecycle `age` counts days
+# since the object was created, Cloud Storage acts on it asynchronously with no
+# guaranteed delay, and a config change can take up to 24 hours to apply
+# (docs.cloud.google.com/storage/docs/lifecycle, checked 18 October 2026). The file
+# replaces the bucket's whole lifecycle config, so every rule the bucket needs belongs
+# here. Keep the 30 in step with ORIGINAL_RETENTION_DAYS in
+# apps/web/app/lib/price-lists.ts, and the 7 with PROOF_RETENTION_DAYS in
+# apps/web/server/proof-files.ts.
+log "Bucket lifecycle (priceLists/ originals 30 days, proof-of-visit/ 7 days)"
 LIFECYCLE_FILE="$(mktemp)"
 trap 'rm -f "$LIFECYCLE_FILE"' EXIT
-jq -n '{rule: [{action: {type: "Delete"}, condition: {age: 30, matchesPrefix: ["priceLists/"]}}]}' >"$LIFECYCLE_FILE"
+jq -n '{rule: [
+  {action: {type: "Delete"}, condition: {age: 30, matchesPrefix: ["priceLists/"]}},
+  {action: {type: "Delete"}, condition: {age: 7, matchesPrefix: ["proof-of-visit/"]}}
+]}' >"$LIFECYCLE_FILE"
 gcloud storage buckets update "gs://${BUCKET}" --project "$PROJECT_ID" --lifecycle-file="$LIFECYCLE_FILE"
 
 # 4. Firebase ------------------------------------------------------------------

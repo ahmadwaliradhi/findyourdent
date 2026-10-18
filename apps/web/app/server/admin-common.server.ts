@@ -5,23 +5,23 @@ import { type DocumentReference, type Firestore, Timestamp, type Transaction } f
 import { type AdminActionRequest, type AdminApiError, QUEUE_TARGET_HOURS, type QueueItem } from "~/lib/admin-queue";
 import type { SignedInUser } from "../../server/auth.ts";
 
-const TARGET_MS = QUEUE_TARGET_HOURS * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 export const iso = (time: StoredTimestamp | undefined) =>
   time ? time.toDate().toISOString() : new Date(0).toISOString();
 
-/** A queue item with its 24-hour target, counted from when it entered the queue. */
+/** A queue item with its kind's target (QUEUE_TARGET_HOURS), counted from when it entered the queue. */
 export function queueItem(
   base: Omit<QueueItem, "createdAt" | "dueAt" | "overdue">,
   enteredAt: StoredTimestamp | undefined,
   nowMs: number,
 ): QueueItem {
-  const ms = enteredAt?.toMillis() ?? 0;
+  const dueMs = (enteredAt?.toMillis() ?? 0) + QUEUE_TARGET_HOURS[base.kind] * HOUR_MS;
   return {
     ...base,
     createdAt: iso(enteredAt),
-    dueAt: new Date(ms + TARGET_MS).toISOString(),
-    overdue: nowMs > ms + TARGET_MS,
+    dueAt: new Date(dueMs).toISOString(),
+    overdue: nowMs > dueMs,
   };
 }
 

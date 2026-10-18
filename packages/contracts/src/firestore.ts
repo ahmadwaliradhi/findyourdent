@@ -189,6 +189,9 @@ export interface ProofOfVisitRecord {
   reasons?: ProofPendingReason[];
   /** `rejected` only. */
   reason?: ProofRejectedReason;
+  /** `adminRejected` only: the admin's note, which the author reads on "Testimoni saya". */
+  adminReason?: string;
+  /** When the agent read it and `decideProof` decided; a pending proof entered the admin queue then. */
   checkedAt: Timestamp;
   /** Facts the agent read from the proof, as printed. */
   clinicNameOnProof?: string;
@@ -396,7 +399,9 @@ export type AdminActionType =
   | "revokeClaim"
   | "applyNameCorrection"
   | "dismissNameCorrection"
-  | "spotCheckConfirm";
+  | "spotCheckConfirm"
+  | "acceptProof"
+  | "rejectProof";
 
 /** Append-only audit log of every admin decision. */
 export interface AdminActionDoc {
@@ -409,7 +414,9 @@ export interface AdminActionDoc {
     | "provider"
     | "providerFacts"
     | "nameCorrection"
-    | "moderationDecision";
+    | "moderationDecision"
+    /** A Testimony's Proof of Visit (spec 09): `subjectId` is the Testimony id. */
+    | "proofOfVisit";
   subjectId: string;
   placeId?: PlaceId;
   /** Allowlisted admin email. */

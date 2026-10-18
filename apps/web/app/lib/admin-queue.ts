@@ -5,6 +5,7 @@ import type {
   ClaimDoc,
   ModerationDecisionDoc,
   ProcedureCode,
+  ProofPendingReason,
   ProviderType,
   RegionRef,
   ReportCategory,
@@ -13,9 +14,6 @@ import type {
 
 /** Share of auto-published Testimonies sampled into the queue for a spot check (spec 03). */
 export const SPOT_CHECK_RATE = 0.1;
-
-/** Every queue item has this long from when it entered the queue. */
-export const QUEUE_TARGET_HOURS = 24;
 
 export const ADMIN_REASON_MAX_CHARS = 1000;
 
@@ -35,6 +33,10 @@ export const OWNER_ACTIONS = [
 ] as const;
 export type OwnerAction = (typeof OWNER_ACTIONS)[number];
 
+/** Actions on a Proof of Visit waiting for the team (spec 09); `subjectId` is the Testimony id. */
+export const PROOF_ACTIONS = ["acceptProof", "rejectProof"] as const;
+export type ProofAction = (typeof PROOF_ACTIONS)[number];
+
 /** Actions that need a reason: it is shown to the author or claimant, or kept for disputes. */
 export const REASON_REQUIRED: ReadonlySet<AdminActionRequest["action"]> = new Set([
   "reject",
@@ -45,18 +47,20 @@ export const REASON_REQUIRED: ReadonlySet<AdminActionRequest["action"]> = new Se
   "revokeClaim",
   "rejectOwnerFacts",
   "rejectReply",
+  "rejectProof",
 ]);
 
 /**
  * POST /admin/api/actions. `subjectId` is the Testimony id for Testimony actions, the
  * report id for dismissReport, the correction id for name corrections, the
  * Moderation decision id for spotCheckConfirm, the Claim id for Claim actions, the
- * place id for owner facts and the Testimony id for replies.
+ * place id for owner facts and the Testimony id for replies and proofs.
  */
 export interface AdminActionRequest {
   action:
     | TestimonyAction
     | OwnerAction
+    | ProofAction
     | "dismissReport"
     | "applyNameCorrection"
     | "dismissNameCorrection"
@@ -85,7 +89,25 @@ export type QueueItemKind =
   | "nameCorrection"
   | "claim"
   | "ownerFacts"
-  | "reply";
+  | "reply"
+  | "proof";
+
+/**
+ * Hours an item has from when it entered the queue: 24 for everything of spec 03 and
+ * spec 05, 72 for a proof review (spec 09).
+ */
+export const QUEUE_TARGET_HOURS: Readonly<Record<QueueItemKind, number>> = {
+  held: 24,
+  hidden: 24,
+  revision: 24,
+  report: 24,
+  spotCheck: 24,
+  nameCorrection: 24,
+  claim: 24,
+  ownerFacts: 24,
+  reply: 24,
+  proof: 72,
+};
 
 export interface QueueHistoryEntry {
   /** ISO time. */
@@ -190,6 +212,42 @@ export interface QueueReply {
   moderation: QueueModeration | null;
 }
 
+/** Another Testimony whose Proof Fingerprint matched this proof (`possibleReuse`, ticket #130). */
+export interface QueueProofMatch {
+  testimonyId: string;
+  placeId: string;
+  displayName: string;
+  status: TestimonyStatus;
+}
+
+/**
+ * A Proof of Visit waiting for the team (spec 09): the file, what the agent read from
+ * it (never a patient name) and why it waits. Its Testimony stays as it is meanwhile.
+ */
+export interface QueueProof {
+  testimonyId: string;
+  placeId: string;
+  /** The Listed name, or the name the author typed while the place is not Listed. */
+  providerName: string;
+  listed: boolean;
+  testimonyStatus: TestimonyStatus;
+  /** The visit month the author stated, YYYY-MM. */
+  visitMonth: string;
+  displayName: string;
+  /** Admin-only route that streams the private file; null once it is gone. */
+  fileUrl: string | null;
+  fileType?: "image" | "pdf";
+  clinicNameOnProof?: string;
+  /** YYYY-MM-DD when a day was printed, else YYYY-MM. */
+  proofDate?: string;
+  totalRupiah?: number;
+  reasons: ProofPendingReason[];
+  /** Proofs checked for this Testimony so far, this one included. */
+  attempts: number;
+  /** Testimonies whose Proof Fingerprint matched; empty until the reuse check (#130) fills it. */
+  matchingTestimonies: QueueProofMatch[];
+}
+
 /** An approved Claim, listed so an admin can revoke a wrong approval. */
 export interface ApprovedClaim {
   claimId: string;
@@ -200,14 +258,17 @@ export interface ApprovedClaim {
 }
 
 export interface QueueItem {
-  /** Unique in the queue: the Testimony, correction, Moderation decision, Claim or place id. */
+  /**
+   * Unique per kind: the Testimony, correction, Moderation decision, Claim or place id;
+   * `reply-` or `proof-` and the Testimony id for replies and proofs.
+   */
   id: string;
   kind: QueueItemKind;
   /** What the actions take as `subjectId` (spot checks: the Testimony; confirm with `id`). */
   subjectId: string;
   /** When it entered the queue, ISO. */
   createdAt: string;
-  /** createdAt + 24 hours, ISO. */
+  /** createdAt + the kind's target hours (QUEUE_TARGET_HOURS), ISO. */
   dueAt: string;
   overdue: boolean;
   testimony?: QueueTestimony;
@@ -216,6 +277,7 @@ export interface QueueItem {
   claim?: QueueClaim;
   ownerFacts?: QueueOwnerFacts;
   reply?: QueueReply;
+  proof?: QueueProof;
 }
 
 /** GET /admin/api/queue: hidden Testimonies first, then oldest first. */

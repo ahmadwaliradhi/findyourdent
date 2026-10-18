@@ -16,14 +16,15 @@ import {
   type QueueItem,
   type QueueModeration,
   type QueueOwnerFacts,
+  type QueueProof,
   type QueueTestimony,
   type QueueTestimonyContent,
   REASON_REQUIRED,
   type TestimonyAction,
 } from "~/lib/admin-queue";
 import { ASPECTS } from "~/lib/aspects";
-import { formatRupiah, formatVisitMonth } from "~/lib/format";
-import { providerPath } from "~/lib/paths";
+import { formatDate, formatRupiah, formatVisitMonth } from "~/lib/format";
+import { providerPath, testimonyPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import { regionLabel } from "~/lib/regions";
 import { testimonyStatusBadge } from "~/lib/testimony-status";
@@ -141,11 +142,17 @@ function QueueCard({ item }: { item: QueueItem }) {
           {item.claim && <span className="font-normal"> · {item.claim.providerName}</span>}
           {item.reply && <span className="font-normal"> · {item.reply.providerName}</span>}
           {item.ownerFacts && <span className="font-normal"> · {item.ownerFacts.currentName}</span>}
+          {item.proof && <span className="font-normal"> · {item.proof.providerName}</span>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {item.testimony && (
             <Badge {...testimonyStatusBadge(item.testimony.status)}>
               {t(`admin.queue.status.${item.testimony.status}`)}
+            </Badge>
+          )}
+          {item.proof && (
+            <Badge {...testimonyStatusBadge(item.proof.testimonyStatus)}>
+              {t(`admin.queue.status.${item.proof.testimonyStatus}`)}
             </Badge>
           )}
           <Badge variant={item.overdue ? "danger" : "outline"} icon={item.overdue ? undefined : Clock}>
@@ -197,6 +204,7 @@ function QueueCard({ item }: { item: QueueItem }) {
 
       {item.claim && <ClaimView claim={item.claim} />}
       {item.ownerFacts && <OwnerFactsView ownerFacts={item.ownerFacts} />}
+      {item.proof && <ProofView proof={item.proof} />}
       {item.reply && (
         <div className="flex flex-col gap-2 text-sm">
           <ModerationLine moderation={item.reply.moderation} />
@@ -264,6 +272,86 @@ function ClaimView({ claim }: { claim: QueueClaim }) {
       </dd>
       <dd className="col-span-2 text-xs text-muted-foreground">{t("admin.queue.claim.callHint")}</dd>
     </dl>
+  );
+}
+
+/**
+ * A Proof of Visit waiting for the team (spec 09): why it waits, what the agent read
+ * next to what the author stated, and the private file itself.
+ */
+function ProofView({ proof }: { proof: QueueProof }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const notPrinted = <span className="text-muted-foreground">{t("admin.queue.proof.notPrinted")}</span>;
+  return (
+    <div className="flex flex-col gap-3 text-sm">
+      <section aria-label={t("admin.queue.proof.reasons")} className="flex flex-col gap-1">
+        <h3 className="font-medium">{t("admin.queue.proof.reasons")}</h3>
+        <ul className="list-disc pl-5">
+          {proof.reasons.map((reason) => (
+            <li key={reason}>{t(`admin.queue.proof.reason.${reason}`)}</li>
+          ))}
+        </ul>
+      </section>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+        <dt className="text-muted-foreground">{t("admin.queue.proof.visitMonth")}</dt>
+        <dd>{formatVisitMonth(proof.visitMonth, language)}</dd>
+        <dt className="text-muted-foreground">{t("admin.queue.proof.clinicName")}</dt>
+        <dd>{proof.clinicNameOnProof ?? notPrinted}</dd>
+        <dt className="text-muted-foreground">{t("admin.queue.proof.proofDate")}</dt>
+        <dd>
+          {proof.proofDate
+            ? proof.proofDate.length > 7
+              ? formatDate(proof.proofDate, language)
+              : formatVisitMonth(proof.proofDate, language)
+            : notPrinted}
+        </dd>
+        <dt className="text-muted-foreground">{t("admin.queue.proof.total")}</dt>
+        <dd>{proof.totalRupiah !== undefined ? formatRupiah(proof.totalRupiah, language) : notPrinted}</dd>
+      </dl>
+      <p className="text-muted-foreground">
+        {proof.displayName} · {t("admin.queue.proof.attempts", { number: proof.attempts })}
+        {proof.testimonyStatus === "published" && (
+          <>
+            {" · "}
+            <a href={providerPath(proof.placeId)} className="underline">
+              {t("admin.queue.viewPublic")}
+            </a>
+          </>
+        )}
+      </p>
+      {proof.fileUrl === null ? (
+        <p className="rounded-md bg-muted p-2">{t("admin.queue.proof.fileGone")}</p>
+      ) : proof.fileType === "pdf" ? (
+        <a href={proof.fileUrl} target="_blank" rel="noreferrer" className="underline">
+          {t("admin.queue.proof.openFile")}
+        </a>
+      ) : (
+        <a href={proof.fileUrl} target="_blank" rel="noreferrer" className="self-start">
+          <img
+            src={proof.fileUrl}
+            alt={t("admin.queue.proof.file", { name: proof.displayName })}
+            className="max-h-96 w-auto max-w-full rounded-md border object-contain"
+          />
+        </a>
+      )}
+      {proof.matchingTestimonies.length > 0 && (
+        <section aria-label={t("admin.queue.proof.matching")} className="flex flex-col gap-1">
+          <h3 className="font-medium">{t("admin.queue.proof.matching")}</h3>
+          <ul className="flex flex-col gap-1">
+            {proof.matchingTestimonies.map((match) => (
+              <li key={match.testimonyId}>
+                <a href={testimonyPath(match.placeId, match.testimonyId)} className="underline">
+                  {match.displayName}
+                </a>{" "}
+                · {t(`admin.queue.status.${match.status}`)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <p className="text-xs text-muted-foreground">{t("admin.queue.proof.hint")}</p>
+    </div>
   );
 }
 
@@ -446,6 +534,12 @@ function Actions({ item }: { item: QueueItem }) {
             <ActionButton request={{ action: "dismissNameCorrection", subjectId: item.id }} />
           </>
         )}
+        {item.kind === "proof" && (
+          <>
+            <ActionButton request={{ action: "acceptProof", subjectId: item.subjectId }} />
+            <ActionButton request={{ action: "rejectProof", subjectId: item.subjectId }} />
+          </>
+        )}
       </div>
       <p className="text-xs text-muted-foreground">{t("admin.queue.logged")}</p>
     </div>
@@ -463,10 +557,18 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const label = t(`admin.queue.actions.${request.action}`);
-  const destructive = ["remove", "reject", "rejectClaim", "revokeClaim", "rejectOwnerFacts", "rejectReply"].includes(
+  const destructive = [
+    "remove",
+    "reject",
+    "rejectClaim",
+    "revokeClaim",
+    "rejectOwnerFacts",
+    "rejectReply",
+    "rejectProof",
+  ].includes(request.action);
+  const primary = ["publish", "approveClaim", "publishOwnerFacts", "publishReply", "acceptProof"].includes(
     request.action,
   );
-  const primary = ["publish", "approveClaim", "publishOwnerFacts", "publishReply"].includes(request.action);
 
   const send = async () => {
     setBusy(true);

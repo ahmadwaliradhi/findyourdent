@@ -25,6 +25,9 @@ export function ProofStatusNote({ status, className }: { status: ProofOfVisitSta
     <p className={cn("flex flex-col gap-1 rounded-md border px-4 py-3 text-sm", TONE[status.result], className)}>
       <span className="font-semibold">{t("proofStatus.title")}</span>
       <span>{proofStatusMessage(t, status)}</span>
+      {status.result === "rejected" && status.adminReason && (
+        <span className="whitespace-pre-line">{t("proofStatus.adminNote", { note: status.adminReason })}</span>
+      )}
     </p>
   );
 }

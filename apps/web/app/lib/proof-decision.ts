@@ -65,15 +65,20 @@ export function decideProof({ extraction, visitMonth, today, reuse = NO_REUSE }:
 export type ProofOfVisitStatus =
   | { result: "accepted" }
   | { result: "pending" }
-  | { result: "rejected"; reason?: ProofRejectedReason }
+  /** `adminReason`: the admin's note when the team turned it down. */
+  | { result: "rejected"; reason?: ProofRejectedReason; adminReason?: string }
   | { result: "notChecked" };
 
 /** The author's view of a stored (or just decided) result. */
 export function proofStatusForAuthor(
-  proof: Pick<ProofOfVisitRecord, "result"> & { reason?: ProofRejectedReason },
+  proof: Pick<ProofOfVisitRecord, "result"> & { reason?: ProofRejectedReason; adminReason?: string },
 ): ProofOfVisitStatus {
   if (proof.result !== "rejected") return { result: proof.result };
-  return proof.reason ? { result: "rejected", reason: proof.reason } : { result: "rejected" };
+  return {
+    result: "rejected",
+    ...(proof.reason ? { reason: proof.reason } : {}),
+    ...(proof.adminReason ? { adminReason: proof.adminReason } : {}),
+  };
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");

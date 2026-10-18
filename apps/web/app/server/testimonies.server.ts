@@ -62,6 +62,7 @@ import { testimonyPhotoUrl } from "~/lib/testimony-photos";
 import type { LatLng } from "../../server/adapters/places.ts";
 import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
+import { storedProofPaths } from "../../server/proof-files.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import { type AggregateInput, computeAggregates } from "./aggregates.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
@@ -71,7 +72,6 @@ import {
   deleteTestimonyMedia,
   readTestimonyFiles,
   type StoredMedia,
-  storedProofPaths,
   storeTestimonyMedia,
 } from "./testimony-media.server.ts";
 import {

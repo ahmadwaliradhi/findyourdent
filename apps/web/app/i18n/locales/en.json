@@ -173,7 +173,7 @@
     "signOut": "Sign out",
     "queue": {
       "summary": "{{count}} items waiting for a decision.",
-      "overdueCount": "{{count}} past the 24-hour target.",
+      "overdueCount": "{{count}} past their target.",
       "empty": "The queue is empty. Nothing to decide.",
       "kind": {
         "held": "Held Testimony",
@@ -184,7 +184,8 @@
         "hidden": "Hidden Testimony",
         "claim": "Page claim",
         "ownerFacts": "Owner details held",
-        "reply": "Reply held"
+        "reply": "Reply held",
+        "proof": "Proof of visit to review"
       },
       "status": {
         "submitted": "Being checked",
@@ -232,7 +233,9 @@
         "publishOwnerFacts": "Publish details",
         "rejectOwnerFacts": "Reject details",
         "publishReply": "Publish reply",
-        "rejectReply": "Reject reply"
+        "rejectReply": "Reject reply",
+        "acceptProof": "Accept proof",
+        "rejectProof": "Reject proof"
       },
       "reasonFor": "Reason for \"{{action}}\" (logged; the author sees it except for hide)",
       "logged": "Every action is logged with the admin, time and reason.",
@@ -249,6 +252,25 @@
         "permit": "Document",
         "openPermit": "Open the SIP or practice permit",
         "callHint": "Phone the number on Google (not the claimant's) to confirm the owner. The document is deleted as soon as the claim is decided."
+      },
+      "proof": {
+        "reasons": "Why it waits for the team",
+        "reason": {
+          "nameMismatch": "The clinic name does not match this place",
+          "dateMismatch": "The date does not match the visit month, or none is printed",
+          "possibleReuse": "Looks like the proof of another Testimony here"
+        },
+        "visitMonth": "Visit month the author gave",
+        "clinicName": "Clinic name on the proof",
+        "proofDate": "Date on the proof",
+        "total": "Total on the proof",
+        "notPrinted": "not read",
+        "attempts": "Proof number {{number}} for this Testimony",
+        "file": "Proof of visit from {{name}}",
+        "openFile": "Open the proof file (PDF)",
+        "fileGone": "The proof file is already deleted. Reject it with a reason so the author can send another.",
+        "matching": "Testimonies with a matching proof",
+        "hint": "Accept only if this clearly proves a visit to this place around that month. The author reads the rejection reason. The file is deleted once decided, or after 7 days."
       }
     }
   },
@@ -746,7 +768,8 @@
       "expired": "The team could not check your proof of visit within 7 days.",
       "other": "Your proof of visit was not accepted."
     },
-    "tryAnother": "We have deleted the file. You can try another document."
+    "tryAnother": "We have deleted the file. You can try another document.",
+    "adminNote": "Note from the FindYourDent team: {{note}}"
   },
   "reportApi": {
     "errors": {
@@ -1101,7 +1124,7 @@
             "<b>Your location or area</b> is used only to find dentists near you and is not stored. In the Directory, distance is computed on your device and your location is not sent to us.",
             "<b>Your Google account</b> is used when you write a Testimony or claim a page. Your account is never shown.",
             "<b>Testimonies</b>: ratings, story, month and year of visit, the name you choose, and the procedure, price and photos if you add them. These are public. Location data in photos is removed automatically.",
-            "<b>Proof of visit</b> is checked and then deleted right away. It is never shown; only a Verified visit mark appears if it matches.",
+            "<b>Proof of visit</b> is deleted after the check, or within 7 days if our team needs to look at it. It is never shown; only a Verified visit mark appears if it is accepted. From it we keep only the clinic name, date and total printed on it, never your name.",
             "<b>Owner claim data</b>: your SIP or practice permit is kept private and deleted after the decision. Your phone number is only for the FindYourDent team and is never shown.",
             "<b>Owner price lists</b>: the original file is kept privately for 30 days in case of disputes, then deleted. Only rows the owner confirms are shown.",
             "<b>Reports</b> on a Testimony: the category and details you write, for the team to review."
@@ -1138,7 +1161,7 @@
         "blocks": [
           [
             "Complaints and location: not stored.",
-            "Proof of visit: deleted right after it is checked.",
+            "Proof of visit: deleted after the check, or within 7 days if our team needs to look at it.",
             "Claim documents: deleted after the decision.",
             "Original price list files: 30 days.",
             "Testimonies: while published, until you or the team delete them.",
