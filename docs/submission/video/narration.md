@@ -27,11 +27,11 @@ Narration lines (the `>` blocks) are what `narrate.ts` sends to ElevenLabs, so t
 
 ## Scene 3: Shortlist (target 0:35)
 
-**On screen:** back on the first Guidance card, tap "Lihat dokter gigi terdekat", then "Gunakan lokasi saya". The Shortlist "Dokter gigi terdekat untuk keluhan Anda" lists up to five Providers, each with its reasons and the note "Tidak pernah berdasarkan bayaran". Open one Provider page and tap "Lihat ulasan Google".
+**On screen:** back on the first Guidance card, tap "Lihat dokter gigi terdekat", then "Gunakan lokasi saya". The Shortlist "Dokter gigi terdekat untuk keluhan Anda" lists up to five Providers, each with its reason, scores and distance, and the ranking note ending "Tidak pernah berdasarkan bayaran". Open one Provider page and tap "Lihat ulasan Google".
 
 **Narration:**
 
-> Next, Lihat dokter gigi terdekat. The Shortlist shows up to five nearby Providers, each with the reasons it fits this complaint: the procedure it handles, its Testimony scores, and how far away it is. Providers are ranked by fit, Testimonies, price and distance, never by payment.
+> Next, Lihat dokter gigi terdekat. The Shortlist shows up to five nearby Providers that can handle the likely procedure, each with a short reason it fits, its Testimony scores, and how far away it is. Providers are ranked by fit, Testimonies, price and distance, never by payment.
 > On a Provider page, Patients read Testimonies first. Google reviews load only when they tap Lihat ulasan Google.
 
 ## Scene 4: Posting a Testimony (target 0:45)
@@ -42,16 +42,16 @@ Narration lines (the `>` blocks) are what `narrate.ts` sends to ElevenLabs, so t
 
 > Patients give back by posting a Testimony with Ceritakan pengalamanmu. Google sign-in happens only when they tap Kirim.
 > This draft includes a phone number. Gemini Moderation checks every Testimony against fixed rules before it is published, so instead of a silent rejection the Patient sees Sedikit perbaikan sebelum terkirim, with the exact sentence to fix. They remove the number and send again.
-> The receipt they attached as proof of visit is checked, then deleted, and the Testimony is published with Kunjungan terbukti.
+> The receipt they attached as Proof of Visit is checked, then deleted, and the Testimony is published with Kunjungan terbukti.
 
 ## Scene 5: Architecture and impact (target 0:35)
 
-**On screen:** the architecture diagram (Firebase Hosting, the web and agent Cloud Run services in Jakarta, Gemini on Vertex AI, Firestore, App Check), then the live "Dampak FindYourDent" counter on the landing page, then the roadmap slide (Providers and clinics).
+**On screen:** the architecture diagram (Firebase Hosting, the web and agent Cloud Run services in Jakarta, Gemini on Vertex AI, Firestore, App Check), then the live "Dampak FindYourDent" counter on the landing page, then the roadmap slide (Providers claiming their pages).
 
 **Narration:**
 
 > Under the hood, Firebase Hosting sits in front of two Cloud Run services in Jakarta: the public web service, and a private Google ADK agent service that only the web service can call. Firestore stores Providers and Testimonies, never a Patient's complaint.
-> The live counter shows Testimonies, Kunjungan terbukti and Guidance sessions as they grow. Next, Providers and clinics claim their pages and publish their own prices.
+> The live counter shows Testimonies, Kunjungan terbukti and Guidance sessions as they grow. Next, Providers claim their pages and publish their own prices.
 > FindYourDent, live now at findyourdent dot com.
 
 ## Voice and audio
@@ -67,7 +67,7 @@ Regenerate only the scenes that changed (the free tier has 10,000 characters a m
 node docs/submission/video/narrate.ts 2 4
 ```
 
-With no scene numbers it generates all five. The key comes from `ELEVENLABS_API_KEY` in the environment, or from the gitignored `.env.local` at the repository root; it is never printed.
+With no scene numbers it generates all five. Run the script's tests with `node --test docs/submission/video/narrate.test.ts` (this folder is outside the pnpm workspace, so `pnpm test` does not run them). The key comes from `ELEVENLABS_API_KEY` in the environment, or from the gitignored `.env.local` at the repository root; it is never printed.
 
 ## Measured durations
 
@@ -77,9 +77,9 @@ Measured with `ffprobe` on the generated files. Scene targets leave room for on-
 | --- | --- | --- | --- |
 | 1. Problem | 0:40 | 0:38 | 570 |
 | 2. Guidance | 1:00 | 0:51 | 712 |
-| 3. Shortlist | 0:35 | 0:25 | 393 |
-| 4. Posting a Testimony | 0:45 | 0:30 | 523 |
-| 5. Architecture and impact | 0:35 | 0:31 | 471 |
-| Total | 3:35 | 2:55 | 2,669 |
+| 3. Shortlist | 0:35 | 0:25 | 392 |
+| 4. Posting a Testimony | 0:45 | 0:31 | 523 |
+| 5. Architecture and impact | 0:35 | 0:31 | 459 |
+| Total | 3:35 | 2:56 | 2,656 |
 
-Generated 18 October 2026 with River on `eleven_multilingual_v2`, 2,669 of the free tier's 10,000 monthly characters. Scene 1 has the least slack (2 seconds), so hold the figures card on screen while it plays.
+Generated 18 October 2026 with River on `eleven_multilingual_v2`; scenes 3 to 5 were regenerated once after review, so about 4,000 of the free tier's 10,000 monthly characters are used. Scene 1 has the least slack (2 seconds), so hold the figures card on screen while it plays.

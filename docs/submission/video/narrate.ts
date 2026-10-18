@@ -4,6 +4,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 export interface Scene {
   number: number;
@@ -18,10 +19,10 @@ const SCENE_HEADING = /^## Scene (\d+): (.+) \(target (\d+):(\d{2})\)$/;
 /** Reads every `## Scene N: Title (target M:SS)` section of the narration script. */
 export function parseScript(markdown: string): Scene[] {
   const scenes: Scene[] = [];
-  let current: { scene: Scene; narration: string[] } | undefined;
+  let current: { scene: Scene; lines: string[] } | undefined;
   const finish = () => {
     if (current) {
-      current.scene.narration = current.narration.join(" ").trim();
+      current.scene.narration = current.lines.join(" ").trim();
       scenes.push(current.scene);
     }
     current = undefined;
@@ -40,13 +41,13 @@ export function parseScript(markdown: string): Scene[] {
             onScreen: "",
             narration: "",
           },
-          narration: [],
+          lines: [],
         };
       }
     } else if (current && line.startsWith("**On screen:**")) {
       current.scene.onScreen = line.slice("**On screen:**".length).trim();
     } else if (current && line.startsWith(">")) {
-      current.narration.push(line.slice(1).trim());
+      current.lines.push(line.slice(1).trim());
     }
   }
   finish();
@@ -54,6 +55,7 @@ export function parseScript(markdown: string): Scene[] {
 }
 
 const KEY_NAME = "ELEVENLABS_API_KEY";
+const KEY_LINE = new RegExp(`^\\s*(?:export\\s+)?${KEY_NAME}\\s*=\\s*(.*)$`);
 
 /** The ElevenLabs key from the environment, else from the gitignored `.env.local`. */
 export function resolveApiKey(
@@ -62,7 +64,7 @@ export function resolveApiKey(
 ): string {
   if (env[KEY_NAME]) return env[KEY_NAME];
   for (const line of dotenvText?.split("\n") ?? []) {
-    const match = /^\s*(?:export\s+)?ELEVENLABS_API_KEY\s*=\s*(.*)$/.exec(line);
+    const match = KEY_LINE.exec(line);
     const value = match?.[1]?.trim().replace(/^(["'])(.*)\1$/, "$2");
     if (value) return value;
   }
@@ -109,7 +111,7 @@ async function main(sceneArgs: string[]) {
     writeFileSync(file, Buffer.from(await response.arrayBuffer()));
     const seconds = Number(
       execFileSync("ffprobe", [
-        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file.pathname,
+        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", fileURLToPath(file),
       ]).toString(),
     );
     console.log(
