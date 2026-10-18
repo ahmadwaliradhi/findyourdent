@@ -9,8 +9,8 @@
 // Kunjungan terbukti badge. The receipt stays outside the repository:
 //   CAPTURE_PROOF_PATH=/path/to/receipt.jpg CAPTURE_VISIT_MONTH=2026-09 E2E_PLACE_ID=<id> \
 //     pnpm --filter web capture:deployed
-// Without one, the demo Testimony publishes as "Belum terbukti" and the clip ends on a real
-// Proven Testimony in the feed instead. Never attach an invented receipt: that would be a
+// Without one, the demo Testimony publishes as "Belum terbukti", and the separate
+// scene-4-proven clip shows a real Proven Testimony from the feed instead. Never attach an invented receipt: that would be a
 // fake Proof of Visit on the live site.
 import { existsSync } from "node:fs";
 import { test as base, expect, type Locator, type Page } from "@playwright/test";
@@ -52,8 +52,15 @@ const TYPING_DELAY_MS = 45;
 
 /** Scrolls smoothly until `target` sits at the top of the screen, the way a thumb would. */
 async function scrollTo(target: Locator, block: "start" | "center" = "start") {
-  await target.evaluate((element, b) => element.scrollIntoView({ behavior: "smooth", block: b }), block);
-  await target.page().waitForTimeout(1200);
+  // Hydration can reset a scroll started right after a page load, so retry until it lands.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await target.evaluate((element, b) => element.scrollIntoView({ behavior: "smooth", block: b }), block);
+    await target.page().waitForTimeout(1200);
+    const box = await target.boundingBox();
+    const viewport = target.page().viewportSize();
+    if (box && viewport && box.y < viewport.height && box.y + box.height > 0) return;
+  }
+  throw new Error("scrollTo: the target never came on screen");
 }
 
 /** Answers Gemini's one follow-up question, when it asks one, then waits for the Guidance card. */
@@ -165,6 +172,19 @@ test.describe("Patient without an account", () => {
     });
   });
 
+  // Without a real receipt for scene 4, the editor cuts to this: a Patient's real Proven Testimony.
+  test("scene 4: a Proven Testimony in the feed", async ({ page, clip }) => {
+    const scene = clip(4, "proven");
+    await page.goto("/?terbukti=1");
+    const proven = page.locator("section[aria-labelledby='feed-title'] li").filter({ hasText: "Kunjungan terbukti" });
+    await expect(proven.first()).toBeVisible();
+    scene.start();
+    await scene.hold(2);
+    await scrollTo(proven.first(), "center");
+    await expect(proven.first().getByText("Kunjungan terbukti")).toBeVisible();
+    await scene.finish();
+  });
+
   test("scene 5: the live 'Dampak FindYourDent' counter", async ({ page, clip }) => {
     const scene = clip(5, "impact");
     await page.goto("/");
@@ -246,18 +266,10 @@ test.describe("signed-in Patient", () => {
 
     // The published Testimony on the Provider page.
     await page.goto(`/tempat/${placeId()}`);
-    const testimony = page.locator("section[aria-labelledby^='testimony-']").filter({ hasText: DEMO_CLEAN_TEXT });
+    const testimony = page.getByRole("article", { name: DEMO_NAME }).filter({ hasText: DEMO_CLEAN_TEXT });
     await scrollTo(testimony, "center");
     await scene.hold(3);
-    if (PROOF_PATH) {
-      await expect(testimony.getByText("Kunjungan terbukti")).toBeVisible();
-    } else {
-      // A Patient's real Proven Testimony, from the feed filtered to Kunjungan terbukti.
-      await page.goto("/?terbukti=1");
-      const proven = page.locator("section[aria-labelledby='feed-title'] li").filter({ hasText: "Kunjungan terbukti" });
-      await scrollTo(proven.first(), "center");
-      await expect(proven.first().getByText("Kunjungan terbukti")).toBeVisible();
-    }
+    if (PROOF_PATH) await expect(testimony.getByText("Kunjungan terbukti")).toBeVisible();
     await scene.finish();
   });
 });

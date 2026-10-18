@@ -21,6 +21,20 @@
     "baseURL": "https://findyourdent.com"
   },
   {
+    "scene": 4,
+    "file": "scene-4-proven.mp4",
+    "seconds": 46,
+    "recordedAt": "2026-10-18T16:38:42.348Z",
+    "baseURL": "https://findyourdent.com"
+  },
+  {
+    "scene": 4,
+    "file": "scene-4-testimony.mp4",
+    "seconds": 79.4,
+    "recordedAt": "2026-10-18T16:35:45.314Z",
+    "baseURL": "https://findyourdent.com"
+  },
+  {
     "scene": 5,
     "file": "scene-5-impact.mp4",
     "seconds": 35.5,
