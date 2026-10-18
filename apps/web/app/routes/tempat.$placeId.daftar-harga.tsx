@@ -13,7 +13,7 @@ import { Notice } from "~/components/ui/notice";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { formatRupiahAmount } from "~/lib/format";
+import { formatDate, formatRupiahAmount } from "~/lib/format";
 import { sendOwnerRequest } from "~/lib/owner-request";
 import { providerPath } from "~/lib/paths";
 import {
@@ -152,7 +152,7 @@ function toRow(row: DraftRow): PriceListRow {
 }
 
 function Uploader({ page }: { page: PriceListPageData }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const firebase = useFirebaseConfig();
   const inputId = useId();
   const [files, setFiles] = useState<File[]>([]);
@@ -362,7 +362,7 @@ function Uploader({ page }: { page: PriceListPageData }) {
           </div>
           {page.currentConfirmedAt && (
             <Notice tone="neutral">
-              <p>{t("priceList.current", { date: page.currentConfirmedAt })}</p>
+              <p>{t("priceList.current", { date: formatDate(page.currentConfirmedAt, i18n.language as Language) })}</p>
             </Notice>
           )}
           {step.phase === "pick" && step.error && <FieldError role="alert">{step.error}</FieldError>}
