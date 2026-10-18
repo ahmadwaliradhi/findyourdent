@@ -305,12 +305,13 @@ function templatedReason(ranked: RankedProvider, request: ShortlistRequest, lang
   if (referral && ranked.services.includes(referral)) {
     return t("shortlist.reason.listedService", { procedure: procedureLabel(referral, language) });
   }
-  const { count, averages } = ranked.testimonies;
-  if (count > 0 && averages) {
+  // The averages come from Proven Testimonies only, so the sentence cites their count.
+  const { verifiedVisitCount, averages } = ranked.testimonies;
+  if (verifiedVisitCount > 0 && averages) {
     const score = overallAverage(averages);
     return t("shortlist.reason.testimonies", {
       score: score.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1 }),
-      count,
+      count: verifiedVisitCount,
     });
   }
   if (distance) return t("shortlist.reason.distance", { distance });

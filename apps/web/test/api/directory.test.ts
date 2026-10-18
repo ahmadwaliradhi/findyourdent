@@ -145,6 +145,20 @@ describe("GET /direktori", () => {
     expect(html).toMatch(/>perkiraan</);
   });
 
+  it("shows Belum cukup testimoni terbukti and the Proven count instead of scores below three", async () => {
+    await seedProvider(server.firestore, {
+      placeId: "few-proven",
+      aggregates: { testimonyCount: 6, verifiedVisitCount: 2, averages: null, procedurePrices: {} as never },
+    });
+
+    const { html } = await directory();
+
+    expect(html).toContain("Belum cukup testimoni terbukti");
+    expect(html).toContain("2 testimoni terbukti");
+    expect(html).toContain("6 testimoni");
+    expect(html).not.toMatch(/Skor \d/);
+  });
+
   it("shows an empty state with a link to write a Testimony, and an Indonesian title naming the kota", async () => {
     await seedProvider(server.firestore, { placeId: "jakpus", region: { provinceCode: "31", regencyCode: "31.71" } });
 
