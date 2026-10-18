@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/proof-check-request.schema.json",
+  "title": "ProofCheckRequest",
+  "description": "Web service to agent service: Moderation in proof-only mode (spec 09). A Proof of Visit attached later to a published Testimony is read for its printed facts, on its own: no text, no photos and no visit month, so nothing else is screened and there is no decision. The shapes are the Moderation request's.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proofOfVisit"],
+  "properties": {
+    "typedProviderName": { "$ref": "moderation-request.schema.json#/properties/typedProviderName" },
+    "googleDisplayName": { "$ref": "moderation-request.schema.json#/properties/googleDisplayName" },
+    "proofOfVisit": {
+      "$ref": "moderation-request.schema.json#/properties/proofOfVisit",
+      "title": "ProofCheckFile"
+    }
+  }
+}

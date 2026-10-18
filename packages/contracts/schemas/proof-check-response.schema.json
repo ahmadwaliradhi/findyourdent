@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/proof-check-response.schema.json",
+  "title": "ProofCheckResponse",
+  "description": "Agent service to web service: the facts read from a Proof of Visit in proof-only mode (spec 09), the same `proofExtraction` a Moderation decision carries. When the model gives no usable answer (error, timeout or invalid output) the agent answers 503 with { error } instead: the proof was not checked.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proofExtraction"],
+  "properties": {
+    "proofExtraction": {
+      "$ref": "moderation-decision.schema.json#/properties/proofExtraction",
+      "title": "ProofCheckExtraction"
+    }
+  }
+}

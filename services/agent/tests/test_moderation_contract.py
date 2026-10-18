@@ -15,6 +15,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator, FormatChecker
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 from findyourdent_agent.adapters import Adapters
 from findyourdent_agent.adapters.fakes import (
@@ -24,9 +26,8 @@ from findyourdent_agent.adapters.fakes import (
 )
 from findyourdent_agent.app import create_app
 from findyourdent_agent.config import Settings
-from findyourdent_agent.contracts.moderation_request import ModerationProofOfVisit
 from findyourdent_agent.data import contracts_dir
-from findyourdent_agent.moderation import extract_proof
+from findyourdent_agent.moderation import MODERATION_INSTRUCTION
 
 CLEAN_TEXT = (
     "Ruang tunggunya bersih dan dokternya menjelaskan pilihan tambalan dengan sabar. "
@@ -595,25 +596,135 @@ def test_a_proof_that_is_not_base64_is_refused_before_any_call(
     assert fake_gemini.calls == []
 
 
-def test_the_proof_alone_can_be_read_without_screening() -> None:
-    # Ticket #131's proof-only mode reuses this call.
-    gemini = RoutingGemini(extractions=[extraction_output()])
+# Proof-only mode (spec 09, ticket #131): a proof attached to a published Testimony is
+# read on its own. Nothing else is screened and there is no decision.
 
-    check = asyncio.run(
-        extract_proof(
-            ModerationProofOfVisit.model_validate(a_proof()),
-            typed_provider_name="Klinik Gigi Senyum",
-            google_display_name=None,
-            gemini=gemini,
-            settings=Settings(),
+PROOF_CHECK = "/v1/moderation/proof-check"
+
+
+def proof_check_validator() -> Draft202012Validator:
+    schemas = contracts_dir() / "schemas"
+    resources = [
+        (
+            schema["$id"],
+            Resource.from_contents(schema, default_specification=DRAFT202012),
         )
+        for schema in (
+            json.loads(path.read_text(encoding="utf-8")) for path in schemas.glob("*.schema.json")
+        )
+    ]
+    schema = json.loads((schemas / "proof-check-response.schema.json").read_text(encoding="utf-8"))
+    return Draft202012Validator(
+        schema, registry=Registry().with_resources(resources), format_checker=FormatChecker()
     )
 
-    assert check.outcome == "extracted"
-    assert check.extraction is not None
-    assert check.extraction.model_dump(exclude_none=True) == extraction_output()
+
+def a_proof_check(**extra: Any) -> dict[str, Any]:
+    return {
+        "typedProviderName": "Klinik Gigi Senyum",
+        "googleDisplayName": "Klinik Gigi Senyum Sehat",
+        "proofOfVisit": a_proof(),
+        **extra,
+    }
+
+
+def check_proof(client: TestClient, body: dict[str, Any]) -> dict[str, Any]:
+    response = client.post(PROOF_CHECK, json=body)
+    assert response.status_code == 200
+    result = response.json()
+    assert [e.message for e in proof_check_validator().iter_errors(result)] == []
+    return result
+
+
+def test_proof_only_mode_reads_the_proof_and_screens_nothing_else() -> None:
+    gemini = RoutingGemini(extractions=[extraction_output()])
+
+    with client_with(gemini) as client:
+        result = check_proof(client, a_proof_check())
+
+    assert result == {"proofExtraction": extraction_output()}
+    # One call, the extraction: no screening instruction, no rules, no photos, no text.
     (call,) = gemini.calls
     assert is_extraction(call)
+    assert call["instruction"] != MODERATION_INSTRUCTION
+    assert "ruleCodes" not in call["response_schema"]["properties"]
+    assert blobs_of(call) == [("application/pdf", base64.b64decode(PDF))]
+    assert data_parts_of(call) == [
+        {"typedProviderName": "Klinik Gigi Senyum", "googleDisplayName": "Klinik Gigi Senyum Sehat"}
+    ]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"text": CLEAN_TEXT},
+        {"photos": [photo()]},
+        {"subjectType": "testimony"},
+        {"visitMonth": "2026-08"},
+    ],
+)
+def test_proof_only_mode_takes_nothing_to_screen(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, extra: dict[str, Any]
+) -> None:
+    response = client.post(PROOF_CHECK, json=a_proof_check(**extra))
+
+    assert response.status_code == 422
+    assert fake_gemini.calls == []
+
+
+def test_proof_only_mode_needs_a_proof(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
+    body = a_proof_check()
+    del body["proofOfVisit"]
+    broken = a_proof_check(
+        proofOfVisit={"mimeType": "application/pdf", "dataBase64": "not base64!"}
+    )
+
+    assert client.post(PROOF_CHECK, json=body).status_code == 422
+    assert client.post(PROOF_CHECK, json=broken).status_code == 422
+    assert fake_gemini.calls == []
+
+
+def test_proof_only_mode_never_returns_a_patient_name() -> None:
+    gemini = RoutingGemini(extractions=[extraction_output(patientName="Budi Santoso")])
+
+    with client_with(gemini) as client:
+        response = client.post(PROOF_CHECK, json=a_proof_check())
+
+    assert response.status_code == 503
+    assert "Budi" not in response.text
+
+
+@pytest.mark.parametrize(
+    ("failure", "outcome"),
+    [
+        (RuntimeError("503 from Vertex AI"), "model_error"),
+        ({"readable": True}, "model_invalid_output"),
+        (extraction_output(proofDate="14/08/2026"), "model_invalid_output"),
+    ],
+)
+def test_proof_only_mode_failure_is_a_retry_later_error(
+    failure: dict[str, Any] | Exception, outcome: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    gemini = RoutingGemini(extractions=[failure])
+
+    with caplog.at_level(logging.INFO), client_with(gemini) as client:
+        response = client.post(PROOF_CHECK, json=a_proof_check())
+
+    # Not checked, so not a result: the web service asks the author to try again later.
+    assert response.status_code == 503
+    assert response.json() == {"error": outcome}
+    (line,) = [r for r in caplog.records if hasattr(r, "outcome")]
+    assert line.outcome == outcome
+
+
+def test_proof_only_mode_times_out_as_a_retry_later_error() -> None:
+    gemini = HangingProofGemini()
+
+    with client_with(gemini, moderation_timeout_seconds=0.05) as client:
+        response = client.post(PROOF_CHECK, json=a_proof_check())
+
+    assert response.status_code == 503
+    assert response.json() == {"error": "model_timeout"}
 
 
 def test_own_health_details_only_warn(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
