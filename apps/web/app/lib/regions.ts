@@ -28,6 +28,14 @@ export interface InitialDistricts {
   districts: DistrictOption[];
 }
 
+/** What a listing page's loader sends about the kecamatan level of its filters. */
+export interface ListingDistricts {
+  /** The kecamatan of the kota in the filters, for the Kecamatan select; null without a kota. */
+  options: InitialDistricts | null;
+  /** The name of the kecamatan in the filters, for headings and meta; null without one. */
+  chosenName: string | null;
+}
+
 /** "Kota Jakarta Pusat, DKI Jakarta". Kecamatan names are not loaded here; see DistrictOption. */
 export function regionLabel(region: Pick<RegionRef, "provinceCode" | "regencyCode">): string {
   return `${regencyName(region.regencyCode)}, ${provinceName(region.provinceCode)}`;

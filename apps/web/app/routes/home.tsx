@@ -29,9 +29,9 @@ import type { FeedItem, FeedPage } from "~/lib/feed";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { type ListingFilters, listingFiltersToParams, parseListingFilters } from "~/lib/listing-filters";
-import { type InitialDistricts, provinceName, regionLabel } from "~/lib/regions";
+import { type ListingDistricts, provinceName, regionLabel } from "~/lib/regions";
 import { openGraphMeta } from "~/lib/seo";
-import { districtName, initialDistrictsOf } from "~/server/districts.server";
+import { listingDistricts } from "~/server/districts.server";
 import { loadFeedPage } from "~/server/feed.server";
 import { guidanceBodyTooLarge, requestGuidance } from "~/server/guidance.server";
 import { readImpactCounter } from "~/server/impact.server";
@@ -53,7 +53,7 @@ export function meta({ matches, loaderData }: Route.MetaArgs) {
   const language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
   const filters = loaderData?.filters;
-  const area = filters ? filterArea(filters, loaderData?.districtName) : null;
+  const area = filters ? filterArea(filters, loaderData?.kecamatan.chosenName) : null;
   const url = loaderData?.url;
   const preview = (title: string, description: string) => (url ? openGraphMeta({ title, description, url }) : []);
   if (!filters || !area) {
@@ -85,8 +85,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   ]);
   return {
     filters,
-    districts: initialDistrictsOf(filters.regencyCode),
-    districtName: filters.districtCode ? (districtName(filters.districtCode) ?? null) : null,
+    kecamatan: listingDistricts(filters),
     feed,
     impact,
     url: `${url.origin}${url.pathname}${url.search}`,
@@ -284,12 +283,7 @@ export default function Home({ actionData: routeActionData, loaderData }: Route.
 
       <ImpactCounter counts={loaderData.impact} />
 
-      <Feed
-        filters={loaderData.filters}
-        districts={loaderData.districts}
-        districtName={loaderData.districtName}
-        feed={loaderData.feed}
-      />
+      <Feed filters={loaderData.filters} kecamatan={loaderData.kecamatan} feed={loaderData.feed} />
     </div>
   );
 }
@@ -366,19 +360,9 @@ function useGuidanceAcrossReload(shown: HomeActionData | undefined): HomeActionD
   return restored?.entryKey === entryKey ? restored.data : undefined;
 }
 
-function Feed({
-  filters,
-  districts,
-  districtName,
-  feed,
-}: {
-  filters: ListingFilters;
-  districts: InitialDistricts | null;
-  districtName: string | null;
-  feed: FeedPage;
-}) {
+function Feed({ filters, kecamatan, feed }: { filters: ListingFilters; kecamatan: ListingDistricts; feed: FeedPage }) {
   const { t } = useTranslation();
-  const area = filterArea(filters, districtName);
+  const area = filterArea(filters, kecamatan.chosenName);
   const query = listingFiltersToParams(filters).toString();
 
   return (
@@ -400,7 +384,7 @@ function Feed({
       <details className="rounded-lg border bg-card px-5 py-3" open={query !== ""}>
         <summary className="flex min-h-touch cursor-pointer items-center font-semibold">{t("filters.title")}</summary>
         <div className="pt-4 pb-2">
-          <ListingFiltersForm filters={filters} districts={districts} action="/" />
+          <ListingFiltersForm filters={filters} districts={kecamatan.options} action="/" />
         </div>
       </details>
       {/* Keyed on the filters, so appended pages reset when the filters change. */}

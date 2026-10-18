@@ -349,6 +349,19 @@ describe("Claim decisions", () => {
     });
     expect(server.fakes.places.coordinatesCalls).toEqual(["ChIJ-belum-listed"]);
   });
+
+  it("keeps the optional kecamatan of a place that was not Listed, so it appears under that kecamatan", async () => {
+    const cookie = await server.signInWithGoogle(OWNER);
+    const region = { provinceCode: "35", regencyCode: "35.78", districtCode: "35.78.08" };
+    const { claimId } = await submitClaim("ChIJ-di-gubeng", {
+      cookie,
+      claim: { providerName: "Klinik Gigi Gubeng", region },
+    });
+    const admin = await adminCookie();
+    expect((await act(admin, { action: "approveClaim", subjectId: claimId })).status).toBe(200);
+
+    expect((await provider("ChIJ-di-gubeng"))?.region).toEqual(region);
+  });
 });
 
 describe("POST /api/providers/:placeId/owner-facts", () => {

@@ -25,7 +25,7 @@ import { provinceName, regencyName, regionLabel } from "~/lib/regions";
 import { openGraphMeta } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import { loadDirectory } from "~/server/directory.server";
-import { districtName, initialDistrictsOf } from "~/server/districts.server";
+import { listingDistricts } from "~/server/districts.server";
 import type { Route } from "./+types/direktori";
 
 /** Server-rendered from FindYourDent's own data; never calls Google Places. */
@@ -38,8 +38,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const rows = context.firestore ? await loadDirectory(context.firestore, { filters, q, sort }) : [];
   return {
     filters,
-    districts: initialDistrictsOf(filters.regencyCode),
-    districtName: filters.districtCode ? (districtName(filters.districtCode) ?? null) : null,
+    kecamatan: listingDistricts(filters),
     q,
     sort,
     rows,
@@ -59,7 +58,7 @@ function areaName(filters: ListingFilters | undefined, district: string | null |
 export function meta({ matches, loaderData }: Route.MetaArgs) {
   const language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
-  const area = areaName(loaderData?.filters, loaderData?.districtName);
+  const area = areaName(loaderData?.filters, loaderData?.kecamatan.chosenName);
   const title = area ? t("directory.metaTitleArea", { area }) : t("directory.metaTitle");
   const description = area ? t("directory.metaDescriptionArea", { area }) : t("directory.metaDescription");
   return [
@@ -112,11 +111,11 @@ function sortByDistance(rows: DirectoryRow[], origin: LatLng): { row: DirectoryR
 }
 
 export default function Directory({ loaderData }: Route.ComponentProps) {
-  const { filters, districts, districtName, q, sort, rows } = loaderData;
+  const { filters, kecamatan, q, sort, rows } = loaderData;
   const { t, i18n } = useTranslation();
   const language: Language = isLanguage(i18n.language) ? i18n.language : "id";
   const location = useVisitorLocation(sort === "jarak");
-  const area = areaName(filters, districtName);
+  const area = areaName(filters, kecamatan.chosenName);
   const shown = useMemo(
     () =>
       location.status === "ready" ? sortByDistance(rows, location.origin) : rows.map((row) => ({ row, km: null })),
@@ -137,7 +136,7 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
           <ListingFiltersForm
             id={FORM_ID}
             filters={filters}
-            districts={districts}
+            districts={kecamatan.options}
             action="/direktori"
             layout="sidebar"
           />

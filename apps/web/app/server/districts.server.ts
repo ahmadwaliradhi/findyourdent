@@ -2,7 +2,8 @@
 // server: pages get the kecamatan of one kota/kabupaten at a time, from a loader or
 // from GET /api/regions/:regencyCode/districts.
 import districtList from "@findyourdent/contracts/data/districts.json";
-import type { DistrictOption, InitialDistricts } from "~/lib/regions";
+import type { ListingFilters } from "~/lib/listing-filters";
+import type { DistrictOption, ListingDistricts } from "~/lib/regions";
 
 const districtNames = new Map(districtList.districts.map((d) => [d.code, d.name] as const));
 // A plain loop, not Map.groupBy, like lib/regions.
@@ -23,8 +24,11 @@ export function districtName(code: string): string | undefined {
   return districtNames.get(code);
 }
 
-/** For a listing page's loader: the kecamatan of the kota in its filters, or null without a kota. */
-export function initialDistrictsOf(regencyCode: string | undefined): InitialDistricts | null {
+/** For a listing page's loader: the kecamatan of the kota in its filters, and the chosen one's name. */
+export function listingDistricts({ regencyCode, districtCode }: ListingFilters): ListingDistricts {
   const districts = regencyCode ? districtsOf(regencyCode) : undefined;
-  return regencyCode && districts ? { regencyCode, districts } : null;
+  return {
+    options: regencyCode && districts ? { regencyCode, districts } : null,
+    chosenName: districtCode ? (districtName(districtCode) ?? null) : null,
+  };
 }
