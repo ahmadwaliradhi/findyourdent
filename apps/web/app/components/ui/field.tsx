@@ -44,7 +44,7 @@ function Field({
 
 /** Native inputs and selects styled like the other inputs, so they stay keyboard and screen-reader friendly. */
 const fieldClassName =
-  "min-h-touch w-full rounded-md border border-input bg-card px-3 text-base shadow-xs focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "min-h-touch w-full rounded-md border border-input bg-card px-3 text-base shadow-xs focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-2 aria-invalid:border-destructive";
 
 /** An error line under an input: an icon and what to do, in danger text. */
 function FieldError({ className, children, ...props }: React.ComponentProps<"p">) {

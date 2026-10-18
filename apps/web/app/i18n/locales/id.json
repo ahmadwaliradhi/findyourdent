@@ -505,6 +505,7 @@
     "photoAlt": "Foto {{index}}",
     "photoRemove": "Hapus foto {{index}}",
     "photosReattach": "Foto dan bukti kunjungan tidak ikut tersimpan di draf. Pilih lagi sebelum mengirim.",
+    "filesTitle": "Foto dan bukti kunjungan",
     "proofLabel": "Bukti kunjungan (opsional, pribadi)",
     "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan: hanya diperiksa lalu langsung dihapus. Jika cocok, Testimoni Anda diberi tanda Kunjungan terbukti.",
     "proofAdd": "Pilih file bukti",
@@ -515,6 +516,7 @@
     "consentTitle": "Pernyataan",
     "consentHonest": "Ini pengalaman saya sendiri, saya tulis dengan jujur.",
     "consentNoOthers": "Tulisan dan foto saya tidak memuat data pribadi orang lain.",
+    "nameTitle": "Nama dan pernyataan",
     "submit": "Kirim",
     "submitting": "Mengirim…",
     "signingIn": "Menunggu masuk dengan Google…",
@@ -576,6 +578,16 @@
       },
       "roundsLeft": "Anda masih bisa memperbaiki {{count}} kali lagi. Setelah itu, tim FindYourDent yang meninjaunya.",
       "lastRound": "Jika kiriman berikutnya masih perlu perbaikan, tim FindYourDent yang meninjaunya, biasanya dalam 24 jam."
+    },
+    "tips": {
+      "title": "Testimoni yang membantu",
+      "what": "Ceritakan apa yang terjadi: penjelasan dokter, lama menunggu, rasa sakit.",
+      "price": "Tulis biaya yang benar-benar dibayar, jika ingat.",
+      "names": "Tanpa nama dokter atau staf jika Anda tidak nyaman.",
+      "privacyTitle": "Privasi Anda",
+      "account": "Akun Google Anda tidak pernah ditampilkan.",
+      "proof": "Bukti kunjungan disimpan privat dan tidak pernah tayang.",
+      "edit": "Anda bisa mengubah atau menghapus Testimoni kapan saja."
     }
   },
   "providerFields": {
