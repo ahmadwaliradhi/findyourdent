@@ -136,13 +136,13 @@ describe("GET /direktori", () => {
     expect(claimedHtml).toContain("Kota Administrasi Jakarta Pusat");
     expect(claimedHtml).toContain("7 testimoni");
     expect(claimedHtml).toContain("3 Kunjungan terbukti");
-    expect(claimedHtml).not.toContain("(perkiraan)");
+    expect(claimedHtml).not.toMatch(/>perkiraan</);
 
     await server.reset();
     await seedProvider(server.firestore, { placeId: "unclaimed", name: "Klinik Biasa" });
     const { html } = await directory();
     expect(html).not.toContain("Diklaim pemilik");
-    expect(html).toContain("(perkiraan)");
+    expect(html).toMatch(/>perkiraan</);
   });
 
   it("shows an empty state with a link to write a Testimony, and an Indonesian title naming the kota", async () => {

@@ -3,7 +3,7 @@
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import type { ProviderType } from "@findyourdent/contracts/firestore";
 import type * as React from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, Link } from "react-router";
 import { RegionFields, type RegionFieldsValue } from "~/components/region-fields";
@@ -11,11 +11,25 @@ import { Button } from "~/components/ui/button";
 import { fieldClassName } from "~/components/ui/field";
 import { isLanguage } from "~/i18n/config";
 import { FILTER_PARAMS, hasActiveFilters, type ListingFilters } from "~/lib/listing-filters";
+import { cn } from "~/lib/utils";
 
 const PROVIDER_TYPES: readonly ProviderType[] = ["klinik", "privateDentist", "hospital"];
 
-export function ListingFiltersForm(props: { filters: ListingFilters; action: string; children?: React.ReactNode }) {
-  const { filters, action, children } = props;
+export function ListingFiltersForm(props: {
+  filters: ListingFilters;
+  action: string;
+  /** Lets inputs elsewhere on the page join this form through their `form` attribute. */
+  id?: string;
+  /**
+   * "grid": two columns from the small breakpoint, labelled for screen readers only (the feed).
+   * "sidebar": one column in a card with a visible "Saring" heading (the Directory).
+   */
+  layout?: "grid" | "sidebar";
+  children?: React.ReactNode;
+}) {
+  const { filters, action, id, layout = "grid", children } = props;
+  const sidebar = layout === "sidebar";
+  const headingId = useId();
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : "id";
   // The kota list follows the chosen province. Without JavaScript it lists the
@@ -35,10 +49,23 @@ export function ListingFiltersForm(props: { filters: ListingFilters; action: str
   const keepsDistrict = Boolean(filters.districtCode) && region.regencyCode === filters.regencyCode;
 
   return (
-    <Form method="get" action={action} className="flex flex-col gap-4" aria-label={t("filters.title")}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+    <Form
+      id={id}
+      method="get"
+      action={action}
+      className={cn("flex flex-col gap-4", sidebar && "rounded-lg border bg-card p-5 text-card-foreground")}
+      aria-label={sidebar ? undefined : t("filters.title")}
+      aria-labelledby={sidebar ? headingId : undefined}
+    >
+      {sidebar && (
+        <h2 id={headingId} className="text-base leading-[22px] font-[650]">
+          {t("filters.title")}
+        </h2>
+      )}
+      <div className={sidebar ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
+        <div className={sidebar ? undefined : "sm:col-span-2"}>
           <RegionFields
+            stacked={sidebar}
             mode="filter"
             value={region}
             onChange={setRegion}
@@ -85,7 +112,7 @@ export function ListingFiltersForm(props: { filters: ListingFilters; action: str
           </select>
         </div>
 
-        <div className="flex items-center gap-2 self-end pb-2">
+        <div className={cn("flex min-h-touch items-center gap-2", !sidebar && "self-end")}>
           <input
             id="filter-verified"
             type="checkbox"
@@ -103,9 +130,11 @@ export function ListingFiltersForm(props: { filters: ListingFilters; action: str
       {children}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit">{t("filters.apply")}</Button>
+        <Button type="submit" size={sidebar ? "sm" : undefined}>
+          {t("filters.apply")}
+        </Button>
         {hasActiveFilters(filters) && (
-          <Button asChild variant="ghost">
+          <Button asChild variant="ghost" size={sidebar ? "sm" : undefined}>
             <Link to={action}>{t("filters.reset")}</Link>
           </Button>
         )}
