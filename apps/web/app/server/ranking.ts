@@ -1,6 +1,6 @@
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import type { AspectRatings, ProcedureCode, ProviderType } from "@findyourdent/contracts/firestore";
-import { aspectPrior, type ScorePrior, shrunkAspectScore } from "~/lib/scores";
+import { aspectPrior, rankingScore, type ScorePrior } from "~/lib/scores";
 
 /**
  * Deterministic, explainable Shortlist ranking (spec 02), computed after Places
@@ -87,14 +87,12 @@ function procedureFit(candidate: RankingCandidate, need: RankingNeed): { score: 
 }
 
 /**
- * The shrunk aspect score shared with the directory (lib/scores.ts), over Proven
- * Testimonies only, scaled to 0..1. No separate Kunjungan terbukti bonus: proof is
- * already the whole input (spec 09).
+ * The ranking score shared with the directory (lib/scores.ts), over Proven Testimonies
+ * only, scaled to 0..1. No separate Kunjungan terbukti bonus: proof is already the whole
+ * input (spec 09).
  */
 function testimonyScore(candidate: RankingCandidate, prior: ScorePrior): number {
-  // An unrated Provider sits at the overall mean: neither helped nor hurt.
-  const shrunk = shrunkAspectScore(candidate.testimonies, prior) ?? prior.mean;
-  return clamp01((shrunk - 1) / 4);
+  return clamp01((rankingScore(candidate.testimonies, prior) - 1) / 4);
 }
 
 function priceScore(candidate: RankingCandidate, need: RankingNeed): number {

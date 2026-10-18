@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aspectPrior, shrunkAspectScore } from "../../app/lib/scores.ts";
+import { aspectPrior, rankingScore, shrunkAspectScore } from "../../app/lib/scores.ts";
 
 const flat = (score: number) => ({ service: score, hygiene: score, materialsEquipment: score });
 
@@ -31,6 +31,15 @@ describe("shrunkAspectScore", () => {
     const many = shrunkAspectScore({ averages: flat(4.8), verifiedVisitCount: 20 }, prior);
     expect(single).toBeCloseTo(4.4, 10);
     expect(many).toBeCloseTo(4.721739, 5);
+  });
+});
+
+describe("rankingScore", () => {
+  it("is the shrunk score, or the overall mean for a Provider with no average", () => {
+    const prior = { mean: 4.2, weight: 3 };
+    expect(rankingScore({ averages: flat(5), verifiedVisitCount: 1 }, prior)).toBeCloseTo(4.4, 10);
+    expect(rankingScore({ averages: null, verifiedVisitCount: 2 }, prior)).toBe(4.2);
+    expect(rankingScore({ averages: null, verifiedVisitCount: 0 }, prior)).toBe(4.2);
   });
 });
 

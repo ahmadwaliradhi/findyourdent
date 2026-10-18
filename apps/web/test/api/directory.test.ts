@@ -122,15 +122,25 @@ describe("GET /direktori", () => {
     await seedProvider(server.firestore, { placeId: "few-perfect", aggregates: rated(3, 5, 30) });
     await seedProvider(server.firestore, { placeId: "many-great", aggregates: rated(20, 4.8) });
     await seedProvider(server.firestore, { placeId: "mediocre", aggregates: rated(10, 3) });
+    // No average: below the minimum of Proven Testimonies, or none at all.
+    await seedProvider(server.firestore, { placeId: "two-proven", aggregates: rated(2, 5) });
     await seedProvider(server.firestore, { placeId: "unrated", aggregates: rated(0, 0, 8) });
 
     const { html, rows } = await directory();
-    expect(rows).toEqual(["many-great", "mediocre", "few-perfect", "unrated"]);
+    expect(rows).toEqual(["many-great", "mediocre", "few-perfect", "two-proven", "unrated"]);
     // The label says what the sort counts.
     expect(html).toMatch(/<option value="testimoni"[^>]*>Testimoni terbukti terbanyak<\/option>/);
-    expect((await directory("?urut=skor")).rows).toEqual(["many-great", "few-perfect", "mediocre", "unrated"]);
+    // As on the Shortlist, a Provider with no average scores the overall mean, so it
+    // ranks above one proven below that mean; ties go to the Proven count.
+    expect((await directory("?urut=skor")).rows).toEqual([
+      "many-great",
+      "few-perfect",
+      "two-proven",
+      "unrated",
+      "mediocre",
+    ]);
     // Distance is sorted in the browser; the server sends the default order.
-    expect((await directory("?urut=jarak")).rows).toEqual(["many-great", "mediocre", "few-perfect", "unrated"]);
+    expect((await directory("?urut=jarak")).rows).toEqual(rows);
   });
 
   it("shows the area, an inferred type as perkiraan, counts, and Diklaim pemilik for claimed Providers", async () => {

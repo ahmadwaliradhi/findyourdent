@@ -36,14 +36,22 @@ export function overallAverage(averages: AspectRatings): number {
 
 /**
  * (weight * mean + n * average) / (weight + n), n the Proven Testimonies. Null when
- * the Provider has no average: an unrated Provider has no score of its own, and each
- * caller decides where it goes (the directory sorts it last, the Shortlist uses the mean).
+ * the Provider has no average: it has no score of its own to show.
  */
 export function shrunkAspectScore({ averages, verifiedVisitCount }: RatedProvider, prior: ScorePrior): number | null {
   if (!averages || verifiedVisitCount <= 0) return null;
   return (
     (prior.weight * prior.mean + verifiedVisitCount * overallAverage(averages)) / (prior.weight + verifiedVisitCount)
   );
+}
+
+/**
+ * What the Shortlist and the directory's score sort rank by (spec 09 Ranking): the shrunk
+ * aspect score, or the overall mean for a Provider with no average, which neither helps
+ * nor hurts it.
+ */
+export function rankingScore(provider: RatedProvider, prior: ScorePrior): number {
+  return shrunkAspectScore(provider, prior) ?? prior.mean;
 }
 
 /** The prior over a set of Providers: their overall averages weighted by Proven Testimony count. */
