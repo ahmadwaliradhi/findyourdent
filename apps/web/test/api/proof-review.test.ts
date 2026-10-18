@@ -377,6 +377,22 @@ describe("admin rejects a proof", () => {
     expect(page).toContain("Bukti kunjungan tidak diterima setelah diperiksa tim FindYourDent.");
     expect(page).toContain(NOTE);
   });
+
+  it("deletes only the decided proof's own file: one stored for the author's next proof meanwhile stays", async () => {
+    const id = await postWithProof("pasien@example.com");
+    const cookie = await adminCookie();
+    const proofCheckedAt = await shownProof(cookie, id);
+    // The author's next proof, stored as the decision lands; its own check is still to come.
+    const next = `proof-of-visit/${id}/next.jpg`;
+    await server.uploads.file(next).save(Buffer.from("another receipt"));
+
+    expect((await act(cookie, { action: "rejectProof", subjectId: id, reason: NOTE, proofCheckedAt })).status).toBe(
+      200,
+    );
+
+    expect(await storedObjects(`proof-of-visit/${id}/`)).toEqual([next]);
+    expect((await testimony(id)).proofOfVisit?.filePath).toBeUndefined();
+  });
 });
 
 describe("proof actions: who may decide, and what", () => {

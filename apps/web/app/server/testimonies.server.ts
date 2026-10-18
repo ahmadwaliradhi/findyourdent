@@ -76,12 +76,12 @@ import { testimonyPhotoUrl } from "~/lib/testimony-photos";
 import type { LatLng } from "../../server/adapters/places.ts";
 import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
-import { storedProofPaths } from "../../server/proof-files.ts";
+import { deleteProofFile, deleteStoredProofs } from "../../server/proof-files.ts";
 import { jakartaDate } from "../../server/quota.ts";
+import { fingerprintRef } from "../../server/waiting-proof.ts";
 import { type AggregateInput, computeAggregates } from "./aggregates.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import {
-  fingerprintRef,
   fingerprintStoredProof,
   type ProofFingerprint,
   recordFingerprint,
@@ -388,11 +388,17 @@ function keepFingerprint(
   recordFingerprint(tx, firestore, { ...at, fingerprint: proof.fingerprint, now }, proof.decision.result);
 }
 
-/** What is kept of a decided proof: never the file, never a patient name. */
-function proofRecord({ decision, extraction }: CheckedProof, attempts: number, now: Timestamp): ProofOfVisitRecord {
+/**
+ * What is kept of a decided proof: never the file, never a patient name. A pending one
+ * also names its file (`filePath`), which waits for the team.
+ */
+function proofRecord(
+  { decision, extraction }: CheckedProof,
+  { attempts, now, filePath }: { attempts: number; now: Timestamp; filePath: string },
+): ProofOfVisitRecord {
   return {
     result: decision.result,
-    ...(decision.result === "pending" ? { reasons: decision.reasons } : {}),
+    ...(decision.result === "pending" ? { reasons: decision.reasons, filePath } : {}),
     ...(decision.result === "rejected" ? { reason: decision.reason } : {}),
     checkedAt: now,
     ...(extraction.clinicNameOnProof ? { clinicNameOnProof: extraction.clinicNameOnProof } : {}),
@@ -428,22 +434,17 @@ const isPending = (proof: ProofCheck | null): proof is CheckedProof =>
   proof?.checked === true && proof.decision.result === "pending";
 
 /**
- * Deletes proof files once the result they belong to is final: the given paths, or
- * (`allBut`) every proof file of the Testimony except a pending one, so a new decision
- * also clears a proof it replaced. Never fails the request: the bucket lifecycle rule
- * is the backstop.
+ * Deletes proof files once the result they belong to is final: a decided proof's own
+ * file, and the file of a waiting proof it replaced; never another proof's. Never fails
+ * the request: the bucket lifecycle rule is the backstop.
  */
 async function deleteProofFiles(
   context: AppLoadContext,
   uploads: Bucket,
-  target: { paths: string[] } | { testimonyId: string; allBut?: string },
+  paths: ReadonlyArray<string | undefined>,
 ): Promise<void> {
   try {
-    const paths =
-      "paths" in target
-        ? target.paths
-        : (await storedProofPaths(uploads, target.testimonyId)).filter((path) => path !== target.allBut);
-    await deleteTestimonyMedia(uploads, paths);
+    await Promise.all(paths.flatMap((path) => (path ? [deleteProofFile(uploads, path)] : [])));
   } catch (error) {
     context.logger.warn("testimony", {
       outcome: "proof_delete_failed",
@@ -677,7 +678,9 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         displayName: value.displayName,
         status: decided,
         verifiedVisit,
-        ...(proof?.checked ? { proofOfVisit: proofRecord(proof, 1, now) } : {}),
+        ...(proof?.checked && media.proofPath
+          ? { proofOfVisit: proofRecord(proof, { attempts: 1, now, filePath: media.proofPath }) }
+          : {}),
         consent: { termsVersion: TESTIMONY_TERMS_VERSION, acceptedAt: now },
         authorFixRounds: roundsUsed,
         moderationDecisionId: decisionRef.id,
@@ -694,7 +697,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
     return refusalResponse(request, error);
   }
 
-  if (media.proofPath && !isPending(proof)) await deleteProofFiles(context, uploads, { paths: [media.proofPath] });
+  if (!isPending(proof)) await deleteProofFiles(context, uploads, [media.proofPath]);
   const proofStatus = proof ? proofFeedback(proof) : undefined;
   context.logger.info("testimony", {
     outcome: "created",
@@ -822,6 +825,8 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
   // are assigned inside the transaction callback, which control flow analysis cannot see.
   let proofWritten = null as ProofOfVisitRecord | null;
   let proofStatus = undefined as ProofOfVisitStatus | undefined;
+  // The file of a waiting proof the new one replaced.
+  let replacedFile = undefined as string | undefined;
   try {
     const status = decided;
     const becomesPublished = !editingPublished && status === "published";
@@ -857,7 +862,10 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       const now = Timestamp.now();
       const content = contentOf(value, [...keep, ...media.photoPaths]);
       const verifiedVisit = before.verifiedVisit || proofAccepted;
-      const proofOfVisit = newProof ? proofRecord(newProof, proofAttempts(before) + 1, now) : null;
+      const proofOfVisit =
+        newProof && media.proofPath
+          ? proofRecord(newProof, { attempts: proofAttempts(before) + 1, now, filePath: media.proofPath })
+          : null;
       tx.create(
         decisionRef,
         moderationDecisionDoc(
@@ -953,6 +961,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       const kept = new Set([...after.photoPaths, ...after.pending]);
       orphaned = storedPhotoPaths(before).filter((path) => !kept.has(path));
       proofWritten = proofOfVisit;
+      replacedFile = proofOfVisit ? before.proofOfVisit?.filePath : undefined;
       if (read) {
         proofStatus = proofOfVisit
           ? proofStatusForAuthor(proofOfVisit)
@@ -967,16 +976,11 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
   }
 
   await deleteTestimonyMedia(uploads, orphaned);
-  if (media.proofPath) {
-    // A new result also clears the proof it replaced; otherwise only the new file goes.
-    await deleteProofFiles(
-      context,
-      uploads,
-      proofWritten
-        ? { testimonyId, ...(proofWritten.result === "pending" ? { allBut: media.proofPath } : {}) }
-        : { paths: [media.proofPath] },
-    );
-  }
+  // The new file goes unless it now waits for the team; so does a waiting proof it replaced.
+  await deleteProofFiles(context, uploads, [
+    proofWritten?.result === "pending" ? undefined : media.proofPath,
+    replacedFile,
+  ]);
   context.logger.info("testimony", {
     outcome: "edited",
     status: decided,
@@ -1041,7 +1045,7 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
   const read = extraction ? await fingerprinted(context, uploads, extraction, proofPath) : null;
   if (!read?.checked) {
     // Not checked, so no attempt: the author may simply send it again later.
-    await deleteProofFiles(context, uploads, { paths: [proofPath] });
+    await deleteProofFiles(context, uploads, [proofPath]);
     context.logger.info("testimony", { outcome: "proof_attached", proof: "notChecked" });
     return errorResponse(request, 503, "proof_check_unavailable");
   }
@@ -1049,8 +1053,9 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
   const ref = testimonies(firestore).doc(testimonyId);
   let after: TestimonyDoc;
   let proof: CheckedProof;
+  let replacedFile: string | undefined;
   try {
-    ({ after, proof } = await firestore.runTransaction(async (tx) => {
+    ({ after, proof, replacedFile } = await firestore.runTransaction(async (tx) => {
       const before = checkOwn(await tx.get(ref), user.uid);
       // Moved meanwhile (hidden after a report, another proof decided): ask again.
       checkAttachable(before);
@@ -1064,7 +1069,7 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
       const published = accepted ? await tx.get(publishedOf(firestore, before.placeId)) : null;
 
       const now = Timestamp.now();
-      const proofOfVisit = proofRecord(proof, proofAttempts(before) + 1, now);
+      const proofOfVisit = proofRecord(proof, { attempts: proofAttempts(before) + 1, now, filePath: proofPath });
       const update: Record<string, unknown> = { proofOfVisit, updatedAt: now };
       if (provider && published) {
         // The public version is Proven now; a pending edit of it changes nothing here.
@@ -1086,16 +1091,21 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
       }
       tx.update(ref, update);
       keepFingerprint(tx, firestore, { testimonyId, placeId: before.placeId }, proof, now);
-      return { after: { ...before, proofOfVisit, verifiedVisit: accepted }, proof };
+      return {
+        after: { ...before, proofOfVisit, verifiedVisit: accepted },
+        proof,
+        // A waiting proof's file: the new proof replaced it.
+        replacedFile: before.proofOfVisit?.filePath,
+      };
     }));
   } catch (error) {
-    await deleteProofFiles(context, uploads, { paths: [proofPath] });
+    await deleteProofFiles(context, uploads, [proofPath]);
     return refusalResponse(request, error);
   }
 
   const result = proof.decision.result;
-  // The new result also clears a proof it replaced; a pending one stays for the team.
-  await deleteProofFiles(context, uploads, { testimonyId, ...(result === "pending" ? { allBut: proofPath } : {}) });
+  // The new file goes unless it now waits for the team; so does a waiting proof it replaced.
+  await deleteProofFiles(context, uploads, [result === "pending" ? undefined : proofPath, replacedFile]);
   context.logger.info("testimony", { outcome: "proof_attached", proof: result });
   const body: ProofAttachResponse = {
     testimonyId,
@@ -1164,8 +1174,16 @@ export async function deleteTestimony(context: AppLoadContext, request: Request,
   }
 
   await deleteTestimonyMedia(uploads, removedPaths);
-  // A proof still waiting for an admin goes with the Testimony.
-  await deleteProofFiles(context, uploads, { testimonyId });
+  // A proof file waiting for the team goes with the Testimony, as does one stored for a
+  // proof still being checked (its decision is then refused: the Testimony is deleted).
+  try {
+    await deleteStoredProofs(uploads, testimonyId);
+  } catch (error) {
+    context.logger.warn("testimony", {
+      outcome: "proof_delete_failed",
+      error: error instanceof Error ? error.name : "unknown",
+    });
+  }
   context.logger.info("testimony", { outcome: "deleted" });
   const body: TestimonyDeleteResponse = { testimonyId, status: "deleted" };
   return Response.json(body);

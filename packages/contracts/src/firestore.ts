@@ -207,6 +207,11 @@ export interface ProofOfVisitRecord {
   totalRupiah?: number;
   /** Proofs checked for this Testimony, the one sent with it included; at most 3. */
   attempts?: number;
+  /**
+   * `pending` only: its private file, `proof-of-visit/{testimonyId}/…`. Whatever decides
+   * the proof deletes exactly this file, never a newer proof's; the field goes with it.
+   */
+  filePath?: string;
 }
 
 // proofFingerprints/{testimonyId} ----------------------------------------------

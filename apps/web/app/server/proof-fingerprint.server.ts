@@ -17,20 +17,19 @@
 // one equality query, compared here.
 import { createHash } from "node:crypto";
 import type { ProofExtraction } from "@findyourdent/contracts";
-import { COLLECTIONS, type ProofFingerprintDoc } from "@findyourdent/contracts/firestore";
+import { COLLECTIONS, type ProofFingerprintDoc, type ProofOfVisitRecord } from "@findyourdent/contracts/firestore";
 import type { Firestore, QuerySnapshot, Timestamp, Transaction } from "firebase-admin/firestore";
 import sharp from "sharp";
 import { normalizeName } from "~/lib/normalize-name";
 import type { Bucket } from "../../server/firebase.ts";
+import { isPdfProof } from "../../server/proof-files.ts";
+import { fingerprintRef } from "../../server/waiting-proof.ts";
 
 /** Perceptual hashes this many bits apart or fewer are the same receipt (spec 09). */
 export const REUSE_MAX_HAMMING_BITS = 10;
 
 /** What a Proof Fingerprint compares: one file hash, and the key when it is strong enough. */
 export type ProofFingerprint = Pick<ProofFingerprintDoc, "perceptualHash" | "fileSha256" | "fieldsKey">;
-
-export const fingerprintRef = (firestore: Firestore, testimonyId: string) =>
-  firestore.collection(COLLECTIONS.proofFingerprints).doc(testimonyId);
 
 /** Every fingerprint kept for a place: what a new proof there is checked against. */
 export const placeFingerprints = (firestore: Firestore, placeId: string) =>
@@ -45,7 +44,7 @@ export async function fingerprintStoredProof(
   const [bytes] = await uploads.file(proofPath).download();
   const key = fieldsKey(extraction);
   return {
-    ...(proofPath.endsWith(".pdf")
+    ...(isPdfProof(proofPath)
       ? { fileSha256: createHash("sha256").update(bytes).digest("hex") }
       : { perceptualHash: await perceptualHash(bytes) }),
     ...(key ? { fieldsKey: key } : {}),
@@ -144,7 +143,7 @@ export function recordFingerprint(
   tx: Transaction,
   firestore: Firestore,
   at: { testimonyId: string; placeId: string; fingerprint: ProofFingerprint; now: Timestamp },
-  result: "accepted" | "pending" | "rejected",
+  result: ProofOfVisitRecord["result"],
 ): void {
   const ref = fingerprintRef(firestore, at.testimonyId);
   if (result === "rejected") {

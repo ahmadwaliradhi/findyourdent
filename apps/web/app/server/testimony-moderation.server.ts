@@ -25,6 +25,7 @@ import { getI18n, type Language } from "~/i18n/config";
 import { AUTHOR_FIXABLE_RULES, MAX_AUTHOR_FIX_ROUNDS } from "~/lib/testimony";
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import type { Bucket } from "../../server/firebase.ts";
+import { isPdfProof } from "../../server/proof-files.ts";
 
 /**
  * Model recorded on decisions the agent made: its configured default
@@ -75,7 +76,7 @@ async function base64Of(uploads: Bucket, path: string): Promise<string> {
 /** A stored Proof of Visit as the agent takes it: JPEG (images, EXIF stripped) or PDF as sent (testimony-media.server.ts). */
 async function proofOfVisitFile(uploads: Bucket, proofPath: string): Promise<ProofCheckRequest["proofOfVisit"]> {
   return {
-    mimeType: proofPath.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+    mimeType: isPdfProof(proofPath) ? "application/pdf" : "image/jpeg",
     dataBase64: await base64Of(uploads, proofPath),
   };
 }
