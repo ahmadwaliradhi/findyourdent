@@ -12,8 +12,11 @@ describe("Provider type inference (spec 02)", () => {
     );
   });
 
-  it("reads a Private Dentist from a drg. name and a Klinik otherwise", () => {
+  it("reads a Private Dentist from a drg. name", () => {
     expect(inferProviderType({ displayName: "drg. Ayu Lestari", types: ["dentist"] })).toBe("privateDentist");
+  });
+
+  it("reads a Klinik otherwise, including a dental clinic", () => {
     expect(inferProviderType({ displayName: "Klinik Gigi Senyum", types: ["dental_clinic"] })).toBe("klinik");
   });
 });
