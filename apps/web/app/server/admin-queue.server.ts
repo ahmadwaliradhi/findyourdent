@@ -34,6 +34,7 @@ import {
   type AdminQueueResponse,
   OWNER_ACTIONS,
   PROOF_ACTIONS,
+  type ProofAction,
   type QueueHistoryEntry,
   type QueueItem,
   type QueueModeration,
@@ -350,13 +351,27 @@ const ACTIONS: ReadonlySet<string> = new Set<AdminActionRequest["action"]>([
 
 function parseAction(body: unknown): AdminActionRequest | null {
   if (!body || typeof body !== "object") return null;
-  const { action, subjectId, reason } = body as Record<string, unknown>;
+  const { action, subjectId, reason, proofCheckedAt } = body as Record<string, unknown>;
   if (typeof action !== "string" || !ACTIONS.has(action)) return null;
   if (typeof subjectId !== "string" || !SUBJECT_ID.test(subjectId)) return null;
   if (reason !== undefined && typeof reason !== "string") return null;
   const trimmed = reason?.trim() ?? "";
   if (trimmed.length > ADMIN_REASON_MAX_CHARS) return null;
-  return { action: action as AdminActionRequest["action"], subjectId, ...(trimmed ? { reason: trimmed } : {}) };
+  // A proof action names the proof the admin was shown; nothing else carries one.
+  const isProofAction = PROOF_ACTIONS.includes(action as ProofAction);
+  if (isProofAction !== (proofCheckedAt !== undefined)) return null;
+  if (
+    proofCheckedAt !== undefined &&
+    (typeof proofCheckedAt !== "string" || Number.isNaN(Date.parse(proofCheckedAt)))
+  ) {
+    return null;
+  }
+  return {
+    action: action as AdminActionRequest["action"],
+    subjectId,
+    ...(trimmed ? { reason: trimmed } : {}),
+    ...(typeof proofCheckedAt === "string" ? { proofCheckedAt } : {}),
+  };
 }
 
 /** GET /admin/api/queue. */

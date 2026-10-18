@@ -808,7 +808,8 @@
       "reason_required": "Write a reason for this action.",
       "not_found": "This item was not found or has already been decided.",
       "not_allowed": "This action is not possible in the current state.",
-      "unavailable": "The admin service is unavailable right now."
+      "unavailable": "The admin service is unavailable right now.",
+      "proof_changed": "The author has replaced this proof. Reload the page to see the new one."
     }
   },
   "report": {

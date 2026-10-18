@@ -67,6 +67,11 @@ export interface AdminActionRequest {
     | "spotCheckConfirm";
   subjectId: string;
   reason?: string;
+  /**
+   * Proof actions only, and required there: when the proof the admin was shown was checked
+   * (`QueueProof.checkedAt`). A proof the author replaced since is refused (`proof_changed`).
+   */
+  proofCheckedAt?: string;
 }
 
 export interface AdminActionResponse {
@@ -75,7 +80,7 @@ export interface AdminActionResponse {
 }
 
 export interface AdminApiError {
-  error: "invalid_action" | "reason_required" | "not_found" | "not_allowed" | "unavailable";
+  error: "invalid_action" | "reason_required" | "not_found" | "not_allowed" | "unavailable" | "proof_changed";
   message: string;
 }
 
@@ -231,6 +236,8 @@ export interface QueueProof {
   providerName: string;
   listed: boolean;
   testimonyStatus: TestimonyStatus;
+  /** When this proof was checked, ISO: which proof the admin decides on (`proofCheckedAt`). */
+  checkedAt: string;
   /** The visit month the author stated, YYYY-MM. */
   visitMonth: string;
   displayName: string;

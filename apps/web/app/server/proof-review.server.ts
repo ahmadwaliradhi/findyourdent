@@ -17,7 +17,7 @@ import type { AppLoadContext } from "react-router";
 import type { ProofAction, QueueItem, QueueProofMatch } from "~/lib/admin-queue";
 import type { Bucket } from "../../server/firebase.ts";
 import { deleteStoredProofs, storedProofPaths } from "../../server/proof-files.ts";
-import { type Acting, AdminRefusal, logAction, queueItem } from "./admin-common.server.ts";
+import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { fingerprintRef, matchingTestimonyIds, placeFingerprints } from "./proof-fingerprint.server.ts";
 import { publishedOf, writeProviderOnPublish } from "./testimonies.server.ts";
@@ -105,6 +105,7 @@ export async function loadProofQueue(
             providerName: listedName ?? t.proposedProviderName ?? "",
             listed: listedName !== undefined,
             testimonyStatus: t.status,
+            checkedAt: iso(proof.checkedAt),
             visitMonth: t.visitMonth,
             displayName: t.displayName,
             fileUrl: path ? proofFileUrl(doc.id) : null,
@@ -178,6 +179,10 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
     if (!testimony || testimony.status === "deleted") throw new AdminRefusal(404, "not_found");
     const proof = testimony.proofOfVisit;
     if (proof?.result !== "pending") throw new AdminRefusal(404, "not_found");
+    // The author replaced the proof since the admin was shown it: decide nothing unseen.
+    if (Date.parse(acting.request.proofCheckedAt ?? "") !== proof.checkedAt.toMillis()) {
+      throw new AdminRefusal(409, "proof_changed");
+    }
     const { reasons: _waitedFor, ...facts } = proof;
 
     if (action === "acceptProof") {

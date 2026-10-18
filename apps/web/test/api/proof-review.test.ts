@@ -133,6 +133,13 @@ async function queue(cookie: string): Promise<AdminQueueResponse> {
 const act = (cookie: string, body: AdminActionRequest) =>
   server.post("/admin/api/actions", body, { headers: { cookie } });
 
+/** When the proof the queue shows for a Testimony was checked: what a proof action names. */
+async function shownProof(cookie: string, testimonyId: string): Promise<string> {
+  const item = (await queue(cookie)).items.find((i) => i.kind === "proof" && i.subjectId === testimonyId);
+  if (!item?.proof) throw new Error(`no waiting proof for ${testimonyId} in the queue`);
+  return item.proof.checkedAt;
+}
+
 async function adminActions(): Promise<AdminActionDoc[]> {
   const snapshot = await server.firestore.collection(COLLECTIONS.adminActions).get();
   return snapshot.docs.map((doc) => doc.data() as AdminActionDoc);
@@ -266,7 +273,11 @@ describe("admin accepts a proof", () => {
     expect(await counter("verifiedVisits")).toBe(0);
     const cookie = await adminCookie();
 
-    const response = await act(cookie, { action: "acceptProof", subjectId: id });
+    const response = await act(cookie, {
+      action: "acceptProof",
+      subjectId: id,
+      proofCheckedAt: await shownProof(cookie, id),
+    });
 
     expect(response.status).toBe(200);
     const stored = await testimony(id);
@@ -299,7 +310,8 @@ describe("admin accepts a proof", () => {
     const before = (await queue(cookie)).items;
     expect(before.map((item) => item.kind).sort()).toEqual(["held", "proof"]);
 
-    expect((await act(cookie, { action: "acceptProof", subjectId: id })).status).toBe(200);
+    const proofCheckedAt = await shownProof(cookie, id);
+    expect((await act(cookie, { action: "acceptProof", subjectId: id, proofCheckedAt })).status).toBe(200);
 
     // The held text keeps its place and its 24-hour target in the queue.
     const after = (await queue(cookie)).items;
@@ -326,13 +338,16 @@ describe("admin rejects a proof", () => {
   it("only with a reason, which the author reads on Testimoni saya; the file and fingerprint go and nothing is counted", async () => {
     const id = await postWithProof("pasien@example.com");
     const cookie = await adminCookie();
+    const proofCheckedAt = await shownProof(cookie, id);
 
-    expect((await act(cookie, { action: "rejectProof", subjectId: id })).status).toBe(400);
+    expect((await act(cookie, { action: "rejectProof", subjectId: id, proofCheckedAt })).status).toBe(400);
     expect((await testimony(id)).proofOfVisit?.result).toBe("pending");
     expect(await storedObjects(`proof-of-visit/${id}/`)).toHaveLength(1);
     expect(await hasFingerprint(id)).toBe(true);
 
-    expect((await act(cookie, { action: "rejectProof", subjectId: id, reason: NOTE })).status).toBe(200);
+    expect((await act(cookie, { action: "rejectProof", subjectId: id, reason: NOTE, proofCheckedAt })).status).toBe(
+      200,
+    );
     expect(await hasFingerprint(id)).toBe(false);
 
     const stored = await testimony(id);
@@ -366,10 +381,12 @@ describe("proof actions: who may decide, and what", () => {
   it("refuses a signed-out visitor and a Patient, and changes nothing", async () => {
     const id = await postWithProof("pasien@example.com");
     const author = await server.signInWithGoogle("pasien@example.com");
+    const proofCheckedAt = await shownProof(await adminCookie(), id);
+    const accept = { action: "acceptProof", subjectId: id, proofCheckedAt } as const;
 
-    expect((await server.post("/admin/api/actions", { action: "acceptProof", subjectId: id })).status).toBe(401);
-    expect((await act(author, { action: "acceptProof", subjectId: id })).status).toBe(403);
-    expect((await act(author, { action: "rejectProof", subjectId: id, reason: "Saya penulisnya." })).status).toBe(403);
+    expect((await server.post("/admin/api/actions", accept)).status).toBe(401);
+    expect((await act(author, accept)).status).toBe(403);
+    expect((await act(author, { ...accept, action: "rejectProof", reason: "Saya penulisnya." })).status).toBe(403);
 
     expect(await testimony(id)).toMatchObject({ verifiedVisit: false, proofOfVisit: { result: "pending" } });
     expect(await storedObjects(`proof-of-visit/${id}/`)).toHaveLength(1);
@@ -379,7 +396,8 @@ describe("proof actions: who may decide, and what", () => {
   it("refuses a proof that is not waiting: already decided, accepted at submission, or none at all", async () => {
     const cookie = await adminCookie();
     const decided = await postWithProof("pasien@example.com");
-    expect((await act(cookie, { action: "acceptProof", subjectId: decided })).status).toBe(200);
+    const proofCheckedAt = await shownProof(cookie, decided);
+    expect((await act(cookie, { action: "acceptProof", subjectId: decided, proofCheckedAt })).status).toBe(200);
     const accepted = await postWithProof("lain@example.com", {
       facts: doubtfulFacts({ clinicNameMatches: true }),
       overrides: { placeId: "ChIJ-lain" },
@@ -387,8 +405,80 @@ describe("proof actions: who may decide, and what", () => {
     expect((await testimony(accepted)).proofOfVisit?.result).toBe("accepted");
 
     for (const subjectId of [decided, accepted, "does-not-exist"]) {
-      expect((await act(cookie, { action: "rejectProof", subjectId, reason: "Coba." })).status).toBe(404);
+      expect((await act(cookie, { action: "rejectProof", subjectId, reason: "Coba.", proofCheckedAt })).status).toBe(
+        404,
+      );
     }
     expect(await adminActions()).toHaveLength(1);
+  });
+});
+
+/** The author attaches another receipt to their published Testimony, which the agent reads as `facts`. */
+async function attachAnother(email: string, id: string, facts: ProofExtraction): Promise<void> {
+  server.fakes.agent.respondToProofCheckWith({ proofExtraction: facts });
+  const form = new FormData();
+  const receipt = await receiptJpeg(`Struk lain ${email}`);
+  form.set("proof", new File([new Uint8Array(receipt)], "struk.jpg", { type: "image/jpeg" }));
+  const response = await fetch(new URL(`/api/testimonies/${id}/proof`, server.baseUrl), {
+    method: "POST",
+    headers: { cookie: await server.signInWithGoogle(email), [APP_CHECK_HEADER]: server.appCheckToken() },
+    body: form,
+  });
+  if (response.status !== 200) throw new Error(`attach failed: ${response.status} ${await response.text()}`);
+}
+
+describe("a proof the author replaces while an admin looks at it", () => {
+  it("refuses to decide on the proof shown once another is waiting, and decides the new one once shown", async () => {
+    const id = await postWithProof("pasien@example.com");
+    const cookie = await adminCookie();
+    const [shown] = (await queue(cookie)).items;
+    expect(shown?.proof?.checkedAt).toEqual(expect.any(String));
+
+    await attachAnother("pasien@example.com", id, doubtfulFacts({ clinicNameOnProof: "Klinik Gigi Baru" }));
+    const replacement = await storedObjects(`proof-of-visit/${id}/`);
+    expect(replacement).toHaveLength(1);
+
+    for (const request of [
+      { action: "acceptProof", subjectId: id },
+      { action: "rejectProof", subjectId: id, reason: "Nama klinik di struk bukan klinik ini." },
+    ] as const) {
+      const response = await act(cookie, { ...request, proofCheckedAt: shown?.proof?.checkedAt });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({
+        error: "proof_changed",
+        message: "Penulis sudah mengganti bukti ini. Muat ulang halaman untuk melihat bukti yang baru.",
+      });
+    }
+
+    // The new proof waits untouched: its file, its fingerprint, no decision logged.
+    expect(await testimony(id)).toMatchObject({
+      verifiedVisit: false,
+      proofOfVisit: { result: "pending", clinicNameOnProof: "Klinik Gigi Baru", attempts: 2 },
+    });
+    expect(await storedObjects(`proof-of-visit/${id}/`)).toEqual(replacement);
+    expect(await hasFingerprint(id)).toBe(true);
+    expect(await adminActions()).toEqual([]);
+
+    const [current] = (await queue(cookie)).items;
+    expect(current?.proof).toMatchObject({ clinicNameOnProof: "Klinik Gigi Baru", attempts: 2 });
+    expect(current?.proof?.checkedAt).not.toBe(shown?.proof?.checkedAt);
+    const accept = await act(cookie, {
+      action: "acceptProof",
+      subjectId: id,
+      proofCheckedAt: current?.proof?.checkedAt,
+    });
+    expect(accept.status).toBe(200);
+    expect(await testimony(id)).toMatchObject({ verifiedVisit: true, proofOfVisit: { result: "accepted" } });
+  });
+
+  it("refuses a proof action that does not say which proof it decides", async () => {
+    const id = await postWithProof("pasien@example.com");
+    const cookie = await adminCookie();
+
+    expect((await act(cookie, { action: "acceptProof", subjectId: id })).status).toBe(400);
+    expect((await act(cookie, { action: "acceptProof", subjectId: id, proofCheckedAt: "gisteren" })).status).toBe(400);
+
+    expect(await testimony(id)).toMatchObject({ verifiedVisit: false, proofOfVisit: { result: "pending" } });
+    expect(await adminActions()).toEqual([]);
   });
 });

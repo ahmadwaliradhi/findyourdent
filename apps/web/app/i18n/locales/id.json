@@ -808,7 +808,8 @@
       "reason_required": "Tulis alasan untuk tindakan ini.",
       "not_found": "Item ini tidak ditemukan atau sudah diputuskan.",
       "not_allowed": "Tindakan ini tidak bisa dilakukan pada status sekarang.",
-      "unavailable": "Layanan admin sedang tidak tersedia."
+      "unavailable": "Layanan admin sedang tidak tersedia.",
+      "proof_changed": "Penulis sudah mengganti bukti ini. Muat ulang halaman untuk melihat bukti yang baru."
     }
   },
   "report": {
