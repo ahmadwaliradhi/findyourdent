@@ -58,6 +58,17 @@ for (const { code, name } of PROVINCES) {
 
 type RegencyType = "kota" | "kabupaten";
 
+// The English names Google uses for a kota/kabupaten whose Kemendagri name it translates,
+// without the "City"/"Regency" suffix (regencyParts takes that off).
+const REGENCY_ALIASES: Record<string, string[]> = {
+  "31.01": ["thousand islands"],
+  "31.71": ["central jakarta"],
+  "31.72": ["north jakarta"],
+  "31.73": ["west jakarta"],
+  "31.74": ["south jakarta"],
+  "31.75": ["east jakarta"],
+};
+
 /** "Kota Administrasi Jakarta Pusat" -> kota "jakarta pusat"; "Kab. Malang" or "Malang Regency" -> kabupaten "malang". */
 function regencyParts(segment: string): { type?: RegencyType; base: string } {
   const prefixed = /^(kota|kabupaten|kab)(?: administrasi)? (.+)$/.exec(segment);
@@ -85,7 +96,10 @@ export function matchRegion(address: string, districts?: DistrictOption[]): Regi
   const provinceCode = onlyOne(new Set(segments.flatMap((segment) => provinceByName.get(segment) ?? [])));
   if (!provinceCode) return {};
 
-  const regencies = regenciesOf(provinceCode).map((r) => ({ code: r.code, ...regencyParts(normalize(r.name)) }));
+  const regencies = regenciesOf(provinceCode).flatMap((r) => {
+    const { type, base } = regencyParts(normalize(r.name));
+    return [base, ...(REGENCY_ALIASES[r.code] ?? [])].map((name) => ({ code: r.code, type, base: name }));
+  });
   const regencyMatches = new Set<string>();
   const regencySegments = new Set<string>();
   for (const segment of segments) {
