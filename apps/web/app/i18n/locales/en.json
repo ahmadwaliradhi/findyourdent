@@ -693,12 +693,16 @@
       "submitted": "Being checked",
       "published": "Live",
       "needsAuthorFix": "Needs your fix",
-      "held": "Under review by the team (usually within 24 hours)",
+      "held": "Under review by the team",
       "rejected": "Not published",
-      "hidden": "Hidden for now after a report, under review by the team",
+      "hidden": "Hidden after a report",
       "removed": "Taken down by the team"
     },
-    "reason": "Reason: {{reason}}",
+    "statusHint": {
+      "held": "Usually within 24 hours. You will see the status change here.",
+      "hidden": "The team is reviewing a report, usually within 24 hours. You will see the status change here."
+    },
+    "reasonTitle": "Reason",
     "pendingRevision": {
       "submitted": "Your changes are being checked. The previous version stays live.",
       "needsAuthorFix": "Your changes need fixing. The previous version stays live.",
@@ -707,6 +711,7 @@
     "reply": "Reply from the practice",
     "view": "View on the practice page",
     "edit": "Edit",
+    "fix": "Fix this Testimony",
     "delete": "Delete",
     "confirmTitle": "Delete this Testimony?",
     "confirmBody": "Its text and photos will be deleted permanently and cannot be restored.",
@@ -714,7 +719,13 @@
     "cancel": "Cancel",
     "deleting": "Deleting…",
     "deleteFailed": "The Testimony was not deleted. Please try again.",
-    "deleted": "The Testimony was deleted."
+    "deleted": "The Testimony was deleted.",
+    "legend": {
+      "title": "What the statuses mean",
+      "published": "Shown on the practice page and on the home page.",
+      "needsAuthorFix": "Change the marked part, then send it again.",
+      "held": "The FindYourDent team decides, usually within 24 hours."
+    }
   },
   "reportApi": {
     "errors": {
