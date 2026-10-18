@@ -8,7 +8,11 @@ import type { Route } from "./+types/privasi";
 export function meta({ matches }: Route.MetaArgs) {
   const language: Language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
-  return [{ title: `${t("privacy.metaTitle")} | ${SITE_NAME}` }, { name: "robots", content: "noindex" }];
+  return [
+    { title: `${t("privacy.metaTitle")} | ${SITE_NAME}` },
+    { name: "description", content: t("privacy.lead") },
+    { name: "robots", content: "noindex" },
+  ];
 }
 
 export default function Privacy() {

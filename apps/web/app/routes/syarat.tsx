@@ -8,7 +8,11 @@ import type { Route } from "./+types/syarat";
 export function meta({ matches }: Route.MetaArgs) {
   const language: Language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
-  return [{ title: `${t("terms.metaTitle")} | ${SITE_NAME}` }, { name: "robots", content: "noindex" }];
+  return [
+    { title: `${t("terms.metaTitle")} | ${SITE_NAME}` },
+    { name: "description", content: t("terms.lead") },
+    { name: "robots", content: "noindex" },
+  ];
 }
 
 export default function Terms() {
