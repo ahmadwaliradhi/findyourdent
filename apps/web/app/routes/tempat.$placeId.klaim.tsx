@@ -481,7 +481,14 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
             ))}
           </select>
         </div>
-        <RegionFields mode="pick" required value={facts.region} onChange={set("region")} disabled={sending} />
+        <RegionFields
+          mode="pick"
+          required
+          withDistrict
+          value={facts.region}
+          onChange={set("region")}
+          disabled={sending}
+        />
         <TextField
           label={t("claim.facts.address")}
           maxLength={OWNER_LIMITS.addressMax}
