@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { filterSection } from "./support";
 
 test("home shows the consent line in Indonesian before the complaint box, and the toggle switches to English", async ({
   page,
@@ -62,4 +63,22 @@ test("on desktop the Summary panel sits beside the Guidance and links to the Sho
   await expect(page.getByRole("region", { name: "Dokter gigi terdekat untuk keluhan Anda" })).toBeInViewport();
   await expect(page.getByText("Klinik Gigi Senyum Contoh")).toBeVisible();
   await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toHaveCount(0);
+});
+
+test("the feed's Filter section starts folded, opens on a click, and starts open once a filter is applied", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const filter = filterSection(page);
+  const form = page.getByRole("form", { name: "Filter" });
+  await expect(filter).not.toHaveAttribute("open");
+  await expect(form).toBeHidden();
+
+  await filter.locator("summary").click();
+  await expect(filter).toHaveAttribute("open");
+  await expect(form).toBeVisible();
+
+  await page.goto("/?provinsi=31");
+  await expect(filter).toHaveAttribute("open");
+  await expect(form).toBeVisible();
 });

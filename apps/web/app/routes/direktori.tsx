@@ -2,6 +2,7 @@ import { BadgeCheck, CircleHelp, Navigation, OctagonAlert, Search } from "lucide
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
+import { FilterSection } from "~/components/filter-section";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -9,6 +10,7 @@ import { fieldClassName } from "~/components/ui/field";
 import { getI18n, isLanguage, type Language } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
 import {
+  DEFAULT_DIRECTORY_SORT,
   DIRECTORY_PARAMS,
   DIRECTORY_ROW_LIMIT,
   DIRECTORY_SORTS,
@@ -19,7 +21,7 @@ import {
 } from "~/lib/directory";
 import { formatKm, formatScore } from "~/lib/format";
 import { haversineKm, type LatLng } from "~/lib/geo";
-import { type ListingFilters, parseListingFilters } from "~/lib/listing-filters";
+import { hasActiveFilters, type ListingFilters, parseListingFilters } from "~/lib/listing-filters";
 import { providerPath } from "~/lib/paths";
 import { provinceName, regencyName, regionLabel } from "~/lib/regions";
 import { openGraphMeta } from "~/lib/seo";
@@ -116,6 +118,8 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
   const language: Language = isLanguage(i18n.language) ? i18n.language : "id";
   const location = useVisitorLocation(sort === "jarak");
   const area = areaName(filters, kecamatan.chosenName);
+  // Anything applied keeps the Filter section open, so the visitor sees what narrowed the list.
+  const refined = hasActiveFilters(filters) || q !== "" || sort !== DEFAULT_DIRECTORY_SORT;
   const shown = useMemo(
     () =>
       location.status === "ready" ? sortByDistance(rows, location.origin) : rows.map((row) => ({ row, km: null })),
@@ -131,20 +135,11 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
         <p className="max-w-[62ch] text-[17px] leading-[27px] text-muted-foreground">{t("directory.intro")}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 desktop:grid-cols-[280px_minmax(0,1fr)] desktop:items-start desktop:gap-10">
-        <aside className="desktop:sticky desktop:top-6">
-          <ListingFiltersForm
-            id={FORM_ID}
-            filters={filters}
-            districts={kecamatan.options}
-            action="/direktori"
-            layout="sidebar"
-          />
-        </aside>
-
-        <section aria-labelledby="directory-results" className="flex flex-col gap-4">
+      {/* Below desktop width the filters, search and sort fold under one Filter row, so the results come first. */}
+      <div className="grid grid-cols-1 gap-6 desktop-unfolded:grid-cols-[280px_minmax(0,1fr)] desktop-unfolded:grid-rows-[auto_1fr] desktop-unfolded:items-start desktop-unfolded:gap-x-10 desktop-unfolded:gap-y-4">
+        <FilterSection open={refined} unfoldOnDesktop>
           {/* Part of the filters form through `form`, so one Apply (or Enter here) sends everything. */}
-          <div className="grid gap-3 desktop:grid-cols-2">
+          <div className="grid gap-3 desktop:grid-cols-2 desktop-unfolded:col-start-2 desktop-unfolded:row-start-1">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="directory-query" className="text-sm font-semibold">
                 {t("directory.searchLabel")}
@@ -187,7 +182,21 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
               </select>
             </div>
           </div>
+          <aside className="desktop-unfolded:sticky desktop-unfolded:top-6 desktop-unfolded:col-start-1 desktop-unfolded:row-span-2 desktop-unfolded:row-start-1">
+            <ListingFiltersForm
+              id={FORM_ID}
+              filters={filters}
+              districts={kecamatan.options}
+              action="/direktori"
+              layout="sidebar"
+            />
+          </aside>
+        </FilterSection>
 
+        <section
+          aria-labelledby="directory-results"
+          className="flex flex-col gap-4 desktop-unfolded:col-start-2 desktop-unfolded:row-start-2"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="directory-results" className="text-base leading-[22px] font-[650]">
               {t("directory.resultsHeading")}{" "}

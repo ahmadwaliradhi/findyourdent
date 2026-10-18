@@ -295,7 +295,7 @@
     "writeBody": "Ceritakan pengalamanmu supaya pasien lain bisa memilih dengan tenang."
   },
   "filters": {
-    "title": "Saring",
+    "title": "Filter",
     "procedure": "Tindakan",
     "allProcedures": "Semua tindakan",
     "providerType": "Jenis tempat",
@@ -307,7 +307,7 @@
     },
     "verifiedOnly": "Hanya Kunjungan terbukti",
     "apply": "Terapkan",
-    "reset": "Hapus saringan"
+    "reset": "Hapus filter"
   },
   "regionFields": {
     "province": "Provinsi",
@@ -329,7 +329,7 @@
     "metaDescriptionArea": "Bandingkan klinik gigi, dokter gigi praktik pribadi dan rumah sakit di {{area}} yang sudah diceritakan pasien di FindYourDent: skor pelayanan, kebersihan, bahan dan alat, serta Kunjungan terbukti.",
     "title": "Direktori tempat perawatan gigi",
     "titleArea": "Tempat perawatan gigi di {{area}}",
-    "intro": "Klinik, dokter gigi praktik pribadi dan rumah sakit yang sudah diceritakan pasien di FindYourDent.",
+    "intro": "Klinik gigi, dokter gigi praktik pribadi dan rumah sakit yang sudah diceritakan pasien di FindYourDent.",
     "searchLabel": "Cari nama tempat",
     "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
     "sortLabel": "Urutkan",
