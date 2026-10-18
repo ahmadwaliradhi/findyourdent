@@ -17,6 +17,7 @@ Vocabulary follows [GLOSSARY.md](../../GLOSSARY.md). Decisions follow the ADRs i
 | 06 | [Post-deployment evaluation and first real Testimonies](06-post-deployment-evaluation.md) | ready-for-human | product owner | 01, 02, 03 | not in the submission build |
 | 07 | [Payment Method](07-payment-method.md) | needs-triage | B, with A | 03, 04, 05 | not in the submission build |
 | 08 | [Design revamp](08-design-revamp.md) | ready-for-agent | B | 00 to 05 | must-have: baseline, shell, Home, Provider page, Testimony form; then Claim and Price List, About/Privacy/Terms, My Testimonies, Directory, Kecamatan |
+| 09 | [Proven Testimonies and buzzer defence](09-proven-testimonies-and-buzzer-defence.md) | ready-for-agent | B, with A | 02, 03, 04 | part 1 never; part 2 after the hackathon |
 
 Cut order under time pressure, first to last: Price List, Claim, Gemini Moderation (fall back to holding every Testimony for the admin), voice input. Guidance, Emergency Escalation, the Shortlist, Provider pages, posting Testimonies and the landing feed are never cut.
 

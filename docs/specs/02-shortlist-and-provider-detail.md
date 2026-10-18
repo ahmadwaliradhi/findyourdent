@@ -60,7 +60,7 @@ From the Guidance card the Patient taps "Lihat dokter gigi terdekat", shares the
 - Fallback when the Shortlist search cap or budget is hit: rank Listed Providers within about 10 km using stored coordinates, and add a "Cari di Google Maps" link built as a plain Google Maps search URL (no API call). When the Google block cap is hit, the Provider page shows FindYourDent content plus the Maps link and a short "info Google sementara tidak tersedia" note.
 - Ranking is deterministic and explainable, computed in the web service after joining search results with Firestore by `place_id`:
   1. Procedure fit (Provider type and services against `likelyProcedures`).
-  2. Testimony quality: the three aspect averages, shrunk toward the overall mean when there are few Testimonies, with a small bonus for Kunjungan terbukti.
+  2. Testimony quality: the three aspect averages over Proven Testimonies only, shrunk toward the overall mean when there are few of them (spec 09; the earlier Kunjungan terbukti bonus is dropped).
   3. Price fit: Provider prices (from Testimonies or Price List) against the Cost Estimate.
   4. Distance.
   Paid placement does not exist; Claim status does not affect rank.
