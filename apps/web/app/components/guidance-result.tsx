@@ -6,7 +6,7 @@ import type {
   UrgencyTier,
 } from "@findyourdent/contracts";
 import { Info, MapPin, TriangleAlert } from "lucide-react";
-import type { MouseEvent, ReactNode } from "react";
+import { type MouseEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShortlistPanel } from "~/components/shortlist-panel";
 import { Badge } from "~/components/ui/badge";
@@ -91,6 +91,7 @@ export function GuidanceView({
   before?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const [shortlistOpenRequest, setShortlistOpenRequest] = useState(0);
   return (
     <div className={cn(twoColumns, "desktop:grid-cols-[minmax(0,1fr)_360px]")}>
       <div className="flex min-w-0 flex-col gap-6">
@@ -99,13 +100,17 @@ export function GuidanceView({
         <GuidanceCard guidance={guidance} />
         {share && <ShareSection share={share} />}
         {guidanceToken && (
-          // Focus lands here from the Summary panel's link.
+          // The Summary panel's link opens the panel here; without script its hash still lands on the section.
           <section id={SHORTLIST_ID} tabIndex={-1} aria-label={t("shortlist.title")} className="scroll-mt-6">
-            <ShortlistPanel purpose="shortlist" guidanceToken={guidanceToken} />
+            <ShortlistPanel purpose="shortlist" guidanceToken={guidanceToken} openRequest={shortlistOpenRequest} />
           </section>
         )}
       </div>
-      <SummaryPanel guidance={guidance} hasShortlist={guidanceToken !== null} />
+      <SummaryPanel
+        guidance={guidance}
+        hasShortlist={guidanceToken !== null}
+        onOpenShortlist={() => setShortlistOpenRequest((n) => n + 1)}
+      />
     </div>
   );
 }
@@ -400,18 +405,29 @@ export function GuidanceCard({ guidance }: { guidance: Guidance }) {
 
 const SHORTLIST_ID = "shortlist";
 
-/** Moves to the Shortlist section without a hash navigation, which would start a new history entry. */
-function goToShortlist(event: MouseEvent<HTMLAnchorElement>) {
+/**
+ * Moves to the Shortlist section without a hash navigation, which would start a new history entry.
+ * The panel then opens and takes focus itself.
+ */
+function goToShortlist(event: MouseEvent<HTMLAnchorElement>, open: () => void) {
   const target = document.getElementById(SHORTLIST_ID);
   if (!target) return;
   event.preventDefault();
+  open();
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-  target.focus({ preventScroll: true });
 }
 
 /** Desktop only: the Guidance at a glance, with the next step always in view. */
-function SummaryPanel({ guidance, hasShortlist }: { guidance: Guidance; hasShortlist: boolean }) {
+function SummaryPanel({
+  guidance,
+  hasShortlist,
+  onOpenShortlist,
+}: {
+  guidance: Guidance;
+  hasShortlist: boolean;
+  onOpenShortlist: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   // The first estimate is the main procedure's; a span across procedures would be neither one nor a total.
@@ -453,7 +469,7 @@ function SummaryPanel({ guidance, hasShortlist }: { guidance: Guidance; hasShort
         {hasShortlist && (
           // A link, not a button: the Shortlist section keeps the one button with this name.
           <Button asChild block>
-            <a href={`#${SHORTLIST_ID}`} onClick={goToShortlist}>
+            <a href={`#${SHORTLIST_ID}`} onClick={(event) => goToShortlist(event, onOpenShortlist)}>
               {t("card.summary.toShortlist")}
             </a>
           </Button>

@@ -57,4 +57,7 @@ test("on desktop the Summary panel sits beside the Guidance and links to the Sho
   await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toHaveCount(1);
   await toShortlist.click();
   await expect(page.getByRole("region", { name: "Dokter gigi terdekat untuk keluhan Anda" })).toBeInViewport();
+  // The link opens the Shortlist too, landing on its first step rather than a second button to press.
+  await expect(page.getByRole("button", { name: "Gunakan lokasi saya" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toHaveCount(0);
 });
