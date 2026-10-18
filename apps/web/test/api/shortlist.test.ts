@@ -636,7 +636,7 @@ describe("POST /api/shortlist reasons (T09)", () => {
       { headers: { cookie: await toggleCookie("en") } },
     );
 
-    expect(english.body.providers[0]?.reason).toBe("Testimony score 4.6 from 3 verified Testimonies");
+    expect(english.body.providers[0]?.reason).toBe("Testimony score 4.6 from 3 Proven Testimonies");
     expect(indonesian.body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 3 Testimoni terbukti");
   });
 

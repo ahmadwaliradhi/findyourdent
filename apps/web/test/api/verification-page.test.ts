@@ -97,8 +97,8 @@ describe(`GET ${PATH}`, () => {
     expect(html).toMatch(/<html[^>]*lang="en"/);
     const text = mainText(html);
     expect(text).toContain("How we verify Testimonies");
-    expect(text).toContain("Only Testimonies with a verified visit count");
-    expect(text).toContain("At least 3 verified Testimonies");
+    expect(text).toContain("Only Proven Testimonies count");
+    expect(text).toContain("At least 3 Proven Testimonies");
     expect(text).toContain("FindYourDent never pays for or rewards Testimonies.");
   });
 
