@@ -1,0 +1,10 @@
+<!-- @dsCard group="Forms" height=330 subtitle="Textarea with label, hint, error and disabled states" -->
+<style>body{margin:0;padding:16px;background:var(--surface-100);font-family:var(--font-sans)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.col{display:flex;flex-direction:column;gap:12px;max-width:420px}</style>
+<div id="root"></div>
+<script>
+var F=window.FYD,h=React.createElement;
+function App(){return h('div',{className:'col'},
+ h(F.Field,{id:'f1',label:'Ceritakan keluhan gigi Anda',hint:'Boleh dalam Bahasa Indonesia, bahasa daerah, atau English.',placeholder:'Contoh: geraham kiri bawah nyut-nyutan sejak tiga hari'}),
+ h(F.Field,{id:'f2',label:'Jawaban Anda',rows:2,defaultValue:'a',error:'Tulis minimal 10 karakter agar kami bisa membantu.'}))}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>

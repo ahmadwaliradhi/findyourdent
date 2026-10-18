@@ -1,0 +1,9 @@
+<!-- @dsCard group="Status" height=150 subtitle="Neutral, brand, success, warning, danger, info; each status carries an icon" -->
+<style>body{margin:0;padding:16px;background:var(--surface-100);font-family:var(--font-sans)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.col{display:flex;flex-direction:column;gap:12px;max-width:420px}</style>
+<div id="root"></div>
+<script>
+var F=window.FYD,h=React.createElement;
+function App(){return h('div',null,
+ h('div',{className:'row'},h(F.Badge,{},'Klinik'),h(F.Badge,{variant:'brand',icon:false},'BPJS'),h(F.Badge,{variant:'success'},'Kunjungan terverifikasi'),h(F.Badge,{variant:'warning'},'Perkiraan kasar'),h(F.Badge,{variant:'danger'},'Tanda bahaya'),h(F.Badge,{variant:'info'},'Sumber resmi'),h(F.Badge,{variant:'outline'},'Rumah sakit')))}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>

@@ -1,0 +1,3 @@
+TestimonyCard is one Patient Testimony in the feed: the Provider name as the link, its type and Region, three aspect ratings, an excerpt, the procedure and price paid, and a byline with the visit month.
+
+The consumer provides the Provider name and link, `meta` (type and Region), the three ratings with their aspect names, the excerpt, optional procedure and price (already formatted as `Rp 350.000`), and the byline. A verified visit adds the success badge. Show ratings as `n/5` with a star and the aspect name, never stars alone. Don't truncate the price, don't show a Provider's reply inside the card, and don't call it a review.

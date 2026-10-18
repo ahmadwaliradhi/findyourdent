@@ -1,0 +1,12 @@
+<!-- @dsCard group="Guidance" height=330 subtitle="The four Guidance urgency tiers" -->
+<style>body{margin:0;padding:16px;background:var(--surface-100);font-family:var(--font-sans)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.col{display:flex;flex-direction:column;gap:12px;max-width:420px}</style>
+<div id="root"></div>
+<script>
+var F=window.FYD,h=React.createElement;
+function App(){return h('div',{className:'col'},
+ h(F.UrgencyNotice,{tier:'darurat',label:'Darurat',description:'Ke IGD sekarang'}),
+ h(F.UrgencyNotice,{tier:'segera',label:'Segera',description:'Temui dokter gigi dalam 1 sampai 3 hari'}),
+ h(F.UrgencyNotice,{tier:'terjadwal',label:'Terjadwal',description:'Buat janji dalam 2 minggu'}),
+ h(F.UrgencyNotice,{tier:'rutin',label:'Rutin',description:'Perawatan rutin, atur waktu yang nyaman'}))}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>

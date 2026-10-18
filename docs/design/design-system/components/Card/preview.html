@@ -1,0 +1,10 @@
+<!-- @dsCard group="Surfaces" height=330 subtitle="Default, flat and emergency cards" -->
+<style>body{margin:0;padding:16px;background:var(--surface-100);font-family:var(--font-sans)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.col{display:flex;flex-direction:column;gap:12px;max-width:420px}</style>
+<div id="root"></div>
+<script>
+var F=window.FYD,h=React.createElement;
+function App(){return h('div',{style:{display:'grid',gap:12,maxWidth:460}},
+ h(F.Card,{labelledBy:'c1'},h('div',{className:'fyd-card__head'},h('h2',{id:'c1',className:'fyd-card__title'},'Perkiraan biaya'),h('p',{className:'fyd-card__desc'},'Harga bervariasi menurut kota dan jenis bahan.')),h('p',{style:{margin:0,font:'700 22px/28px var(--font-sans)',fontVariantNumeric:'tabular-nums'}},'Rp 450.000 – Rp 1.200.000')),
+ h(F.Card,{variant:'emergency',labelledBy:'c2'},h('div',{className:'fyd-card__head'},h('h2',{id:'c2',className:'fyd-card__title'},'Ke IGD sekarang'),h('p',{className:'fyd-card__desc',style:{color:'var(--ink)',fontSize:16,lineHeight:'24px'}},'Segera pergi ke Instalasi Gawat Darurat rumah sakit terdekat. Jangan menunggu jadwal dokter gigi.')),h(F.Button,{variant:'danger',icon:'map-pin'},'Cari IGD terdekat')))}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>

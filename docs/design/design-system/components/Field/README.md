@@ -1,0 +1,3 @@
+Field is the labelled multi-line text input used for the complaint, the follow-up answer and the Testimony text. It always renders a visible label, an optional hint under it and, when invalid, an error with an icon, wired together with `aria-describedby` and `aria-invalid`.
+
+The consumer provides `label`, an `id` unique on the page, and optionally `hint`, `error`, `placeholder` and `maxLength`. Text is 16px so mobile browsers do not zoom. Use the placeholder only for an example ("Contoh: …"), never as the label. Write errors as what to do ("Tulis minimal 10 karakter"), not what went wrong. Don't clear the Patient's text when an error shows.
