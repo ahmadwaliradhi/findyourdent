@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
-import { GuidanceCard } from "~/components/guidance-result";
+import { GuidanceView } from "~/components/guidance-result";
 import { Button } from "~/components/ui/button";
 import { getI18n } from "~/i18n/config";
 import { readShareToken } from "~/server/share.server";
@@ -28,10 +28,12 @@ export default function SharedGuidance({ loaderData, params }: Route.ComponentPr
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{t("shared.title")}</h1>
-        <p className="text-muted-foreground">{t("shared.intro")}</p>
+        <h1 className="text-[28px] leading-[34px] font-bold tracking-[-.015em] desktop:text-4xl desktop:leading-[42px]">
+          {t("shared.title")}
+        </h1>
+        <p className="max-w-[62ch] text-[17px] leading-[27px] text-muted-foreground">{t("shared.intro")}</p>
       </div>
-      <GuidanceCard guidance={loaderData.guidance} share={null} guidanceToken={params.token} />
+      <GuidanceView guidance={loaderData.guidance} share={null} guidanceToken={params.token} />
       <Button asChild size="lg" className="w-full sm:w-auto sm:self-start">
         <Link to="/">{t("shared.cta")}</Link>
       </Button>

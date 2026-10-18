@@ -124,14 +124,16 @@ export function VoiceRecorder({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground">{t("home.voiceOr")}</p>
+      <p className="flex items-center gap-3 text-sm text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+        {t("home.voiceOr")}
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
           ref={recordButton}
           type="button"
           size="lg"
           variant={recording ? "outline" : "secondary"}
-          className="h-14 w-full gap-3 px-6 text-lg sm:w-auto"
+          className="h-auto min-h-14 w-full gap-3 px-6 whitespace-normal"
           aria-describedby={statusId}
           disabled={disabled && !recording}
           onClick={() => (recording ? stop(false) : void start())}
@@ -152,7 +154,7 @@ export function VoiceRecorder({
           {state === "denied" ? t("home.voiceDenied") : t("home.voiceFailed")}
         </FieldError>
       ) : (
-        <p id={statusId} aria-live="polite" className="text-xs text-muted-foreground">
+        <p id={statusId} aria-live="polite" className="text-center text-sm text-muted-foreground">
           {recording && t("home.voiceRecording")}
           {state === "idle" && t("home.voiceHint")}
         </p>

@@ -1,16 +1,17 @@
 import type { Language } from "~/i18n/config";
 
-/** English keeps Indonesian number separators, so prices and scores read the same in both languages. */
+/** English keeps Indonesian separators for counts, scores and distances; money follows the language (formatRupiah). */
 function locale(language: Language): string {
   return language === "id" ? "id-ID" : "en-ID";
 }
 
+/**
+ * "Rp 450.000" in Indonesian, "Rp 450,000" in English: money takes the language's own thousands
+ * separator. A no-break space keeps "Rp" and the amount on one line.
+ */
 export function formatRupiah(amount: number, language: Language): string {
-  return new Intl.NumberFormat(locale(language), {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(amount);
+  const digits = new Intl.NumberFormat(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 0 });
+  return `Rp\u00a0${digits.format(amount)}`;
 }
 
 export function formatCount(value: number, language: Language): string {

@@ -1,7 +1,8 @@
 import type { Guidance } from "@findyourdent/contracts";
+import { Clock, Info, MapPin, ShieldCheck } from "lucide-react";
 import type * as React from "react";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Fragment, useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import {
   data,
   Form,
@@ -15,6 +16,7 @@ import { GuidanceResult, shareTokenOf } from "~/components/guidance-result";
 import { ImpactCounter } from "~/components/impact-counter";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
 import { TestimonyCard } from "~/components/testimony-card";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ErrorNotice } from "~/components/ui/error-notice";
 import { Field, FieldError } from "~/components/ui/field";
@@ -202,53 +204,71 @@ export default function Home({ actionData: routeActionData, loaderData }: Route.
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{t("home.headline")}</h1>
-        <p className="text-muted-foreground">{t("home.intro")}</p>
-      </div>
+    <div className="flex flex-col gap-10 desktop:gap-14">
+      <Form method="post" className="flex flex-col" aria-busy={pending} onSubmit={onSubmit}>
+        <div className="grid gap-6 desktop:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] desktop:items-start desktop:gap-10">
+          <div className="flex flex-col gap-6 desktop:pt-2">
+            <div className="flex flex-col gap-4">
+              <Badge variant="brand">{t("home.badge")}</Badge>
+              <h1 className="text-[34px] leading-[38px] font-bold tracking-[-.02em] desktop:text-[52px] desktop:leading-[56px]">
+                {t("home.headline")}
+              </h1>
+              <p className="max-w-[62ch] text-[17px] leading-[27px] text-muted-foreground">{t("home.intro")}</p>
+            </div>
+            <Benefits />
+          </div>
 
-      <Form method="post" className="flex flex-col gap-4" aria-busy={pending} onSubmit={onSubmit}>
-        <p
-          role="note"
-          className="rounded-md border border-primary/30 bg-secondary px-3 py-2 text-sm text-secondary-foreground"
-          data-testid="consent"
-        >
-          {t("home.consent")}
-        </p>
-        <Field
-          // Remounts with each answer, so a voice note's transcript replaces what the box held.
-          key={actionData?.complaintText ?? ""}
-          id="complaintText"
-          name="complaintText"
-          label={t("home.complaintLabel")}
-          hint={t("home.complaintHint")}
-          required
-          maxLength={4000}
-          defaultValue={actionData?.complaintText ?? ""}
-          placeholder={t("home.complaintPlaceholder")}
-        />
-        <Button
-          type="submit"
-          size="lg"
-          disabled={pending || recording || !hydrated}
-          className="w-full sm:w-auto sm:self-start"
-        >
-          {pending ? t("home.submitting") : t("home.submit")}
-        </Button>
-        <VoiceRecorder disabled={pending || !hydrated} onRecorded={onRecorded} onRecordingChange={setRecording} />
+          {/* The complaint box and the consent line lead the page on a phone too. */}
+          <div className="flex flex-col gap-4 rounded-lg border bg-card p-5 shadow-md desktop:p-6">
+            <p role="note" className="flex items-start gap-2.5 rounded-md bg-muted px-4 py-3" data-testid="consent">
+              <Info aria-hidden="true" strokeWidth={1.75} className="mt-1 size-4 shrink-0 text-muted-foreground" />
+              <span>{t("home.consent")}</span>
+            </p>
+            <Field
+              // Remounts with each answer, so a voice note's transcript replaces what the box held.
+              key={actionData?.complaintText ?? ""}
+              id="complaintText"
+              name="complaintText"
+              label={t("home.complaintLabel")}
+              hint={t("home.complaintHint")}
+              required
+              maxLength={4000}
+              rows={5}
+              defaultValue={actionData?.complaintText ?? ""}
+              placeholder={t("home.complaintPlaceholder")}
+              className="[&>label]:text-lg [&>label]:leading-6 [&>label]:font-[650]"
+            />
+            <Button type="submit" size="lg" block disabled={pending || recording || !hydrated}>
+              {pending ? t("home.submitting") : t("home.submit")}
+            </Button>
+            {/* Grouped so the live region, empty until an error, adds no gap of its own. */}
+            <div className="flex flex-col">
+              <VoiceRecorder disabled={pending || !hydrated} onRecorded={onRecorded} onRecordingChange={setRecording} />
+              <div aria-live="polite">
+                {actionData?.error && (
+                  <ErrorNotice role="alert" className="mt-4">
+                    <p>{t(`errors.${actionData.error}`)}</p>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      size="sm"
+                      className="self-start"
+                      disabled={pending || !hydrated}
+                    >
+                      {t("errors.retry")}
+                    </Button>
+                  </ErrorNotice>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <div aria-live="polite" className="flex flex-col gap-3">
-          {actionData?.error && (
-            <ErrorNotice role="alert">
-              <p>{t(`errors.${actionData.error}`)}</p>
-              <Button type="submit" variant="outline" size="sm" className="self-start" disabled={pending || !hydrated}>
-                {t("errors.retry")}
-              </Button>
-            </ErrorNotice>
-          )}
+        <div aria-live="polite">
           {actionData?.response && (
-            <GuidanceResult response={actionData.response} pending={pending} share={actionData.share} />
+            <div className="pt-10">
+              <GuidanceResult response={actionData.response} pending={pending} share={actionData.share} />
+            </div>
           )}
         </div>
       </Form>
@@ -257,6 +277,29 @@ export default function Home({ actionData: routeActionData, loaderData }: Route.
 
       <Feed filters={loaderData.filters} feed={loaderData.feed} />
     </div>
+  );
+}
+
+const BENEFITS = [
+  { key: "urgency", icon: Clock },
+  { key: "cost", icon: ShieldCheck },
+  { key: "nearby", icon: MapPin },
+] as const;
+
+/** What the Guidance gives, beside the complaint box on desktop. Left out on a phone, so the box comes first. */
+function Benefits() {
+  const { t } = useTranslation();
+  return (
+    <ul aria-label={t("home.benefits.label")} className="hidden max-w-[520px] flex-col gap-3 desktop:flex">
+      {BENEFITS.map(({ key, icon: Icon }) => (
+        <li key={key} className="flex items-start gap-3">
+          <Icon aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-5 shrink-0 text-primary" />
+          <span>
+            <Trans i18nKey={`home.benefits.${key}`} components={{ b: <b className="font-semibold" /> }} />
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -315,19 +358,24 @@ function Feed({ filters, feed }: { filters: ListingFilters; feed: FeedPage }) {
   const query = listingFiltersToParams(filters).toString();
 
   return (
-    <section aria-labelledby="feed-title" className="flex flex-col gap-4 border-t pt-6">
-      <div className="flex flex-col gap-1">
-        <h2 id="feed-title" className="text-xl font-bold">
-          {area ? t("feed.titleIn", { area }) : t("feed.title")}
-        </h2>
-        <p className="text-sm text-muted-foreground">{t("feed.intro")}</p>
-        <Link to="/ceritakan" className="self-start text-sm font-medium text-primary underline underline-offset-4">
-          {t("testimonyForm.entryCta")}
-        </Link>
+    <section aria-labelledby="feed-title" className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h2
+            id="feed-title"
+            className="text-[28px] leading-[34px] font-bold tracking-[-.015em] desktop:text-4xl desktop:leading-[42px]"
+          >
+            {area ? t("feed.titleIn", { area }) : t("feed.title")}
+          </h2>
+          <p className="max-w-[62ch] text-[17px] leading-[27px] text-muted-foreground">{t("feed.intro")}</p>
+        </div>
+        <Button asChild variant="ghost" className="hidden desktop:inline-flex">
+          <Link to="/direktori">{t("feed.seeDirectory")}</Link>
+        </Button>
       </div>
-      <details className="rounded-md border px-4 py-3" open={query !== ""}>
-        <summary className="cursor-pointer font-medium">{t("filters.title")}</summary>
-        <div className="pt-4">
+      <details className="rounded-lg border bg-card px-5 py-3" open={query !== ""}>
+        <summary className="flex min-h-touch cursor-pointer items-center font-semibold">{t("filters.title")}</summary>
+        <div className="pt-4 pb-2">
           <ListingFiltersForm filters={filters} action="/" />
         </div>
       </details>
@@ -336,6 +384,28 @@ function Feed({ filters, feed }: { filters: ListingFilters; feed: FeedPage }) {
     </section>
   );
 }
+
+/** "Pernah ke dokter gigi?": the way to write a Testimony, among the Testimonies themselves. */
+function WritePrompt() {
+  const { t } = useTranslation();
+  return (
+    <aside
+      aria-labelledby="write-prompt-title"
+      className="flex flex-col gap-3 rounded-lg bg-secondary p-6 text-secondary-foreground"
+    >
+      <h3 id="write-prompt-title" className="text-lg leading-6 font-[650]">
+        {t("feed.writeTitle")}
+      </h3>
+      <p>{t("feed.writeBody")}</p>
+      <Button asChild className="self-start">
+        <Link to="/ceritakan">{t("testimonyForm.entryCta")}</Link>
+      </Button>
+    </aside>
+  );
+}
+
+/** The write prompt comes after this many Testimonies, or after the last when there are fewer. */
+const WRITE_PROMPT_AFTER = 3;
 
 function FeedList({ query, feed }: { query: string; feed: FeedPage }) {
   const { t } = useTranslation();
@@ -346,7 +416,7 @@ function FeedList({ query, feed }: { query: string; feed: FeedPage }) {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed px-5 py-6">
+      <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-border-strong bg-card px-5 py-6">
         <p className="font-semibold">{t("feed.emptyTitle")}</p>
         <p className="text-sm text-muted-foreground">{t("feed.emptyBody")}</p>
         <Button asChild>
@@ -377,11 +447,18 @@ function FeedList({ query, feed }: { query: string; feed: FeedPage }) {
 
   return (
     <>
-      <ul className="flex flex-col gap-4" aria-busy={loading}>
-        {items.map((item) => (
-          <li key={item.id}>
-            <TestimonyCard item={item} />
-          </li>
+      <ul className="grid items-start gap-4 desktop:grid-cols-2 desktop:gap-5" aria-busy={loading}>
+        {items.map((item, index) => (
+          <Fragment key={item.id}>
+            <li>
+              <TestimonyCard item={item} />
+            </li>
+            {index === Math.min(WRITE_PROMPT_AFTER, items.length) - 1 && (
+              <li>
+                <WritePrompt />
+              </li>
+            )}
+          </Fragment>
         ))}
       </ul>
       {failed && <FieldError role="alert">{t("feed.loadError")}</FieldError>}
