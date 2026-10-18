@@ -117,7 +117,7 @@ Every journey that works today keeps working: the existing end-to-end tests stay
 
 ### Home, Guidance and Emergency Escalation
 
-- The desktop Summary panel's "Lihat dokter gigi terdekat" is a link to the Shortlist section on the page, not a second button, so the page keeps one button with that name.
+- The desktop Summary panel's "Lihat dokter gigi terdekat" is a link to the Shortlist section on the page, not a second button, so the page keeps one button with that name. Following it opens the Shortlist and moves focus to "Gunakan lokasi saya", so the Patient lands on the first step instead of a second "Lihat dokter gigi terdekat" to press. While a search is running that button is disabled, so focus goes to the Shortlist itself. Without script the link still lands on the Shortlist section.
 - The Emergency Escalation card keeps `role="alert"`.
 - Impact counter values come from the existing impact counter read; the claim review time comes from the value the claim code already passes; the Testimony character limit comes from the shared Testimony limits. No placeholder from the mockups reaches the app, and no sample data from the mockups (names, ratings, prices, distances) does either.
 

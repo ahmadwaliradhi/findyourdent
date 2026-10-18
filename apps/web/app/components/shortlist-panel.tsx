@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
@@ -32,7 +32,10 @@ type State =
  * home Guidance form, so it uses no form of its own.
  */
 export function ShortlistPanel(
-  props: { purpose: "shortlist"; guidanceToken: string } | { purpose: "emergency"; guidanceToken?: undefined },
+  props: ({ purpose: "shortlist"; guidanceToken: string } | { purpose: "emergency"; guidanceToken?: undefined }) & {
+    /** Changes each time something outside asks the panel to open, such as the Summary panel's link. */
+    openRequest?: number;
+  },
 ) {
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
@@ -58,6 +61,23 @@ export function ShortlistPanel(
     if (state.phase === "done" || state.phase === "closed") rememberEntry(entryKey, slot, state);
     if (state.phase !== "closed") keepAcrossReload(entryKey, openSlot, "1");
   }, [entryKey, slot, openSlot, state]);
+  // An open request lands on "Gunakan lokasi saya", the first step, not on a second button to press.
+  const locationButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const [seenOpenRequest, setSeenOpenRequest] = useState(props.openRequest);
+  const [focusLocationButton, setFocusLocationButton] = useState(false);
+  if (props.openRequest !== seenOpenRequest) {
+    setSeenOpenRequest(props.openRequest);
+    if (state.phase === "closed") setState({ phase: "asking" });
+    setFocusLocationButton(true);
+  }
+  useEffect(() => {
+    if (!focusLocationButton) return;
+    // While a search runs the button is disabled, so the panel itself takes focus.
+    const button = locationButtonRef.current;
+    (button && !button.disabled ? button : panelRef.current)?.focus({ preventScroll: true });
+    setFocusLocationButton(false);
+  }, [focusLocationButton]);
   const [area, setArea] = useState("");
   const areaId = useId();
   const emergency = props.purpose === "emergency";
@@ -119,10 +139,16 @@ export function ShortlistPanel(
 
   const busy = state.phase === "locating" || state.phase === "searching";
   return (
-    <section className="flex flex-col gap-3" aria-busy={busy} data-testid="shortlist">
+    <section ref={panelRef} tabIndex={-1} className="flex flex-col gap-3" aria-busy={busy} data-testid="shortlist">
       <h3 className="font-semibold">{emergency ? t("shortlist.emergencyTitle") : t("shortlist.title")}</h3>
       <div className="flex flex-col gap-2">
-        <Button type="button" onClick={shareLocation} disabled={busy} className="w-full sm:w-auto sm:self-start">
+        <Button
+          ref={locationButtonRef}
+          type="button"
+          onClick={shareLocation}
+          disabled={busy}
+          className="w-full sm:w-auto sm:self-start"
+        >
           {state.phase === "locating" ? t("shortlist.locating") : t("shortlist.useLocation")}
         </Button>
         {state.phase === "asking" && state.locationDenied && <FieldError>{t("shortlist.locationDenied")}</FieldError>}
