@@ -108,12 +108,12 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
         {provider && <p className="text-muted-foreground">{provider.area}</p>}
         <div className="flex flex-wrap gap-2">
           {providerType && (
-            <Badge variant="secondary">
+            <Badge variant="neutral">
               {t(`provider.type.${providerType}`)}
               {typeInferred && ` (${t("provider.typeInferred")})`}
             </Badge>
           )}
-          {provider?.claimed && <Badge>{t("provider.claimed")}</Badge>}
+          {provider?.claimed && <Badge variant="brand">{t("provider.claimed")}</Badge>}
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
           {phone && (
@@ -357,7 +357,7 @@ function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; la
       <CardHeader className="gap-1">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           {testimony.displayName}
-          {testimony.verifiedVisit && <Badge variant="outline">{t("provider.verifiedVisit")}</Badge>}
+          {testimony.verifiedVisit && <Badge variant="success">{t("provider.verifiedVisit")}</Badge>}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           {t("provider.visitMonth", { month: formatVisitMonth(testimony.visitMonth, language) })}

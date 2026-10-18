@@ -18,7 +18,12 @@ import { detectLanguage } from "~/i18n/language.server";
 import type { Route } from "./+types/root";
 import "./app.css";
 
-export const links: Route.LinksFunction = () => [{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }];
+export const links: Route.LinksFunction = () => [
+  { rel: "preload", href: "/fonts/Figtree-Variable.woff2", as: "font", type: "font/woff2", crossOrigin: "anonymous" },
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+  { rel: "manifest", href: "/site.webmanifest" },
+];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const language = await detectLanguage(request);
@@ -36,7 +41,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#0f6e74" />
+        <meta name="theme-color" content="#0b6e6a" />
         <Meta />
         <Links />
       </head>
@@ -50,8 +55,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </a>
           <header className="border-b bg-card">
             <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
-              <Link to="/" aria-label={t("nav.home")} className="text-lg font-bold tracking-tight text-primary">
-                FindYourDent
+              <Link to="/" aria-label={t("nav.home")} className="inline-flex min-h-11 items-center rounded-md">
+                <img src="/brand/wordmark.svg" alt="" width={140} height={28} className="h-7 w-auto" />
               </Link>
               <LanguageToggle language={language} />
             </div>

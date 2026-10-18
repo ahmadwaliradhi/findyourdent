@@ -1,3 +1,4 @@
+import { OctagonAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -168,10 +169,13 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
             role="status"
             className={
               location.status === "denied" || location.status === "unsupported"
-                ? "rounded-md border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm"
+                ? "flex items-start gap-2 rounded-md border border-destructive-line bg-destructive-soft px-3 py-2 text-sm"
                 : "text-sm text-muted-foreground"
             }
           >
+            {(location.status === "denied" || location.status === "unsupported") && (
+              <OctagonAlert aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-4 shrink-0 text-destructive" />
+            )}
             {location.status === "locating" && t("directory.locating")}
             {location.status === "ready" && t("directory.locationReady")}
             {location.status === "denied" && t("directory.locationDenied")}
@@ -229,7 +233,7 @@ function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: stri
             {row.name}
           </Link>
         </h3>
-        {row.claimed && <Badge variant="secondary">{t("directory.claimed")}</Badge>}
+        {row.claimed && <Badge variant="brand">{t("directory.claimed")}</Badge>}
       </div>
 
       <p className="text-sm text-muted-foreground">

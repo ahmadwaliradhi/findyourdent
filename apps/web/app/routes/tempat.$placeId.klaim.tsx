@@ -7,6 +7,8 @@ import { fieldClassName } from "~/components/listing-filters-form";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { ErrorNotice } from "~/components/ui/error-notice";
+import { FieldError } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import {
@@ -95,9 +97,9 @@ function ClaimBody({ page }: { page: ClaimPageData }) {
   return (
     <section className="flex flex-col gap-4">
       {claim?.status === "rejected" && (
-        <p role="alert" className="rounded-md border border-destructive p-4">
-          {t("claim.status.rejected", { reason: claim.rejectionReason ?? "" })}
-        </p>
+        <ErrorNotice role="alert" className="p-4 text-base">
+          <p>{t("claim.status.rejected", { reason: claim.rejectionReason ?? "" })}</p>
+        </ErrorNotice>
       )}
       {claim?.status === "revoked" && <p className="rounded-md border p-4">{t("claim.status.revoked")}</p>}
       <Explainer />
@@ -218,9 +220,9 @@ function Feedback({ state }: { state: Sending }) {
   if (state.phase === "done") return <p role="status">{state.message}</p>;
   if (state.phase === "error") {
     return (
-      <p role="alert" className="text-destructive">
+      <FieldError role="alert" className="text-base">
         {state.message}
-      </p>
+      </FieldError>
     );
   }
   return null;
@@ -407,7 +409,7 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
         <h2 id={`${id}-title`} className="text-lg font-semibold">
           {t("claim.facts.title")}
         </h2>
-        {owner.factsStatus === "held" && <Badge variant="secondary">{t("claim.facts.held")}</Badge>}
+        {owner.factsStatus === "held" && <Badge variant="warning">{t("claim.facts.held")}</Badge>}
       </div>
       <p className="text-sm text-muted-foreground">{t("claim.facts.intro")}</p>
       <form onSubmit={submit} className="flex flex-col gap-4">

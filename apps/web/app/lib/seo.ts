@@ -15,14 +15,19 @@ export function openGraphMeta({
   description: string;
   url: string;
 }): MetaDescriptor[] {
+  const image = new URL("/og-image.png", url).href;
   return [
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
     { property: "og:url", content: url },
     { property: "og:site_name", content: SITE_NAME },
-    { name: "twitter:card", content: "summary" },
+    { property: "og:image", content: image },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
+    { name: "twitter:image", content: image },
   ];
 }

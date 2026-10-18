@@ -3,12 +3,14 @@ import { useTranslation } from "react-i18next";
 import { Link, redirect } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { FieldError } from "~/components/ui/field";
 import { getI18n, type Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
 import { testimonyPath } from "~/lib/paths";
+import { testimonyStatusTone } from "~/lib/testimony-status";
 import { loadMyTestimonies, type MyTestimony } from "~/server/testimonies.server";
 import { readSession } from "../../server/auth.ts";
 import type { Route } from "./+types/testimoni-saya";
@@ -102,7 +104,7 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
         <h2 id={headingId} className="text-lg font-semibold">
           {item.providerName}
         </h2>
-        <Badge variant={item.status === "published" ? "default" : "secondary"}>
+        <Badge variant={testimonyStatusTone(item.status)} className="whitespace-normal">
           {t(`myTestimonies.status.${item.status === "deleted" ? "removed" : item.status}`)}
         </Badge>
       </div>
@@ -157,18 +159,14 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
             {t("myTestimonies.confirmBody")}
           </p>
           <div className="flex gap-2">
-            <Button variant="destructive" size="sm" disabled={deleting} onClick={remove}>
+            <Button variant="danger" size="sm" disabled={deleting} onClick={remove}>
               {deleting ? t("myTestimonies.deleting") : t("myTestimonies.confirmDelete")}
             </Button>
             <Button variant="outline" size="sm" disabled={deleting} onClick={() => setConfirming(false)}>
               {t("myTestimonies.cancel")}
             </Button>
           </div>
-          {failed ? (
-            <p role="alert" className="text-sm text-destructive">
-              {t("myTestimonies.deleteFailed")}
-            </p>
-          ) : null}
+          {failed ? <FieldError role="alert">{t("myTestimonies.deleteFailed")}</FieldError> : null}
         </div>
       ) : null}
     </article>

@@ -16,7 +16,8 @@ import { ImpactCounter } from "~/components/impact-counter";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
 import { TestimonyCard } from "~/components/testimony-card";
 import { Button } from "~/components/ui/button";
-import { Textarea } from "~/components/ui/textarea";
+import { ErrorNotice } from "~/components/ui/error-notice";
+import { Field, FieldError } from "~/components/ui/field";
 import { VoiceRecorder } from "~/components/voice-recorder";
 import { getI18n } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
@@ -215,25 +216,18 @@ export default function Home({ actionData: routeActionData, loaderData }: Route.
         >
           {t("home.consent")}
         </p>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="complaintText" className="font-medium">
-            {t("home.complaintLabel")}
-          </label>
-          <Textarea
-            // Remounts with each answer, so a voice note's transcript replaces what the box held.
-            key={actionData?.complaintText ?? ""}
-            id="complaintText"
-            name="complaintText"
-            required
-            maxLength={4000}
-            defaultValue={actionData?.complaintText ?? ""}
-            placeholder={t("home.complaintPlaceholder")}
-            aria-describedby="complaintHint"
-          />
-          <p id="complaintHint" className="text-xs text-muted-foreground">
-            {t("home.complaintHint")}
-          </p>
-        </div>
+        <Field
+          // Remounts with each answer, so a voice note's transcript replaces what the box held.
+          key={actionData?.complaintText ?? ""}
+          id="complaintText"
+          name="complaintText"
+          label={t("home.complaintLabel")}
+          hint={t("home.complaintHint")}
+          required
+          maxLength={4000}
+          defaultValue={actionData?.complaintText ?? ""}
+          placeholder={t("home.complaintPlaceholder")}
+        />
         <Button
           type="submit"
           size="lg"
@@ -246,15 +240,12 @@ export default function Home({ actionData: routeActionData, loaderData }: Route.
 
         <div aria-live="polite" className="flex flex-col gap-3">
           {actionData?.error && (
-            <div
-              role="alert"
-              className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive-soft px-3 py-3 text-sm"
-            >
+            <ErrorNotice role="alert">
               <p>{t(`errors.${actionData.error}`)}</p>
               <Button type="submit" variant="outline" size="sm" className="self-start" disabled={pending || !hydrated}>
                 {t("errors.retry")}
               </Button>
-            </div>
+            </ErrorNotice>
           )}
           {actionData?.response && (
             <GuidanceResult response={actionData.response} pending={pending} share={actionData.share} />
@@ -393,11 +384,7 @@ function FeedList({ query, feed }: { query: string; feed: FeedPage }) {
           </li>
         ))}
       </ul>
-      {failed && (
-        <p role="alert" className="text-sm text-destructive">
-          {t("feed.loadError")}
-        </p>
-      )}
+      {failed && <FieldError role="alert">{t("feed.loadError")}</FieldError>}
       {cursor && (
         <Button
           type="button"

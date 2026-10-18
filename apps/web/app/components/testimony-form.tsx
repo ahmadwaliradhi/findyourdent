@@ -2,6 +2,7 @@
 // kept in the browser, Google sign-in only when the Patient presses Kirim, and the
 // fix-before-submit loop when Moderation flags something the author can fix.
 import procedureList from "@findyourdent/contracts/data/procedures.json";
+import { TriangleAlert } from "lucide-react";
 import type * as React from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +10,8 @@ import { Link } from "react-router";
 import { fieldClassName } from "~/components/listing-filters-form";
 import { ProviderFields } from "~/components/provider-fields";
 import { Button } from "~/components/ui/button";
+import { ErrorNotice } from "~/components/ui/error-notice";
+import { FieldError } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { isLanguage, type Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
@@ -338,11 +341,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   const photoCount = kept.length + photos.length;
   const years = visitYears(now);
   const fieldError = (name: string) =>
-    errors[name] ? (
-      <p id={id(`${name}-error`)} className="text-sm text-destructive">
-        {errors[name]}
-      </p>
-    ) : null;
+    errors[name] ? <FieldError id={id(`${name}-error`)}>{errors[name]}</FieldError> : null;
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6" aria-busy={busy}>
@@ -561,7 +560,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
             <div>
               <label
                 htmlFor={id("photos")}
-                className="inline-flex h-11 cursor-pointer items-center rounded-md border px-4 text-sm font-medium shadow-xs hover:bg-accent has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
+                className="inline-flex min-h-touch cursor-pointer items-center rounded-md border border-border-strong bg-card px-4 text-sm font-semibold shadow-xs hover:border-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
               >
                 {t("testimonyForm.photosAdd")}
                 <input
@@ -597,7 +596,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
             <div>
               <label
                 htmlFor={id("proof")}
-                className="inline-flex h-11 cursor-pointer items-center rounded-md border px-4 text-sm font-medium shadow-xs hover:bg-accent has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
+                className="inline-flex min-h-touch cursor-pointer items-center rounded-md border border-border-strong bg-card px-4 text-sm font-semibold shadow-xs hover:border-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
               >
                 {t("testimonyForm.proofAdd")}
                 <input
@@ -660,19 +659,14 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
       </fieldset>
 
       {problem && (
-        <div
-          ref={problemRef}
-          tabIndex={-1}
-          role="alert"
-          className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm outline-none"
-        >
+        <ErrorNotice ref={problemRef} tabIndex={-1} role="alert" className="px-4">
           <p>{problem.message}</p>
           {problem.alreadyPosted && (
             <Link to={MY_TESTIMONIES_PATH} className="font-medium underline underline-offset-4">
               {t("testimonyForm.myTestimonies")}
             </Link>
           )}
-        </div>
+        </ErrorNotice>
       )}
 
       <div className="flex flex-col gap-2">
@@ -706,7 +700,7 @@ function RatingGroup(props: {
         {[1, 2, 3, 4, 5].map((score) => (
           <label
             key={score}
-            className="flex h-11 cursor-pointer items-center justify-center rounded-md border text-base font-medium has-checked:border-primary has-checked:bg-primary has-checked:text-primary-foreground has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50 has-disabled:cursor-not-allowed has-disabled:opacity-50"
+            className="flex min-h-touch cursor-pointer items-center justify-center rounded-md border border-border-strong text-base font-medium has-checked:border-primary has-checked:bg-primary has-checked:text-primary-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring has-disabled:cursor-not-allowed has-disabled:opacity-50"
           >
             <input
               type="radio"
@@ -722,11 +716,7 @@ function RatingGroup(props: {
           </label>
         ))}
       </div>
-      {error && (
-        <p id={errorId} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
     </fieldset>
   );
 }
@@ -753,16 +743,19 @@ function AuthorFixPanel({
       ref={panelRef}
       tabIndex={-1}
       role="alert"
-      className="flex flex-col gap-3 rounded-md border border-amber-500/50 bg-amber-50 px-4 py-3 text-sm outline-none dark:bg-amber-950/30"
+      className="flex flex-col gap-3 rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-foreground"
     >
-      <p className="font-semibold">{t("testimonyForm.fix.title")}</p>
+      <p className="flex items-start gap-2 font-semibold">
+        <TriangleAlert aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-4 shrink-0 text-warning" />
+        <span>{t("testimonyForm.fix.title")}</span>
+      </p>
       <p>{t("testimonyForm.fix.intro")}</p>
       {response.message && <p>{response.message}</p>}
       {issues.length > 0 && (
         <ul className="flex flex-col gap-3" aria-label={t("testimonyForm.fix.flagged")}>
           {issues.map((issue) => (
             <li key={`${issue.sentence}-${issue.marks[0]?.start}`} className="flex flex-col gap-1">
-              <blockquote className="border-l-2 border-amber-500 pl-3 break-words">
+              <blockquote className="border-l-2 border-warning-line pl-3 break-words">
                 <MarkedSentence issue={issue} />
               </blockquote>
               {issue.ruleCodes.map((code) => (
@@ -793,7 +786,7 @@ function MarkedSentence({ issue }: { issue: FixIssue }) {
     if (mark.start < at) continue;
     if (mark.start > at) parts.push(issue.sentence.slice(at, mark.start));
     parts.push(
-      <mark key={mark.start} className="rounded-sm bg-amber-200 px-0.5 dark:bg-amber-700/60 dark:text-white">
+      <mark key={mark.start} className="rounded-sm bg-highlight px-0.5 text-foreground">
         {issue.sentence.slice(mark.start, mark.end)}
       </mark>,
     );
@@ -824,7 +817,7 @@ function Result({
 
   return (
     <section className="flex flex-col gap-4 rounded-xl border px-5 py-6" aria-live="polite">
-      <h2 ref={headingRef} tabIndex={-1} className="text-xl font-bold outline-none">
+      <h2 ref={headingRef} tabIndex={-1} className="text-xl font-bold">
         {title}
       </h2>
       {/* On held, the server's message carries the reason and the 24-hour target. */}
@@ -846,7 +839,7 @@ function Result({
             <Link to={providerPath(placeId)}>{t("testimonyForm.result.viewProvider")}</Link>
           </Button>
         )}
-        <Button asChild variant={published ? "outline" : "default"}>
+        <Button asChild variant={published ? "outline" : "primary"}>
           <Link to={MY_TESTIMONIES_PATH}>{t("testimonyForm.myTestimonies")}</Link>
         </Button>
       </div>
