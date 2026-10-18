@@ -3,14 +3,20 @@
  * Listed Provider's coordinates for 30 days, so each one is refreshed with an
  * Essentials Place Details call once it is 25 days old, and deleted once it could
  * not be refreshed and would be older than 30 days by the next daily run.
+ *
+ * The same call returns Google's types. They are held in memory only (ADR-0005) to
+ * re-infer an `inferred` Provider type, healing Listed Providers typed from the name
+ * alone before the types were read; a `claimed` type is never touched.
  */
 import {
   COLLECTIONS,
   type ProviderDoc,
+  type ProviderType,
   type StoredLocation,
   type Timestamp as StoredTimestamp,
 } from "@findyourdent/contracts/firestore";
 import { type DocumentReference, FieldValue, type Firestore, Timestamp } from "firebase-admin/firestore";
+import { inferProviderType } from "../app/lib/provider-type.ts";
 import { COORDINATES_DAILY_CAP, type LatLng, type PlacesAdapter } from "./adapters/places.ts";
 import type { Logger } from "./logger.ts";
 
@@ -66,10 +72,11 @@ export async function refreshCoordinates({
   let callsLeft = REFRESH_BATCH_SIZE;
   for (const { ref, fetchedAt, ageMs } of due) {
     let location: LatLng | null = null;
+    let types: string[] = [];
     if (callsLeft > 0) {
       callsLeft -= 1;
       const result = await places.getCoordinates(ref.id);
-      if (result.ok) location = result.location;
+      if (result.ok) ({ location, types } = result);
       else if (result.reason === "cap_reached") callsLeft = 0;
     }
     const expiring = ageMs !== null && ageMs + DAY_MS > KEEP_AT_MOST_DAYS * DAY_MS;
@@ -79,7 +86,9 @@ export async function refreshCoordinates({
     }
     try {
       const fresh: StoredLocation | null = location ? { ...location, fetchedAt: Timestamp.fromMillis(nowMs) } : null;
-      if (await replaceIfUnchanged(firestore, ref, fetchedAt, fresh)) summary[fresh ? "refreshed" : "deleted"] += 1;
+      if (await replaceIfUnchanged(firestore, ref, fetchedAt, fresh, types)) {
+        summary[fresh ? "refreshed" : "deleted"] += 1;
+      }
     } catch {
       summary.failed += 1;
     }
@@ -92,19 +101,39 @@ export async function refreshCoordinates({
  * Writes `fresh` (or deletes the coordinates when null) only if the Provider still
  * has the coordinates this run read: a Listed Provider written meanwhile keeps its
  * newer ones, and one that went away is skipped. Returns whether it wrote.
+ *
+ * With fresh coordinates, an `inferred` type is re-inferred from the stored name and
+ * Google's `types`; a changed type is copied to the place's Testimonies, as owner
+ * facts do (data model: Testimonies carry the type for feed filters).
  */
 async function replaceIfUnchanged(
   firestore: Firestore,
   ref: DocumentReference,
   fetchedAt: StoredTimestamp | null,
   fresh: StoredLocation | null,
+  types: string[],
 ): Promise<boolean> {
   return firestore.runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
     if (!snapshot.exists) return false;
-    const current = (snapshot.data() as ProviderDoc).location?.fetchedAt ?? null;
+    const provider = snapshot.data() as ProviderDoc;
+    const current = provider.location?.fetchedAt ?? null;
     if ((current?.toMillis() ?? null) !== (fetchedAt?.toMillis() ?? null)) return false;
-    tx.update(ref, { location: fresh ?? FieldValue.delete() });
+    const providerType = fresh ? healedType(provider, types) : null;
+    const placeTestimonies = providerType
+      ? await tx.get(firestore.collection(COLLECTIONS.testimonies).where("placeId", "==", ref.id))
+      : null;
+    tx.update(ref, { location: fresh ?? FieldValue.delete(), ...(providerType ? { providerType } : {}) });
+    for (const doc of placeTestimonies?.docs ?? []) {
+      if (doc.get("status") !== "deleted") tx.update(doc.ref, { providerType });
+    }
     return true;
   });
+}
+
+/** The re-inferred type when it differs from an `inferred` stored one; null otherwise. */
+function healedType(provider: ProviderDoc, types: string[]): ProviderType | null {
+  if (provider.providerTypeSource !== "inferred") return null;
+  const inferred = inferProviderType({ displayName: provider.name, types });
+  return inferred === provider.providerType ? null : inferred;
 }

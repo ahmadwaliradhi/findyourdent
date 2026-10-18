@@ -3,7 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { refreshCoordinates } from "../../server/coordinates-refresh.ts";
 import { silentLogger } from "../../server/logger.ts";
-import { seedProvider } from "../support/fixtures.ts";
+import { seedProvider, seedTestimony } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -27,9 +27,17 @@ function fetchedDaysAgo(days: number) {
   return { lat: -6.2, lng: 106.8, fetchedAt: Timestamp.fromMillis(NOW - days * DAY_MS) } as never;
 }
 
-async function locationOf(placeId: string) {
+async function providerOf(placeId: string) {
   const snapshot = await server.firestore.collection(COLLECTIONS.providers).doc(placeId).get();
-  return (snapshot.data() as ProviderDoc).location;
+  return snapshot.data() as ProviderDoc;
+}
+
+async function locationOf(placeId: string) {
+  return (await providerOf(placeId)).location;
+}
+
+async function testimonyTypeOf(id: string) {
+  return (await server.firestore.collection(COLLECTIONS.testimonies).doc(id).get()).get("providerType");
 }
 
 function run() {
@@ -138,5 +146,66 @@ describe("coordinate refresh job, against the 30-day limit", () => {
     expect(await locationOf("place-rewritten")).toMatchObject({ lat: 1, lng: 2 });
     expect((await providers.doc("place-gone").get()).exists).toBe(false);
     expect(await locationOf("place-stale")).toBeUndefined();
+  });
+});
+
+describe("coordinate refresh job, healing the inferred Provider type", () => {
+  it("lists an inferred klinik as a hospital when Google types it so, and its Testimonies follow", async () => {
+    const provider = await seedProvider(server.firestore, {
+      placeId: "place-hospital",
+      name: "RS Medika Utama",
+      location: fetchedDaysAgo(26),
+    });
+    const published = await seedTestimony(server.firestore, provider);
+    const deleted = await seedTestimony(server.firestore, provider, { status: "deleted" });
+    server.fakes.places.respondWithCoordinates({
+      ok: true,
+      location: { lat: -7.25, lng: 112.75 },
+      types: ["general_hospital", "hospital", "health"],
+    });
+
+    await run();
+
+    const refreshed = await providerOf("place-hospital");
+    expect(refreshed.providerType).toBe("hospital");
+    expect(refreshed.providerTypeSource).toBe("inferred");
+    expect(refreshed).not.toHaveProperty("types");
+    expect(await testimonyTypeOf(published.id)).toBe("hospital");
+    expect(await testimonyTypeOf(deleted.id)).toBe("klinik");
+  });
+
+  it("never changes a claimed type", async () => {
+    const provider = await seedProvider(server.firestore, {
+      placeId: "place-claimed",
+      name: "Klinik Gigi Sehat",
+      providerTypeSource: "claimed",
+      location: fetchedDaysAgo(26),
+    });
+    const testimony = await seedTestimony(server.firestore, provider);
+    server.fakes.places.respondWithCoordinates({
+      ok: true,
+      location: { lat: -7.25, lng: 112.75 },
+      types: ["hospital"],
+    });
+
+    await run();
+
+    expect((await providerOf("place-claimed")).providerType).toBe("klinik");
+    expect(await testimonyTypeOf(testimony.id)).toBe("klinik");
+    expect(await locationOf("place-claimed")).toMatchObject({ lat: -7.25, lng: 112.75 });
+  });
+
+  it("keeps an inferred type that Google's types agree with", async () => {
+    await seedProvider(server.firestore, {
+      placeId: "place-dentist",
+      name: "drg. Siti Rahma",
+      providerType: "privateDentist",
+      location: fetchedDaysAgo(26),
+    });
+    server.fakes.places.respondWithCoordinates({ ok: true, location: { lat: -7.25, lng: 112.75 }, types: ["dentist"] });
+
+    await run();
+
+    expect((await providerOf("place-dentist")).providerType).toBe("privateDentist");
   });
 });

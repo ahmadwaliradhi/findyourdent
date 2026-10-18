@@ -5,17 +5,12 @@ import {
   validateShortlistReasonsRequest,
   validateShortlistReasonsResponse,
 } from "@findyourdent/contracts";
-import {
-  COLLECTIONS,
-  type ProcedureCode,
-  type ProviderDoc,
-  type ProviderType,
-  type Timestamp,
-} from "@findyourdent/contracts/firestore";
+import { COLLECTIONS, type ProcedureCode, type ProviderDoc, type Timestamp } from "@findyourdent/contracts/firestore";
 import type { AppLoadContext } from "react-router";
 import { getI18n, type Language } from "~/i18n/config";
 import { formatDistance } from "~/lib/format";
 import { procedureLabel } from "~/lib/procedures";
+import { inferProviderType } from "~/lib/provider-type";
 import { overallAverage } from "~/lib/scores";
 import type { PriceSignal, ShortlistProvider, ShortlistResponse } from "~/lib/shortlist";
 import type { LatLng, PlaceSummary, TextSearch } from "../../server/adapters/places.ts";
@@ -120,15 +115,6 @@ export function distanceMeters(a: LatLng, b: LatLng): number {
   const dLng = rad(b.lng - a.lng);
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(h));
-}
-
-const PRIVATE_DENTIST_NAME = /^(drg\.?|dokter gigi)\s+\p{L}/iu;
-
-/** Provider type when no Claim confirms it (spec 02); shown with "perkiraan". */
-export function inferProviderType(place: Pick<PlaceSummary, "displayName" | "types">): ProviderType {
-  if (place.types.includes("hospital") || place.types.includes("general_hospital")) return "hospital";
-  if (PRIVATE_DENTIST_NAME.test(place.displayName.trim())) return "privateDentist";
-  return "klinik";
 }
 
 const normalize = (text: string) =>
