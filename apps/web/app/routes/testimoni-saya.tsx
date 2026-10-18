@@ -43,7 +43,7 @@ export default function MyTestimonies({ loaderData }: Route.ComponentProps) {
     <div className="grid grid-cols-1 items-start gap-6 desktop:grid-cols-[minmax(0,1fr)_360px] desktop:gap-10">
       <section className="flex flex-col gap-6" aria-labelledby="my-testimonies-title">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             <h1
               id="my-testimonies-title"
               className="text-[28px] leading-[34px] font-bold tracking-[-.015em] desktop:text-4xl desktop:leading-[42px]"
@@ -56,6 +56,7 @@ export default function MyTestimonies({ loaderData }: Route.ComponentProps) {
             {t("myTestimonies.writeCta")}
           </Link>
         </div>
+        {/* Always rendered so the live region announces a notice; while empty it cancels the gap above. */}
         <p role="status" className="text-sm empty:-mt-6">
           {notice}
         </p>
