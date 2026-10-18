@@ -38,6 +38,7 @@ export default [
   route("dampak", "routes/dampak.ts"),
   route("sitemap.xml", "routes/sitemap.xml.ts"),
   route("tentang", "routes/tentang.tsx"),
+  route("verifikasi-testimoni", "routes/verifikasi-testimoni.tsx"),
   route("privasi", "routes/privasi.tsx"),
   route("syarat", "routes/syarat.tsx"),
   route("ceritakan", "routes/ceritakan.tsx"),

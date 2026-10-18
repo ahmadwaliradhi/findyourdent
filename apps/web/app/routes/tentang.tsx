@@ -16,6 +16,7 @@ import {
 import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
+import { FeatureIcon, FeatureList, infoH2 as h2, infoLead as lead } from "~/components/info-page";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { getI18n, type Language } from "~/i18n/config";
@@ -48,33 +49,6 @@ const ROADMAP: { icon: LucideIcon; badge: ComponentProps<typeof Badge> }[] = [
   { icon: MapIcon, badge: { variant: "brand", icon: ArrowRight } },
   { icon: Globe, badge: { variant: "neutral", icon: Clock } },
 ];
-
-const h2 = "text-[28px] leading-[34px] font-bold tracking-[-.015em] desktop:text-4xl desktop:leading-[42px]";
-const lead = "max-w-[62ch] text-[17px] leading-[27px] text-muted-foreground";
-
-function FeatureIcon({ icon: Icon }: { icon: LucideIcon }) {
-  return (
-    <span className="flex size-11 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
-      <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
-    </span>
-  );
-}
-
-function Features({ items, icons }: { items: readonly { title: string; body: string }[]; icons: LucideIcon[] }) {
-  return (
-    <ul className="grid grid-cols-1 gap-x-10 gap-y-7 desktop:grid-cols-2">
-      {items.map((item, i) => (
-        <li key={item.title} className="grid grid-cols-[44px_minmax(0,1fr)] items-start gap-3.5">
-          <FeatureIcon icon={icons[i] ?? MessageCircle} />
-          <div className="flex flex-col gap-1">
-            <h3 className="leading-[22px] font-[650]">{item.title}</h3>
-            <p className="text-muted-foreground">{item.body}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 /** The mockup's soft brand shapes behind the hero, desktop only. Token fills, never hex. */
 function HeroShapes() {
@@ -118,7 +92,7 @@ export default function About() {
         <h2 id="what-title" className={h2}>
           {t("about.whatTitle")}
         </h2>
-        <Features items={what} icons={WHAT_ICONS} />
+        <FeatureList items={what} icons={WHAT_ICONS} />
       </section>
 
       <section
@@ -131,7 +105,7 @@ export default function About() {
           </h2>
           <p className={lead}>{t("about.safeLead")}</p>
         </div>
-        <Features items={safe} icons={SAFE_ICONS} />
+        <FeatureList items={safe} icons={SAFE_ICONS} />
       </section>
 
       <section aria-labelledby="go-title" className="flex flex-col gap-6">
