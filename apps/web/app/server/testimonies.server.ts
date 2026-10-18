@@ -42,6 +42,7 @@ import { getI18n, type Language } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { normalizeName } from "~/lib/normalize-name";
+import { inferProviderType } from "~/lib/provider-type";
 import {
   MAX_AUTHOR_FIX_ROUNDS,
   SUBMISSION_FIELDS,
@@ -60,7 +61,6 @@ import { jakartaDate } from "../../server/quota.ts";
 import { type AggregateInput, computeAggregates } from "./aggregates.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
-import { inferProviderType } from "./shortlist.server.ts";
 import {
   deleteTestimonyMedia,
   readTestimonyFiles,

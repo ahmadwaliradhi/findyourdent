@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inferProviderType } from "../../app/server/shortlist.server.ts";
+import { inferProviderType } from "../../app/lib/provider-type.ts";
 
 describe("Provider type inference (spec 02)", () => {
   it("reads a hospital from Google's hospital type", () => {

@@ -24,7 +24,7 @@ A Listed Provider. **Document id = `placeId`.** Created by the first published T
 | `nameNormalized` | For prefix search in the directory (spec 04). |
 | `region` | `RegionRef`. |
 | `location` | `{ lat, lng, fetchedAt }` from a Place Details Essentials call; refreshed monthly, deleted when older than 30 days and not refreshable. |
-| `providerType`, `providerTypeSource` | `klinik`, `privateDentist` or `hospital`; `inferred` (shown "perkiraan") or `claimed`. |
+| `providerType`, `providerTypeSource` | `klinik`, `privateDentist` or `hospital`; `inferred` (shown "perkiraan") or `claimed`. An `inferred` type is re-inferred from Google's types (held in memory) by the coordinate refresh job, which copies a change to the place's Testimonies. |
 | `claimStatus`, `claimId` | `unclaimed` or `claimed`. Never affects ranking. |
 | `ownerFacts` | Owner-entered name, type, Region, address, phone, WhatsApp, opening hours, services; screened by Moderation (Provider-facts rules). A held edit (any rule hit) waits in `pendingOwnerFacts` while the published `ownerFacts` stay live. Once published, name, type and Region are copied to the top-level fields (`nameSource: "claim"`, `providerTypeSource: "claimed"`) and the Region and type to the place's Testimonies. Removed when the Claim is revoked. |
 | `aggregates` | `testimonyCount` (all published), `verifiedVisitCount` (Proven Testimonies), aspect `averages` and `procedurePrices` (count, median, min, max per procedure), both over Proven Testimonies only; `averages` is `null` below three Proven Testimonies (spec 09). Recomputed whenever a Testimony enters or leaves `published` or its proof result changes. |

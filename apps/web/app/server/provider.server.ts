@@ -3,9 +3,10 @@ import type { AppLoadContext } from "react-router";
 import type { Language } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import type { GoogleBlockResponse, GoogleReviewsResponse } from "~/lib/provider";
+import { inferProviderType } from "~/lib/provider-type";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
 import { getOrCreateSessionId } from "./session.server.ts";
-import { inferProviderType, placeMapsUrl } from "./shortlist.server.ts";
+import { placeMapsUrl } from "./shortlist.server.ts";
 
 /**
  * The Provider page's two Google routes (spec 02). The page itself renders only
