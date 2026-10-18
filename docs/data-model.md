@@ -27,10 +27,10 @@ A Listed Provider. **Document id = `placeId`.** Created by the first published T
 | `providerType`, `providerTypeSource` | `klinik`, `privateDentist` or `hospital`; `inferred` (shown "perkiraan") or `claimed`. |
 | `claimStatus`, `claimId` | `unclaimed` or `claimed`. Never affects ranking. |
 | `ownerFacts` | Owner-entered name, type, Region, address, phone, WhatsApp, opening hours, services; screened by Moderation (Provider-facts rules). A held edit (any rule hit) waits in `pendingOwnerFacts` while the published `ownerFacts` stay live. Once published, name, type and Region are copied to the top-level fields (`nameSource: "claim"`, `providerTypeSource: "claimed"`) and the Region and type to the place's Testimonies. Removed when the Claim is revoked. |
-| `aggregates` | `testimonyCount`, `verifiedVisitCount`, aspect `averages`, `procedurePrices` (count, median, min, max per procedure). Recomputed whenever a Testimony enters or leaves `published`. |
+| `aggregates` | `testimonyCount` (all published), `verifiedVisitCount` (Proven Testimonies), aspect `averages` and `procedurePrices` (count, median, min, max per procedure), both over Proven Testimonies only; `averages` is `null` below three Proven Testimonies (spec 09). Recomputed whenever a Testimony enters or leaves `published` or its proof result changes. |
 | `listedBy`, `createdAt`, `updatedAt` | |
 
-Indexes (`firestore.indexes.json`): each of `region.provinceCode`, `region.regencyCode`, `region.districtCode` and `providerType` with `aggregates.testimonyCount desc` (directory) and with `nameNormalized` (prefix search); Firestore merges them when filters combine.
+Indexes (`firestore.indexes.json`): each of `region.provinceCode`, `region.regencyCode`, `region.districtCode` and `providerType` with `aggregates.verifiedVisitCount desc` (directory, spec 09; was `testimonyCount`) and with `nameNormalized` (prefix search); Firestore merges them when filters combine.
 
 ### `testimonies`
 
@@ -44,7 +44,7 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `ratings` | `service`, `hygiene`, `materialsEquipment`, each 1 to 5. |
 | `text`, `visitMonth`, `procedureCode`, `pricePaidRupiah`, `photoPaths` | Text up to 10,000 characters; up to four photos, EXIF stripped. |
 | `status` | `submitted`, `published`, `needsAuthorFix`, `held`, `rejected`, `hidden`, `removed`, `deleted` (state machine in spec 03). Moderation's authorFix stores nothing, so `needsAuthorFix` comes only from the admin queue's "send back to the author". |
-| `verifiedVisit`, `proofOfVisit` | Kunjungan terbukti and the check result with its date. The Proof of Visit file itself is deleted right after the check. |
+| `verifiedVisit`, `proofOfVisit` | Kunjungan terbukti (true only when the result is `accepted`) and the check result: `notProvided`, `accepted`, `pending` with reasons (`nameMismatch`, `dateMismatch`, `possibleReuse`) or `rejected` with a reason (`unreadable`, `notAProof`, `tooOld`, `adminRejected`, `expired`), its date, the extracted clinic name, proof date and total (never the patient's name), and `attempts` (at most 3). The file is deleted right after an `accepted` or `rejected` result; a `pending` file stays for the admin at most 7 days (spec 09). |
 | `authorFixRounds` | authorFix rounds used before this version was stored (the next authorFix after three is held). An authorFix itself stores nothing on the Testimony; the count waits in `counters` meanwhile. |
 | `pendingRevision` | Edit of a published Testimony under Moderation; the public fields stay visible until it is decided. |
 | `reply` | The claimed Provider's one public reply (editable), with its own Moderation status and the `claimId` it was written under; shown only while that Claim is the place's current one. |
@@ -54,7 +54,7 @@ Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`,
 
 ### `testimonyReports`
 
-Reports from anyone (category `personalData`, `threat`, `falseClaim`, `spam`, `conflictOfInterest`, `other`). `personalData` and `threat` set the Testimony to `hidden` immediately (`hidTestimony: true`). Every report goes to the admin queue with a 24-hour target. Type `TestimonyReportDoc`.
+Reports from anyone (category `personalData`, `threat`, `falseClaim`, `spam`, `conflictOfInterest`, `other`; spec 09 part 2 adds `incentive`, which does not hide). `personalData` and `threat` set the Testimony to `hidden` immediately (`hidTestimony: true`). Every report goes to the admin queue with a 24-hour target. Type `TestimonyReportDoc`.
 
 ### `claims`
 
@@ -71,6 +71,18 @@ Queries: `placeId` + `status` (the current list of a place; `in` on `placeId` fo
 ### `moderationDecisions`
 
 One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `proofOfVisit` result, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). It never stores the moderated text or images. Type `ModerationDecisionDoc`.
+
+### `proofFingerprints` (spec 09, not yet in contracts)
+
+One per Testimony with an `accepted` or `pending` Proof of Visit: `testimonyId`, `placeId`, `perceptualHash` (64-bit, images) or `fileSha256` (PDFs), and `fieldsKey` (normalised clinic name, proof date and total). No image and no patient name. Deleted when the Testimony is deleted or its proof is rejected. Queried by `placeId` for the reuse check.
+
+### `submissionSignals` (spec 09 part 2, not yet in contracts)
+
+One per Testimony submission or edit: `testimonyId`, `placeId`, `authorUid`, `ipHash` and `browserIdHash` (salted SHA-256), `expiresAt` 90 days later (Firestore TTL). Queried by `placeId` for detection. No raw IP or id.
+
+### `policyViolations` (spec 09 part 2, not yet in contracts)
+
+Testimony Policy Violation cases: `placeId`, evidence (report ids, detection holds, notes, private evidence paths), suspected period, status `open`, `providerNotified` (`responseDueAt`), `confirmed` (`badgeUntil`, 6 months) or `dismissed`; every move recorded in `adminActions`.
 
 ### `nameCorrections`
 
@@ -94,4 +106,4 @@ Fixed-window rate-limit counters (spec 00): per App Check token and per session 
 
 ## Open points
 
-- TTL policies on `rateLimits.expiresAt` and `counters.expiresAt` are a console or `gcloud` step, not code.
+- TTL policies on `rateLimits.expiresAt`, `counters.expiresAt` and (spec 09 part 2) `submissionSignals.expiresAt` are a console or `gcloud` step, not code.

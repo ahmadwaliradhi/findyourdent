@@ -352,7 +352,7 @@ function PlacePicker(props: { onPick(placeId: string): void; error?: string; dis
   );
 }
 
-/** Province then Kota/Kabupaten, from the Kemendagri list. No kecamatan: the list has none. */
+/** Province then Kota/Kabupaten, from the Kemendagri list. No kecamatan select yet. */
 function RegionSelects(props: {
   idPrefix: string;
   value: RegionValue;
