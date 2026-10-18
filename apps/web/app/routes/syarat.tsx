@@ -4,15 +4,11 @@ import { getI18n, type Language } from "~/i18n/config";
 import { SITE_NAME } from "~/lib/seo";
 import type { Route } from "./+types/syarat";
 
-/** Terms of use (spec 08). A draft until legal review: noindex and out of the sitemap. */
+/** Terms of use (spec 08). Indexable and in the sitemap. */
 export function meta({ matches }: Route.MetaArgs) {
   const language: Language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
-  return [
-    { title: `${t("terms.metaTitle")} | ${SITE_NAME}` },
-    { name: "description", content: t("terms.lead") },
-    { name: "robots", content: "noindex" },
-  ];
+  return [{ title: `${t("terms.metaTitle")} | ${SITE_NAME}` }, { name: "description", content: t("terms.lead") }];
 }
 
 export default function Terms() {

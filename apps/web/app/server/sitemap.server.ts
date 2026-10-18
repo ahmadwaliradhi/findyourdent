@@ -12,9 +12,9 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/** The landing page, the directory, About and every Listed Provider page. Privacy and Terms wait for legal review. */
+/** The landing page, the directory, About, Privacy, Terms and every Listed Provider page. */
 export async function sitemapPaths(firestore: Firestore | null): Promise<string[]> {
-  const paths = ["/", "/direktori", "/tentang"];
+  const paths = ["/", "/direktori", "/tentang", "/privasi", "/syarat"];
   if (!firestore) return paths;
   const providers = await firestore.collection(COLLECTIONS.providers).select().get();
   for (const doc of providers.docs) paths.push(providerPath(doc.id));

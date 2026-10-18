@@ -1,12 +1,8 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-// About, Privacy and Terms (spec 08): reached from the footer; Privacy and Terms are drafts, kept out of search.
+// About, Privacy and Terms (spec 08): reached from the footer, all three indexable.
 
-async function robots(page: Page) {
-  return page.locator('meta[name="robots"]').getAttribute("content");
-}
-
-test("the footer reaches About, Privacy and Terms, and only About is indexable", async ({ page }) => {
+test("the footer reaches About, Privacy and Terms, and all three are indexable", async ({ page }) => {
   await page.goto("/");
   const footer = page.getByRole("contentinfo");
 
@@ -14,19 +10,24 @@ test("the footer reaches About, Privacy and Terms, and only About is indexable",
   await expect(page).toHaveURL(/\/tentang$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Pahami keluhan gigi Anda");
   await expect(page.getByText("Setiap negara baru hanya dibuka setelah")).toBeVisible();
+  await expect(page.getByText("Berawal dari AI Builder Cup 2026 untuk masyarakat Indonesia")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Bendera Indonesia" })).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
 
   await footer.getByRole("link", { name: "Kebijakan privasi" }).click();
   await expect(page).toHaveURL(/\/privasi$/);
   await expect(page.getByRole("heading", { level: 1, name: "Kebijakan privasi" })).toBeVisible();
-  await expect(page.getByText("Draf untuk ditinjau penasihat hukum sebelum tayang.")).toBeVisible();
-  expect(await robots(page)).toBe("noindex");
+  await expect(page.getByText("Berlaku sejak: 18 Oktober 2026")).toBeVisible();
+  await expect(page.getByText("Kami akan menjawab dalam 30 hari kerja.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Draf untuk ditinjau")).toHaveCount(0);
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
 
   await footer.getByRole("link", { name: "Syarat penggunaan" }).click();
   await expect(page).toHaveURL(/\/syarat$/);
   await expect(page.getByRole("heading", { level: 1, name: "Syarat penggunaan" })).toBeVisible();
-  await expect(page.getByText("Draf untuk ditinjau penasihat hukum sebelum tayang.")).toBeVisible();
-  expect(await robots(page)).toBe("noindex");
+  await expect(page.getByText("Terakhir diperbarui: 18 Oktober 2026")).toBeVisible();
+  await expect(page.getByText("Draf untuk ditinjau")).toHaveCount(0);
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
 });
 
 test("About is in the main nav and marked current on its page", async ({ page }) => {
@@ -41,7 +42,7 @@ test("the legal pages switch to English and keep their contents list", async ({ 
   await page.getByRole("button", { name: "Ganti bahasa ke English" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: "Terms of use" })).toBeVisible();
-  await expect(page.getByText("Draft for review by legal counsel before publishing.")).toBeVisible();
+  await expect(page.getByText("Effective from: 18 October 2026")).toBeVisible();
   // Desktop shows the side list, phones a collapsed one to open first; either way it jumps to section 3.
   const collapsed = page.locator("details").filter({ visible: true });
   if (await collapsed.count()) {

@@ -135,7 +135,7 @@ Every journey that works today keeps working: the existing end-to-end tests stay
 ### About, Privacy and Terms
 
 - Routes: `/tentang`, `/privasi`, `/syarat`. Copy comes from the mockups, in both languages, including the About closing sentence about opening new countries only after official-source guidance.
-- Privacy and Terms carry the draft banner and their bracketed placeholders, render `noindex`, and stay out of the sitemap. Removing the banner, adding them to the sitemap and filling the placeholders wait for legal sign-off.
+- Privacy and Terms are production copy: no draft banner, no bracketed placeholders, effective and last-updated dates in the header, indexable, and in the sitemap. Privacy answers data requests within 30 working days.
 - About is indexable, in the sitemap, and linked from the header nav and the footer.
 - The Privacy page's "no advertising cookies" statement holds only while no analytics or ad SDK is added.
 
@@ -174,7 +174,7 @@ Tests check what a Patient sees and does, what goes over the network and what la
 
 1. **End-to-end (Playwright, mobile-360 and desktop)**, the main seam. New specs, each added in the ticket that introduces the behavior:
    - the language switch works with JavaScript disabled and keeps the current page (Shell);
-   - the footer reaches About, Privacy and Terms, and Privacy and Terms render `noindex` (About, Privacy and Terms);
+   - the footer reaches About, Privacy and Terms, and all three are indexable (About, Privacy and Terms);
    - the Kecamatan select stays disabled until a kota/kabupaten is chosen, and filtering by one narrows the results (Kecamatan in Region fields);
    - picking a place in the Testimony form pre-fills Provinsi, Kota/Kabupaten and Kecamatan from the fake Places adapter's address, and the Patient can change them (Kecamatan in Region fields).
    Prior art: the four existing specs and their shared support helpers.
