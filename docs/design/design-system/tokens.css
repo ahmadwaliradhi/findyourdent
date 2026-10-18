@@ -1,0 +1,124 @@
+/* FindYourDent, generated from tokens.json */
+
+:root,
+[data-theme="light"] {
+  --surface-100: #f7f5f0;
+  --surface-200: #ffffff;
+  --surface-300: #ece8df;
+  --ink: #12262b;
+  --ink-muted: #4b5c60;
+  --border: #d8d3c6;
+  --border-strong: #7a8788;
+  --brand: #0b6e6a;
+  --brand-hover: #085753;
+  --on-brand: #ffffff;
+  --brand-tint: #dcefec;
+  --on-brand-tint: #084a47;
+  --focus-ring: #0b6e6a;
+  --danger: #b3261e;
+  --on-danger: #ffffff;
+  --danger-soft: #fdebe8;
+  --danger-line: #c4463d;
+  --warning: #774600;
+  --warning-soft: #fff3d1;
+  --warning-line: #a8740a;
+  --success: #1b6b3c;
+  --success-soft: #e3f4ea;
+  --success-line: #3f8f5f;
+  --info: #1d5a94;
+  --info-soft: #e5eff9;
+  --info-line: #4d86bd;
+  --star: #a86a00;
+  --shadow-xs: 0 1px 1px rgba(18,38,43,0.05);
+  --shadow-sm: 0 1px 3px rgba(18,38,43,0.08), 0 1px 2px rgba(18,38,43,0.04);
+  --shadow-md: 0 8px 20px -6px rgba(18,38,43,0.16), 0 2px 4px rgba(18,38,43,0.06);
+}
+
+[data-theme="dark"],
+.dark {
+  --surface-100: #0d1a1d;
+  --surface-200: #14262a;
+  --surface-300: #091416;
+  --ink: #eaf2f0;
+  --ink-muted: #a9bcbc;
+  --border: #26403f;
+  --border-strong: #6f8b8b;
+  --brand: #5cc8bf;
+  --brand-hover: #7ad6ce;
+  --on-brand: #052624;
+  --brand-tint: #143c3a;
+  --on-brand-tint: #bfeee9;
+  --focus-ring: #5cc8bf;
+  --danger: #f08a82;
+  --on-danger: #2a0806;
+  --danger-soft: #3a1815;
+  --danger-line: #a8524c;
+  --warning: #f2c25c;
+  --warning-soft: #35290a;
+  --warning-line: #9a7418;
+  --success: #6fd09a;
+  --success-soft: #12301f;
+  --success-line: #3c9a64;
+  --info: #8dbdf0;
+  --info-soft: #12283d;
+  --info-line: #3f78ad;
+  --star: #f0b429;
+  --shadow-xs: 0 1px 1px rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md: 0 8px 20px -6px rgba(0,0,0,0.6);
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --touch-target: 44px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans", Roboto, sans-serif;
+}
+
+@font-face {
+  font-family: "Figtree";
+  src: url("fonts/Figtree-Variable.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+.display { font-family: var(--font-sans); font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -0.02em; }
+
+.h1 { font-family: var(--font-sans); font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.015em; }
+
+.h2 { font-family: var(--font-sans); font-size: 24px; line-height: 30px; font-weight: 700; letter-spacing: -0.01em; }
+
+.h3 { font-family: var(--font-sans); font-size: 20px; line-height: 26px; font-weight: 650; letter-spacing: -0.005em; }
+
+.h4 { font-family: var(--font-sans); font-size: 17px; line-height: 24px; font-weight: 650; }
+
+.body-lg { font-family: var(--font-sans); font-size: 18px; line-height: 28px; font-weight: 400; }
+
+.body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
+
+.body-strong { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 600; }
+
+.body-sm { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
+
+.label { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; }
+
+.caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; }
+
+.overline { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; }
+
+.price { font-family: var(--font-sans); font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; }
+
+.score { font-family: var(--font-sans); font-size: 16px; line-height: 20px; font-weight: 700; }
