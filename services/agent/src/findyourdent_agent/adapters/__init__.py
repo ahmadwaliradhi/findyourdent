@@ -27,10 +27,12 @@ class GeminiAdapter(Protocol):
         response_schema: dict[str, Any],
         max_output_tokens: int | None = None,
         thinking_level: str | None = None,
+        timeout_seconds: float | None = None,
     ) -> dict[str, Any]:
         """The parsed JSON object Gemini returned. ``contents`` holds google-genai parts
         or contents. Output tokens are always bounded: ``max_output_tokens`` defaults to
-        the adapter's cap. Raises ModelUnavailableError."""
+        the adapter's cap. ``timeout_seconds`` is the whole call's budget, retries
+        included; it defaults to the adapter's. Raises ModelUnavailableError."""
         ...
 
 

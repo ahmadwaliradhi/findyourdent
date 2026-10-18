@@ -26,6 +26,7 @@ class FakeGeminiAdapter:
         response_schema: dict[str, Any],
         max_output_tokens: int | None = None,
         thinking_level: str | None = None,
+        timeout_seconds: float | None = None,
     ) -> dict[str, Any]:
         self.calls.append(
             {
@@ -35,6 +36,7 @@ class FakeGeminiAdapter:
                 "response_schema": response_schema,
                 "max_output_tokens": max_output_tokens,
                 "thinking_level": thinking_level,
+                "timeout_seconds": timeout_seconds,
             }
         )
         if not self.outputs:
@@ -187,6 +189,7 @@ class CannedGeminiAdapter:
         response_schema: dict[str, Any],
         max_output_tokens: int | None = None,
         thinking_level: str | None = None,
+        timeout_seconds: float | None = None,
     ) -> dict[str, Any]:
         if "reasons" in response_schema.get("properties", {}):
             return _canned_reasons(contents)

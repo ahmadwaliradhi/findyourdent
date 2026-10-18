@@ -105,6 +105,25 @@ describe("validateForm", () => {
     expect(validateForm({ ...filled, provider: EMPTY_FORM_STATE.provider }, { mode: "edit", now: NOW })).toEqual({});
   });
 
+  it("marks the place, not the hidden name and Region, while the listing check runs or after it failed", () => {
+    // Picked from a Listed Provider page: `listed` is still null until the check answers.
+    const unchecked = {
+      ...filled,
+      provider: { ...filled.provider, providerName: "", region: { provinceCode: "", regencyCode: "" } },
+    };
+    expect(validateForm(unchecked, { mode: "create", now: NOW, listing: "checking" })).toEqual({
+      placeId: { key: "errors.listingChecking" },
+    });
+    expect(validateForm(unchecked, { mode: "create", now: NOW, listing: "failed" })).toEqual({
+      placeId: { key: "errors.listingFailed" },
+    });
+    expect(Object.keys(validateForm(unchecked, { mode: "create", now: NOW, listing: "checked" })).sort()).toEqual([
+      "providerName",
+      "region.provinceCode",
+      "region.regencyCode",
+    ]);
+  });
+
   it("refuses a visit month in the future and a price out of range", () => {
     const errors = validateForm({ ...filled, visitMonth: "11", price: "2000000000" }, { mode: "create", now: NOW });
     expect(errors.visitMonth?.key).toBe("errors.visitFuture");

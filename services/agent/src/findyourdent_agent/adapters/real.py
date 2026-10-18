@@ -7,7 +7,10 @@ from __future__ import annotations
 import asyncio
 import html
 import json
+import logging
+import random
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -31,6 +34,23 @@ from .fakes import CannedGeminiAdapter, FakeAgentSearchAdapter
 # Output tokens have no daily quota and thinking tokens count as output, so a call
 # that names no cap still gets one (infra/gcp/README.md).
 DEFAULT_MAX_OUTPUT_TOKENS = 4096
+# The whole call, retry included, when the caller names no budget: below the web
+# service's 30 s agent timeout, so the Patient gets a retry state (Guidance, Shortlist
+# reasons). Moderation and Price List extraction pass their own.
+DEFAULT_CALL_BUDGET_SECONDS = 25.0
+# One retry for a transient failure. Healthy answers take under 8 s while the failures
+# seen on 18 Oct 2026 hung for about 23 s, so each attempt gets an even share of what
+# is left of the budget instead of all of it.
+_MAX_ATTEMPTS = 2
+_BACKOFF_SECONDS = (0.2, 0.8)
+# A retry with less time than this left would only time out again.
+_MIN_RETRY_SECONDS = 3.0
+
+log = logging.getLogger(__name__)
+
+
+class _TransientModelError(ModelUnavailableError):
+    """A failure worth one more attempt: a 5xx, a connection error or a timeout."""
 
 
 @dataclass
@@ -45,6 +65,7 @@ class GoogleGeminiAdapter:
     _client: genai.Client | None = field(default=None, repr=False)
     # The exact model version of the last answer, for the Moderation evaluation results.
     last_model_version: str | None = field(default=None, repr=False)
+    sleep: Callable[[float], Awaitable[None]] = field(default=asyncio.sleep, repr=False)
 
     def _vertex_client(self) -> genai.Client:
         # Built on first use so the service starts without credentials (tests, local dev).
@@ -67,6 +88,7 @@ class GoogleGeminiAdapter:
         response_schema: dict[str, Any],
         max_output_tokens: int | None = None,
         thinking_level: str | None = None,
+        timeout_seconds: float | None = None,
     ) -> dict[str, Any]:
         config = types.GenerateContentConfig(
             system_instruction=instruction,
@@ -77,17 +99,27 @@ class GoogleGeminiAdapter:
             if thinking_level
             else None,
         )
-        try:
-            response = await self._vertex_client().aio.models.generate_content(
-                model=model, contents=contents, config=config
-            )
-        except errors.APIError as error:
-            # Only the status goes into the exception: the body can echo the prompt.
-            if error.code == 429:
-                raise ModelQuotaExhaustedError("gemini 429") from None
-            raise ModelUnavailableError(f"gemini {error.code}") from None
-        except (httpx.HTTPError, TimeoutError) as error:
-            raise ModelUnavailableError(f"gemini {type(error).__name__}") from None
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + (timeout_seconds or DEFAULT_CALL_BUDGET_SECONDS)
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            share = (deadline - loop.time()) / (_MAX_ATTEMPTS - attempt + 1)
+            try:
+                response = await self._attempt(model, contents, config, share)
+                break
+            except _TransientModelError as error:
+                backoff = random.uniform(*_BACKOFF_SECONDS)  # noqa: S311 (jitter, not a secret)
+                left = deadline - loop.time() - backoff
+                if attempt == _MAX_ATTEMPTS or left < _MIN_RETRY_SECONDS:
+                    log.warning(
+                        "gemini failed after %d attempts: %s",
+                        attempt,
+                        error,
+                        extra={"outcome": "model_retry_exhausted"},
+                    )
+                    raise ModelUnavailableError(str(error)) from None
+                # The reason is a status or class name only, never the request.
+                log.warning("gemini retrying: %s", error, extra={"outcome": "model_retry"})
+                await self.sleep(backoff)
         self.last_model_version = response.model_version
         try:
             parsed = json.loads(response.text or "")
@@ -97,6 +129,28 @@ class GoogleGeminiAdapter:
         if not isinstance(parsed, dict):
             raise ModelUnavailableError("gemini returned JSON that is not an object")
         return parsed
+
+    async def _attempt(
+        self,
+        model: str,
+        contents: list[Any],
+        config: types.GenerateContentConfig,
+        timeout_seconds: float,
+    ) -> Any:
+        try:
+            async with asyncio.timeout(timeout_seconds):
+                return await self._vertex_client().aio.models.generate_content(
+                    model=model, contents=contents, config=config
+                )
+        except errors.APIError as error:
+            # Only the status goes into the exception: the body can echo the prompt.
+            if error.code == 429:
+                raise ModelQuotaExhaustedError("gemini 429") from None
+            if isinstance(error, errors.ServerError):
+                raise _TransientModelError(f"gemini {error.code}") from None
+            raise ModelUnavailableError(f"gemini {error.code}") from None
+        except (httpx.HTTPError, TimeoutError) as error:
+            raise _TransientModelError(f"gemini {type(error).__name__}") from None
 
 
 _DISCOVERY_ENGINE = "https://discoveryengine.googleapis.com/v1"
