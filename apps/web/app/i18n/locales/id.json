@@ -173,7 +173,7 @@
     "signOut": "Keluar",
     "queue": {
       "summary": "{{count}} item menunggu keputusan.",
-      "overdueCount": "{{count}} melewati target 24 jam.",
+      "overdueCount": "{{count}} melewati target.",
       "empty": "Antrean kosong. Tidak ada yang perlu diputuskan.",
       "kind": {
         "held": "Testimoni ditahan",
@@ -184,7 +184,8 @@
         "hidden": "Testimoni disembunyikan",
         "claim": "Klaim halaman",
         "ownerFacts": "Data pemilik ditahan",
-        "reply": "Balasan ditahan"
+        "reply": "Balasan ditahan",
+        "proof": "Periksa bukti kunjungan"
       },
       "status": {
         "submitted": "Diperiksa",
@@ -232,7 +233,9 @@
         "publishOwnerFacts": "Tayangkan data",
         "rejectOwnerFacts": "Tolak data",
         "publishReply": "Tayangkan balasan",
-        "rejectReply": "Tolak balasan"
+        "rejectReply": "Tolak balasan",
+        "acceptProof": "Terima bukti",
+        "rejectProof": "Tolak bukti"
       },
       "reasonFor": "Alasan untuk \"{{action}}\" (dicatat; penulis melihatnya kecuali saat disembunyikan)",
       "logged": "Setiap tindakan dicatat dengan nama admin, waktu dan alasan.",
@@ -249,6 +252,25 @@
         "permit": "Dokumen",
         "openPermit": "Buka SIP atau izin praktik",
         "callHint": "Telepon nomor di Google (bukan nomor pengklaim) untuk memastikan pemiliknya. Dokumen dihapus begitu klaim diputuskan."
+      },
+      "proof": {
+        "reasons": "Alasan menunggu tim",
+        "reason": {
+          "nameMismatch": "Nama klinik tidak cocok dengan tempat ini",
+          "dateMismatch": "Tanggal tidak cocok dengan bulan kunjungan, atau tidak tertulis",
+          "possibleReuse": "Mirip bukti Testimoni lain di tempat ini"
+        },
+        "visitMonth": "Bulan kunjungan menurut penulis",
+        "clinicName": "Nama klinik di bukti",
+        "proofDate": "Tanggal di bukti",
+        "total": "Total di bukti",
+        "notPrinted": "tidak terbaca",
+        "attempts": "Bukti ke-{{number}} untuk Testimoni ini",
+        "file": "Bukti kunjungan dari {{name}}",
+        "openFile": "Buka file bukti (PDF)",
+        "fileGone": "File bukti sudah terhapus. Tolak dengan alasan agar penulis bisa mengirim bukti lain.",
+        "matching": "Testimoni dengan bukti yang mirip",
+        "hint": "Terima hanya jika bukti ini jelas dari kunjungan ke tempat ini sekitar bulan itu. Alasan penolakan dibaca penulis. File dihapus begitu diputuskan, atau otomatis setelah 7 hari."
       }
     }
   },
@@ -751,7 +773,8 @@
       "expired": "Bukti kunjungan tidak sempat diperiksa tim dalam 7 hari.",
       "other": "Bukti kunjungan tidak diterima."
     },
-    "tryAnother": "File buktinya sudah kami hapus. Anda bisa mencoba dokumen lain."
+    "tryAnother": "File buktinya sudah kami hapus. Anda bisa mencoba dokumen lain.",
+    "adminNote": "Catatan tim FindYourDent: {{note}}"
   },
   "reportApi": {
     "errors": {
@@ -1106,7 +1129,7 @@
             "<b>Lokasi atau area</b> yang Anda berikan hanya dipakai untuk mencari dokter gigi terdekat dan tidak disimpan. Di Direktori, jarak dihitung di perangkat Anda dan lokasi tidak dikirim ke kami.",
             "<b>Akun Google</b> dipakai saat Anda menulis Testimoni atau mengklaim halaman. Akun Anda tidak pernah ditampilkan.",
             "<b>Testimoni</b>: nilai, cerita, bulan dan tahun kunjungan, nama yang Anda pilih, serta tindakan, biaya dan foto jika Anda mengisinya. Bagian ini tampil untuk publik. Data lokasi di dalam foto dihapus otomatis.",
-            "<b>Bukti kunjungan</b> diperiksa lalu langsung dihapus. Bukti tidak pernah ditampilkan; yang tampil hanya tanda Kunjungan terbukti jika cocok.",
+            "<b>Bukti kunjungan</b> dihapus setelah diperiksa, atau paling lama 7 hari jika tim kami perlu melihatnya. Bukti tidak pernah ditampilkan; yang tampil hanya tanda Kunjungan terbukti jika diterima. Dari bukti itu kami hanya menyimpan nama klinik, tanggal dan total yang tertulis, tidak pernah nama Anda.",
             "<b>Data klaim pemilik</b>: dokumen SIP atau izin praktik disimpan privat dan dihapus setelah keputusan. Nomor telepon hanya untuk tim FindYourDent dan tidak ditampilkan.",
             "<b>Daftar harga dari pemilik</b>: berkas asli disimpan privat selama 30 hari untuk keperluan sengketa, lalu dihapus. Hanya baris yang dikonfirmasi pemilik yang tampil.",
             "<b>Laporan</b> atas Testimoni: kategori dan keterangan yang Anda tulis, untuk ditinjau tim."
@@ -1143,7 +1166,7 @@
         "blocks": [
           [
             "Keluhan dan lokasi: tidak disimpan.",
-            "Bukti kunjungan: dihapus segera setelah diperiksa.",
+            "Bukti kunjungan: dihapus setelah diperiksa, atau paling lama 7 hari jika tim perlu melihatnya.",
             "Dokumen klaim: dihapus setelah keputusan.",
             "Berkas asli daftar harga: 30 hari.",
             "Testimoni: selama tayang, sampai Anda atau tim menghapusnya.",

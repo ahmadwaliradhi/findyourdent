@@ -33,6 +33,7 @@ import {
   type AdminApiError,
   type AdminQueueResponse,
   OWNER_ACTIONS,
+  PROOF_ACTIONS,
   type QueueHistoryEntry,
   type QueueItem,
   type QueueModeration,
@@ -48,6 +49,7 @@ import type { LatLng } from "../../server/adapters/places.ts";
 import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
+import { loadProofQueue, proofAction } from "./proof-review.server.ts";
 import {
   coordinatesFor,
   publishedOf,
@@ -135,11 +137,12 @@ async function historyOf(firestore: Firestore, testimonyId: string): Promise<Que
 
 /** Everything waiting for an admin: hidden Testimonies first (harm is paused, a decision is owed), then oldest first. */
 export async function loadAdminQueue(
-  context: Pick<AppLoadContext, "adapters" | "logger">,
+  context: Pick<AppLoadContext, "adapters" | "logger" | "uploads">,
   firestore: Firestore,
   nowMs = Date.now(),
 ): Promise<AdminQueueResponse> {
   const owner = loadOwnerQueue(context, firestore, nowMs);
+  const proofs = loadProofQueue(context, firestore, nowMs);
   const [held, hidden, revisions, reports, corrections, spotChecks] = await Promise.all([
     col(firestore, "testimonies").where("status", "==", "held").get(),
     col(firestore, "testimonies").where("status", "==", "hidden").get(),
@@ -320,7 +323,7 @@ export async function loadAdminQueue(
   }
 
   const { items: ownerItems, approvedClaims } = await owner;
-  const resolved = [...(await Promise.all(items)), ...ownerItems];
+  const resolved = [...(await Promise.all(items)), ...ownerItems, ...(await proofs)];
   const hiddenFirst = (i: QueueItem) => (i.testimony?.status === "hidden" ? 0 : 1);
   resolved.sort((a, b) => hiddenFirst(a) - hiddenFirst(b) || Date.parse(a.createdAt) - Date.parse(b.createdAt));
   return { items: resolved, approvedClaims };
@@ -342,6 +345,7 @@ const ACTIONS: ReadonlySet<string> = new Set<AdminActionRequest["action"]>([
   "dismissNameCorrection",
   "spotCheckConfirm",
   ...OWNER_ACTIONS,
+  ...PROOF_ACTIONS,
 ]);
 
 function parseAction(body: unknown): AdminActionRequest | null {
@@ -397,6 +401,10 @@ export async function adminActionResponse(context: AppLoadContext, request: Requ
       case "publishReply":
       case "rejectReply":
         await ownerAction(context, acting, parsed.action);
+        break;
+      case "acceptProof":
+      case "rejectProof":
+        await proofAction(context, acting, parsed.action);
         break;
       default: {
         const orphaned = await testimonyAction(context, acting, parsed.action);
