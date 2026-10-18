@@ -1,44 +1,94 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Figtree, self-hosted from the design package (SIL Open Font License 1.1) and preloaded in root.tsx. */
+@font-face {
+  font-family: "Figtree";
+  src: url("/fonts/Figtree-Variable.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: swap;
+}
 
-/* Mobile-first: base styles target 360 px; sm:/md: scale up. */
+/*
+ * FindYourDent tokens (docs/design/design-system/tokens.css), light theme only.
+ * Mobile-first: base styles target 360 px; sm:/md: scale up.
+ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.99 0.004 190);
-  --foreground: oklch(0.2 0.02 230);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 230);
-  --primary: oklch(0.47 0.09 195);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.02 195);
-  --secondary-foreground: oklch(0.28 0.05 205);
-  --muted: oklch(0.96 0.008 200);
-  --muted-foreground: oklch(0.45 0.02 230);
-  --accent: oklch(0.95 0.02 195);
-  --accent-foreground: oklch(0.28 0.05 205);
-  --destructive: oklch(0.53 0.21 27);
-  --destructive-soft: oklch(0.96 0.03 25);
-  --warning-soft: oklch(0.97 0.05 85);
-  --warning-foreground: oklch(0.38 0.08 70);
-  --border: oklch(0.9 0.01 210);
-  --input: oklch(0.86 0.015 210);
-  --ring: oklch(0.55 0.09 195);
+  --surface-100: #f7f5f0;
+  --surface-200: #ffffff;
+  --surface-300: #ece8df;
+  --ink: #12262b;
+  --ink-muted: #4b5c60;
+  --border: #d8d3c6;
+  --border-strong: #7a8788;
+  --brand: #0b6e6a;
+  --brand-hover: #085753;
+  --on-brand: #ffffff;
+  --brand-tint: #dcefec;
+  --on-brand-tint: #084a47;
+  --focus-ring: #0b6e6a;
+  --danger: #b3261e;
+  --on-danger: #ffffff;
+  --danger-soft: #fdebe8;
+  --danger-line: #c4463d;
+  --warning: #774600;
+  --warning-soft: #fff3d1;
+  --warning-line: #a8740a;
+  --success: #1b6b3c;
+  --success-soft: #e3f4ea;
+  --success-line: #3f8f5f;
+  --info: #1d5a94;
+  --info-soft: #e5eff9;
+  --info-line: #4d86bd;
+  --star: #a86a00;
+  --highlight: #ffe08a;
+  /* Suffixed so they do not collide with Tailwind's own --shadow-* theme variables. */
+  --shadow-xs-value: 0 1px 1px rgba(18, 38, 43, 0.05);
+  --shadow-sm-value: 0 1px 3px rgba(18, 38, 43, 0.08), 0 1px 2px rgba(18, 38, 43, 0.04);
+  --shadow-md-value: 0 8px 20px -6px rgba(18, 38, 43, 0.16), 0 2px 4px rgba(18, 38, 43, 0.06);
+
+  /* shadcn names, mapped as the brand book's "Using the tokens in code" table says. */
+  --radius: 10px;
+  --background: var(--surface-100);
+  --foreground: var(--ink);
+  --card: var(--surface-200);
+  --card-foreground: var(--ink);
+  --popover: var(--surface-200);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--brand-tint);
+  --secondary-foreground: var(--on-brand-tint);
+  --muted: var(--surface-300);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--brand-tint);
+  --accent-foreground: var(--on-brand-tint);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--on-danger);
+  --input: var(--border-strong);
+  --ring: var(--focus-ring);
 }
 
 @theme inline {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans", Roboto, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: var(--radius);
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-xs: var(--shadow-xs-value);
+  --shadow-sm: var(--shadow-sm-value);
+  --shadow-md: var(--shadow-md-value);
+  --spacing-touch: 44px;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--brand-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -46,22 +96,40 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-soft: var(--destructive-soft);
-  --color-warning-soft: var(--warning-soft);
-  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--danger-soft);
+  --color-destructive-line: var(--danger-line);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-line: var(--info-line);
+  --color-star: var(--star);
+  --color-highlight: var(--highlight);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   html {
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+  /* One focus ring everywhere: 3px solid, 2px offset, keyboard focus only. Never suppressed. */
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
   }
 }

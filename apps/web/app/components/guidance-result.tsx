@@ -1,21 +1,16 @@
-import type {
-  EmergencyResponse,
-  FollowUpResponse,
-  Guidance,
-  GuidanceResponse,
-  UrgencyTier,
-} from "@findyourdent/contracts";
+import type { EmergencyResponse, FollowUpResponse, Guidance, GuidanceResponse } from "@findyourdent/contracts";
+import { MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ShortlistPanel } from "~/components/shortlist-panel";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Textarea } from "~/components/ui/textarea";
+import { Field } from "~/components/ui/field";
+import { UrgencyNotice } from "~/components/ui/urgency-notice";
 import type { Language } from "~/i18n/config";
 import { formatRupiah } from "~/lib/format";
 import { procedureLabel } from "~/lib/procedures";
-import { cn } from "~/lib/utils";
 
 export interface ShareLink {
   /** /panduan/<token>, built from the Guidance object alone. */
@@ -92,9 +87,9 @@ const NEAREST_IGD_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${
 function EmergencyCard({ response }: { response: EmergencyResponse }) {
   const { t } = useTranslation();
   return (
-    <Card role="alert" className="border-destructive bg-destructive-soft" data-kind="emergency">
+    <Card variant="emergency" data-kind="emergency" labelledBy="emergency-title">
       <CardHeader>
-        <CardTitle className="text-2xl text-destructive">{t("card.emergency.title")}</CardTitle>
+        <CardTitle id="emergency-title">{t("card.emergency.title")}</CardTitle>
         <CardDescription className="text-base text-foreground">{response.reason}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -107,13 +102,9 @@ function EmergencyCard({ response }: { response: EmergencyResponse }) {
             ))}
           </ul>
         </div>
-        <Button
-          asChild
-          variant="destructive"
-          size="lg"
-          className="h-auto w-full whitespace-normal py-3 text-center sm:w-auto sm:self-start"
-        >
+        <Button asChild size="lg" className="h-auto w-full whitespace-normal py-3 text-center sm:w-auto sm:self-start">
           <a href={NEAREST_IGD_MAPS_URL} target="_blank" rel="noreferrer">
+            <MapPin aria-hidden="true" strokeWidth={1.75} />
             {t("card.emergency.findIgd")}
           </a>
         </Button>
@@ -126,9 +117,9 @@ function EmergencyCard({ response }: { response: EmergencyResponse }) {
 function FollowUpCard({ response, pending }: { response: FollowUpResponse; pending: boolean }) {
   const { t } = useTranslation();
   return (
-    <Card data-kind="followUp">
+    <Card data-kind="followUp" labelledBy="follow-up-title">
       <CardHeader>
-        <CardTitle>{t("card.followUp.title")}</CardTitle>
+        <CardTitle id="follow-up-title">{t("card.followUp.title")}</CardTitle>
         <CardDescription className="text-base text-foreground">{response.question}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -151,10 +142,14 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
             ))}
           </fieldset>
         )}
-        <label htmlFor="followUpAnswer" className="text-sm font-medium">
-          {t("home.followUpAnswerLabel")}
-        </label>
-        <Textarea id="followUpAnswer" name="followUpAnswer" maxLength={1000} className="min-h-16" />
+        <Field
+          id="followUpAnswer"
+          name="followUpAnswer"
+          label={t("home.followUpAnswerLabel")}
+          rows={2}
+          maxLength={1000}
+          className="[&_textarea]:min-h-16"
+        />
         <Button type="submit" disabled={pending} className="self-start">
           {t("home.followUpSubmit")}
         </Button>
@@ -162,13 +157,6 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
     </Card>
   );
 }
-
-const urgencyStyles: Record<UrgencyTier, string> = {
-  darurat: "bg-destructive text-white",
-  segera: "bg-warning-soft text-warning-foreground border-warning-foreground/30",
-  terjadwal: "bg-secondary text-secondary-foreground",
-  rutin: "bg-muted text-muted-foreground",
-};
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -192,16 +180,17 @@ export function GuidanceCard({
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   return (
-    <Card data-kind="guidance">
+    <Card data-kind="guidance" labelledBy="guidance-title">
       <CardHeader>
-        <CardTitle>{t("card.guidance.title")}</CardTitle>
+        <CardTitle id="guidance-title">{t("card.guidance.title")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <Section title={t("card.guidance.urgencyLabel")}>
-          <div className={cn("flex flex-col gap-0.5 rounded-md border px-3 py-2", urgencyStyles[guidance.urgencyTier])}>
-            <span className="font-semibold">{t(`urgency.${guidance.urgencyTier}.label`)}</span>
-            <span className="text-sm">{t(`urgency.${guidance.urgencyTier}.description`)}</span>
-          </div>
+          <UrgencyNotice
+            tier={guidance.urgencyTier}
+            label={t(`urgency.${guidance.urgencyTier}.label`)}
+            description={t(`urgency.${guidance.urgencyTier}.description`)}
+          />
         </Section>
 
         <Section title={t("card.guidance.categoryLabel")}>
@@ -229,7 +218,7 @@ export function GuidanceCard({
           <ul className="flex flex-wrap gap-1.5">
             {guidance.likelyProcedures.map((code) => (
               <li key={code}>
-                <Badge variant="secondary">{procedureLabel(code, language)}</Badge>
+                <Badge variant="brand">{procedureLabel(code, language)}</Badge>
               </li>
             ))}
           </ul>
@@ -251,7 +240,7 @@ export function GuidanceCard({
                   <span className="text-sm font-medium">{procedureLabel(cost.procedureCode, language)}</span>
                   <Badge variant="outline">{t("estimate")}</Badge>
                 </div>
-                <p className="font-semibold">
+                <p className="font-semibold tabular-nums">
                   {t("card.guidance.costRange", {
                     min: formatRupiah(cost.minRupiah, language),
                     max: formatRupiah(cost.maxRupiah, language),

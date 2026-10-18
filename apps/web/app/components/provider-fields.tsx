@@ -8,6 +8,7 @@ import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fieldClassName } from "~/components/listing-filters-form";
 import { Button } from "~/components/ui/button";
+import { FieldError as ErrorLine } from "~/components/ui/field";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken, signInWithGoogle } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
@@ -42,11 +43,7 @@ function newSessionToken(): string {
 
 function FieldError(props: { id: string; message?: string }) {
   if (!props.message) return null;
-  return (
-    <p id={props.id} className="text-sm text-destructive">
-      {props.message}
-    </p>
-  );
+  return <ErrorLine id={props.id}>{props.message}</ErrorLine>;
 }
 
 /**
@@ -116,9 +113,7 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
           {t("providerFields.checkingListing")}
         </p>
       ) : listing === "failed" ? (
-        <p className="text-sm text-destructive" role="alert">
-          {t("providerFields.listingFailed")}
-        </p>
+        <ErrorLine role="alert">{t("providerFields.listingFailed")}</ErrorLine>
       ) : value.listed ? (
         <ListedProvider placeId={placeId} listed={value.listed} />
       ) : (
@@ -554,11 +549,7 @@ function CorrectionForm(props: { placeId: string; onClose(): void }) {
         <legend className="mb-1.5 text-sm font-medium">{t("providerFields.correction.regionLabel")}</legend>
         <RegionSelects idPrefix={`${id}-region`} value={region} onChange={setRegion} />
       </fieldset>
-      {errorMessage ? (
-        <p className="text-sm text-destructive" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
+      {errorMessage ? <ErrorLine role="alert">{errorMessage}</ErrorLine> : null}
       <div className="flex flex-wrap gap-2">
         {state.kind === "error" && state.code === "sign_in_required" && firebase.app ? (
           <Button type="button" onClick={signInThenSend} disabled={sending}>

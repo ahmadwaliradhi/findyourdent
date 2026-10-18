@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "~/components/ui/button";
+import { ErrorNotice } from "~/components/ui/error-notice";
 import { getI18n } from "~/i18n/config";
 import { signInWithGoogle } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
@@ -51,9 +52,9 @@ export default function SignIn({ loaderData }: Route.ComponentProps) {
       </Button>
       <div aria-live="polite">
         {state === "failed" && (
-          <p role="alert" className="rounded-md border border-destructive/40 bg-destructive-soft px-3 py-3 text-sm">
-            {t("signin.failed")}
-          </p>
+          <ErrorNotice role="alert">
+            <p>{t("signin.failed")}</p>
+          </ErrorNotice>
         )}
         {!firebase && <p className="text-sm text-muted-foreground">{t("signin.unavailable")}</p>}
       </div>

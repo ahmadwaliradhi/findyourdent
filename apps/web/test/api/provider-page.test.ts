@@ -100,7 +100,8 @@ describe("Listed Provider page", () => {
     expect(metaContent(html, "property", "og:type")).toBe("website");
     expect(metaContent(html, "property", "og:site_name")).toBe("FindYourDent");
     expect(metaContent(html, "property", "og:url")).toBe(`${server.baseUrl}/tempat/ChIJ-surabaya-senyum`);
-    expect(metaContent(html, "name", "twitter:card")).toBe("summary");
+    expect(metaContent(html, "property", "og:image")).toBe(`${server.baseUrl}/og-image.png`);
+    expect(metaContent(html, "name", "twitter:card")).toBe("summary_large_image");
     expect(metaContent(html, "name", "twitter:title")).toBe(title);
     expect(metaContent(html, "name", "description")).toBe(description);
     expect(html).toMatch(/<title>[^<]*Klinik Gigi Senyum Sehat[^<]*<\/title>/);

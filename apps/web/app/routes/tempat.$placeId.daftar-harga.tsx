@@ -6,6 +6,7 @@ import { data, Link } from "react-router";
 import { fieldClassName } from "~/components/listing-filters-form";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { FieldError } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import { useFirebaseConfig } from "~/lib/firebase-config";
@@ -268,11 +269,7 @@ function Uploader({ page }: { page: PriceListPageData }) {
             </Button>
           </section>
         </div>
-        {step.error && (
-          <p role="alert" className="text-sm text-destructive">
-            {step.error}
-          </p>
-        )}
+        {step.error && <FieldError role="alert">{step.error}</FieldError>}
         <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={step.saving}>
             {step.saving ? t("priceList.confirming") : t("priceList.confirm")}
@@ -307,11 +304,7 @@ function Uploader({ page }: { page: PriceListPageData }) {
           className="text-sm"
         />
       </div>
-      {step.phase === "pick" && step.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {step.error}
-        </p>
-      )}
+      {step.phase === "pick" && step.error && <FieldError role="alert">{step.error}</FieldError>}
       <Button type="submit" className="self-start" disabled={files.length === 0 || step.phase === "reading"}>
         {step.phase === "reading" ? t("priceList.reading") : t("priceList.read")}
       </Button>
@@ -365,12 +358,14 @@ function RowEditor({
   const set = (patch: Partial<DraftRow>) => onChange({ ...row, ...patch });
   return (
     <fieldset
-      className={`flex flex-col gap-2 rounded-md border p-3 ${low ? "border-warning-foreground/40 bg-warning-soft" : ""}`}
+      className={`flex flex-col gap-2 rounded-md border p-3 ${low ? "border-warning-line bg-warning-soft" : ""}`}
       data-low-confidence={low || undefined}
     >
       <legend className="sr-only">{row.procedureText || t("priceList.procedureText")}</legend>
       {low && (
-        <Badge className="self-start bg-warning-foreground text-background">{t("priceList.lowConfidence")}</Badge>
+        <Badge variant="warning" className="self-start">
+          {t("priceList.lowConfidence")}
+        </Badge>
       )}
       <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-text`}>
         {t("priceList.procedureText")}

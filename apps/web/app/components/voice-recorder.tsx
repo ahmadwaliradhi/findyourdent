@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "~/components/ui/button";
+import { FieldError } from "~/components/ui/field";
 
 /** Matches the 60-second cap in spec 01; the server also refuses anything bigger. */
 export const MAX_RECORDING_SECONDS = 60;
@@ -129,7 +130,7 @@ export function VoiceRecorder({
           ref={recordButton}
           type="button"
           size="lg"
-          variant={recording ? "destructive" : "secondary"}
+          variant={recording ? "outline" : "secondary"}
           className="h-14 w-full gap-3 px-6 text-lg sm:w-auto"
           aria-describedby={statusId}
           disabled={disabled && !recording}
@@ -146,18 +147,16 @@ export function VoiceRecorder({
           </Button>
         )}
       </div>
-      <p
-        id={statusId}
-        aria-live="polite"
-        className={
-          state === "denied" || state === "failed" ? "text-sm text-destructive" : "text-xs text-muted-foreground"
-        }
-      >
-        {recording && t("home.voiceRecording")}
-        {state === "idle" && t("home.voiceHint")}
-        {state === "denied" && t("home.voiceDenied")}
-        {state === "failed" && t("home.voiceFailed")}
-      </p>
+      {state === "denied" || state === "failed" ? (
+        <FieldError id={statusId} aria-live="polite">
+          {state === "denied" ? t("home.voiceDenied") : t("home.voiceFailed")}
+        </FieldError>
+      ) : (
+        <p id={statusId} aria-live="polite" className="text-xs text-muted-foreground">
+          {recording && t("home.voiceRecording")}
+          {state === "idle" && t("home.voiceHint")}
+        </p>
+      )}
     </div>
   );
 }

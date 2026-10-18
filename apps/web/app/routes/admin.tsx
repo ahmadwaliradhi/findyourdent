@@ -1,8 +1,10 @@
+import { Clock } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useRevalidator } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { FieldError } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import {
@@ -24,6 +26,7 @@ import { formatRupiah, formatVisitMonth } from "~/lib/format";
 import { providerPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import { regionLabel } from "~/lib/regions";
+import { testimonyStatusTone } from "~/lib/testimony-status";
 import { loadAdminQueue } from "~/server/admin-queue.server";
 import type { Route } from "./+types/admin";
 
@@ -140,8 +143,12 @@ function QueueCard({ item }: { item: QueueItem }) {
           {item.ownerFacts && <span className="font-normal"> · {item.ownerFacts.currentName}</span>}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          {item.testimony && <Badge variant="secondary">{t(`admin.queue.status.${item.testimony.status}`)}</Badge>}
-          <Badge variant={item.overdue ? "destructive" : "outline"}>
+          {item.testimony && (
+            <Badge variant={testimonyStatusTone(item.testimony.status)}>
+              {t(`admin.queue.status.${item.testimony.status}`)}
+            </Badge>
+          )}
+          <Badge variant={item.overdue ? "danger" : "outline"} icon={item.overdue ? undefined : Clock}>
             {item.overdue
               ? t("admin.queue.overdue", { due: formatTime(item.dueAt, language) })
               : t("admin.queue.due", { due: formatTime(item.dueAt, language) })}
@@ -284,7 +291,7 @@ function OwnerFactsView({ ownerFacts }: { ownerFacts: QueueOwnerFacts }) {
           .map(([label, value]) => (
             <div key={label} className="contents">
               <dt className="text-muted-foreground">{label}</dt>
-              <dd className={[...flagged].some((text) => value.includes(text)) ? "bg-yellow-200 text-black" : ""}>
+              <dd className={[...flagged].some((text) => value.includes(text)) ? "bg-highlight text-foreground" : ""}>
                 {value}
               </dd>
             </div>
@@ -305,7 +312,7 @@ function FlaggedText({ text, moderation }: { text: string; moderation: QueueMode
     if (span.start < at) continue;
     parts.push(text.slice(at, span.start));
     parts.push(
-      <mark key={span.start} title={span.ruleCode} className="rounded bg-yellow-200 px-0.5 text-black">
+      <mark key={span.start} title={span.ruleCode} className="rounded bg-highlight px-0.5 text-foreground">
         {text.slice(span.start, span.end)}
       </mark>,
     );
@@ -501,7 +508,7 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
         <div className="flex gap-2">
           <Button
             size="sm"
-            variant={destructive ? "destructive" : "default"}
+            variant={destructive ? "danger" : "primary"}
             disabled={busy || !reason.trim()}
             onClick={send}
           >
@@ -511,11 +518,7 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
             {t("report.cancel")}
           </Button>
         </div>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
+        {error && <FieldError role="alert">{error}</FieldError>}
       </div>
     );
   }
@@ -523,17 +526,13 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
     <span className="flex flex-col gap-1">
       <Button
         size="sm"
-        variant={destructive ? "destructive" : primary ? "default" : "outline"}
+        variant={destructive ? "danger" : primary ? "primary" : "outline"}
         disabled={busy}
         onClick={needsReason ? () => setAsking(true) : send}
       >
         {label}
       </Button>
-      {error && (
-        <span role="alert" className="text-sm text-destructive">
-          {error}
-        </span>
-      )}
+      {error && <FieldError role="alert">{error}</FieldError>}
     </span>
   );
 }
