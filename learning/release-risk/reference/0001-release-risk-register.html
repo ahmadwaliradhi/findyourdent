@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release Risk Register</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<main>
+<p class="kicker">Reference · 18 October 2026 · origin/main = v0.2.2</p>
+<h1>Release risk register</h1>
+<p class="lede">Scenario: ship v0.2.2 as the submission build, finish #30, #24 and #26 on it, then merge and deploy #105, #124, #106 during evaluation (19 Oct to 6 Nov).</p>
+
+<h2>Migration and data</h2>
+<table>
+<tr><th></th><th>Risk</th><th>Mitigation</th></tr>
+<tr><td><span class="tag high">High</span></td><td>#105 release recompute (no grandfathering) removes star averages from every Provider with under 3 Proven Testimonies. H10's 30 Testimonies seeded without proof stop counting.</td><td>Ask recruits to attach receipts now; old-rule accepts stay accepted. Or defer #105.</td></tr>
+<tr><td><span class="tag high">High</span></td><td>Moderation contract change: <code>proofOfVisit</code> becomes extracted facts. Agent deploys first; old web cannot read the new shape.</td><td>Agent emits both shapes for one release; web reads new, falls back to old.</td></tr>
+<tr><td><span class="tag med">Med</span></td><td><code>proofOfVisit</code> gains <code>pending</code> and reason codes; old documents lack them. Readers that assume the new shape break on old data.</td><td>Test web API against an export of production Firestore, not only fresh emulator data.</td></tr>
+<tr><td><span class="tag med">Med</span></td><td>Proofs accepted under the 24-month rule stay accepted forever and get no Proof Fingerprint, so reuse check cannot see them.</td><td>Accept; small and documented in spec 09.</td></tr>
+<tr><td><span class="tag med">Med</span></td><td>New composite indexes fail queries with <code>FAILED_PRECONDITION</code> until built.</td><td>Deploy indexes alone, a day before the code that uses them.</td></tr>
+<tr><td><span class="tag low">Low</span></td><td>#124 optional field, no backfill. Old Testimonies show no Payment Method.</td><td>None needed; block says when nothing is reported.</td></tr>
+<tr><td><span class="tag low">Low</span></td><td>#106 TTL policy, bucket lifecycle and sweep are manual steps outside <code>deploy.sh</code>.</td><td>Post-hackathon anyway; add to the setup checklist.</td></tr>
+</table>
+
+<h2>Operations</h2>
+<table>
+<tr><td><span class="tag high">High</span></td><td><code>deploy.sh</code> sends traffic to a new revision before the smoke test runs. Issue #26: no retries if the site is down.</td><td>Deploy with <code>--no-traffic --tag candidate</code>, smoke the tag URL, then move traffic. Note the previous revision for rollback.</td></tr>
+<tr><td><span class="tag med">Med</span></td><td>Pending proofs need an admin within 72 hours and expire at 7 days. Team time during evaluation is thin.</td><td>Only ship #129 if someone owns the queue.</td></tr>
+<tr><td><span class="tag med">Med</span></td><td>Extra Gemini calls (proof-only mode, up to 3 attempts); account has no credits.</td><td>Check budget caps in <code>infra/gcp/README.md</code> before release.</td></tr>
+</table>
+
+<h2>Product and UI/UX</h2>
+<table>
+<tr><td><span class="tag high">High</span></td><td>Video (#24) and deck show stars and a Shortlist ranked on them; the live site after #105 shows "Belum cukup testimoni terbukti" almost everywhere. Judges compare.</td><td>Do not ship #105 during evaluation, or record the video after it.</td></tr>
+<tr><td><span class="tag high">High</span></td><td>Hackathon rules on changes after the deadline are unconfirmed. Spec 07 itself says "Build only if changes during evaluation are allowed."</td><td>Confirm on the Hack2skill FAQ or ask the organisers before any feature deploy.</td></tr>
+<tr><td><span class="tag med">Med</span></td><td>Recruits see their honest Testimony relabelled "Belum terbukti" days after posting.</td><td>Tell them in the WhatsApp brief that a receipt makes it count.</td></tr>
+<tr><td><span class="tag med">Med</span></td><td>Shortlist order shifts: Kunjungan terbukti bonus removed, most Providers fall to the overall mean.</td><td>Re-run Lighthouse and the e2e suite on the candidate tag.</td></tr>
+</table>
+
+<h2>Recommendation</h2>
+<div class="box">
+<ol>
+<li>Deploy v0.2.2 now as the submission build. Freeze it.</li>
+<li>Run H10 with a receipt request, so Testimonies arrive Proven under today's rule.</li>
+<li>Record the video on the frozen build; describe #105, #106 as roadmap in deck and description.</li>
+<li>During evaluation deploy nothing that changes what judges already see. At most #124 (additive), and only if the rules allow it, via no-traffic plus tag smoke.</li>
+<li>Ship #105 after 6 November, with the parallel-change agent release first. #106 after that.</li>
+</ol>
+</div>
+
+<footer>Lesson: <a href="../lessons/0001-three-kinds-of-change.html">Three kinds of change</a></footer>
+</main>
+</body>
+</html>
