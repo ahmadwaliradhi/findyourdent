@@ -1,0 +1,29 @@
+:root {
+  --bg: #fffff8; --ink: #111; --muted: #5a5a5a; --rule: #d8d4c4;
+  --accent: #8a1c1c; --ok: #17532d; --warn: #6e4600; --card: #f7f5ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151513; --ink: #eae7dc; --muted: #a5a294; --rule: #3a382f;
+    --accent: #e07a6e; --ok: #6cc28c; --warn: #e2b14d; --card: #1f1e1a; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 18px/1.6 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 16px 4rem; }
+h1 { font-weight: 400; font-size: 2rem; line-height: 1.2; margin: 0 0 .25rem; }
+h2 { font-weight: 400; font-style: italic; font-size: 1.35rem; margin: 2.2rem 0 .5rem; }
+.kicker { color: var(--muted); font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
+.lede { font-size: 1.1rem; color: var(--muted); }
+a { color: var(--accent); }
+code { font: .85em ui-monospace, Menlo, monospace; background: var(--card); padding: .05em .3em; border-radius: 3px; }
+.sidenote { color: var(--muted); font-size: .9rem; font-style: italic; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; margin: 1rem 0; }
+th, td { text-align: left; padding: .45rem .4rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; }
+.tag { font: 600 .72rem/1 system-ui, sans-serif; padding: .2rem .4rem; border-radius: 3px; white-space: nowrap; }
+.tag.high { background: var(--accent); color: var(--bg); }
+.tag.med { background: var(--warn); color: var(--bg); }
+.tag.low { background: var(--ok); color: var(--bg); }
+.box { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.1rem; margin: 1.2rem 0; }
+footer { margin-top: 3rem; border-top: 1px solid var(--rule); padding-top: 1rem; font-size: .9rem; color: var(--muted); }
+@media print { body { background: #fff; color: #000; } .quiz button { display: none; } }

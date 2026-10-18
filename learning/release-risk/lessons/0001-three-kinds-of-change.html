@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three Kinds of Change</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<main>
+<p class="kicker">Lesson 1 · Release risk for FindYourDent</p>
+<h1>Three kinds of change</h1>
+<p class="lede">Before you deploy anything on top of a live build, ask one question: what does this change do to things that already exist? The answer sorts every change into one of three kinds, and each kind has its own deploy rule.</p>
+
+<h2>The three kinds</h2>
+<table>
+<tr><th>Kind</th><th>What it touches</th><th>Deploy rule</th></tr>
+<tr><td><b>Additive</b></td><td>New optional field, new page, new filter. Old data stays valid and keeps its meaning.</td><td>Deploy any time. Old documents simply lack the field.</td></tr>
+<tr><td><b>Semantic</b></td><td>Same data, new meaning. A number shown to users is computed under a new rule.</td><td>Decide what existing users will see the moment it lands. Recompute is a data migration.</td></tr>
+<tr><td><b>Contract</b></td><td>The shape two services exchange changes.</td><td>Expand, migrate, contract: both shapes valid first, then switch, then remove the old one (<a href="https://martinfowler.com/bliki/ParallelChange.html">Fowler, Parallel Change</a>).</td></tr>
+</table>
+<p class="sidenote">Firestore is schemaless, so old and new document shapes sit side by side without errors (<a href="https://firebase.google.com/docs/firestore/manage-data/structure-data">Firestore docs</a>). That makes additive changes cheap and hides semantic ones: nothing fails, the meaning just changes.</p>
+
+<h2>Your three issues, sorted</h2>
+<table>
+<tr><th>Issue</th><th>Kind</th><th>Why</th></tr>
+<tr><td>#124 Payment Method</td><td><span class="tag low">Additive</span></td><td>Optional <code>paymentMethod</code>, "absent on old Testimonies; no backfill" (spec 07). New counts only.</td></tr>
+<tr><td>#105 Proven Testimonies</td><td><span class="tag high">Semantic + contract</span></td><td>Scores, ranking and prices count only Proven Testimonies, with a one-off release recompute and "no grandfathering" (ADR-0011). Moderation output changes from <code>accepted/rejected</code> to extracted facts.</td></tr>
+<tr><td>#106 Buzzer detection</td><td><span class="tag med">Additive, with new infra</span></td><td>Can only turn publish into hold. Needs new collections, a Firestore TTL policy (a manual step) and admin time. Already planned for after the hackathon.</td></tr>
+</table>
+
+<h2>Why #105 is the dangerous one</h2>
+<div class="box">
+<p><b>Semantic.</b> Today a Proof of Visit is optional and every published Testimony counts. After #126, a Provider needs three Proven Testimonies before any star average shows; otherwise it reads "Belum cukup testimoni terbukti". The 30 Testimonies from H10 (#30), spread across many cities, will mostly be one or two per Provider and mostly without proof. On release, nearly every star on the site disappears, in the middle of judging.</p>
+<p><b>The cheap fix hides in the spec.</b> Testimonies "already marked Kunjungan terbukti under the old 24-month rule stay accepted" (spec 09). Ask the H10 recruits to attach their receipt now, on v0.2.2, and their Testimonies survive the switch.</p>
+<p><b>Contract.</b> <code>deploy.sh agent</code> runs first. If the new agent sends extracted facts while the old web service still reads <code>proofOfVisit</code>, every proof check breaks for the minutes between the two deploys. Ship an agent that sends both shapes first.</p>
+</div>
+
+<h2>One more trap: the deploy script itself</h2>
+<p><code>infra/gcp/deploy.sh</code> runs <code>gcloud run deploy</code> with no <code>--no-traffic</code>, then the smoke test. A bad revision serves judges before the smoke test can catch it. Cloud Run lets you deploy with no traffic, test the revision on a tag URL, then move traffic, and roll back by moving traffic back (<a href="https://cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration">Cloud Run docs</a>). New composite indexes also fail queries until they finish building (<a href="https://firebase.google.com/docs/firestore/query-data/index-overview">Firestore docs</a>), so deploy indexes a day ahead.</p>
+
+<h2>Check yourself</h2>
+<div class="quiz" data-answer="1" data-why="Spec 09 keeps every published Testimony visible with a 'Belum terbukti' label, but only Proven Testimonies feed scores, ranking and price stats.">
+<p>1. An H10 recruit posts a Testimony on v0.2.2 without a Proof of Visit. What happens to it when #126 deploys?</p>
+<button>Deleted by the release job</button> <button>Shown but moves no score</button> <button>Counted until its next edit</button> <button>Hidden until an admin approves</button>
+<p class="fb"></p></div>
+
+<div class="quiz" data-answer="3" data-why="Parallel change: first make both shapes valid, so either deploy order works and either service can be rolled back alone.">
+<p>2. Spec 09 changes the Moderation output shape. What makes the agent and web deploys safe in any order?</p>
+<button>Swap both services at once</button> <button>Pause posting while you deploy</button> <button>Roll back the agent if broken</button> <button>Make both shapes valid first</button>
+<p class="fb"></p></div>
+
+<div class="quiz" data-answer="2" data-why="#124 adds an optional field with no backfill. Old Testimonies keep their meaning; nothing users already see changes.">
+<p>3. Which issue could ship during evaluation with the least risk to what judges already see?</p>
+<button>#105 Proven Testimonies, part one</button> <button>#106 detection and violation badges</button> <button>#124 optional Payment Method field</button> <button>All three carry equal risk</button>
+<p class="fb"></p></div>
+
+<h2>Try it on your own</h2>
+<p>Without looking above: for each of #105, #124, #106, write the kind of change and the one thing that must happen before it deploys. Then compare with the <a href="../reference/0001-release-risk-register.html">risk register</a>.</p>
+
+<footer>
+<p><b>Read next:</b> <a href="https://martinfowler.com/bliki/ParallelChange.html">Martin Fowler, "Parallel Change"</a>. Short, and the clearest account of expand, migrate, contract.</p>
+<p>Reference: <a href="../reference/0001-release-risk-register.html">Release risk register and recommendation</a>.</p>
+<p>Anything unclear, or want to argue with the judgement? Ask me in the chat; that is what I am here for.</p>
+</footer>
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
