@@ -41,8 +41,13 @@ test("empty results show the message and the share button", async ({ page }) => 
 
 test("the filters are labelled by a visible heading", async ({ page }) => {
   await page.goto("/direktori");
-  await expect(page.getByRole("form", { name: "Saring" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Saring" })).toBeVisible();
+  await expect(page.getByRole("form", { name: "Filter" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Filter" })).toBeVisible();
+});
+
+test("the intro names dental clinics, private dentists and hospitals", async ({ page }) => {
+  await page.goto("/direktori");
+  await expect(page.getByText(/^Klinik gigi, dokter gigi praktik pribadi dan rumah sakit/)).toBeVisible();
 });
 
 test("/direktori does not scroll sideways", async ({ page }) => {

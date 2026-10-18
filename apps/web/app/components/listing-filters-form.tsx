@@ -25,7 +25,7 @@ export function ListingFiltersForm(props: {
   id?: string;
   /**
    * "grid": two columns from the small breakpoint, labelled for screen readers only (the feed).
-   * "sidebar": one column in a card with a visible "Saring" heading (the Directory).
+   * "sidebar": one column in a card with a visible "Filter" heading (the Directory).
    */
   layout?: "grid" | "sidebar";
   children?: React.ReactNode;

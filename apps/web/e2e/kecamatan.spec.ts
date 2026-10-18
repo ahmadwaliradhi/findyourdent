@@ -80,8 +80,8 @@ seeded("Home: the feed filter's Kecamatan narrows the Testimonies to one", async
   await expect(page.getByText(mentengText)).toBeVisible();
 
   await page.goto("/");
-  // The feed filters sit folded under "Saring" until a filter is applied.
-  await page.locator("summary", { hasText: "Saring" }).click();
+  // The feed filters sit folded under "Filter" until a filter is applied.
+  await page.locator("summary", { hasText: "Filter" }).click();
   await expect(page.getByLabel("Kecamatan")).toBeDisabled();
   await chooseKota(page);
   await page.getByLabel("Kecamatan").selectOption({ label: "Menteng" });
