@@ -31,8 +31,20 @@ A Patient's public, signed-in account of a visit to a Provider, with aspect rati
 _Avoid_: Review (reserved for Google reviews), rating, ulasan
 
 **Proof of Visit**:
-An optional private document a Patient attaches to a Testimony (such as a receipt or appointment confirmation) showing they visited that Provider; it is never published, only whether it was accepted.
+An optional private document a Patient attaches to a Testimony, at submission or later (such as a receipt, invoice or appointment card), showing they visited that Provider. It is accepted when its clinic name matches the Provider, its date is within a month of the visit month and it is under 12 months old; doubtful ones go to an admin. It is never published, only whether it was accepted.
 _Avoid_: Bukti bayar, verification
+
+**Proven Testimony**:
+A published Testimony whose Proof of Visit was accepted, shown as "Kunjungan terbukti". Only Proven Testimonies count toward aspect averages, ranking and price stats; a Provider needs three before a star average is shown. Other published Testimonies are shown as "Belum terbukti".
+_Avoid_: Verified review, valid testimony
+
+**Proof Fingerprint**:
+What FindYourDent keeps of an accepted or pending Proof of Visit after the file is deleted: a perceptual or file hash plus the clinic name, date and total read from it, never the patient's name. Used only to stop one receipt being reused for several Testimonies.
+_Avoid_: Receipt copy, proof hash (alone)
+
+**Testimony Policy Violation**:
+A confirmed finding that a Provider offered something in exchange for Testimonies or asked only selected Patients to write them; shown on the Provider page for six months as "Pelanggaran kebijakan testimoni", and the Testimonies from that period stop counting.
+_Avoid_: Ban, penalty, review fraud
 
 **Moderation**:
 The screening every Testimony passes: Gemini publishes clean ones and holds doubtful ones, and the FindYourDent team makes every decision on held or reported Testimonies and every removal.
