@@ -28,7 +28,7 @@ The landing page leads with the agent entry ("Gigi sakit? Ceritakan keluhanmu", 
 8. As a visitor, I want to show only Testimonies with Kunjungan terbukti, so that I read the most trustworthy ones.
 9. As a visitor, I want to open a full Testimony and its Provider page from a card, so that I can read more.
 10. As a visitor, I want a directory of Listed Providers with the same filters, so that I can browse places that Patients have written about.
-11. As a visitor, I want to sort the directory by number of Testimonies, by aspect score, or by distance if I share my location, so that I find what matters to me.
+11. As a visitor, I want to sort the directory by number of Proven Testimonies, by aspect score, or by distance if I share my location, so that I find what matters to me.
 12. As a visitor, I want each directory row to show the name, area, type, aspect scores, number of Testimonies and Kunjungan terbukti count, and "Diklaim pemilik" if claimed, so that I can compare.
 13. As a visitor, I want to search the directory by name, so that I can find a specific clinic or dentist.
 14. As a visitor, I want a clear message and a "Ceritakan pengalamanmu" button when my filter has no results, so that I can be the first.

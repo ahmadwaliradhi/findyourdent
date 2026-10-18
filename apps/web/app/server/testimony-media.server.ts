@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { DEFAULT_LANGUAGE, getI18n, type Language } from "~/i18n/config";
 import { PHOTO_MIME_TYPES, PROOF_MIME_TYPES, SUBMISSION_FIELDS, TESTIMONY_LIMITS } from "~/lib/testimony";
 import type { Bucket } from "../../server/firebase.ts";
+import { proofPrefix } from "../../server/proof-files.ts";
 
 /** Files taken from the multipart submit body, already checked for type, size and count. */
 export interface TestimonyFiles {
@@ -205,13 +206,4 @@ export async function storeTestimonyMedia(
 /** Deletes stored objects; missing ones are ignored. */
 export async function deleteTestimonyMedia(uploads: Bucket, paths: readonly string[]): Promise<void> {
   await Promise.all(paths.map((path) => uploads.file(path).delete({ ignoreNotFound: true })));
-}
-
-/** Where a Testimony's Proof of Visit files are kept until decided (spec 09). */
-export const proofPrefix = (testimonyId: string) => `proof-of-visit/${testimonyId}/`;
-
-/** Every stored Proof of Visit file of a Testimony: a pending one waits there for an admin. */
-export async function storedProofPaths(uploads: Bucket, testimonyId: string): Promise<string[]> {
-  const [files] = await uploads.getFiles({ prefix: proofPrefix(testimonyId) });
-  return files.map((file) => file.name);
 }

@@ -29,6 +29,7 @@ export default [
   route("admin/api/queue", "routes/admin.api.queue.ts"),
   route("admin/api/actions", "routes/admin.api.actions.ts"),
   route("admin/claims/:claimId/permit", "routes/admin.claims.$claimId.permit.ts"),
+  route("admin/proofs/:testimonyId", "routes/admin.proofs.$testimonyId.ts"),
   route("panduan/:token", "routes/panduan.$token.tsx"),
   route("api/guidance-card", "routes/api.guidance-card.ts"),
   route("api/feed", "routes/api.feed.ts"),

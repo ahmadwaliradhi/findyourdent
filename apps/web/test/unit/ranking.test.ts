@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MIN_PROVEN_TESTIMONIES } from "../../app/lib/scores.ts";
 import { type RankingCandidate, type RankingNeed, rankProviders } from "../../app/server/ranking.ts";
 
 /** A Provider 2 km away with no Testimonies, no prices and no Claim; tests override what matters. */
@@ -15,11 +16,16 @@ function candidate(placeId: string, overrides: Partial<RankingCandidate> = {}): 
   };
 }
 
-function rated(count: number, average: number, verifiedVisitCount = 0): RankingCandidate["testimonies"] {
+/**
+ * Testimonies as the aggregates store them (spec 09): `average` over the Proven ones
+ * only, null below the minimum; `count` also holds the unproven ones.
+ */
+function rated(proven: number, average: number, unproven = 0): RankingCandidate["testimonies"] {
   return {
-    count,
-    verifiedVisitCount,
-    averages: { service: average, hygiene: average, materialsEquipment: average },
+    count: proven + unproven,
+    verifiedVisitCount: proven,
+    averages:
+      proven >= MIN_PROVEN_TESTIMONIES ? { service: average, hygiene: average, materialsEquipment: average } : null,
   };
 }
 
@@ -53,7 +59,7 @@ describe("Shortlist ranking", () => {
   it("keeps procedure fit first: a nearer, better-rated Klinik does not outrank a Hospital for a surgical referral", () => {
     const ranked = rankProviders(
       [
-        candidate("klinik-near-loved", { testimonies: rated(12, 4.9, 5), distanceMeters: 200 }),
+        candidate("klinik-near-loved", { testimonies: rated(12, 4.9), distanceMeters: 200 }),
         candidate("hospital-far-average", {
           providerType: "hospital",
           testimonies: rated(3, 2.5),
@@ -79,29 +85,59 @@ describe("Shortlist ranking", () => {
     expect(ranked[0]?.procedureFit).toEqual(["wisdom_tooth_surgery"]);
   });
 
-  it("trusts many good Testimonies over a single perfect one", () => {
+  it("trusts many good Proven Testimonies over a few perfect ones", () => {
     const ranked = rankProviders(
       [
-        candidate("one-perfect", { testimonies: rated(1, 5) }),
-        candidate("many-good", { testimonies: rated(10, 4.6) }),
-        candidate("some-poor", { testimonies: rated(4, 3) }),
+        candidate("few-perfect", { testimonies: rated(3, 5) }),
+        candidate("many-good", { testimonies: rated(20, 4.6) }),
+        candidate("many-poor", { testimonies: rated(20, 3) }),
       ],
       ROOT_CANAL,
     );
 
-    expect(order(ranked)).toEqual(["many-good", "one-perfect", "some-poor"]);
+    expect(order(ranked)).toEqual(["many-good", "few-perfect", "many-poor"]);
   });
 
-  it("gives a small bonus for Kunjungan terbukti", () => {
+  it("never lets unproven Testimonies change the order", () => {
+    const providers = [
+      candidate("a", { testimonies: rated(3, 4) }),
+      candidate("b", { testimonies: rated(3, 4) }),
+      candidate("c", { testimonies: rated(3, 2) }),
+    ];
+    const before = order(rankProviders(providers, ROOT_CANAL));
+
+    const buzzed = providers.map((p) => (p.placeId === "b" ? { ...p, testimonies: rated(3, 4, 40) } : p));
+
+    expect(before).toEqual(["a", "b", "c"]);
+    expect(order(rankProviders(buzzed, ROOT_CANAL))).toEqual(before);
+  });
+
+  it("has no separate Kunjungan terbukti bonus: at the same score, place_id decides", () => {
+    // Both sit exactly at the overall mean, so their scores tie and place_id decides.
     const ranked = rankProviders(
       [
-        candidate("unproven", { testimonies: rated(5, 4.5, 0) }),
-        candidate("proven", { testimonies: rated(5, 4.5, 4) }),
+        candidate("b-many-proven", { testimonies: rated(12, 4) }),
+        candidate("a-few-proven", { testimonies: rated(3, 4) }),
       ],
       ROOT_CANAL,
     );
 
-    expect(order(ranked)).toEqual(["proven", "unproven"]);
+    expect(order(ranked)).toEqual(["a-few-proven", "b-many-proven"]);
+  });
+
+  it("puts a Provider without a star average at the overall mean", () => {
+    const ranked = rankProviders(
+      [
+        candidate("poor", { testimonies: rated(5, 2) }),
+        // Two Proven and many unproven Testimonies: no average yet.
+        candidate("no-average", { testimonies: rated(2, 5, 30) }),
+        candidate("good", { testimonies: rated(5, 4.8) }),
+      ],
+      ROOT_CANAL,
+    );
+
+    expect(order(ranked)).toEqual(["good", "no-average", "poor"]);
+    expect(ranked[1]?.testimonies.averages).toBeNull();
   });
 
   it("prefers a price at the low end of the Cost Estimate", () => {
@@ -129,9 +165,9 @@ describe("Shortlist ranking", () => {
     const ranked = rankProviders(
       [
         candidate("A-near-unknown", { distanceMeters: 300 }),
-        candidate("B-well-rated", { testimonies: rated(8, 4.7, 3), distanceMeters: 4000 }),
+        candidate("B-well-rated", { testimonies: rated(8, 4.7), distanceMeters: 4000 }),
         candidate("C-cheap", { prices: { root_canal_treatment: 900_000 }, distanceMeters: 2500 }),
-        candidate("D-poorly-rated-near", { testimonies: rated(6, 2.5), distanceMeters: 200 }),
+        candidate("D-poorly-rated-near", { testimonies: rated(10, 2.5), distanceMeters: 200 }),
         candidate("E-hospital", { providerType: "hospital", distanceMeters: 1500 }),
       ],
       ROOT_CANAL,
