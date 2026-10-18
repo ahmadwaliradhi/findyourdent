@@ -350,6 +350,25 @@ describe("Claim decisions", () => {
     expect(server.fakes.places.coordinatesCalls).toEqual(["ChIJ-belum-listed"]);
   });
 
+  it("lists a claimed place Google types as a hospital as a hospital", async () => {
+    server.fakes.places.respondWithCoordinates({
+      ok: true,
+      location: { lat: -7.2684, lng: 112.7584 },
+      types: ["hospital", "health"],
+    });
+    const cookie = await server.signInWithGoogle(OWNER);
+    const { claimId } = await submitClaim("ChIJ-rs-belum-listed", {
+      cookie,
+      claim: { providerName: "RS Gigi dan Mulut", region: { provinceCode: "35", regencyCode: "35.78" } },
+    });
+    expect((await act(await adminCookie(), { action: "approveClaim", subjectId: claimId })).status).toBe(200);
+
+    expect(await provider("ChIJ-rs-belum-listed")).toMatchObject({
+      providerType: "hospital",
+      providerTypeSource: "inferred",
+    });
+  });
+
   it("keeps the optional kecamatan of a place that was not Listed, so it appears under that kecamatan", async () => {
     const cookie = await server.signInWithGoogle(OWNER);
     const region = { provinceCode: "35", regencyCode: "35.78", districtCode: "35.78.08" };

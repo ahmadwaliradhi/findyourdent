@@ -353,6 +353,21 @@ describe("Moderation: publish", () => {
     expect((await provider(NEW_PLACE))?.providerType).toBe("privateDentist");
   });
 
+  it.each(["hospital", "general_hospital"])(
+    "lists a place Google types as %s as a hospital, whatever the typed name",
+    async (type) => {
+      server.fakes.places.respondWithCoordinates({
+        ok: true,
+        location: { lat: -7.2684, lng: 112.7584 },
+        types: [type, "health", "point_of_interest"],
+      });
+      const { cookie } = await signIn("pasien@example.com");
+      const { testimonyId } = await createOk(submission({ providerName: "RSUD Dr. Soetomo" }), { cookie });
+      expect((await provider(NEW_PLACE))?.providerType).toBe("hospital");
+      expect((await testimony(testimonyId))?.providerType).toBe("hospital");
+    },
+  );
+
   it("lists the place without coordinates when the Essentials call fails", async () => {
     server.fakes.places.respondWithCoordinates({ ok: false, reason: "cap_reached" });
     const { cookie } = await signIn("pasien@example.com");

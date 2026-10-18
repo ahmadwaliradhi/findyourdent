@@ -44,12 +44,12 @@ import {
 } from "~/lib/admin-queue";
 import { normalizeName } from "~/lib/normalize-name";
 import { testimonyPhotoUrl } from "~/lib/testimony-photos";
-import type { LatLng } from "../../server/adapters/places.ts";
 import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
 import {
-  coordinatesFor,
+  NO_ESSENTIALS,
+  placeEssentialsFor,
   publishedOf,
   regionValue,
   storedPhotoPaths,
@@ -429,12 +429,12 @@ async function testimonyAction(context: AppLoadContext, acting: Acting, action: 
   const { firestore } = acting;
   const ref = col(firestore, "testimonies").doc(acting.request.subjectId);
 
-  // A first publish of a place that is not Listed needs coordinates, fetched before the transaction.
-  let location: LatLng | null = null;
+  // A first publish of a place that is not Listed needs coordinates and Google's types, fetched before the transaction.
+  let essentials = NO_ESSENTIALS;
   const before = (await ref.get()).data() as TestimonyDoc | undefined;
   if (action === "publish" && before?.status === "held" && before.proposedProviderName) {
     const listed = await col(firestore, "providers").doc(before.placeId).get();
-    if (!listed.exists) location = await coordinatesFor(context, before.placeId);
+    if (!listed.exists) essentials = await placeEssentialsFor(context, before.placeId);
   }
 
   let orphaned: string[] = [];
@@ -477,12 +477,7 @@ async function testimonyAction(context: AppLoadContext, acting: Acting, action: 
         testimonyId: ref.id,
         self: testimony,
         proposal: testimony.proposedProviderName
-          ? {
-              name: testimony.proposedProviderName,
-              region: testimony.region,
-              providerType: testimony.providerType,
-              location,
-            }
+          ? { name: testimony.proposedProviderName, region: testimony.region, essentials }
           : null,
       });
       update.region = regionValue(region);

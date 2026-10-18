@@ -474,8 +474,10 @@ describe("Places adapter: Testimony provider picker (Autocomplete)", () => {
 });
 
 describe("Places adapter: coordinates for a new Listed Provider", () => {
-  it("sends one Place Details call with the Essentials field mask `location` only", async () => {
-    const places = fakePlaces(() => Response.json({ location: { latitude: -7.2756, longitude: 112.7509 } }));
+  it("sends one Place Details call with the Essentials field mask `location,types` only", async () => {
+    const places = fakePlaces(() =>
+      Response.json({ location: { latitude: -7.2756, longitude: 112.7509 }, types: ["dentist", "health"] }),
+    );
 
     const result = await adapterWith(places).getCoordinates("ChIJ-gubeng-dental");
 
@@ -483,8 +485,8 @@ describe("Places adapter: coordinates for a new Listed Provider", () => {
     const [call] = places.seen;
     expect(call?.method).toBe("GET");
     expect(call?.url.startsWith("https://places.googleapis.com/v1/places/ChIJ-gubeng-dental")).toBe(true);
-    expect(call?.headers.get("x-goog-fieldmask")).toBe("location");
-    expect(result).toEqual({ ok: true, location: { lat: -7.2756, lng: 112.7509 } });
+    expect(call?.headers.get("x-goog-fieldmask")).toBe("location,types");
+    expect(result).toEqual({ ok: true, location: { lat: -7.2756, lng: 112.7509 }, types: ["dentist", "health"] });
   });
 
   it("stops at its own small daily cap, so the Provider page keeps most of the shared Place Details quota", async () => {
