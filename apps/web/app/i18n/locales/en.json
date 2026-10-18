@@ -846,7 +846,9 @@
         "rejected": "Rejected"
       }
     },
-    "priceListCta": "Upload a price list"
+    "priceListCta": "Upload a price list",
+    "howItWorks": "How it works",
+    "formTitle": "Claim details"
   },
   "priceListApi": {
     "errors": {
@@ -885,7 +887,6 @@
     "notes": "Notes",
     "deleteRow": "Delete row",
     "addRow": "Add a row",
-    "rowInvalid": "Fill in the procedure and prices; the lowest price cannot be higher than the highest.",
     "noRows": "Add at least one row.",
     "confirm": "Confirm and publish",
     "confirming": "Saving…",
@@ -897,6 +898,16 @@
       "per_jaw": "per jaw",
       "per_visit": "per visit",
       "per_package": "per package"
-    }
+    },
+    "steps": {
+      "label": "Steps",
+      "upload": "Upload",
+      "review": "Check the price rows",
+      "publish": "Published",
+      "done": "done"
+    },
+    "rowMissing": "Row {{row}}: fill in the procedure and the lowest price.",
+    "rowRange": "Row {{row}}: the lowest price cannot be higher than the highest.",
+    "rowTooHigh": "Row {{row}}: the price is too high. Check the number of zeros."
   }
 }

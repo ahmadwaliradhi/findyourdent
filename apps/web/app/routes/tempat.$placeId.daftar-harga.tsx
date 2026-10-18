@@ -1,14 +1,19 @@
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import type { PriceListRow, ProcedureCode } from "@findyourdent/contracts/firestore";
+import { Check, Circle, CircleDot, FileText, LogIn, Plus, RotateCcw, Trash2, TriangleAlert } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
+import { OwnerPageHeader } from "~/components/owner-page-header";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { FieldError, fieldClassName } from "~/components/ui/field";
+import { Card } from "~/components/ui/card";
+import { FieldError, fieldClassName, fileInputClassName } from "~/components/ui/field";
+import { Notice } from "~/components/ui/notice";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import { useFirebaseConfig } from "~/lib/firebase-config";
+import { formatDate, formatRupiahAmount } from "~/lib/format";
 import { sendOwnerRequest } from "~/lib/owner-request";
 import { providerPath } from "~/lib/paths";
 import {
@@ -22,6 +27,7 @@ import {
   type PriceListUploadResponse,
 } from "~/lib/price-lists";
 import { SITE_NAME } from "~/lib/seo";
+import { cn } from "~/lib/utils";
 import { loadPriceListPage, type PriceListPageData } from "~/server/price-lists.server";
 import { isPlaceId } from "~/server/provider.server";
 import type { Route } from "./+types/tempat.$placeId.daftar-harga";
@@ -47,14 +53,14 @@ export default function PriceListPage({ loaderData }: Route.ComponentProps) {
   const page = loaderData;
   const claimPath = `${providerPath(page.placeId)}/klaim`;
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <Link to={page.owner ? claimPath : providerPath(page.placeId)} className="text-sm underline">
-          {t("claim.back")}
-        </Link>
-        <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{t("priceList.title")}</h1>
-        {page.providerName && <p className="text-muted-foreground">{page.providerName}</p>}
-      </header>
+    <div className="flex flex-col gap-8">
+      <OwnerPageHeader
+        backTo={page.owner ? claimPath : providerPath(page.placeId)}
+        backLabel={page.owner ? t("claim.manageTitle") : t("claim.back")}
+        placeName={page.providerName}
+        title={t("priceList.title")}
+        lead={t("priceList.intro")}
+      />
       <PriceListBody page={page} />
     </div>
   );
@@ -65,18 +71,23 @@ function PriceListBody({ page }: { page: PriceListPageData }) {
   if (!page.signedIn) {
     const signIn = `/signin?redirectTo=${encodeURIComponent(`${providerPath(page.placeId)}/daftar-harga`)}`;
     return (
-      <section className="flex flex-col items-start gap-3">
+      <section className="flex max-w-xl flex-col items-start gap-4">
         <p>{t("priceList.signIn")}</p>
         <Button asChild>
-          <a href={signIn}>{t("claim.signIn")}</a>
+          <a href={signIn}>
+            <LogIn aria-hidden="true" strokeWidth={1.75} />
+            {t("claim.signIn")}
+          </a>
         </Button>
       </section>
     );
   }
   if (!page.owner) {
     return (
-      <section className="flex flex-col items-start gap-3">
-        <p className="rounded-md border bg-muted p-4">{t("priceList.notOwner")}</p>
+      <section className="flex max-w-xl flex-col items-start gap-4">
+        <Notice tone="info" className="text-base leading-6">
+          <p>{t("priceList.notOwner")}</p>
+        </Notice>
         <Button asChild variant="outline">
           <Link to={`${providerPath(page.placeId)}/klaim`}>{t("priceList.toClaim")}</Link>
         </Button>
@@ -86,7 +97,7 @@ function PriceListBody({ page }: { page: PriceListPageData }) {
   return <Uploader page={page} />;
 }
 
-/** A row being reviewed: prices as typed text, so a half-typed number is not lost. */
+/** A row being reviewed: prices as typed digits, so a half-typed number is not lost. */
 interface DraftRow {
   key: number;
   procedureCode: ProcedureCode | "";
@@ -113,34 +124,46 @@ const nextKey = () => {
 
 const digits = (text: string) => text.replace(/\D/g, "");
 
-/** The stored row, or null while the owner still has something to fix. */
-function toRow(row: DraftRow): PriceListRow | null {
-  const procedureText = row.procedureText.trim();
+type RowProblem = "rowMissing" | "rowRange" | "rowTooHigh";
+
+/** What the owner still has to fix in a row, or null when it can be stored. */
+function rowProblem(row: DraftRow): RowProblem | null {
   const min = digits(row.minRupiah);
-  const max = digits(row.maxRupiah) || min;
-  if (!procedureText || !min) return null;
+  if (!row.procedureText.trim() || !min) return "rowMissing";
   const minRupiah = Number(min);
-  const maxRupiah = Number(max);
-  if (minRupiah > maxRupiah || maxRupiah > PRICE_LIST_LIMITS.rupiahMax) return null;
+  const maxRupiah = Number(digits(row.maxRupiah) || min);
+  if (minRupiah > maxRupiah) return "rowRange";
+  if (maxRupiah > PRICE_LIST_LIMITS.rupiahMax) return "rowTooHigh";
+  return null;
+}
+
+/** The stored row; call only on a row with no problem. */
+function toRow(row: DraftRow): PriceListRow {
+  const min = digits(row.minRupiah);
   const notes = row.notes.trim();
   return {
     ...(row.procedureCode ? { procedureCode: row.procedureCode } : {}),
-    procedureText,
-    minRupiah,
-    maxRupiah,
+    procedureText: row.procedureText.trim(),
+    minRupiah: Number(min),
+    maxRupiah: Number(digits(row.maxRupiah) || min),
     unit: row.unit,
     ...(notes ? { notes } : {}),
   };
 }
 
 function Uploader({ page }: { page: PriceListPageData }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const firebase = useFirebaseConfig();
   const inputId = useId();
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<Array<{ url: string; pdf: boolean; name: string }>>([]);
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [step, setStep] = useState<Step>({ phase: "pick", error: null });
+  /** Set once a confirm stops at a row: from then on the first row to fix is named as the owner edits. */
+  const [checked, setChecked] = useState(false);
+  const brokenIndex = checked ? rows.findIndex((row) => rowProblem(row) !== null) : -1;
+  const broken = rows[brokenIndex];
+  const brokenProblem = broken ? rowProblem(broken) : null;
 
   // Object URLs show the owner's own files beside the rows; nothing is fetched back.
   useEffect(() => {
@@ -183,20 +206,25 @@ function Uploader({ page }: { page: PriceListPageData }) {
         confidence: row.confidence,
       })),
     );
+    setChecked(false);
     setStep({ phase: "review", priceListId: body.priceListId, error: null, saving: false });
   }
 
   async function confirm(event: FormEvent) {
     event.preventDefault();
     if (step.phase !== "review") return;
-    const checked = rows.map(toRow);
-    if (rows.length === 0 || checked.some((row) => row === null)) {
-      setStep({ ...step, error: rows.length === 0 ? t("priceList.noRows") : t("priceList.rowInvalid") });
+    if (rows.length === 0) {
+      setStep({ ...step, error: t("priceList.noRows") });
+      return;
+    }
+    if (rows.some((row) => rowProblem(row) !== null)) {
+      setChecked(true);
+      setStep({ ...step, error: null });
       return;
     }
     setStep({ ...step, error: null, saving: true });
     const result = await sendOwnerRequest(firebase, `/api/providers/${page.placeId}/price-lists/${step.priceListId}`, {
-      rows: checked,
+      rows: rows.map(toRow),
     });
     if (!result.ok) {
       setStep({ ...step, error: result.message ?? t("priceList.error"), saving: false });
@@ -208,15 +236,19 @@ function Uploader({ page }: { page: PriceListPageData }) {
   function startOver() {
     setFiles([]);
     setRows([]);
+    setChecked(false);
     setStep({ phase: "pick", error: null });
   }
 
+  const progress = <Progress current={step.phase === "done" ? 3 : step.phase === "review" ? 2 : 1} />;
+
   if (step.phase === "done") {
     return (
-      <section className="flex flex-col items-start gap-3">
-        <p role="status" className="rounded-md border bg-muted p-4">
-          {step.message}
-        </p>
+      <section className="flex max-w-xl flex-col items-start gap-4">
+        {progress}
+        <Notice tone="success" role="status" className="text-base leading-6">
+          <p>{step.message}</p>
+        </Notice>
         <Button asChild>
           <Link to={providerPath(page.placeId)}>{t("priceList.viewPage")}</Link>
         </Button>
@@ -226,29 +258,45 @@ function Uploader({ page }: { page: PriceListPageData }) {
 
   if (step.phase === "review") {
     return (
-      <form onSubmit={confirm} className="flex flex-col gap-4" noValidate>
-        <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <form onSubmit={confirm} className="flex flex-col gap-6" noValidate>
+        {progress}
+        <div className="grid grid-cols-1 gap-6 desktop:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] desktop:items-start desktop:gap-10">
           <Originals previews={previews} />
-          <section aria-labelledby="rows-title" className="flex min-w-0 flex-col gap-3">
-            <h2 id="rows-title" className="text-lg font-semibold">
-              {t("priceList.reviewTitle")}
-            </h2>
-            <p className="text-sm text-muted-foreground">{t("priceList.reviewHint")}</p>
+          <section aria-labelledby="rows-title" className="flex min-w-0 flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <h2 id="rows-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+                {t("priceList.reviewTitle")}
+              </h2>
+              <Notice tone="warning" icon={TriangleAlert}>
+                <p>{t("priceList.reviewHint")}</p>
+              </Notice>
+            </div>
             <ol className="flex flex-col gap-3">
-              {rows.map((row) => (
+              {rows.map((row, index) => (
                 <li key={row.key}>
                   <RowEditor
                     row={row}
+                    number={index + 1}
+                    problem={row.key === broken?.key ? brokenProblem : null}
                     onChange={(next) => setRows((all) => all.map((r) => (r.key === row.key ? next : r)))}
                     onDelete={() => setRows((all) => all.filter((r) => r.key !== row.key))}
                   />
                 </li>
               ))}
             </ol>
+            {step.error ? (
+              <FieldError role="alert">{step.error}</FieldError>
+            ) : (
+              brokenProblem && (
+                <FieldError role="alert">{t(`priceList.${brokenProblem}`, { row: brokenIndex + 1 })}</FieldError>
+              )
+            )}
             <Button
               type="button"
               variant="outline"
+              size="sm"
               className="self-start"
+              icon={<Plus aria-hidden="true" strokeWidth={1.75} />}
               onClick={() =>
                 setRows((all) => [
                   ...all,
@@ -266,56 +314,100 @@ function Uploader({ page }: { page: PriceListPageData }) {
             >
               {t("priceList.addRow")}
             </Button>
+            <hr className="border-border" />
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" size="lg" loading={step.saving}>
+                {step.saving ? t("priceList.confirming") : t("priceList.confirm")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={startOver}
+                disabled={step.saving}
+                icon={<RotateCcw aria-hidden="true" strokeWidth={1.75} />}
+              >
+                {t("priceList.startOver")}
+              </Button>
+            </div>
           </section>
-        </div>
-        {step.error && <FieldError role="alert">{step.error}</FieldError>}
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={step.saving}>
-            {step.saving ? t("priceList.confirming") : t("priceList.confirm")}
-          </Button>
-          <Button type="button" variant="ghost" onClick={startOver} disabled={step.saving}>
-            {t("priceList.startOver")}
-          </Button>
         </div>
       </form>
     );
   }
 
   const accept = [PRICE_LIST_PDF_TYPE, ...PRICE_LIST_IMAGE_TYPES].join(",");
+  const reading = step.phase === "reading";
   return (
-    <form onSubmit={read} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 text-sm">
-        <p>{t("priceList.intro")}</p>
-        <p className="text-muted-foreground">{t("priceList.privacy")}</p>
-        {page.currentConfirmedAt && <p>{t("priceList.current", { date: page.currentConfirmedAt })}</p>}
-      </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor={inputId} className="text-sm font-medium">
-          {t("priceList.pickFiles")}
-        </label>
-        <input
-          id={inputId}
-          type="file"
-          accept={accept}
-          multiple
-          disabled={step.phase === "reading"}
-          onChange={(event) => setFiles(Array.from(event.currentTarget.files ?? []))}
-          className="text-sm"
-        />
-      </div>
-      {step.phase === "pick" && step.error && <FieldError role="alert">{step.error}</FieldError>}
-      <Button type="submit" className="self-start" disabled={files.length === 0 || step.phase === "reading"}>
-        {step.phase === "reading" ? t("priceList.reading") : t("priceList.read")}
-      </Button>
-    </form>
+    <div className="flex flex-col gap-6">
+      {progress}
+      <Card className="max-w-2xl gap-5 p-6">
+        <form onSubmit={read} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <label htmlFor={inputId} className="text-sm leading-5 font-semibold">
+              {t("priceList.pickFiles")}
+            </label>
+            <input
+              id={inputId}
+              type="file"
+              accept={accept}
+              multiple
+              disabled={reading}
+              onChange={(event) => setFiles(Array.from(event.currentTarget.files ?? []))}
+              aria-describedby={`${inputId}-hint`}
+              className={cn(fileInputClassName, "rounded-md bg-muted p-3")}
+            />
+            <p id={`${inputId}-hint`} className="text-sm text-muted-foreground">
+              {t("priceList.privacy")}
+            </p>
+          </div>
+          {page.currentConfirmedAt && (
+            <Notice tone="neutral">
+              <p>{t("priceList.current", { date: formatDate(page.currentConfirmedAt, i18n.language as Language) })}</p>
+            </Notice>
+          )}
+          {step.phase === "pick" && step.error && <FieldError role="alert">{step.error}</FieldError>}
+          <Button type="submit" size="lg" className="self-start" loading={reading} disabled={files.length === 0}>
+            {reading ? t("priceList.reading") : t("priceList.read")}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+/** Upload, check, publish: each step shows an icon and its name, never color alone. */
+function Progress({ current }: { current: 1 | 2 | 3 }) {
+  const { t } = useTranslation();
+  const steps = [t("priceList.steps.upload"), t("priceList.steps.review"), t("priceList.steps.publish")];
+  return (
+    <ol aria-label={t("priceList.steps.label")} className="flex flex-wrap gap-2">
+      {steps.map((name, index) => {
+        const number = index + 1;
+        // The last step is done once it is reached: the rows are live.
+        const done = number < current || (number === 3 && current === 3);
+        const here = number === current && !done;
+        return (
+          <li key={name} aria-current={here ? "step" : undefined}>
+            <Badge
+              variant={done ? "success" : here ? "brand" : "neutral"}
+              icon={done ? Check : here ? CircleDot : Circle}
+              className={cn("px-3 py-1.5 text-sm leading-5", here && "border-primary")}
+            >
+              {number}. {name}
+              {done && <span className="sr-only"> ({t("priceList.steps.done")})</span>}
+            </Badge>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
 function Originals({ previews }: { previews: Array<{ url: string; pdf: boolean; name: string }> }) {
   const { t } = useTranslation();
   return (
-    <section aria-labelledby="original-title" className="flex min-w-0 flex-col gap-2 md:sticky md:top-4 md:self-start">
-      <h2 id="original-title" className="text-lg font-semibold">
+    <aside aria-labelledby="original-title" className="flex min-w-0 flex-col gap-3 desktop:sticky desktop:top-4">
+      <h2 id="original-title" className="text-base leading-[22px] font-[650]">
         {t("priceList.original")}
       </h2>
       {previews.map((preview) =>
@@ -324,7 +416,7 @@ function Originals({ previews }: { previews: Array<{ url: string; pdf: boolean; 
             key={preview.url}
             data={preview.url}
             type={PRICE_LIST_PDF_TYPE}
-            className="h-[70vh] w-full rounded-md border"
+            className="h-[70vh] w-full rounded-md border bg-card"
             aria-label={preview.name}
           >
             <a href={preview.url} target="_blank" rel="noreferrer" className="underline">
@@ -333,20 +425,36 @@ function Originals({ previews }: { previews: Array<{ url: string; pdf: boolean; 
           </object>
         ) : (
           <a key={preview.url} href={preview.url} target="_blank" rel="noreferrer">
-            <img src={preview.url} alt={preview.name} className="w-full rounded-md border" />
+            <img src={preview.url} alt={preview.name} className="w-full rounded-md border bg-card" />
           </a>
         ),
       )}
-    </section>
+      <ul className="flex flex-col gap-1">
+        {previews.map((preview) => (
+          <li key={preview.url} className="flex items-center gap-2 rounded-md bg-muted px-4 py-3 text-sm break-all">
+            <FileText aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
+            {preview.name}
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs leading-4 font-medium text-muted-foreground">{t("priceList.privacy")}</p>
+    </aside>
   );
 }
 
+const labelClass = "flex flex-col gap-1.5 text-sm leading-5 font-semibold";
+
 function RowEditor({
   row,
+  number,
+  problem,
   onChange,
   onDelete,
 }: {
   row: DraftRow;
+  number: number;
+  /** The problem to mark, on the first row the owner still has to fix. */
+  problem: RowProblem | null;
   onChange: (row: DraftRow) => void;
   onDelete: () => void;
 }) {
@@ -355,93 +463,143 @@ function RowEditor({
   const id = useId();
   const low = row.confidence !== undefined && row.confidence < LOW_CONFIDENCE;
   const set = (patch: Partial<DraftRow>) => onChange({ ...row, ...patch });
+  const textInvalid = problem === "rowMissing" && !row.procedureText.trim();
+  const minInvalid = (problem === "rowMissing" && !row.minRupiah) || problem === "rowRange";
+  const maxInvalid = problem === "rowRange" || problem === "rowTooHigh";
   return (
     <fieldset
-      className={`flex flex-col gap-2 rounded-md border p-3 ${low ? "border-warning-line bg-warning-soft" : ""}`}
+      className={cn(
+        "flex flex-col gap-3 rounded-lg border bg-card p-4",
+        low && "border-warning-line bg-warning-soft",
+        problem && "border-2 border-destructive",
+      )}
       data-low-confidence={low || undefined}
     >
-      <legend className="sr-only">{row.procedureText || t("priceList.procedureText")}</legend>
+      <legend className="sr-only">
+        {number}. {row.procedureText || t("priceList.procedureText")}
+      </legend>
       {low && (
-        <Badge variant="warning" className="self-start">
+        <Badge variant="warning" icon={TriangleAlert}>
           {t("priceList.lowConfidence")}
         </Badge>
       )}
-      <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-text`}>
-        {t("priceList.procedureText")}
-        <input
-          id={`${id}-text`}
-          className={fieldClassName}
-          value={row.procedureText}
-          maxLength={PRICE_LIST_LIMITS.procedureTextMax}
-          onChange={(e) => set({ procedureText: e.currentTarget.value })}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-code`}>
-        {t("priceList.procedureCode")}
-        <select
-          id={`${id}-code`}
-          className={fieldClassName}
-          value={row.procedureCode}
-          onChange={(e) => set({ procedureCode: e.currentTarget.value as ProcedureCode | "" })}
-        >
-          <option value="">{t("priceList.noCode")}</option>
-          {procedureList.procedures.map((procedure) => (
-            <option key={procedure.code} value={procedure.code}>
-              {procedure.label[language]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-min`}>
-          {t("priceList.minRupiah")}
+      <div className="grid gap-3 desktop:grid-cols-2">
+        <label className={labelClass} htmlFor={`${id}-text`}>
+          {t("priceList.procedureText")}
           <input
-            id={`${id}-min`}
-            className={fieldClassName}
-            inputMode="numeric"
-            value={row.minRupiah}
-            onChange={(e) => set({ minRupiah: digits(e.currentTarget.value) })}
+            id={`${id}-text`}
+            className={cn(fieldClassName, "font-normal")}
+            value={row.procedureText}
+            maxLength={PRICE_LIST_LIMITS.procedureTextMax}
+            onChange={(e) => set({ procedureText: e.currentTarget.value })}
+            aria-invalid={textInvalid || undefined}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-max`}>
-          {t("priceList.maxRupiah")}
-          <input
-            id={`${id}-max`}
-            className={fieldClassName}
-            inputMode="numeric"
-            value={row.maxRupiah}
-            onChange={(e) => set({ maxRupiah: digits(e.currentTarget.value) })}
-          />
+        <label className={labelClass} htmlFor={`${id}-code`}>
+          {t("priceList.procedureCode")}
+          <select
+            id={`${id}-code`}
+            className={cn(fieldClassName, "font-normal")}
+            value={row.procedureCode}
+            onChange={(e) => set({ procedureCode: e.currentTarget.value as ProcedureCode | "" })}
+          >
+            <option value="">{t("priceList.noCode")}</option>
+            {procedureList.procedures.map((procedure) => (
+              <option key={procedure.code} value={procedure.code}>
+                {procedure.label[language]}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
-      <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-unit`}>
-        {t("priceList.unit")}
-        <select
-          id={`${id}-unit`}
-          className={fieldClassName}
-          value={row.unit}
-          onChange={(e) => set({ unit: e.currentTarget.value as PriceListRow["unit"] })}
-        >
-          {PRICE_UNITS.map((unit) => (
-            <option key={unit} value={unit}>
-              {t(`priceList.units.${unit}`)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-notes`}>
+      <div className="grid grid-cols-2 gap-3 desktop:grid-cols-3">
+        <label className={labelClass} htmlFor={`${id}-min`}>
+          {t("priceList.minRupiah")}
+          <PriceInput
+            id={`${id}-min`}
+            digits={row.minRupiah}
+            onChange={(value) => set({ minRupiah: value })}
+            invalid={minInvalid}
+          />
+        </label>
+        <label className={labelClass} htmlFor={`${id}-max`}>
+          {t("priceList.maxRupiah")}
+          <PriceInput
+            id={`${id}-max`}
+            digits={row.maxRupiah}
+            onChange={(value) => set({ maxRupiah: value })}
+            invalid={maxInvalid}
+          />
+        </label>
+        <label className={cn(labelClass, "col-span-2 desktop:col-span-1")} htmlFor={`${id}-unit`}>
+          {t("priceList.unit")}
+          <select
+            id={`${id}-unit`}
+            className={cn(fieldClassName, "font-normal")}
+            value={row.unit}
+            onChange={(e) => set({ unit: e.currentTarget.value as PriceListRow["unit"] })}
+          >
+            {PRICE_UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {t(`priceList.units.${unit}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className={labelClass} htmlFor={`${id}-notes`}>
         {t("priceList.notes")}
         <Textarea
           id={`${id}-notes`}
-          rows={2}
+          rows={1}
           value={row.notes}
           maxLength={PRICE_LIST_LIMITS.notesMax}
           onChange={(e) => set({ notes: e.currentTarget.value })}
+          className="min-h-touch font-normal"
         />
       </label>
-      <Button type="button" variant="ghost" size="sm" className="self-start" onClick={onDelete}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="self-start"
+        onClick={onDelete}
+        icon={<Trash2 aria-hidden="true" strokeWidth={1.75} />}
+      >
         {t("priceList.deleteRow")}
       </Button>
     </fieldset>
+  );
+}
+
+/**
+ * A rupiah amount: grouped the language's way ("450.000", "450,000") while it is read,
+ * plain digits while it is edited, so the caret and Backspace act on the digits.
+ */
+function PriceInput({
+  id,
+  digits: value,
+  onChange,
+  invalid,
+}: {
+  id: string;
+  digits: string;
+  onChange(digits: string): void;
+  invalid: boolean;
+}) {
+  const { i18n } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const shown = editing || !value ? value : formatRupiahAmount(Number(value), i18n.language as Language);
+  return (
+    <input
+      id={id}
+      className={cn(fieldClassName, "font-normal tabular-nums")}
+      inputMode="numeric"
+      value={shown}
+      onFocus={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+      onChange={(e) => onChange(digits(e.currentTarget.value))}
+      aria-invalid={invalid || undefined}
+    />
   );
 }

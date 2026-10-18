@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatRupiah } from "../../app/lib/format";
+import { formatDate, formatRupiah, formatRupiahAmount } from "../../app/lib/format";
 
 // A no-break space keeps "Rp" and the amount on one line.
 const rp = (amount: string) => `Rp ${amount}`;
@@ -29,5 +29,12 @@ describe("formatDate", () => {
 
   it("returns anything that is not a date unchanged", () => {
     expect(formatDate("soon", "id")).toBe("soon");
+  });
+});
+
+describe("formatRupiahAmount", () => {
+  it("groups the amount without the currency, as typed into a price field", () => {
+    expect(formatRupiahAmount(450_000, "id")).toBe("450.000");
+    expect(formatRupiahAmount(450_000, "en")).toBe("450,000");
   });
 });

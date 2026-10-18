@@ -10,8 +10,12 @@ function locale(language: Language): string {
  * separator. A no-break space keeps "Rp" and the amount on one line.
  */
 export function formatRupiah(amount: number, language: Language): string {
-  const digits = new Intl.NumberFormat(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 0 });
-  return `Rp\u00a0${digits.format(amount)}`;
+  return `Rp\u00a0${formatRupiahAmount(amount, language)}`;
+}
+
+/** The amount alone, "450.000" or "450,000", for a price field labelled "(Rp)". */
+export function formatRupiahAmount(amount: number, language: Language): string {
+  return new Intl.NumberFormat(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 0 }).format(amount);
 }
 
 export function formatCount(value: number, language: Language): string {
