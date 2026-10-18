@@ -320,12 +320,8 @@ describe("Moderation: publish", () => {
       claimStatus: "unclaimed",
       listedBy: "testimony",
       location: { lat: -6.1754, lng: 106.8272 },
-      aggregates: {
-        testimonyCount: 1,
-        verifiedVisitCount: 0,
-        averages: { service: 5, hygiene: 4, materialsEquipment: 3 },
-        procedurePrices: { scaling: { count: 1, medianRupiah: 300_000, minRupiah: 300_000, maxRupiah: 300_000 } },
-      },
+      // Without a Proof of Visit it is counted but moves no average or price (spec 09).
+      aggregates: { testimonyCount: 1, verifiedVisitCount: 0, averages: null, procedurePrices: {} },
     });
     expect(listed?.location?.fetchedAt).toBeDefined();
     expect(await count(COLLECTIONS.providers)).toBe(1);
@@ -382,8 +378,8 @@ describe("Moderation: publish", () => {
     expect(listed?.aggregates).toEqual({
       testimonyCount: 2,
       verifiedVisitCount: 0,
-      averages: { service: 3.5, hygiene: 3.5, materialsEquipment: 3.5 },
-      procedurePrices: { scaling: { count: 2, medianRupiah: 200_000, minRupiah: 100_000, maxRupiah: 300_000 } },
+      averages: null,
+      procedurePrices: {},
     });
     expect(server.fakes.places.coordinatesCalls).toEqual([NEW_PLACE]);
     expect(await counter("testimoniesPublished")).toBe(2);
@@ -688,6 +684,76 @@ describe("Moderation: Proof of Visit", () => {
     expect(await storedObjects("proof-of-visit/")).toEqual([]);
   });
 
+  it("averages a Provider only from its third Proven Testimony", async () => {
+    const proof = { bytes: await photo(), type: "image/jpeg" };
+    const post = async (email: string, service: number, price: number) =>
+      createOk(submission({ ratings: { service, hygiene: 4, materialsEquipment: 4 }, pricePaidRupiah: price }), {
+        cookie: (await signIn(email)).cookie,
+        proof,
+      });
+
+    await post("satu@example.com", 5, 300_000);
+    await post("dua@example.com", 4, 200_000);
+    expect((await provider(NEW_PLACE))?.aggregates).toEqual({
+      testimonyCount: 2,
+      verifiedVisitCount: 2,
+      averages: null,
+      procedurePrices: { scaling: { count: 2, medianRupiah: 250_000, minRupiah: 200_000, maxRupiah: 300_000 } },
+    });
+
+    await post("tiga@example.com", 3, 100_000);
+    expect((await provider(NEW_PLACE))?.aggregates).toEqual({
+      testimonyCount: 3,
+      verifiedVisitCount: 3,
+      averages: { service: 4, hygiene: 4, materialsEquipment: 4 },
+      procedurePrices: { scaling: { count: 3, medianRupiah: 200_000, minRupiah: 100_000, maxRupiah: 300_000 } },
+    });
+  });
+
+  it("publishes an unproven Testimony that changes no average or price stat, only the count", async () => {
+    const proof = { bytes: await photo(), type: "image/jpeg" };
+    for (const email of ["satu@example.com", "dua@example.com", "tiga@example.com"]) {
+      await createOk(submission(), { cookie: (await signIn(email)).cookie, proof });
+    }
+    const proven = (await provider(NEW_PLACE))?.aggregates;
+    expect(proven).toMatchObject({ testimonyCount: 3, verifiedVisitCount: 3 });
+    expect(proven?.averages).not.toBeNull();
+
+    const unproven = {
+      ratings: { service: 1, hygiene: 1, materialsEquipment: 1 },
+      pricePaidRupiah: 5_000_000,
+    } as const;
+    const withoutProof = await createOk(submission(unproven), { cookie: (await signIn("empat@example.com")).cookie });
+    moderateWith({ ...PUBLISH, proofOfVisit: "rejected" });
+    const rejectedProof = await createOk(submission(unproven), {
+      cookie: (await signIn("lima@example.com")).cookie,
+      proof,
+    });
+
+    expect([withoutProof.status, rejectedProof.status]).toEqual(["published", "published"]);
+    expect([withoutProof.verifiedVisit, rejectedProof.verifiedVisit]).toEqual([false, false]);
+    expect((await provider(NEW_PLACE))?.aggregates).toEqual({ ...proven, testimonyCount: 5 });
+  });
+
+  it("recomputes the aggregates when an edit brings an accepted Proof of Visit", async () => {
+    const proof = { bytes: await photo(), type: "image/jpeg" };
+    for (const email of ["satu@example.com", "dua@example.com"]) {
+      await createOk(submission(), { cookie: (await signIn(email)).cookie, proof });
+    }
+    const { cookie } = await signIn("tiga@example.com");
+    const later = submission({ ratings: { service: 2, hygiene: 1, materialsEquipment: 3 } });
+    const { testimonyId } = await createOk(later, { cookie });
+    expect((await provider(NEW_PLACE))?.aggregates).toMatchObject({ verifiedVisitCount: 2, averages: null });
+
+    const response = await edit(testimonyId, later, { cookie, proof });
+    expect(await response.json()).toMatchObject({ status: "published", verifiedVisit: true });
+    expect((await provider(NEW_PLACE))?.aggregates).toMatchObject({
+      testimonyCount: 3,
+      verifiedVisitCount: 3,
+      averages: { service: 4, hygiene: 3, materialsEquipment: 3 },
+    });
+  });
+
   it("deletes the Proof file when the Testimony needs a fix", async () => {
     moderateWith(AUTHOR_FIX);
     const { cookie } = await signIn("pasien@example.com");
@@ -780,8 +846,12 @@ describe("editing", () => {
   });
 
   it("replaces the published content and the aggregates when the edit is published", async () => {
+    const proof = { bytes: await photo(), type: "image/jpeg" };
+    for (const email of ["satu@example.com", "dua@example.com"]) {
+      await createOk(submission({ pricePaidRupiah: 200_000 }), { cookie: (await signIn(email)).cookie, proof });
+    }
     const { cookie } = await signIn("pasien@example.com");
-    const { testimonyId } = await createOk(submission(), { cookie });
+    const { testimonyId } = await createOk(submission(), { cookie, proof });
     moderateWith(HOLD);
     await edit(testimonyId, submission({ text: "Ditahan dulu." }), { cookie });
     moderateWith(PUBLISH);
@@ -800,13 +870,14 @@ describe("editing", () => {
     expect(stored).toMatchObject({ status: "published", text: "Versi baru." });
     expect(stored.pendingRevision).toBeUndefined();
     expect(stored.pricePaidRupiah).toBeUndefined();
+    // Still Proven: an edit keeps an accepted Proof of Visit.
     expect((await provider(NEW_PLACE))?.aggregates).toEqual({
-      testimonyCount: 1,
-      verifiedVisitCount: 0,
-      averages: { service: 1, hygiene: 1, materialsEquipment: 1 },
-      procedurePrices: {},
+      testimonyCount: 3,
+      verifiedVisitCount: 3,
+      averages: { service: 3.67, hygiene: 3, materialsEquipment: 2.33 },
+      procedurePrices: { scaling: { count: 2, medianRupiah: 200_000, minRupiah: 200_000, maxRupiah: 200_000 } },
     });
-    expect(await counter("testimoniesPublished")).toBe(1);
+    expect(await counter("testimoniesPublished")).toBe(3);
   });
 
   it("keeps listed photos, deletes the others from storage and adds new ones", async () => {
