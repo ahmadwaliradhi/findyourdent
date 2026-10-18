@@ -278,7 +278,7 @@ def heading_box(slide):
 def s_team(slide):
     tb = shape_named(slide, "Google Shape;54")
     paras = tb.text_frame.paragraphs
-    set_runs_text(paras[2], "FindYourDent")
+    set_runs_text(paras[2], "SabiqLab")
     set_runs_text(paras[3], "Ahmad Wali Radhi")
     set_runs_text(
         paras[4],
