@@ -27,6 +27,7 @@ import {
   type PriceListUploadResponse,
 } from "~/lib/price-lists";
 import { SITE_NAME } from "~/lib/seo";
+import { cn } from "~/lib/utils";
 import { loadPriceListPage, type PriceListPageData } from "~/server/price-lists.server";
 import { isPlaceId } from "~/server/provider.server";
 import type { Route } from "./+types/tempat.$placeId.daftar-harga";
@@ -158,8 +159,11 @@ function Uploader({ page }: { page: PriceListPageData }) {
   const [previews, setPreviews] = useState<Array<{ url: string; pdf: boolean; name: string }>>([]);
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [step, setStep] = useState<Step>({ phase: "pick", error: null });
-  /** The row the last confirm stopped at, marked invalid until the owner confirms again. */
-  const [invalidKey, setInvalidKey] = useState<number | null>(null);
+  /** Set once a confirm stops at a row: from then on the first row to fix is named as the owner edits. */
+  const [checked, setChecked] = useState(false);
+  const brokenIndex = checked ? rows.findIndex((row) => rowProblem(row) !== null) : -1;
+  const broken = rows[brokenIndex];
+  const brokenProblem = broken ? rowProblem(broken) : null;
 
   // Object URLs show the owner's own files beside the rows; nothing is fetched back.
   useEffect(() => {
@@ -202,7 +206,7 @@ function Uploader({ page }: { page: PriceListPageData }) {
         confidence: row.confidence,
       })),
     );
-    setInvalidKey(null);
+    setChecked(false);
     setStep({ phase: "review", priceListId: body.priceListId, error: null, saving: false });
   }
 
@@ -213,14 +217,11 @@ function Uploader({ page }: { page: PriceListPageData }) {
       setStep({ ...step, error: t("priceList.noRows") });
       return;
     }
-    const index = rows.findIndex((row) => rowProblem(row) !== null);
-    const broken = rows[index];
-    if (broken) {
-      setInvalidKey(broken.key);
-      setStep({ ...step, error: t(`priceList.${rowProblem(broken) as RowProblem}`, { row: index + 1 }) });
+    if (rows.some((row) => rowProblem(row) !== null)) {
+      setChecked(true);
+      setStep({ ...step, error: null });
       return;
     }
-    setInvalidKey(null);
     setStep({ ...step, error: null, saving: true });
     const result = await sendOwnerRequest(firebase, `/api/providers/${page.placeId}/price-lists/${step.priceListId}`, {
       rows: rows.map(toRow),
@@ -235,7 +236,7 @@ function Uploader({ page }: { page: PriceListPageData }) {
   function startOver() {
     setFiles([]);
     setRows([]);
-    setInvalidKey(null);
+    setChecked(false);
     setStep({ phase: "pick", error: null });
   }
 
@@ -276,14 +277,20 @@ function Uploader({ page }: { page: PriceListPageData }) {
                   <RowEditor
                     row={row}
                     number={index + 1}
-                    invalid={row.key === invalidKey}
+                    problem={row.key === broken?.key ? brokenProblem : null}
                     onChange={(next) => setRows((all) => all.map((r) => (r.key === row.key ? next : r)))}
                     onDelete={() => setRows((all) => all.filter((r) => r.key !== row.key))}
                   />
                 </li>
               ))}
             </ol>
-            {step.error && <FieldError role="alert">{step.error}</FieldError>}
+            {step.error ? (
+              <FieldError role="alert">{step.error}</FieldError>
+            ) : (
+              brokenProblem && (
+                <FieldError role="alert">{t(`priceList.${brokenProblem}`, { row: brokenIndex + 1 })}</FieldError>
+              )
+            )}
             <Button
               type="button"
               variant="outline"
@@ -347,7 +354,7 @@ function Uploader({ page }: { page: PriceListPageData }) {
               disabled={reading}
               onChange={(event) => setFiles(Array.from(event.currentTarget.files ?? []))}
               aria-describedby={`${inputId}-hint`}
-              className={`${fileInputClassName} rounded-md bg-muted p-3`}
+              className={cn(fileInputClassName, "rounded-md bg-muted p-3")}
             />
             <p id={`${inputId}-hint`} className="text-sm text-muted-foreground">
               {t("priceList.privacy")}
@@ -384,7 +391,7 @@ function Progress({ current }: { current: 1 | 2 | 3 }) {
             <Badge
               variant={done ? "success" : here ? "brand" : "neutral"}
               icon={done ? Check : here ? CircleDot : Circle}
-              className={`px-3 py-1.5 text-sm leading-5 ${here ? "border-primary" : ""}`}
+              className={cn("px-3 py-1.5 text-sm leading-5", here && "border-primary")}
             >
               {number}. {name}
               {done && <span className="sr-only"> ({t("priceList.steps.done")})</span>}
@@ -440,13 +447,14 @@ const labelClass = "flex flex-col gap-1.5 text-sm leading-5 font-semibold";
 function RowEditor({
   row,
   number,
-  invalid,
+  problem,
   onChange,
   onDelete,
 }: {
   row: DraftRow;
   number: number;
-  invalid: boolean;
+  /** The problem to mark, on the first row the owner still has to fix. */
+  problem: RowProblem | null;
   onChange: (row: DraftRow) => void;
   onDelete: () => void;
 }) {
@@ -455,13 +463,17 @@ function RowEditor({
   const id = useId();
   const low = row.confidence !== undefined && row.confidence < LOW_CONFIDENCE;
   const set = (patch: Partial<DraftRow>) => onChange({ ...row, ...patch });
-  const price = (value: string) => (value ? formatRupiahAmount(Number(value), language) : "");
-  const invalidField = invalid ? true : undefined;
+  const textInvalid = problem === "rowMissing" && !row.procedureText.trim();
+  const minInvalid = (problem === "rowMissing" && !row.minRupiah) || problem === "rowRange";
+  const maxInvalid = problem === "rowRange" || problem === "rowTooHigh";
   return (
     <fieldset
-      className={`flex flex-col gap-3 rounded-lg border bg-card p-4 ${low ? "border-warning-line bg-warning-soft" : ""} ${invalid ? "border-2 border-destructive" : ""}`}
+      className={cn(
+        "flex flex-col gap-3 rounded-lg border bg-card p-4",
+        low && "border-warning-line bg-warning-soft",
+        problem && "border-2 border-destructive",
+      )}
       data-low-confidence={low || undefined}
-      aria-invalid={invalidField}
     >
       <legend className="sr-only">
         {number}. {row.procedureText || t("priceList.procedureText")}
@@ -476,18 +488,18 @@ function RowEditor({
           {t("priceList.procedureText")}
           <input
             id={`${id}-text`}
-            className={`${fieldClassName} font-normal`}
+            className={cn(fieldClassName, "font-normal")}
             value={row.procedureText}
             maxLength={PRICE_LIST_LIMITS.procedureTextMax}
             onChange={(e) => set({ procedureText: e.currentTarget.value })}
-            aria-invalid={invalidField}
+            aria-invalid={textInvalid || undefined}
           />
         </label>
         <label className={labelClass} htmlFor={`${id}-code`}>
           {t("priceList.procedureCode")}
           <select
             id={`${id}-code`}
-            className={`${fieldClassName} font-normal`}
+            className={cn(fieldClassName, "font-normal")}
             value={row.procedureCode}
             onChange={(e) => set({ procedureCode: e.currentTarget.value as ProcedureCode | "" })}
           >
@@ -503,31 +515,27 @@ function RowEditor({
       <div className="grid grid-cols-2 gap-3 desktop:grid-cols-3">
         <label className={labelClass} htmlFor={`${id}-min`}>
           {t("priceList.minRupiah")}
-          <input
+          <PriceInput
             id={`${id}-min`}
-            className={`${fieldClassName} font-normal tabular-nums`}
-            inputMode="numeric"
-            value={price(row.minRupiah)}
-            onChange={(e) => set({ minRupiah: digits(e.currentTarget.value) })}
-            aria-invalid={invalidField}
+            digits={row.minRupiah}
+            onChange={(value) => set({ minRupiah: value })}
+            invalid={minInvalid}
           />
         </label>
         <label className={labelClass} htmlFor={`${id}-max`}>
           {t("priceList.maxRupiah")}
-          <input
+          <PriceInput
             id={`${id}-max`}
-            className={`${fieldClassName} font-normal tabular-nums`}
-            inputMode="numeric"
-            value={price(row.maxRupiah)}
-            onChange={(e) => set({ maxRupiah: digits(e.currentTarget.value) })}
-            aria-invalid={invalidField}
+            digits={row.maxRupiah}
+            onChange={(value) => set({ maxRupiah: value })}
+            invalid={maxInvalid}
           />
         </label>
-        <label className={`${labelClass} col-span-2 desktop:col-span-1`} htmlFor={`${id}-unit`}>
+        <label className={cn(labelClass, "col-span-2 desktop:col-span-1")} htmlFor={`${id}-unit`}>
           {t("priceList.unit")}
           <select
             id={`${id}-unit`}
-            className={`${fieldClassName} font-normal`}
+            className={cn(fieldClassName, "font-normal")}
             value={row.unit}
             onChange={(e) => set({ unit: e.currentTarget.value as PriceListRow["unit"] })}
           >
@@ -561,5 +569,37 @@ function RowEditor({
         {t("priceList.deleteRow")}
       </Button>
     </fieldset>
+  );
+}
+
+/**
+ * A rupiah amount: grouped the language's way ("450.000", "450,000") while it is read,
+ * plain digits while it is edited, so the caret and Backspace act on the digits.
+ */
+function PriceInput({
+  id,
+  digits: value,
+  onChange,
+  invalid,
+}: {
+  id: string;
+  digits: string;
+  onChange(digits: string): void;
+  invalid: boolean;
+}) {
+  const { i18n } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const shown = editing || !value ? value : formatRupiahAmount(Number(value), i18n.language as Language);
+  return (
+    <input
+      id={id}
+      className={cn(fieldClassName, "font-normal tabular-nums")}
+      inputMode="numeric"
+      value={shown}
+      onFocus={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+      onChange={(e) => onChange(digits(e.currentTarget.value))}
+      aria-invalid={invalid || undefined}
+    />
   );
 }

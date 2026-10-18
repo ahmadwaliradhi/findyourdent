@@ -30,6 +30,7 @@ import { formatVisitMonth } from "~/lib/format";
 import { sendOwnerRequest as send } from "~/lib/owner-request";
 import { providerPath } from "~/lib/paths";
 import { SITE_NAME } from "~/lib/seo";
+import { cn } from "~/lib/utils";
 import { type ClaimPageData, loadClaimPage, type OwnerTestimony } from "~/server/claims.server";
 import { isPlaceId } from "~/server/provider.server";
 import type { Route } from "./+types/tempat.$placeId.klaim";
@@ -216,7 +217,7 @@ function TextField(props: {
         disabled={props.disabled}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
-        className={`${fieldClassName} ${props.type === "tel" ? "tabular-nums" : ""}`}
+        className={cn(fieldClassName, props.type === "tel" && "tabular-nums")}
         aria-describedby={props.hint ? `${id}-hint` : undefined}
       />
       {props.hint && (
@@ -343,7 +344,7 @@ function ClaimForm({ placeId, listed }: { placeId: string; listed: boolean }) {
           disabled={sending}
           onChange={(event) => setPermit(event.target.files?.[0] ?? null)}
           aria-describedby={`${id}-permit-hint`}
-          className={`${fileInputClassName} rounded-md bg-muted p-3`}
+          className={cn(fileInputClassName, "rounded-md bg-muted p-3")}
         />
         <p id={`${id}-permit-hint`} className="text-sm text-muted-foreground">
           {t("claim.permitHint")}
