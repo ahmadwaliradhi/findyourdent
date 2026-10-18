@@ -26,7 +26,7 @@ import { formatRupiah, formatVisitMonth } from "~/lib/format";
 import { providerPath } from "~/lib/paths";
 import { procedureLabel } from "~/lib/procedures";
 import { regionLabel } from "~/lib/regions";
-import { testimonyStatusTone } from "~/lib/testimony-status";
+import { testimonyStatusBadge } from "~/lib/testimony-status";
 import { loadAdminQueue } from "~/server/admin-queue.server";
 import type { Route } from "./+types/admin";
 
@@ -144,7 +144,7 @@ function QueueCard({ item }: { item: QueueItem }) {
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {item.testimony && (
-            <Badge variant={testimonyStatusTone(item.testimony.status)}>
+            <Badge {...testimonyStatusBadge(item.testimony.status)}>
               {t(`admin.queue.status.${item.testimony.status}`)}
             </Badge>
           )}

@@ -691,12 +691,16 @@
       "submitted": "Sedang diperiksa",
       "published": "Tayang",
       "needsAuthorFix": "Perlu Anda perbaiki",
-      "held": "Sedang ditinjau tim (biasanya dalam 24 jam)",
+      "held": "Sedang ditinjau tim",
       "rejected": "Tidak ditayangkan",
-      "hidden": "Disembunyikan sementara karena laporan, sedang ditinjau tim",
+      "hidden": "Disembunyikan karena laporan",
       "removed": "Diturunkan oleh tim"
     },
-    "reason": "Alasan: {{reason}}",
+    "statusHint": {
+      "held": "Biasanya dalam 24 jam. Anda akan melihat statusnya berubah di sini.",
+      "hidden": "Tim sedang meninjau laporan, biasanya dalam 24 jam. Anda akan melihat statusnya berubah di sini."
+    },
+    "reasonTitle": "Alasan",
     "pendingRevision": {
       "submitted": "Perubahan Anda sedang diperiksa. Versi sebelumnya tetap tayang.",
       "needsAuthorFix": "Perubahan Anda perlu diperbaiki. Versi sebelumnya tetap tayang.",
@@ -705,6 +709,7 @@
     "reply": "Balasan dari tempat praktik",
     "view": "Lihat di halaman tempat",
     "edit": "Ubah",
+    "fix": "Perbaiki Testimoni",
     "delete": "Hapus",
     "confirmTitle": "Hapus Testimoni ini?",
     "confirmBody": "Teks dan foto akan dihapus permanen dan tidak bisa dikembalikan.",
@@ -712,7 +717,13 @@
     "cancel": "Batal",
     "deleting": "Menghapus…",
     "deleteFailed": "Testimoni belum terhapus. Silakan coba lagi.",
-    "deleted": "Testimoni sudah dihapus."
+    "deleted": "Testimoni sudah dihapus.",
+    "legend": {
+      "title": "Arti status",
+      "published": "Tampil di halaman tempat dan di beranda.",
+      "needsAuthorFix": "Ubah bagian yang ditandai, lalu kirim lagi.",
+      "held": "Tim FindYourDent memutuskan, biasanya dalam 24 jam."
+    }
   },
   "reportApi": {
     "errors": {
