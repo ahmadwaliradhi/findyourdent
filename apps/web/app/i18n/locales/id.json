@@ -265,13 +265,6 @@
   },
   "filters": {
     "title": "Saring",
-    "province": "Provinsi",
-    "allProvinces": "Semua provinsi",
-    "regency": "Kota/kabupaten",
-    "allRegencies": "Semua kota/kabupaten",
-    "chooseProvinceFirst": "Pilih provinsi dulu",
-    "district": "Kode kecamatan",
-    "districtHint": "Opsional, kode Kemendagri, contoh 31.71.01.",
     "procedure": "Tindakan",
     "allProcedures": "Semua tindakan",
     "providerType": "Jenis tempat",
@@ -284,6 +277,15 @@
     "verifiedOnly": "Hanya Kunjungan terbukti",
     "apply": "Terapkan",
     "reset": "Hapus saringan"
+  },
+  "regionFields": {
+    "province": "Provinsi",
+    "regency": "Kota/kabupaten",
+    "allProvinces": "Semua provinsi",
+    "allRegencies": "Semua kota/kabupaten",
+    "chooseProvince": "Pilih provinsi",
+    "chooseRegency": "Pilih kota/kabupaten",
+    "chooseProvinceFirst": "Pilih provinsi dulu"
   },
   "directory": {
     "metaTitle": "Direktori dokter gigi dan klinik gigi | FindYourDent",
@@ -566,11 +568,6 @@
     "listingFailed": "Tempat belum bisa diperiksa. Coba pilih lagi.",
     "nameLabel": "Nama tempat sesuai papan nama atau yang kamu kenal",
     "nameHint": "Tulis sendiri namanya. Nama ini akan tampil di FindYourDent.",
-    "provinceLabel": "Provinsi",
-    "provincePlaceholder": "Pilih provinsi",
-    "regencyLabel": "Kota/Kabupaten",
-    "regencyPlaceholder": "Pilih kota/kabupaten",
-    "regencyNeedsProvince": "Pilih provinsi dulu",
     "listedNote": "Tempat ini sudah terdaftar di FindYourDent.",
     "storedName": "Nama tempat",
     "storedRegion": "Wilayah",
@@ -763,7 +760,6 @@
     "submit": "Kirim klaim",
     "sending": "Mengirim…",
     "failed": "Gagal mengirim. Periksa koneksi lalu coba lagi.",
-    "choose": "Pilih",
     "status": {
       "submitted": "Klaim Anda sedang diperiksa. Tim FindYourDent memeriksa dokumen dan menelepon nomor di Google Maps dalam {{days}} hari kerja. Hasilnya muncul di halaman ini.",
       "rejected": "Klaim sebelumnya ditolak: {{reason}}. Anda bisa mengirim klaim baru dengan dokumen yang sesuai.",
@@ -778,8 +774,6 @@
       "name": "Nama tempat praktik",
       "providerType": "Jenis",
       "region": "Wilayah",
-      "province": "Provinsi",
-      "regency": "Kota atau kabupaten",
       "address": "Alamat",
       "phone": "Telepon",
       "whatsapp": "WhatsApp",

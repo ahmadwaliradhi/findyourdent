@@ -6,13 +6,13 @@
 import type { RegionRef } from "@findyourdent/contracts/firestore";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { fieldClassName } from "~/components/listing-filters-form";
+import { RegionFields } from "~/components/region-fields";
 import { Button } from "~/components/ui/button";
-import { FieldError as ErrorLine } from "~/components/ui/field";
+import { FieldError as ErrorLine, fieldClassName } from "~/components/ui/field";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken, signInWithGoogle } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { PROVINCES, regenciesOf, regionLabel } from "~/lib/regions";
+import { regionLabel } from "~/lib/regions";
 import {
   AUTOCOMPLETE_DEBOUNCE_MS,
   AUTOCOMPLETE_MIN_CHARS,
@@ -139,8 +139,8 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
             </p>
             <FieldError id={`${id}-name-error`} message={errors.providerName} />
           </div>
-          <RegionSelects
-            idPrefix={`${id}-region`}
+          <RegionFields
+            mode="pick"
             value={value.region}
             onChange={(region) => onChange({ ...latest.current, region })}
             errors={{ province: errors["region.provinceCode"], regency: errors["region.regencyCode"] }}
@@ -352,74 +352,6 @@ function PlacePicker(props: { onPick(placeId: string): void; error?: string; dis
   );
 }
 
-/** Province then Kota/Kabupaten, from the Kemendagri list. No kecamatan select yet. */
-function RegionSelects(props: {
-  idPrefix: string;
-  value: RegionValue;
-  onChange(region: RegionValue): void;
-  errors?: { province?: string; regency?: string };
-  required?: boolean;
-}) {
-  const { t } = useTranslation();
-  const { idPrefix, value, errors = {} } = props;
-  const regencies = value.provinceCode ? regenciesOf(value.provinceCode) : [];
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${idPrefix}-province`} className="text-sm font-medium">
-          {t("providerFields.provinceLabel")}
-        </label>
-        <select
-          id={`${idPrefix}-province`}
-          required={props.required}
-          value={value.provinceCode}
-          // A new province drops the kota, which belonged to the old one.
-          onChange={(event) => props.onChange({ provinceCode: event.currentTarget.value, regencyCode: "" })}
-          aria-invalid={errors.province ? true : undefined}
-          aria-describedby={errors.province ? `${idPrefix}-province-error` : undefined}
-          className={fieldClassName}
-        >
-          <option value="">{t("providerFields.provincePlaceholder")}</option>
-          {PROVINCES.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <FieldError id={`${idPrefix}-province-error`} message={errors.province} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${idPrefix}-regency`} className="text-sm font-medium">
-          {t("providerFields.regencyLabel")}
-        </label>
-        <select
-          id={`${idPrefix}-regency`}
-          required={props.required}
-          disabled={!value.provinceCode}
-          value={value.regencyCode}
-          onChange={(event) =>
-            props.onChange({ provinceCode: value.provinceCode, regencyCode: event.currentTarget.value })
-          }
-          aria-invalid={errors.regency ? true : undefined}
-          aria-describedby={errors.regency ? `${idPrefix}-regency-error` : undefined}
-          className={fieldClassName}
-        >
-          <option value="">
-            {value.provinceCode ? t("providerFields.regencyPlaceholder") : t("providerFields.regencyNeedsProvince")}
-          </option>
-          {regencies.map((r) => (
-            <option key={r.code} value={r.code}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-        <FieldError id={`${idPrefix}-regency-error`} message={errors.regency} />
-      </div>
-    </div>
-  );
-}
-
 /** The stored name and Region, read-only, with "Sarankan koreksi". */
 function ListedProvider(props: { placeId: string; listed: { name: string; region: RegionRef } }) {
   const { t } = useTranslation();
@@ -547,7 +479,7 @@ function CorrectionForm(props: { placeId: string; onClose(): void }) {
       </div>
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-sm font-medium">{t("providerFields.correction.regionLabel")}</legend>
-        <RegionSelects idPrefix={`${id}-region`} value={region} onChange={setRegion} />
+        <RegionFields mode="pick" value={region} onChange={setRegion} />
       </fieldset>
       {errorMessage ? <ErrorLine role="alert">{errorMessage}</ErrorLine> : null}
       <div className="flex flex-wrap gap-2">

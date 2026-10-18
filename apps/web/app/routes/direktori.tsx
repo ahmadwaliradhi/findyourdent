@@ -2,9 +2,10 @@ import { OctagonAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { fieldClassName, ListingFiltersForm } from "~/components/listing-filters-form";
+import { ListingFiltersForm } from "~/components/listing-filters-form";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { fieldClassName } from "~/components/ui/field";
 import { getI18n, isLanguage, type Language } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
 import {

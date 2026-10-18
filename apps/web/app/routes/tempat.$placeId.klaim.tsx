@@ -3,12 +3,12 @@ import type { ProviderType, RegionRef } from "@findyourdent/contracts/firestore"
 import { type FormEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link, useRevalidator } from "react-router";
-import { fieldClassName } from "~/components/listing-filters-form";
+import { RegionFields } from "~/components/region-fields";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { ErrorNotice } from "~/components/ui/error-notice";
-import { FieldError } from "~/components/ui/field";
+import { FieldError, fieldClassName } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import {
@@ -26,7 +26,6 @@ import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
 import { sendOwnerRequest as send } from "~/lib/owner-request";
 import { providerPath } from "~/lib/paths";
-import { PROVINCES, regenciesOf } from "~/lib/regions";
 import { SITE_NAME } from "~/lib/seo";
 import { type ClaimPageData, loadClaimPage, type OwnerTestimony } from "~/server/claims.server";
 import { isPlaceId } from "~/server/provider.server";
@@ -119,57 +118,6 @@ function Explainer() {
         <li>{t("claim.steps.check", { days: CLAIM_CHECK_WORKING_DAYS })}</li>
       </ol>
       <p className="text-muted-foreground">{t("claim.ethics")}</p>
-    </div>
-  );
-}
-
-function RegionFields(props: { value: RegionRef; onChange(value: RegionRef): void; disabled?: boolean }) {
-  const { t } = useTranslation();
-  const id = useId();
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="flex flex-col gap-1">
-        <label htmlFor={`${id}-province`} className="text-sm font-medium">
-          {t("claim.facts.province")}
-        </label>
-        <select
-          id={`${id}-province`}
-          required
-          className={fieldClassName}
-          disabled={props.disabled}
-          value={props.value.provinceCode}
-          onChange={(event) => props.onChange({ provinceCode: event.target.value, regencyCode: "" })}
-        >
-          <option value="">{t("claim.choose")}</option>
-          {PROVINCES.map((province) => (
-            <option key={province.code} value={province.code}>
-              {province.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor={`${id}-regency`} className="text-sm font-medium">
-          {t("claim.facts.regency")}
-        </label>
-        <select
-          id={`${id}-regency`}
-          required
-          className={fieldClassName}
-          disabled={props.disabled || !props.value.provinceCode}
-          value={props.value.regencyCode}
-          onChange={(event) =>
-            props.onChange({ provinceCode: props.value.provinceCode, regencyCode: event.target.value })
-          }
-        >
-          <option value="">{t("claim.choose")}</option>
-          {regenciesOf(props.value.provinceCode).map((regency) => (
-            <option key={regency.code} value={regency.code}>
-              {regency.name}
-            </option>
-          ))}
-        </select>
-      </div>
     </div>
   );
 }
@@ -302,7 +250,7 @@ function ClaimForm({ placeId, listed }: { placeId: string; listed: boolean }) {
             onChange={setProviderName}
             disabled={sending}
           />
-          <RegionFields value={region} onChange={setRegion} disabled={sending} />
+          <RegionFields mode="pick" required value={region} onChange={setRegion} disabled={sending} />
         </>
       )}
       <div className="flex flex-col gap-1">
@@ -439,7 +387,7 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
             ))}
           </select>
         </div>
-        <RegionFields value={facts.region} onChange={set("region")} disabled={sending} />
+        <RegionFields mode="pick" required value={facts.region} onChange={set("region")} disabled={sending} />
         <TextField
           label={t("claim.facts.address")}
           maxLength={OWNER_LIMITS.addressMax}
