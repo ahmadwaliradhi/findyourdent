@@ -37,7 +37,14 @@
     "voiceHint": "Press the button, then describe your problem. Up to 1 minute.",
     "voiceRecording": "Recording. Press Stop and send when you are done, up to 1 minute.",
     "voiceDenied": "Microphone access is blocked. Allow the microphone in your browser settings, or type your complaint.",
-    "voiceFailed": "Recording did not work. Try again, or type your complaint."
+    "voiceFailed": "Recording did not work. Try again, or type your complaint.",
+    "badge": "For Patients across Indonesia",
+    "benefits": {
+      "label": "What you get",
+      "urgency": "<b>How urgent it is</b>, from Routine to Emergency, with a clear next step.",
+      "cost": "<b>Cost estimates and BPJS coverage</b> from official sources, not guesses.",
+      "nearby": "<b>Dentists near you</b> that fit, with Patients' Testimonies."
+    }
   },
   "errors": {
     "title": "Sorry, something went wrong",
@@ -91,6 +98,16 @@
     "languageNote": {
       "id": "This Guidance is in Bahasa Indonesia, the language of your complaint. Write your complaint in English to get Guidance in English.",
       "en": "This Guidance is in English, the language of your complaint. Write your complaint in Bahasa Indonesia to get Guidance in Bahasa Indonesia."
+    },
+    "summary": {
+      "title": "Summary",
+      "likely": "Likely",
+      "visits": "Visits",
+      "visitsCount": "{{count}}",
+      "cost": "Cost",
+      "bpjs": "BPJS",
+      "toShortlist": "See dentists near you",
+      "emergencyReminder": "If your face swells, you get a fever or it becomes hard to swallow, go to the emergency department."
     }
   },
   "estimate": "estimasi (estimate)",
@@ -269,7 +286,10 @@
       "price": "Price paid",
       "byline": "by {{name}}",
       "readMore": "Read the full Testimony"
-    }
+    },
+    "seeDirectory": "See the directory",
+    "writeTitle": "Been to a dentist?",
+    "writeBody": "Share your experience so other patients can choose with confidence."
   },
   "filters": {
     "title": "Filter",
@@ -278,7 +298,7 @@
     "providerType": "Provider type",
     "allProviderTypes": "All types",
     "providerTypes": {
-      "klinik": "Clinic",
+      "klinik": "Dental clinic",
       "privateDentist": "Private dentist",
       "hospital": "Hospital"
     },
@@ -435,7 +455,7 @@
     "mapsSearch": "Search in Google Maps",
     "openInMaps": "Open in Google Maps",
     "type": {
-      "klinik": "Clinic",
+      "klinik": "Dental clinic",
       "privateDentist": "Private dentist",
       "hospital": "Hospital"
     },

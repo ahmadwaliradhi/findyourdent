@@ -224,7 +224,7 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
         )}
       </div>
       {provider.priceSignals.length > 0 && (
-        <ul className="flex flex-col gap-1 text-sm">
+        <ul className="flex flex-col gap-1 text-sm tabular-nums">
           {provider.priceSignals.map((signal) => (
             <li key={`${signal.procedureCode}-${signal.source}`}>
               <span className="font-medium">{procedureLabel(signal.procedureCode, language)}: </span>

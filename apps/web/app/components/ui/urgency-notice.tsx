@@ -11,17 +11,20 @@ const TIER: Record<UrgencyTier, { icon: LucideIcon; className: string }> = {
 
 /**
  * How urgent the Guidance is: icon, label and a one-line instruction, readable without color.
- * `darurat` is an alert. See docs/design/design-system/components/UrgencyNotice.
+ * `darurat` is an alert, unless it sits inside something that already is one (`alert={false}`).
+ * See docs/design/design-system/components/UrgencyNotice.
  */
 function UrgencyNotice({
   tier,
   label,
   description,
+  alert = tier === "darurat",
   className,
 }: {
   tier: UrgencyTier;
   label: React.ReactNode;
   description: React.ReactNode;
+  alert?: boolean;
   className?: string;
 }) {
   const { icon: Icon, className: tone } = TIER[tier];
@@ -29,7 +32,7 @@ function UrgencyNotice({
     <div
       data-slot="urgency-notice"
       data-tier={tier}
-      role={tier === "darurat" ? "alert" : undefined}
+      role={alert ? "alert" : undefined}
       className={cn("flex items-start gap-3 rounded-md border border-transparent px-4 py-3", tone, className)}
     >
       <Icon aria-hidden="true" strokeWidth={1.75} className="mt-px size-[22px] shrink-0" />

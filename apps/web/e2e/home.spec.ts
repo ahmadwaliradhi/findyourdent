@@ -35,3 +35,26 @@ test("a complaint gets a Guidance card, with the App Check token attached by the
 
   await expect(page.getByText("Panduan untuk keluhan Anda")).toBeVisible();
 });
+
+test("on desktop the Summary panel sits beside the Guidance and links to the Shortlist", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await page.getByLabel("Ceritakan keluhan gigi Anda").fill("Gigi geraham nyut-nyutan sejak tiga hari");
+  await page.getByRole("button", { name: "Lihat panduan" }).click();
+  await expect(page.getByText("Panduan untuk keluhan Anda")).toBeVisible();
+
+  const summary = page.getByRole("complementary", { name: "Ringkasan" });
+  if (testInfo.project.name !== "desktop") {
+    await expect(summary).toBeHidden();
+    return;
+  }
+
+  await expect(summary).toBeVisible();
+  // Urgency Tier as a word, never color alone.
+  await expect(summary.getByText("Segera", { exact: true })).toBeVisible();
+  // A link to the Shortlist section, so the page keeps one button with that name.
+  const toShortlist = summary.getByRole("link", { name: "Lihat dokter gigi terdekat" });
+  await expect(toShortlist).toHaveAttribute("href", "#shortlist");
+  await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toHaveCount(1);
+  await toShortlist.click();
+  await expect(page.getByRole("region", { name: "Dokter gigi terdekat untuk keluhan Anda" })).toBeInViewport();
+});

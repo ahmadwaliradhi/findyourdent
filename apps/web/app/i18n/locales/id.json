@@ -37,7 +37,14 @@
     "voiceHint": "Tekan tombol, lalu ceritakan keluhan Anda. Maksimal 1 menit.",
     "voiceRecording": "Sedang merekam. Tekan Berhenti dan kirim jika sudah selesai, maksimal 1 menit.",
     "voiceDenied": "Mikrofon tidak diizinkan. Izinkan mikrofon di pengaturan peramban, atau tulis keluhan Anda.",
-    "voiceFailed": "Perekaman tidak berhasil. Coba lagi, atau tulis keluhan Anda."
+    "voiceFailed": "Perekaman tidak berhasil. Coba lagi, atau tulis keluhan Anda.",
+    "badge": "Untuk Pasien di seluruh Indonesia",
+    "benefits": {
+      "label": "Yang Anda dapatkan",
+      "urgency": "<b>Seberapa mendesak</b>, dari Rutin sampai Darurat, dengan langkah yang jelas.",
+      "cost": "<b>Perkiraan biaya dan cakupan BPJS</b> dari sumber resmi, bukan tebakan.",
+      "nearby": "<b>Dokter gigi terdekat</b> yang cocok, beserta Testimoni pasien."
+    }
   },
   "errors": {
     "title": "Maaf, ada yang tidak beres",
@@ -91,6 +98,16 @@
     "languageNote": {
       "id": "Panduan ini dalam Bahasa Indonesia, sesuai bahasa keluhan Anda. Tulis keluhan dalam bahasa Inggris untuk panduan dalam bahasa Inggris.",
       "en": "Panduan ini dalam bahasa Inggris, sesuai bahasa keluhan Anda. Tulis keluhan dalam Bahasa Indonesia untuk panduan dalam Bahasa Indonesia."
+    },
+    "summary": {
+      "title": "Ringkasan",
+      "likely": "Kemungkinan",
+      "visits": "Kunjungan",
+      "visitsCount": "{{count}} kali",
+      "cost": "Biaya",
+      "bpjs": "BPJS",
+      "toShortlist": "Lihat dokter gigi terdekat",
+      "emergencyReminder": "Jika muncul bengkak di wajah, demam, atau sulit menelan, segera ke IGD."
     }
   },
   "estimate": "estimasi",
@@ -269,7 +286,10 @@
       "price": "Biaya dibayar",
       "byline": "oleh {{name}}",
       "readMore": "Baca Testimoni lengkap"
-    }
+    },
+    "seeDirectory": "Lihat direktori",
+    "writeTitle": "Pernah ke dokter gigi?",
+    "writeBody": "Ceritakan pengalamanmu supaya pasien lain bisa memilih dengan tenang."
   },
   "filters": {
     "title": "Saring",
@@ -278,7 +298,7 @@
     "providerType": "Jenis tempat",
     "allProviderTypes": "Semua jenis",
     "providerTypes": {
-      "klinik": "Klinik",
+      "klinik": "Klinik Gigi",
       "privateDentist": "Praktik mandiri dokter gigi",
       "hospital": "Rumah sakit"
     },
@@ -435,7 +455,7 @@
     "mapsSearch": "Cari di Google Maps",
     "openInMaps": "Buka di Google Maps",
     "type": {
-      "klinik": "Klinik",
+      "klinik": "Klinik Gigi",
       "privateDentist": "Dokter gigi praktik mandiri",
       "hospital": "Rumah sakit"
     },
