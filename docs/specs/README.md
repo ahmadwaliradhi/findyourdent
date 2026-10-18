@@ -15,6 +15,7 @@ Vocabulary follows [GLOSSARY.md](../../GLOSSARY.md). Decisions follow the ADRs i
 | 04 | [Landing feed, directory and impact counter](04-landing-feed-and-directory.md) | ready-for-agent | B | 00, 03 | never; extra filters can go |
 | 05 | [Claim and Price List](05-claim-and-price-list.md) | ready-for-agent | B, with A | 00, 02, 03 | first: Price List, then Claim |
 | 06 | [Post-deployment evaluation and first real Testimonies](06-post-deployment-evaluation.md) | ready-for-human | product owner | 01, 02, 03 | not in the submission build |
+| 07 | [Payment Method](07-payment-method.md) | needs-triage | B, with A | 03, 04, 05 | not in the submission build |
 
 Cut order under time pressure, first to last: Price List, Claim, Gemini Moderation (fall back to holding every Testimony for the admin), voice input. Guidance, Emergency Escalation, the Shortlist, Provider pages, posting Testimonies and the landing feed are never cut.
 
