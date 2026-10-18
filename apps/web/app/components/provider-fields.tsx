@@ -50,14 +50,11 @@ function FieldError(props: { id: string; message?: string }) {
 }
 
 /**
- * The Region an address suggests: province and kota/kabupaten now, and the kecamatan
- * through `onDistrict` once its kota's list has loaded (the list the Kecamatan select
- * loads anyway).
+ * Starts the Region pre-fill: returns the province and kota/kabupaten an address
+ * suggests, and passes its kecamatan to `onDistrict` once its kota's list has loaded
+ * (the list the Kecamatan select loads anyway).
  */
-function prefilledRegion(
-  address: string,
-  onDistrict: (regencyCode: string, districtCode: string) => void,
-): RegionValue {
+function prefillRegion(address: string, onDistrict: (regencyCode: string, districtCode: string) => void): RegionValue {
   const { provinceCode = "", regencyCode = "" } = matchRegion(address);
   if (regencyCode) {
     fetchDistricts(regencyCode).then(
@@ -109,7 +106,7 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
           listed: body.listed ? { name: body.name, region: body.region } : null,
           ...(!body.listed && address !== null
             ? {
-                region: prefilledRegion(address, (regencyCode, districtCode) => {
+                region: prefillRegion(address, (regencyCode, districtCode) => {
                   const now = latest.current;
                   // Only onto the Region pre-filled above, not one the Patient has changed since.
                   if (now.placeId !== placeId || now.listed) return;

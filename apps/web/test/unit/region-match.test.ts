@@ -46,6 +46,19 @@ describe("Region suggestion from a picked place's address", () => {
     });
   });
 
+  it("does not read the part naming the kabupaten as its kecamatan of the same name", () => {
+    const sleman = districtsOf("34.04") ?? [];
+    expect(matchRegion("Jl. Kaliurang, Sleman, Daerah Istimewa Yogyakarta", sleman)).toEqual({
+      provinceCode: "34",
+      regencyCode: "34.04",
+    });
+    expect(matchRegion("Jl. Kaliurang, Kec. Sleman, Kabupaten Sleman, Daerah Istimewa Yogyakarta", sleman)).toEqual({
+      provinceCode: "34",
+      regencyCode: "34.04",
+      districtCode: "34.04.13",
+    });
+  });
+
   it("leaves the kota and kecamatan empty when the kota name fits both a kota and a kabupaten", () => {
     expect(matchRegion("Jl. Ijen No. 5, Malang, Jawa Timur", SURABAYA)).toEqual({ provinceCode: "35" });
   });

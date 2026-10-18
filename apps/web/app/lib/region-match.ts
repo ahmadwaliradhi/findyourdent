@@ -2,19 +2,15 @@
 // picked place, read against the Kemendagri list, gives a Region suggestion for the
 // Testimony form. Pure and in the browser: no network call, and the text is never kept.
 import type { RegionRef } from "@findyourdent/contracts/firestore";
+import { normalizeName } from "~/lib/normalize-name";
 import { type DistrictOption, PROVINCES, regenciesOf } from "~/lib/regions";
 
 /** Each code is present only when exactly one name matched at its level, inside the level above. */
 export type RegionSuggestion = Partial<Pick<RegionRef, "provinceCode" | "regencyCode" | "districtCode">>;
 
-/** Lowercase words only: no accents, apostrophes, punctuation or postal codes. */
+/** As normalizeName, with apostrophes dropped ("Ki'e" is "kie") and postal codes left out. */
 function normalize(text: string): string {
-  return text
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/['’`]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
+  return normalizeName(text.replace(/['’`]/g, ""))
     .split(" ")
     .filter((word) => word && !/^\d+$/.test(word))
     .join(" ");
@@ -91,19 +87,24 @@ export function matchRegion(address: string, districts?: DistrictOption[]): Regi
 
   const regencies = regenciesOf(provinceCode).map((r) => ({ code: r.code, ...regencyParts(normalize(r.name)) }));
   const regencyMatches = new Set<string>();
+  const regencySegments = new Set<string>();
   for (const segment of segments) {
     const { type, base } = regencyParts(segment);
     for (const regency of regencies) {
-      if (regency.base === base && (!type || regency.type === type)) regencyMatches.add(regency.code);
+      if (regency.base === base && (!type || regency.type === type)) {
+        regencyMatches.add(regency.code);
+        regencySegments.add(segment);
+      }
     }
   }
   const regencyCode = onlyOne(regencyMatches);
   if (!regencyCode) return { provinceCode };
 
   // "Kec. Gubeng" names the kecamatan for sure; a bare "Gubeng" may be a kelurahan, so
-  // bare parts count only when no part says Kec./Kecamatan.
+  // bare parts count only when no part says Kec./Kecamatan. The part that named the
+  // kota/kabupaten never counts: "Sleman" is Kabupaten Sleman, not also Kecamatan Sleman.
   const marked = segments.flatMap((segment) => /^(?:kec|kecamatan) (.+)$/.exec(segment)?.[1] ?? []);
-  const candidates = new Set(marked.length > 0 ? marked : segments);
+  const candidates = new Set(marked.length > 0 ? marked : segments.filter((segment) => !regencySegments.has(segment)));
   const districtCode = onlyOne(
     new Set((districts ?? []).filter((d) => candidates.has(normalize(d.name))).map((d) => d.code)),
   );
