@@ -2,16 +2,19 @@
 // picker, then the typed name and Region (not yet Listed) or the stored name and
 // Region read-only with "Sarankan koreksi" (Listed). Google's words appear only in
 // the live suggestion list: the value, which goes into the browser draft, keeps the
-// placeId and what the Patient typed, never Google's name.
+// placeId and what the Patient typed, never Google's name. For a place that is not
+// Listed, the Region is pre-filled from the address the suggestion showed (spec 08);
+// that address stays in memory and is dropped once read.
 import type { RegionRef } from "@findyourdent/contracts/firestore";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RegionFields } from "~/components/region-fields";
+import { fetchDistricts, RegionFields } from "~/components/region-fields";
 import { Button } from "~/components/ui/button";
 import { FieldError as ErrorLine, fieldClassName } from "~/components/ui/field";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken, signInWithGoogle } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
+import { matchRegion } from "~/lib/region-match";
 import { regionLabel } from "~/lib/regions";
 import {
   AUTOCOMPLETE_DEBOUNCE_MS,
@@ -47,6 +50,29 @@ function FieldError(props: { id: string; message?: string }) {
 }
 
 /**
+ * The Region an address suggests: province and kota/kabupaten now, and the kecamatan
+ * through `onDistrict` once its kota's list has loaded (the list the Kecamatan select
+ * loads anyway).
+ */
+function prefilledRegion(
+  address: string,
+  onDistrict: (regencyCode: string, districtCode: string) => void,
+): RegionValue {
+  const { provinceCode = "", regencyCode = "" } = matchRegion(address);
+  if (regencyCode) {
+    fetchDistricts(regencyCode).then(
+      (districts) => {
+        const { districtCode } = matchRegion(address, districts);
+        if (districtCode) onDistrict(regencyCode, districtCode);
+      },
+      // The Kecamatan is optional: without its list it stays for the Patient to choose.
+      () => {},
+    );
+  }
+  return { provinceCode, regencyCode };
+}
+
+/**
  * Provider picker (Places Autocomplete through /api/places/autocomplete), then either
  * the typed-name field and Region selects (not Listed) or the stored name and Region
  * read-only with "Sarankan koreksi" (Listed).
@@ -60,6 +86,9 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
   const emit = useRef(onChange);
   emit.current = onChange;
   const [listing, setListing] = useState<"checking" | "checked" | "failed">("checked");
+  // The address shown with the picked suggestion, kept until the listing check says
+  // whether to pre-fill the Region from it. Never in `value`, so never in the draft.
+  const pickedAddress = useRef<{ placeId: string; text: string } | null>(null);
 
   // Whether the picked place is Listed: asked on every pick and again for a restored
   // draft, since the place may have become Listed since. A free Firestore read.
@@ -73,9 +102,22 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
         if (!response.ok) throw new Error(`listing ${response.status}`);
         const body = (await response.json()) as ProviderListingResponse;
         if (latest.current.placeId !== placeId) return;
+        const address = pickedAddress.current?.placeId === placeId ? pickedAddress.current.text : null;
+        pickedAddress.current = null;
         emit.current({
           ...latest.current,
           listed: body.listed ? { name: body.name, region: body.region } : null,
+          ...(!body.listed && address !== null
+            ? {
+                region: prefilledRegion(address, (regencyCode, districtCode) => {
+                  const now = latest.current;
+                  // Only onto the Region pre-filled above, not one the Patient has changed since.
+                  if (now.placeId !== placeId || now.listed) return;
+                  if (now.region.regencyCode !== regencyCode || now.region.districtCode) return;
+                  emit.current({ ...now, region: { ...now.region, districtCode } });
+                }),
+              }
+            : {}),
         });
         setListing("checked");
       })
@@ -90,7 +132,10 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
       <PlacePicker
         error={errors.placeId}
         disabled={disabled}
-        onPick={(picked) => onChange({ ...latest.current, placeId: picked, listed: null, providerName: "" })}
+        onPick={(picked, address) => {
+          pickedAddress.current = address ? { placeId: picked, text: address } : null;
+          onChange({ ...latest.current, placeId: picked, listed: null, providerName: "" });
+        }}
       />
     );
   }
@@ -158,7 +203,7 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
 }
 
 /** Combobox over /api/places/autocomplete: a 300 ms pause and 3 characters before any request. */
-function PlacePicker(props: { onPick(placeId: string): void; error?: string; disabled?: boolean }) {
+function PlacePicker(props: { onPick(placeId: string, address?: string): void; error?: string; disabled?: boolean }) {
   const { t } = useTranslation();
   const firebase = useFirebaseConfig();
   const id = useId();
@@ -214,12 +259,13 @@ function PlacePicker(props: { onPick(placeId: string): void; error?: string; dis
   }, [query, coords, firebase]);
 
   function pick(suggestion: Suggestion) {
-    // Google's name is not kept: the input clears and only the placeId goes up.
+    // Google's name is not kept: the input clears and only the placeId goes up, with
+    // the address for the Region pre-fill to read in memory.
     sessionToken.current = null;
     setText("");
     setSuggestions([]);
     setOpen(false);
-    props.onPick(suggestion.placeId);
+    props.onPick(suggestion.placeId, suggestion.secondaryText);
   }
 
   // Only when the Patient taps: never asked for automatically.

@@ -379,7 +379,7 @@ const SAMPLE_PLACES: PlaceSummary[] = [
   {
     placeId: "sample-drg-ani",
     displayName: "drg. Ani Contoh",
-    formattedAddress: "Jl. Contoh No. 2, Surabaya",
+    formattedAddress: "Jl. Contoh No. 2, Darmo, Kec. Wonokromo, Kota Surabaya, Jawa Timur 60241",
     location: { lat: -7.2856, lng: 112.7509 },
     types: ["dentist", "health"],
     googleMapsUri: "https://www.google.com/maps/search/?api=1&query=drg&query_place_id=sample-drg-ani",

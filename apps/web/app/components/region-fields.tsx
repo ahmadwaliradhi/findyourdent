@@ -31,10 +31,11 @@ export interface RegionFieldsProps {
   stacked?: boolean;
 }
 
-// The kecamatan lists fetched in this page view, shared by every Region fields on it.
+// The kecamatan lists fetched in this page view, shared by every Region fields on it
+// and by the Testimony form's Region pre-fill.
 const districtRequests = new Map<string, Promise<DistrictOption[]>>();
 
-function fetchDistricts(regencyCode: string): Promise<DistrictOption[]> {
+export function fetchDistricts(regencyCode: string): Promise<DistrictOption[]> {
   let request = districtRequests.get(regencyCode);
   if (!request) {
     request = fetch(`/api/regions/${encodeURIComponent(regencyCode)}/districts`)
