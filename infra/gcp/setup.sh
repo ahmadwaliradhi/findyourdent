@@ -247,6 +247,17 @@ for role in roles/datastore.user roles/logging.logWriter roles/monitoring.metric
   grant "$WEB_SA" "$role"
   grant "$AGENT_SA" "$role"
 done
+# Google sign-in: createSessionCookie needs users.createSession, and
+# verifySessionCookie with the revocation check needs users.get. Without them
+# POST /auth/session fails with INSUFFICIENT_PERMISSION.
+if gcloud iam roles describe fydWebSession --project "$PROJECT_ID" >/dev/null 2>&1; then
+  skip "role fydWebSession"
+else
+  gcloud iam roles create fydWebSession --project "$PROJECT_ID" \
+    --title="FindYourDent web session" \
+    --permissions=firebaseauth.users.createSession,firebaseauth.users.get --quiet >/dev/null
+fi
+grant "$WEB_SA" "projects/${PROJECT_ID}/roles/fydWebSession"
 grant "$AGENT_SA" roles/aiplatform.user
 grant "$AGENT_SA" roles/discoveryengine.user
 gcloud storage buckets add-iam-policy-binding "gs://${BUCKET}" \
