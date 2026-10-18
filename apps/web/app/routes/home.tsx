@@ -227,7 +227,10 @@ export default function Home({ actionData: routeActionData, loaderData }: Route.
           </div>
 
           {/* The complaint box and the consent line lead the page on a phone too. */}
-          <div className="flex flex-col gap-4 rounded-lg border bg-card p-5 shadow-md desktop:p-6">
+          <div
+            className="flex flex-col gap-4 rounded-lg border bg-card p-5 shadow-md desktop:p-6"
+            data-testid="complaint-panel"
+          >
             <p role="note" className="flex items-start gap-2.5 rounded-md bg-muted px-4 py-3" data-testid="consent">
               <Info aria-hidden="true" strokeWidth={1.75} className="mt-1 size-4 shrink-0 text-muted-foreground" />
               <span>{t("home.consent")}</span>

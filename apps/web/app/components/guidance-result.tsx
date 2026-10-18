@@ -210,20 +210,9 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
     title.focus({ preventScroll: true });
   }, []);
   return (
-    <Card
-      data-kind="followUp"
-      labelledBy="follow-up-title"
-      className="relative gap-5 overflow-hidden border-2 border-primary p-6 pt-7 shadow-md duration-500 animate-in fade-in slide-in-from-bottom-4 motion-reduce:animate-none desktop:p-8 desktop:pt-9"
-    >
-      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-primary" />
+    <Card variant="attention" data-kind="followUp" labelledBy="follow-up-title" className="gap-5 p-6 desktop:p-8">
       <CardHeader className="gap-3">
-        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
-          <span aria-hidden="true" className="relative flex size-2.5">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60 motion-reduce:hidden" />
-            <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
-          </span>
-          {t("card.followUp.badge")}
-        </span>
+        <Badge variant="brand">{t("card.followUp.badge")}</Badge>
         <div className="flex items-start gap-3">
           <MessageCircleQuestion
             aria-hidden="true"
@@ -241,14 +230,14 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
           </div>
         </div>
       </CardHeader>
-      {/* On desktop the quick replies lead as large tiles; writing an answer is the fallback below them. */}
+      {/* On desktop the quick replies lead as wide tiles; writing an answer is the fallback below them. */}
       <CardContent className="flex flex-col gap-5 border-t pt-5 desktop:gap-6">
         {/* Sent back with the answer so the agent knows what "Ya" or "Tidak" replies to. */}
         <input type="hidden" name="followUpQuestion" value={response.question} />
         {hasQuickReplies && (
           <fieldset className="flex flex-wrap gap-2 desktop:grid desktop:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] desktop:gap-3">
             <legend className="mb-2 text-sm font-semibold desktop:mb-3 desktop:text-base">
-              {t("home.quickRepliesLabel")}
+              {t("card.followUp.quickRepliesLabel")}
             </legend>
             {response.quickReplies?.map((reply) => (
               <Button
@@ -257,8 +246,8 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
                 name="followUpAnswer"
                 value={reply}
                 variant="secondary"
+                size="lg"
                 disabled={pending}
-                className="desktop:min-h-16 desktop:border-2 desktop:border-primary/30 desktop:px-6 desktop:text-[17px] desktop:whitespace-normal desktop:shadow-xs desktop:hover:border-primary desktop:hover:bg-card"
               >
                 {reply}
               </Button>
@@ -274,22 +263,19 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
           <Field
             id="followUpAnswer"
             name="followUpAnswer"
-            label={t("home.followUpAnswerLabel")}
+            label={t("card.followUp.answerLabel")}
             rows={2}
             maxLength={1000}
             className="[&_textarea]:min-h-16 desktop:[&_textarea]:min-h-12"
           />
+          {/* Beside the quick replies the written answer is the alternative, so its button steps back. */}
           <Button
             type="submit"
+            variant={hasQuickReplies ? "outline" : "primary"}
             disabled={pending}
-            className={cn(
-              "self-end",
-              // Beside the quick replies the written answer is the fallback, so its button steps back.
-              hasQuickReplies &&
-                "desktop:border-primary desktop:bg-card desktop:text-primary desktop:shadow-none desktop:hover:bg-secondary",
-            )}
+            className="self-end"
           >
-            {t("home.followUpSubmit")}
+            {t("card.followUp.submit")}
           </Button>
         </div>
       </CardContent>

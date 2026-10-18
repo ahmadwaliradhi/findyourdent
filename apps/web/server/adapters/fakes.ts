@@ -232,7 +232,7 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
   };
 }
 
-/** The question the scripted fake asks; the follow-up card's e2e spec answers it. */
+/** A stub follow-up question, valid against guidance-response.schema.json. */
 export const STUB_FOLLOW_UP_RESPONSE = {
   kind: "followUp",
   question: "Apakah saat ini terasa nyeri hebat berdenyut atau gusi di sekitarnya membengkak?",
@@ -245,18 +245,27 @@ export const FAKE_FOLLOW_UP_TRIGGER = "goyang";
 /**
  * The fake the dev and e2e servers run (AGENT_ADAPTER=fake): the stub Guidance, except that a
  * complaint containing FAKE_FOLLOW_UP_TRIGGER is asked STUB_FOLLOW_UP_RESPONSE first.
+ * Once respondWith is called, it answers like the plain fake.
  */
 export function createScriptedFakeAgentAdapter(): FakeAgentAdapter {
   const fake = createFakeAgentAdapter();
-  const requestGuidance = fake.requestGuidance;
-  fake.requestGuidance = async (request, options) => {
-    const asksFollowUp =
-      request.followUpAnswer === undefined && request.complaintText?.toLowerCase().includes(FAKE_FOLLOW_UP_TRIGGER);
-    if (!asksFollowUp) return requestGuidance(request, options);
-    fake.calls.push(structuredClone(request));
-    return structuredClone(STUB_FOLLOW_UP_RESPONSE);
+  let scripted = true;
+  return {
+    ...fake,
+    respondWith(response) {
+      scripted = false;
+      fake.respondWith(response);
+    },
+    async requestGuidance(request, options) {
+      const asksFollowUp =
+        scripted &&
+        request.followUpAnswer === undefined &&
+        request.complaintText?.toLowerCase().includes(FAKE_FOLLOW_UP_TRIGGER);
+      if (!asksFollowUp) return fake.requestGuidance(request, options);
+      fake.calls.push(structuredClone(request));
+      return structuredClone(STUB_FOLLOW_UP_RESPONSE);
+    },
   };
-  return fake;
 }
 
 export interface FakePlacesAdapter extends PlacesAdapter {

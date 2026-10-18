@@ -4,7 +4,7 @@ import { cn } from "~/lib/utils";
 
 /**
  * Groups one thing a Patient reads as a unit. `emergency` is only for the IGD instruction:
- * it adds role="alert". See docs/design/design-system/components/Card.
+ * it adds role="alert". `attention` is for a card that waits on the Patient, such as the follow-up question. See docs/design/design-system/components/Card.
  */
 const cardVariants = cva("group/card flex flex-col gap-4 rounded-lg border p-5 text-card-foreground", {
   variants: {
@@ -12,6 +12,7 @@ const cardVariants = cva("group/card flex flex-col gap-4 rounded-lg border p-5 t
       default: "bg-card shadow-sm",
       flat: "bg-card",
       emergency: "border-2 border-destructive-line bg-destructive-soft",
+      attention: "border-2 border-primary bg-card shadow-sm",
     },
   },
   defaultVariants: { variant: "default" },
