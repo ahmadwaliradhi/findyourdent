@@ -547,7 +547,9 @@
       "displayNameTooLong": "Maksimal {{max}} karakter.",
       "consent": "Centang kedua pernyataan untuk mengirim.",
       "providerName": "Isi nama tempat sesuai papan nama atau yang Anda kenal.",
-      "region": "Pilih provinsi dan kota/kabupaten."
+      "region": "Pilih provinsi dan kota/kabupaten.",
+      "listingChecking": "Tunggu sebentar, tempat sedang diperiksa.",
+      "listingFailed": "Tekan Coba lagi untuk memeriksa tempat."
     },
     "fileErrors": {
       "photoType": "Foto harus berupa JPG, PNG, atau WebP.",
@@ -616,7 +618,8 @@
     "picked": "Tempat dipilih",
     "change": "Ganti tempat",
     "checkingListing": "Memeriksa tempat…",
-    "listingFailed": "Tempat belum bisa diperiksa. Coba pilih lagi.",
+    "listingFailed": "Tempat belum bisa diperiksa.",
+    "retryListing": "Coba lagi",
     "nameLabel": "Nama tempat sesuai papan nama atau yang kamu kenal",
     "nameHint": "Tulis sendiri namanya. Nama ini akan tampil di FindYourDent.",
     "listedNote": "Tempat ini sudah terdaftar di FindYourDent.",

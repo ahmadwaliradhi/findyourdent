@@ -144,18 +144,30 @@ export interface FormError {
   values?: Record<string, number>;
 }
 
+/** The check of whether the picked place is Listed (GET /api/providers/:placeId/listing). */
+export type ListingCheck = "checking" | "checked" | "failed";
+
 /**
  * The form's own checks before anything is sent, keyed like the server's fieldErrors
  * ("ratings.service", "visitMonth", "region.regencyCode", ...). The server checks again.
  */
 export function validateForm(
   state: TestimonyFormState,
-  options: { mode: "create" | "edit"; now: Date },
+  options: {
+    mode: "create" | "edit";
+    now: Date;
+    /** Where the picked place's listing check stands: until "checked", `listed` is not known yet. */
+    listing?: ListingCheck;
+  },
 ): Record<string, FormError> {
   const errors: Record<string, FormError> = {};
   if (options.mode === "create") {
     const { provider } = state;
+    const listing = options.listing ?? "checked";
     if (!provider.placeId) errors.placeId = { key: "errors.provider" };
+    // The name and Region are not shown before the check answers, so the place is what gets marked.
+    else if (listing === "checking") errors.placeId = { key: "errors.listingChecking" };
+    else if (listing === "failed") errors.placeId = { key: "errors.listingFailed" };
     else if (!provider.listed) {
       if (!provider.providerName.trim()) errors.providerName = { key: "errors.providerName" };
       if (!provider.region.provinceCode) errors["region.provinceCode"] = { key: "errors.region" };

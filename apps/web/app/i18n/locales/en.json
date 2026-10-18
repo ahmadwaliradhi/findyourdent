@@ -547,7 +547,9 @@
       "displayNameTooLong": "At most {{max}} characters.",
       "consent": "Tick both statements to send.",
       "providerName": "Enter the place's name as on its signboard or as you know it.",
-      "region": "Choose the province and city/regency."
+      "region": "Choose the province and city/regency.",
+      "listingChecking": "Wait a moment, the place is being checked.",
+      "listingFailed": "Press Try again to check the place."
     },
     "fileErrors": {
       "photoType": "Photos must be JPG, PNG or WebP.",
@@ -616,7 +618,8 @@
     "picked": "Place picked",
     "change": "Change place",
     "checkingListing": "Checking the place…",
-    "listingFailed": "Could not check the place yet. Try picking it again.",
+    "listingFailed": "Could not check the place yet.",
+    "retryListing": "Try again",
     "nameLabel": "Place name as on its signboard or as you know it",
     "nameHint": "Type the name yourself. This name will appear on FindYourDent.",
     "listedNote": "This place is already listed on FindYourDent.",
