@@ -30,8 +30,8 @@ const test = base.extend<{ clip: (scene: number, slug: string) => Clip }>({
     await addDebugToken(context);
     await use(context);
   },
-  clip: async ({ page }, use) => {
-    await use((scene, slug) => new Clip(page, scene, slug));
+  clip: async ({ page, baseURL }, use) => {
+    await use((scene, slug) => new Clip(page, scene, slug, baseURL ?? ""));
   },
 });
 
@@ -57,14 +57,14 @@ async function scrollTo(target: Locator, block: "start" | "center" = "start") {
 }
 
 /** Answers Gemini's one follow-up question, when it asks one, then waits for the Guidance card. */
-async function guidanceFor(page: Page, complaint: string, card: Locator) {
-  await page.getByLabel("Ceritakan keluhan gigi Anda").pressSequentially(complaint, { delay: TYPING_DELAY_MS });
+async function guidanceFor(page: Page, complaint: string, card: Locator, delay = TYPING_DELAY_MS) {
+  await page.getByLabel("Ceritakan keluhan gigi Anda").pressSequentially(complaint, { delay });
   await page.getByRole("button", { name: "Lihat panduan" }).click();
   const followUp = page.getByRole("region", { name: "Satu pertanyaan lagi" });
   await expect(card.or(followUp).first()).toBeVisible();
   if (await followUp.isVisible()) {
-    await page.waitForTimeout(1500);
-    await followUp.getByLabel("Jawaban Anda").pressSequentially("Saya kurang tahu", { delay: TYPING_DELAY_MS });
+    await page.waitForTimeout(delay ? 1500 : 0);
+    await followUp.getByLabel("Jawaban Anda").pressSequentially("Saya kurang tahu", { delay });
     await followUp.getByRole("button", { name: "Kirim jawaban" }).click();
   }
   await expect(card).toBeVisible();
@@ -73,7 +73,7 @@ async function guidanceFor(page: Page, complaint: string, card: Locator) {
 test.describe("Patient without an account", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("scene 1: the landing page down to 'Testimoni terbaru'", async ({ page, clip, baseURL }) => {
+  test("scene 1: the landing page down to 'Testimoni terbaru'", async ({ page, clip }) => {
     const scene = clip(1, "landing");
     await page.goto("/");
     await expect(page.getByLabel("Ceritakan keluhan gigi Anda")).toBeVisible();
@@ -87,10 +87,10 @@ test.describe("Patient without an account", () => {
     await scene.hold(3);
     await scrollTo(firstTestimony, "center");
     await scene.hold(4);
-    await scene.finish(baseURL ?? "");
+    await scene.finish();
   });
 
-  test("scene 2: Guidance with the BPJS answer, then the emergency case", async ({ page, clip, baseURL }) => {
+  test("scene 2: Guidance with the BPJS answer, then the emergency case", async ({ page, clip }) => {
     const scene = clip(2, "guidance");
     await page.goto("/");
     await expect(page.getByLabel("Ceritakan keluhan gigi Anda")).toBeEditable();
@@ -115,25 +115,17 @@ test.describe("Patient without an account", () => {
     await expect(page.getByText("Tanda bahaya yang terdeteksi")).toBeVisible();
     await scene.hold(4);
     await scrollTo(page.getByRole("link", { name: "Cari IGD terdekat di Google Maps" }), "center");
-    await scene.finish(baseURL ?? "");
+    await scene.finish();
   });
 
   test.describe(() => {
     test.use({ geolocation: GUBENG, permissions: ["geolocation"] });
 
-    test("scene 3: Shortlist, a Provider page and 'Lihat ulasan Google'", async ({ page, clip, baseURL }) => {
+    test("scene 3: Shortlist, a Provider page and 'Lihat ulasan Google'", async ({ page, clip }) => {
       const scene = clip(3, "shortlist");
       // The Guidance card is set up before the clip starts; the scene opens on it.
       await page.goto("/");
-      await page.getByLabel("Ceritakan keluhan gigi Anda").fill(ROUTINE_COMPLAINT);
-      await page.getByRole("button", { name: "Lihat panduan" }).click();
-      const guidance = page.getByText("Panduan untuk keluhan Anda");
-      const followUp = page.getByRole("region", { name: "Satu pertanyaan lagi" });
-      await expect(guidance.or(followUp).first()).toBeVisible();
-      if (await followUp.isVisible()) {
-        await followUp.getByLabel("Jawaban Anda").fill("Saya kurang tahu");
-        await followUp.getByRole("button", { name: "Kirim jawaban" }).click();
-      }
+      await guidanceFor(page, ROUTINE_COMPLAINT, page.getByText("Panduan untuk keluhan Anda"), 0);
       const toShortlist = page.getByRole("button", { name: "Lihat dokter gigi terdekat" });
       await expect(toShortlist).toBeVisible();
       await toShortlist.evaluate((element) => element.scrollIntoView({ block: "center" }));
@@ -144,7 +136,7 @@ test.describe("Patient without an account", () => {
       await toShortlist.click();
       await page.getByRole("button", { name: "Gunakan lokasi saya" }).click();
       const cards = page.locator("[data-place-id]");
-      await expect(cards.first()).toBeVisible();
+      await expect(cards).toHaveCount(5);
       await scrollTo(page.getByTestId("shortlist"));
       await scene.hold(3);
       // Through every card, reason and scores, to the ranking note.
@@ -169,11 +161,11 @@ test.describe("Patient without an account", () => {
       await expect(reviews.getByText("Sumber: Google Maps")).toBeVisible();
       await scrollTo(reviews);
       await scene.hold(3);
-      await scene.finish(baseURL ?? "");
+      await scene.finish();
     });
   });
 
-  test("scene 5: the live 'Dampak FindYourDent' counter", async ({ page, clip, baseURL }) => {
+  test("scene 5: the live 'Dampak FindYourDent' counter", async ({ page, clip }) => {
     const scene = clip(5, "impact");
     await page.goto("/");
     const counter = page.getByTestId("impact-counter");
@@ -182,7 +174,7 @@ test.describe("Patient without an account", () => {
     await scene.hold(2);
     await scrollTo(counter, "center");
     await expect(counter.getByText("Kunjungan terbukti")).toBeVisible();
-    await scene.finish(baseURL ?? "");
+    await scene.finish();
   });
 });
 
@@ -217,9 +209,9 @@ test.describe("signed-in Patient", () => {
     await cleanup.close();
   });
 
-  test("scene 4: fix-before-submit, publishing and Kunjungan terbukti", async ({ page, clip, baseURL }) => {
+  test("scene 4: fix-before-submit, publishing and Kunjungan terbukti", async ({ page, clip }) => {
     const scene = clip(4, "testimony");
-    await page.goto(`/ceritakan?placeId=${encodeURIComponent(placeId())}`);
+    // fillTestimony opens the form; the clip starts on its first frame.
     scene.start();
     await fillTestimony(page, {
       text: DEMO_PHONE_TEXT,
@@ -266,6 +258,6 @@ test.describe("signed-in Patient", () => {
       await scrollTo(proven.first(), "center");
       await expect(proven.first().getByText("Kunjungan terbukti")).toBeVisible();
     }
-    await scene.finish(baseURL ?? "");
+    await scene.finish();
   });
 });

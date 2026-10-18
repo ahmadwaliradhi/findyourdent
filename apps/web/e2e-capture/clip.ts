@@ -24,11 +24,13 @@ export class Clip {
   private readonly page: Page;
   private readonly scene: number;
   private readonly slug: string;
+  private readonly baseURL: string;
 
-  constructor(page: Page, scene: number, slug: string) {
+  constructor(page: Page, scene: number, slug: string, baseURL: string) {
     this.page = page;
     this.scene = scene;
     this.slug = slug;
+    this.baseURL = baseURL;
   }
 
   /** The scene's first frame: everything recorded before (loading, setup) is cut. */
@@ -42,13 +44,12 @@ export class Clip {
   }
 
   /** Holds the last frame until the scene is as long as its narration target, then saves the clip. */
-  async finish(baseURL: string): Promise<string> {
+  async finish(): Promise<string> {
     if (this.startedAt === null) throw new Error(`Clip ${this.slug} finished without start()`);
     // A second over the target: the encoded clip can end a few frames short of the last hold.
-    const target = sceneTarget(this.scene) + 1;
+    const target = sceneTarget(this.scene);
     const elapsed = (Date.now() - this.startedAt) / 1000;
-    if (elapsed < target) await this.hold(target - elapsed);
-    const seconds = (Date.now() - this.startedAt) / 1000;
+    if (elapsed < target + 1) await this.hold(target + 1 - elapsed);
 
     const video = this.page.video();
     if (!video) throw new Error("Video recording is off; run with playwright.capture.config.ts");
@@ -68,15 +69,19 @@ export class Clip {
       ],
       { stdio: "inherit" },
     );
-    recordClip({
-      scene: this.scene,
-      file,
-      seconds: Math.round(seconds),
-      recordedAt: new Date().toISOString(),
-      baseURL,
-    });
+    const seconds = encodedSeconds(join(CAPTURES_DIR, file));
+    if (seconds < target) throw new Error(`${file} runs ${seconds} s, under its ${target} s scene target`);
+    recordClip({ scene: this.scene, file, seconds, recordedAt: new Date().toISOString(), baseURL: this.baseURL });
     return file;
   }
+}
+
+/** The saved clip's length, to a tenth of a second. */
+function encodedSeconds(path: string): number {
+  const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path], {
+    encoding: "utf8",
+  });
+  return Math.round(Number(out) * 10) / 10;
 }
 
 function recordClip(entry: ClipEntry) {

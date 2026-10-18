@@ -2,29 +2,29 @@
   {
     "scene": 1,
     "file": "scene-1-landing.mp4",
-    "seconds": 40,
-    "recordedAt": "2026-10-18T16:05:39.431Z",
+    "seconds": 41.1,
+    "recordedAt": "2026-10-18T16:19:35.096Z",
     "baseURL": "https://findyourdent.com"
   },
   {
     "scene": 2,
     "file": "scene-2-guidance.mp4",
-    "seconds": 60,
-    "recordedAt": "2026-10-18T16:02:28.460Z",
+    "seconds": 60.4,
+    "recordedAt": "2026-10-18T16:20:44.866Z",
     "baseURL": "https://findyourdent.com"
   },
   {
     "scene": 3,
     "file": "scene-3-shortlist.mp4",
-    "seconds": 43,
-    "recordedAt": "2026-10-18T16:03:31.762Z",
+    "seconds": 40,
+    "recordedAt": "2026-10-18T16:21:50.393Z",
     "baseURL": "https://findyourdent.com"
   },
   {
     "scene": 5,
     "file": "scene-5-impact.mp4",
-    "seconds": 36,
-    "recordedAt": "2026-10-18T16:07:01.992Z",
+    "seconds": 35.5,
+    "recordedAt": "2026-10-18T16:22:39.660Z",
     "baseURL": "https://findyourdent.com"
   }
 ]
