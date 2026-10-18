@@ -46,7 +46,7 @@ Cut order under time pressure, first to last: Price List, Claim, Gemini Moderati
 
 Differentiator (deck and video): "FindYourDent turns a toothache into a guided decision. A grounded Gemini agent explains urgency, the visit journey, cost and BPJS coverage, then shortlists Providers ranked by Patient Testimonies that FindYourDent owns, each one screened by AI and checked against proof of visit."
 
-## Video storyboard (under 3 minutes; nothing outside these scenes is built)
+## Video storyboard (3 to 4 minutes; nothing outside these scenes is built)
 
 1. **Problem** (Impact): SKI 2023 figures (checked against the report) and one real Testimony.
 2. **Guidance** (Technical Merit): a voice or typed complaint, the Guidance card with the BPJS answer, then the emergency case and the "Ke IGD sekarang" card.
