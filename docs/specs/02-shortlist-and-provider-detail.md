@@ -65,7 +65,7 @@ From the Guidance card the Patient taps "Lihat dokter gigi terdekat", shares the
   4. Distance.
   Paid placement does not exist; Claim status does not affect rank.
 - The Shortlist Gemini call (the second of the two per session, spec 01) receives the top five with their facts and returns one short reason per Provider in the Patient's language. It cannot reorder or add Providers. If the call fails, cards show a templated reason.
-- Provider type inference when not claimed: Hospital if Google's types include hospital; Private Dentist if the name starts with "drg." or "dokter gigi" followed by a person's name; otherwise Klinik. Shown with "perkiraan" until a Claim confirms it.
+- Provider type inference when not claimed: Hospital if Google's types include hospital or general_hospital; Private Dentist if the name starts with "drg." or "dokter gigi" followed by a person's name; otherwise Klinik. Shown with "perkiraan" until a Claim confirms it.
 - Price signals on cards and pages, in this order, each labelled with its source and date: median price paid from Testimonies for the procedure (shown only with at least two), the Provider's Price List (spec 05), then the Cost Estimate (spec 01) labelled "estimasi".
 - Provider page route is keyed by `place_id`. The server renders FindYourDent content (Listed Provider name, Region, Testimonies, aggregates, prices, Claim status); the Google block and reviews are fetched by the browser through App Check-protected web API routes. Pages for Listed Providers are indexable; pages for non-Listed Providers are `noindex`.
 - Google attribution: the Google block and reviews show "Google Maps" attribution; each review shows the author name, photo and link as provided; every Provider has a link to its Google Maps page.

@@ -603,7 +603,7 @@
     "pickerPlaceholder": "Type the name of the clinic, dentist or hospital",
     "pickerHint": "Type at least 3 letters, then pick the place from the list.",
     "searching": "Searching…",
-    "noSuggestions": "No matching places. Try other words.",
+    "noSuggestions": "No matching places. Try another name or the street name. The place must already be on Google Maps.",
     "unavailable": "Place search is not available right now. Please try again later.",
     "searchFailed": "Place search failed. Check your connection and try again.",
     "useLocation": "Use my location",

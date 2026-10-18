@@ -126,7 +126,7 @@ const PRIVATE_DENTIST_NAME = /^(drg\.?|dokter gigi)\s+\p{L}/iu;
 
 /** Provider type when no Claim confirms it (spec 02); shown with "perkiraan". */
 export function inferProviderType(place: Pick<PlaceSummary, "displayName" | "types">): ProviderType {
-  if (place.types.includes("hospital")) return "hospital";
+  if (place.types.includes("hospital") || place.types.includes("general_hospital")) return "hospital";
   if (PRIVATE_DENTIST_NAME.test(place.displayName.trim())) return "privateDentist";
   return "klinik";
 }

@@ -603,7 +603,7 @@
     "pickerPlaceholder": "Ketik nama klinik, dokter gigi atau rumah sakit",
     "pickerHint": "Ketik minimal 3 huruf, lalu pilih tempatnya dari daftar.",
     "searching": "Mencari…",
-    "noSuggestions": "Tidak ada tempat yang cocok. Coba kata lain.",
+    "noSuggestions": "Tidak ada tempat yang cocok. Coba nama lain atau nama jalannya. Tempat harus sudah ada di Google Maps.",
     "unavailable": "Pencarian tempat sedang tidak tersedia. Silakan coba lagi nanti.",
     "searchFailed": "Pencarian tempat gagal. Periksa koneksi lalu coba lagi.",
     "useLocation": "Gunakan lokasi saya",

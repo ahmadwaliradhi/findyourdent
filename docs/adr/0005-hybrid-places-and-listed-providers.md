@@ -9,3 +9,4 @@ Google's terms allow storing only `place_id` (indefinitely) and coordinates (up 
 - Places spend above the free allowances is capped at USD 10 a month through daily per-method caps; when a cap is hit, the Shortlist falls back to nearby Listed Providers plus a free Google Maps search link instead of failing.
 - Shortlist cards show Testimony scores, not Google stars; Google rating appears on the Provider page.
 - A Provider with no Testimony and no Claim exists only as live Google data and its page is `noindex`.
+- Every Provider is keyed by its `place_id`, as in ADR-0001: a place that is not on Google Maps cannot be Listed, claimed or given a Testimony. The picker says so when nothing matches.

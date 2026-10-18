@@ -219,8 +219,11 @@ export const MODERATION_NAME_DAILY_CAP = 15;
 const TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places/";
 const AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete";
-/** Table A types; Autocomplete (New) takes up to five. */
-const PICKER_PRIMARY_TYPES = ["dentist", "hospital"];
+/**
+ * Table A types; Autocomplete (New) takes up to five and matches only a place's primary type,
+ * so dental clinics and general hospitals need their own entries (issue 148).
+ */
+const PICKER_PRIMARY_TYPES = ["dentist", "dental_clinic", "hospital", "general_hospital", "medical_clinic"];
 const PAGE_SIZE = 20;
 
 export interface GooglePlacesAdapterOptions {
