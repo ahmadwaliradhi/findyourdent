@@ -4,6 +4,8 @@ Narration for the AI Builder Cup 2026 demo video (issue #110), on the five-scene
 
 Every figure is from the verified SKI 2023 wording (H03, [comment on #3](https://github.com/ahmadwaliradhi/findyourdent/issues/3#issuecomment-6230566365)); the claim in scene 1 is the differentiator sentence from the spec, word for word. Indonesian UI terms are spoken exactly as they appear on screen. Everything else is checked against the [README](../../../README.md) and the live build's copy.
 
+The screen captures recorded to these scenes are in [`captures/`](captures/README.md).
+
 Narration lines (the `>` blocks) are what `narrate.ts` sends to ElevenLabs, so they hold plain spoken text only: no Markdown, numbers written the way they should be said.
 
 ## Scene 1: Problem (target 0:40)

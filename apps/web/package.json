@@ -14,6 +14,7 @@
     "test:unit": "vitest run --project unit",
     "test:e2e": "playwright test",
     "test:e2e:deployed": "playwright test --config playwright.deployed.config.ts",
+    "capture:deployed": "playwright test --config playwright.capture.config.ts",
     "e2e:deployed:login": "node e2e-deployed/login.ts",
     "e2e:deployed:login:admin": "node e2e-deployed/login.ts admin",
     "lighthouse": "react-router build && npx -y @lhci/cli@0.15.1 autorun"
