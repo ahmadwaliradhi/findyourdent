@@ -312,6 +312,21 @@ describe("admin actions on a held Testimony", () => {
     expect((await queue(cookie)).items).toEqual([]);
   });
 
+  it("lists a held Testimony's place as a hospital on publish when Google types it so", async () => {
+    moderateWith(HOLD);
+    server.fakes.places.respondWithCoordinates({
+      ok: true,
+      location: { lat: -7.2684, lng: 112.7584 },
+      types: ["general_hospital", "health"],
+    });
+    const id = await postTestimony("pasien@example.com");
+
+    expect((await act(await adminCookie(), { action: "publish", subjectId: id })).status).toBe(200);
+
+    expect((await provider())?.providerType).toBe("hospital");
+    expect((await testimony(id)).providerType).toBe("hospital");
+  });
+
   it("rejects only with a reason, which the author sees", async () => {
     moderateWith(HOLD);
     const id = await postTestimony("pasien@example.com");

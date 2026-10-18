@@ -23,8 +23,13 @@ import { normalizeName } from "~/lib/normalize-name";
 import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
 import { computeAggregates } from "./aggregates.ts";
 import { activeClaimsOf, applyOwnerFacts, deletePermit } from "./claims.server.ts";
-import { inferProviderType } from "./shortlist.server.ts";
-import { coordinatesFor, regionValue } from "./testimonies.server.ts";
+import {
+  NO_ESSENTIALS,
+  type PlaceEssentials,
+  placeEssentialsFor,
+  proposedProviderType,
+  regionValue,
+} from "./testimonies.server.ts";
 
 const col = (firestore: Firestore, name: keyof typeof COLLECTIONS) => firestore.collection(COLLECTIONS[name]);
 
@@ -196,11 +201,11 @@ async function claimAction(
   const before = (await ref.get()).data() as ClaimDoc | undefined;
   if (!before) throw new AdminRefusal(404, "not_found");
 
-  // A Claim on a place that is not Listed creates the Listed Provider, with coordinates fetched first.
-  let location: Awaited<ReturnType<typeof coordinatesFor>> = null;
+  // A Claim on a place that is not Listed creates the Listed Provider, with coordinates and Google's types fetched first.
+  let essentials = NO_ESSENTIALS;
   if (action === "approveClaim" && before.status === "submitted") {
     const listed = await col(firestore, "providers").doc(before.placeId).get();
-    if (!listed.exists) location = await coordinatesFor(context, before.placeId);
+    if (!listed.exists) essentials = await placeEssentialsFor(context, before.placeId);
   }
 
   let permitPath: string | undefined;
@@ -223,7 +228,7 @@ async function claimAction(
         tx.update(provider.ref, { claimStatus: "claimed", claimId: ref.id, updatedAt: now });
       } else {
         if (!claim.proposedProviderName || !claim.proposedRegion) throw new AdminRefusal(409, "not_allowed");
-        createListedProvider(tx, provider.ref, { claimId: ref.id, claim, location });
+        createListedProvider(tx, provider.ref, { claimId: ref.id, claim, essentials });
       }
     } else if (action === "revokeClaim" && provider.get("claimId") === ref.id) {
       // A wrong approval: the owner's facts go with it. Their replies stop showing (provider-page.server.ts).
@@ -260,9 +265,10 @@ async function claimAction(
 function createListedProvider(
   tx: Transaction,
   ref: DocumentReference,
-  input: { claimId: string; claim: ClaimDoc; location: Awaited<ReturnType<typeof coordinatesFor>> },
+  input: { claimId: string; claim: ClaimDoc; essentials: PlaceEssentials },
 ) {
-  const { claim, location } = input;
+  const { claim, essentials } = input;
+  const { location } = essentials;
   const name = claim.proposedProviderName as string;
   const now = Timestamp.now();
   const doc: ProviderDoc = {
@@ -273,7 +279,7 @@ function createListedProvider(
     region: regionValue(claim.proposedRegion as NonNullable<ClaimDoc["proposedRegion"]>),
     ...(location ? { location: { ...location, fetchedAt: now } } : {}),
     // Inferred until the owner confirms it in their facts.
-    providerType: inferProviderType({ displayName: name, types: [] }),
+    providerType: proposedProviderType(name, essentials),
     providerTypeSource: "inferred",
     claimStatus: "claimed",
     claimId: input.claimId,

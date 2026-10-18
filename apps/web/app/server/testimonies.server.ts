@@ -10,8 +10,10 @@
 //   (`proposedProviderName`) and the Region in `region`; the first publish creates the
 //   Listed Provider from them. Google's name is never read here, let alone stored.
 // - Provider type for a new Listed Provider: the spec 02 rule (`inferProviderType`) on
-//   the typed name alone, with no Google types (no extra paid call): "drg. Nama" →
-//   privateDentist, anything else → klinik; `providerTypeSource` "inferred".
+//   the typed name and Google's types from the Essentials call that fetches its
+//   coordinates (held in memory, never stored; never the browser's): a hospital type →
+//   hospital, "drg. Nama" → privateDentist, anything else → klinik; `providerTypeSource`
+//   "inferred". Without that call's answer, the typed name alone decides.
 // - Fix before submit: an authorFix decision is answered with the flagged spans and
 //   stores nothing (no Testimony, no decision, no photos); only the round count is kept,
 //   per Patient and place (`authorFixCounterId`), until a submission is stored.
@@ -278,19 +280,32 @@ function proofRecord(outcome: ModerationOutcome, now: Timestamp): Pick<Testimony
   return result === "accepted" || result === "rejected" ? { proofOfVisit: { result, checkedAt: now } } : {};
 }
 
-/** Coordinates for a new Listed Provider (Essentials Place Details). On failure it is listed without them. */
-export async function coordinatesFor(context: AppLoadContext, placeId: string): Promise<LatLng | null> {
-  const result = await context.adapters.places.getCoordinates(placeId);
-  if (result.ok) return result.location;
-  context.logger.warn("listed_provider", { outcome: "coordinates_unavailable", reason: result.reason });
-  return null;
+/** What one Essentials Place Details call tells a new Listed Provider. `types` is never stored. */
+export interface PlaceEssentials {
+  location: LatLng | null;
+  types: string[];
 }
+
+/** Coordinates and Google's types for a new Listed Provider. On failure it is listed without them. */
+export async function placeEssentialsFor(context: AppLoadContext, placeId: string): Promise<PlaceEssentials> {
+  const result = await context.adapters.places.getCoordinates(placeId);
+  if (result.ok) return { location: result.location, types: result.types };
+  context.logger.warn("listed_provider", { outcome: "coordinates_unavailable", reason: result.reason });
+  return { location: null, types: [] };
+}
+
+/** Before any Essentials call: nothing known from Google. */
+export const NO_ESSENTIALS: PlaceEssentials = { location: null, types: [] };
 
 export interface ProviderProposal {
   name: string;
   region: RegionRef;
-  providerType: ProviderType;
-  location: LatLng | null;
+  essentials: PlaceEssentials;
+}
+
+/** The inferred type of a new Listed Provider: the typed name and Google's types (spec 02). */
+export function proposedProviderType(name: string, essentials: PlaceEssentials): ProviderType {
+  return inferProviderType({ displayName: name, types: essentials.types });
 }
 
 /** Aggregates over a place's published Testimonies read in the transaction, with one replaced or left out. */
@@ -329,14 +344,16 @@ export function writeProviderOnPublish(
   }
   const { proposal } = input;
   if (!proposal) throw new Error(`no Listed Provider and no proposed name for ${input.placeId}`);
+  const { location } = proposal.essentials;
+  const providerType = proposedProviderType(proposal.name, proposal.essentials);
   const doc: ProviderDoc = {
     placeId: input.placeId,
     name: proposal.name,
     nameSource: "testimonyAuthor",
     nameNormalized: normalizeName(proposal.name),
     region: proposal.region,
-    ...(proposal.location ? { location: { ...proposal.location, fetchedAt: now } } : {}),
-    providerType: proposal.providerType,
+    ...(location ? { location: { ...location, fetchedAt: now } } : {}),
+    providerType,
     providerTypeSource: "inferred",
     claimStatus: "unclaimed",
     aggregates,
@@ -346,7 +363,7 @@ export function writeProviderOnPublish(
   };
   // The Listed Provider count is read from `providers` (impact.server.ts), so no counter moves.
   tx.create(input.provider.ref, doc);
-  return { region: proposal.region, providerType: proposal.providerType };
+  return { region: proposal.region, providerType };
 }
 
 /** Recomputes aggregates after a Testimony left `published`. */
@@ -444,7 +461,8 @@ export async function createTestimony(context: AppLoadContext, request: Request)
   }
   try {
     status = statusForDecision(moderation.decision);
-    const location = status === "published" && !listedAtStart ? await coordinatesFor(context, value.placeId) : null;
+    const essentials =
+      status === "published" && !listedAtStart ? await placeEssentialsFor(context, value.placeId) : NO_ESSENTIALS;
     const decisionRef = firestore.collection(COLLECTIONS.moderationDecisions).doc();
     const decided = status;
     const decidedOutcome = outcome;
@@ -480,7 +498,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
           published,
           testimonyId: ref.id,
           self: { ...content, verifiedVisit },
-          proposal: proposedProviderName ? { name: proposedProviderName, region, providerType, location } : null,
+          proposal: proposedProviderName ? { name: proposedProviderName, region, essentials } : null,
         }));
         proposedProviderName = undefined;
       }
@@ -639,7 +657,8 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
   try {
     const status = decided;
     const becomesPublished = !editingPublished && status === "published";
-    const location = becomesPublished && !listedAtStart ? await coordinatesFor(context, current.placeId) : null;
+    const essentials =
+      becomesPublished && !listedAtStart ? await placeEssentialsFor(context, current.placeId) : NO_ESSENTIALS;
     const decisionRef = firestore.collection(COLLECTIONS.moderationDecisions).doc();
     const ref = testimonies(firestore).doc(testimonyId);
 
@@ -713,7 +732,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
             published,
             testimonyId,
             self: { ...content, verifiedVisit },
-            proposal: proposedName ? { name: proposedName, region, providerType, location } : null,
+            proposal: proposedName ? { name: proposedName, region, essentials } : null,
           }));
           update.proposedProviderName = FieldValue.delete();
           if (!editingPublished) update.publishedAt = now;

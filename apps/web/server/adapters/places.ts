@@ -105,7 +105,8 @@ export type AutocompleteResult =
   | { ok: true; suggestions: AutocompleteSuggestion[] }
   | { ok: false; reason: "cap_reached" | "unavailable" };
 
-export type CoordinatesResult = { ok: true; location: LatLng } | PlaceDetailsFailure;
+/** `types` is held in memory to infer a new Listed Provider's type (spec 02), never stored. */
+export type CoordinatesResult = { ok: true; location: LatLng; types: string[] } | PlaceDetailsFailure;
 
 /** Google's live name for a place: held in memory for Moderation only, never stored. */
 export type DisplayNameResult = { ok: true; displayName: string } | PlaceDetailsFailure;
@@ -118,8 +119,8 @@ export interface PlacesAdapter {
    */
   autocomplete(request: AutocompleteRequest): Promise<AutocompleteResult>;
   /**
-   * Place Details, Essentials tier (`location` only): coordinates for a new Listed
-   * Provider. Counted against the `coordinates` daily cap.
+   * Place Details, Essentials tier (`location` and `types`): coordinates and Google's
+   * types for a new Listed Provider. Counted against the `coordinates` daily cap.
    */
   getCoordinates(placeId: string): Promise<CoordinatesResult>;
   /**
@@ -192,8 +193,11 @@ export const AUTOCOMPLETE_FIELD_MASK = [
   "suggestions.placePrediction.structuredFormat",
 ].join(",");
 
-/** Place Details, Essentials tier: coordinates only, for a new Listed Provider. */
-export const COORDINATES_FIELD_MASK = "location";
+/**
+ * Place Details, Essentials tier: coordinates, and Google's types for the inferred
+ * Provider type of a new Listed Provider. Both are Essentials fields, so the SKU stays.
+ */
+export const COORDINATES_FIELD_MASK = "location,types";
 
 /** Matches the project quota `AutocompletePlacesRequestPerDayPerProject` (infra/gcp/README.md). */
 export const AUTOCOMPLETE_DAILY_CAP = 300;
@@ -499,7 +503,7 @@ export function createGooglePlacesAdapter(options: GooglePlacesAdapterOptions): 
       if (!result.ok) return result;
       const { latitude, longitude } = result.place.location ?? {};
       if (typeof latitude !== "number" || typeof longitude !== "number") return { ok: false, reason: "unavailable" };
-      return { ok: true, location: { lat: latitude, lng: longitude } };
+      return { ok: true, location: { lat: latitude, lng: longitude }, types: result.place.types ?? [] };
     },
     async getDisplayName(request) {
       const result = await placeDetails(

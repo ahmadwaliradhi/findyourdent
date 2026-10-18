@@ -57,7 +57,7 @@ describe("coordinate refresh job", () => {
     await seedProvider(server.firestore, { placeId: "place-due", location: fetchedDaysAgo(26) });
     await seedProvider(server.firestore, { placeId: "place-fresh", location: fetchedDaysAgo(3) });
     await seedProvider(server.firestore, { placeId: "place-missing" });
-    server.fakes.places.respondWithCoordinates({ ok: true, location: { lat: -7.25, lng: 112.75 } });
+    server.fakes.places.respondWithCoordinates({ ok: true, location: { lat: -7.25, lng: 112.75 }, types: ["dentist"] });
 
     await run();
 
@@ -89,7 +89,7 @@ describe("coordinate refresh job", () => {
     for (let days = 26; days <= 33; days += 1) {
       await seedProvider(server.firestore, { placeId: `place-${days}`, location: fetchedDaysAgo(days) });
     }
-    server.fakes.places.respondWithCoordinates({ ok: true, location: { lat: -7.25, lng: 112.75 } });
+    server.fakes.places.respondWithCoordinates({ ok: true, location: { lat: -7.25, lng: 112.75 }, types: ["dentist"] });
 
     await run();
 

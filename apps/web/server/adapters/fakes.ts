@@ -265,6 +265,7 @@ export function createFakePlacesAdapter(initial: PlaceSummary[] = []): FakePlace
   let nextCoordinates: CoordinatesResult | ((placeId: string) => Promise<CoordinatesResult>) = {
     ok: true,
     location: { lat: -6.1754, lng: 106.8272 },
+    types: ["dentist", "health"],
   };
   let nextDisplayName: DisplayNameResult = { ok: true, displayName: "Fake Google Place" };
   const displayNameCalls: PlaceDetailsRequest[] = [];
@@ -446,8 +447,10 @@ export function createFakeSamplePlacesAdapter(): PlacesAdapter {
       return place ? { ok: true, displayName: place.displayName } : { ok: false, reason: "not_found" };
     },
     async getCoordinates(placeId) {
-      const location = known.get(placeId)?.location;
-      return location ? { ok: true, location } : { ok: false, reason: "not_found" };
+      const place = known.get(placeId);
+      return place?.location
+        ? { ok: true, location: place.location, types: place.types }
+        : { ok: false, reason: "not_found" };
     },
   };
 }
