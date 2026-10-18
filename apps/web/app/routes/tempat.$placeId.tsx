@@ -75,6 +75,10 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
   ];
 }
 
+/** The mockup's h2 for main-column sections and the smaller h3-sized one for aside cards. */
+const SECTION_TITLE = "text-[22px] leading-7 font-bold tracking-[-.01em]";
+const ASIDE_TITLE = "text-lg leading-6 font-[650]";
+
 type BlockState = { phase: "loading" } | { phase: "done"; result: GoogleBlockResponse } | { phase: "error" };
 
 export default function ProviderPage({ loaderData }: Route.ComponentProps) {
@@ -103,6 +107,9 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
   const phone = provider?.owner?.phone ?? google?.nationalPhoneNumber;
   const whatsappUri = provider?.owner?.whatsappUri ?? google?.whatsappUri;
   const mapsUri = google?.googleMapsUri ?? loaderData.googleMapsUri;
+  const claim = provider?.claimed
+    ? ({ hint: "provider.ownerHint", cta: "provider.manageCta" } as const)
+    : ({ hint: "provider.claimHint", cta: "provider.claimCta" } as const);
   const hasPrices = Boolean(provider && (provider.priceSignals.length > 0 || provider.priceList));
 
   return (
@@ -172,7 +179,7 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
 
           <section aria-labelledby="testimonies-title" className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="testimonies-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+              <h2 id="testimonies-title" className={SECTION_TITLE}>
                 {t("provider.testimoniesTitle")}
               </h2>
               <Button asChild variant="secondary" size="sm">
@@ -200,7 +207,7 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
 
           <Card labelledBy="google-title" aria-busy={block.phase === "loading"}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="google-title" className="text-lg leading-6 font-[650]">
+              <h2 id="google-title" className={ASIDE_TITLE}>
                 {t("provider.googleTitle")}
               </h2>
               {google?.openNow !== undefined &&
@@ -229,11 +236,9 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
           </Card>
 
           <Card variant="flat" className="gap-2 border-transparent bg-muted">
-            <p className="text-sm">{provider?.claimed ? t("provider.ownerHint") : t("provider.claimHint")}</p>
+            <p>{t(claim.hint)}</p>
             <Button asChild variant="ghost" size="sm" className="self-start">
-              <Link to={`${providerPath(placeId)}/klaim`}>
-                {provider?.claimed ? t("provider.manageCta") : t("provider.claimCta")}
-              </Link>
+              <Link to={`${providerPath(placeId)}/klaim`}>{t(claim.cta)}</Link>
             </Button>
           </Card>
         </aside>
@@ -248,7 +253,7 @@ function Aspects({ provider, language }: { provider: ProviderSummary; language: 
   return (
     <Card labelledBy="aspects-title" className="desktop:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="aspects-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+        <h2 id="aspects-title" className={SECTION_TITLE}>
           {t("provider.aspectsTitle")}
         </h2>
         <span className="text-sm text-muted-foreground">
@@ -304,7 +309,7 @@ function Prices({
   return (
     <Card labelledBy="prices-title" className="desktop:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="prices-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+        <h2 id="prices-title" className={SECTION_TITLE}>
           {t("provider.pricesTitle")}
         </h2>
         {list && (
@@ -374,7 +379,12 @@ function OwnerInfo({ owner, language }: { owner: NonNullable<ProviderSummary["ow
     facts.push({
       label: t("provider.website"),
       value: (
-        <a href={owner.website} target="_blank" rel="noreferrer nofollow" className="break-all underline">
+        <a
+          href={owner.website}
+          target="_blank"
+          rel="noreferrer nofollow"
+          className="inline-flex min-h-touch items-center break-all underline"
+        >
           {owner.website}
         </a>
       ),
@@ -382,11 +392,11 @@ function OwnerInfo({ owner, language }: { owner: NonNullable<ProviderSummary["ow
   }
   return (
     <Card labelledBy="owner-title">
-      <h2 id="owner-title" className="text-lg leading-6 font-[650]">
+      <h2 id="owner-title" className={ASIDE_TITLE}>
         {t("provider.ownerTitle")}
       </h2>
       {facts.length > 0 && (
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-[15px] leading-[22px]">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2">
           {facts.map((fact) => (
             <Fragment key={fact.label}>
               <dt className="text-muted-foreground">{fact.label}</dt>
@@ -424,7 +434,12 @@ function GoogleFacts({ block, language }: { block: ProviderGoogleBlock; language
       {block.nationalPhoneNumber && <p className="tabular-nums">{block.nationalPhoneNumber}</p>}
       {block.websiteUri && (
         <p>
-          <a href={block.websiteUri} target="_blank" rel="noreferrer nofollow" className="underline">
+          <a
+            href={block.websiteUri}
+            target="_blank"
+            rel="noreferrer nofollow"
+            className="inline-flex min-h-touch items-center underline"
+          >
             {t("provider.website")}
           </a>
         </p>
