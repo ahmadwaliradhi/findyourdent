@@ -3,6 +3,7 @@
 import { COLLECTIONS, type ProofOfVisitRecord, type TestimonyDoc } from "@findyourdent/contracts/firestore";
 import { Timestamp } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { Bucket } from "../../server/firebase.ts";
 import { silentLogger } from "../../server/logger.ts";
 import { expireProofs } from "../../server/proof-expiry.ts";
 import { seedProvider, seedTestimony } from "../support/fixtures.ts";
@@ -26,9 +27,11 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const NOW = Date.parse("2026-11-20T03:00:00Z");
 
-/** A Testimony whose proof (by default waiting for the team) was checked `checkedAgoMs` ago, a file in the bucket. */
+/** A Testimony whose proof (by default waiting for the team, its file in the bucket) was checked `checkedAgoMs` ago. */
 async function waitingProof(checkedAgoMs: number, overrides: Partial<ProofOfVisitRecord> = {}) {
   const provider = await seedProvider(server.firestore);
+  const { id } = await seedTestimony(server.firestore, provider);
+  const filePath = `proof-of-visit/${id}/struk.jpg`;
   const proofOfVisit: ProofOfVisitRecord = {
     result: "pending",
     reasons: ["nameMismatch"],
@@ -36,11 +39,15 @@ async function waitingProof(checkedAgoMs: number, overrides: Partial<ProofOfVisi
     clinicNameOnProof: "Klinik Gigi Sentosa",
     proofDate: "2026-11-02",
     attempts: 1,
+    filePath,
     ...overrides,
   };
-  if (proofOfVisit.result !== "pending") delete proofOfVisit.reasons;
-  const { id } = await seedTestimony(server.firestore, provider, { proofOfVisit: proofOfVisit as never });
-  await server.uploads.file(`proof-of-visit/${id}/struk.jpg`).save(Buffer.from("receipt"));
+  if (proofOfVisit.result !== "pending") {
+    delete proofOfVisit.reasons;
+    delete proofOfVisit.filePath;
+  }
+  await server.firestore.collection(COLLECTIONS.testimonies).doc(id).update({ proofOfVisit });
+  await server.uploads.file(filePath).save(Buffer.from("receipt"));
   if (proofOfVisit.result !== "rejected") {
     await fingerprints().doc(id).set({
       testimonyId: id,
@@ -75,7 +82,7 @@ describe("proof expiry job", () => {
 
     const summary = await run();
 
-    expect(summary).toEqual({ expired: 1, failed: 0 });
+    expect(summary).toEqual({ expired: 1, expiredFileLeft: 0, failed: 0 });
     const expired = await proofOf(old);
     expect(expired.verifiedVisit).toBe(false);
     expect(expired.proofOfVisit).toMatchObject({
@@ -108,11 +115,56 @@ describe("proof expiry job", () => {
     const rejected = await waitingProof(30 * DAY_MS, { result: "rejected", reason: "tooOld" });
     const old = await waitingProof(9 * DAY_MS);
 
-    expect(await run()).toEqual({ expired: 1, failed: 0 });
+    expect(await run()).toEqual({ expired: 1, expiredFileLeft: 0, failed: 0 });
 
     expect((await proofOf(accepted)).proofOfVisit?.result).toBe("accepted");
     expect(await hasFingerprint(accepted)).toBe(true);
     expect((await proofOf(rejected)).proofOfVisit).toMatchObject({ result: "rejected", reason: "tooOld" });
     expect(await proofOf(old)).toMatchObject({ verifiedVisit: false, proofOfVisit: { result: "rejected" } });
+  });
+
+  it("deletes only the expired proof's own file: one the author attached meanwhile stays", async () => {
+    const id = await waitingProof(8 * DAY_MS);
+    // A newer proof stored after the job read the Testimony, its decision still to come.
+    const newer = `proof-of-visit/${id}/newer.jpg`;
+    await server.uploads.file(newer).save(Buffer.from("another receipt"));
+
+    expect(await run()).toEqual({ expired: 1, expiredFileLeft: 0, failed: 0 });
+
+    expect(await storedObjects(`proof-of-visit/${id}/`)).toEqual([newer]);
+    expect((await proofOf(id)).proofOfVisit?.filePath).toBeUndefined();
+  });
+
+  it("counts a proof whose file could not be deleted once: expired, the file left to the lifecycle rule", async () => {
+    const id = await waitingProof(8 * DAY_MS);
+    // Cloud Storage refuses every delete; listing and reading still work.
+    const deletesFail = {
+      getFiles: (...args: Parameters<Bucket["getFiles"]>) => server.uploads.getFiles(...args),
+      file: (name: string) =>
+        Object.assign(server.uploads.file(name), { delete: () => Promise.reject(new Error("storage unavailable")) }),
+    } as unknown as Bucket;
+
+    const summary = await expireProofs({
+      firestore: server.firestore,
+      uploads: deletesFail,
+      logger: silentLogger,
+      now: () => NOW,
+    });
+
+    expect(summary).toEqual({ expired: 0, expiredFileLeft: 1, failed: 0 });
+    expect((await proofOf(id)).proofOfVisit).toMatchObject({ result: "rejected", reason: "expired" });
+    expect(await storedObjects(`proof-of-visit/${id}/`)).toHaveLength(1);
+  });
+
+  it("never touches a deleted Testimony, even one still carrying a waiting proof", async () => {
+    const id = await waitingProof(9 * DAY_MS);
+    await server.firestore.collection(COLLECTIONS.testimonies).doc(id).update({ status: "deleted" });
+    const before = await proofOf(id);
+
+    const summary = await run();
+
+    expect(summary.expired).toBe(0);
+    expect(summary.failed).toBe(0);
+    expect(await proofOf(id)).toEqual(before);
   });
 });

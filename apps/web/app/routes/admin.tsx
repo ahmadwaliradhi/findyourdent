@@ -534,10 +534,14 @@ function Actions({ item }: { item: QueueItem }) {
             <ActionButton request={{ action: "dismissNameCorrection", subjectId: item.id }} />
           </>
         )}
-        {item.kind === "proof" && (
+        {item.proof && (
           <>
-            <ActionButton request={{ action: "acceptProof", subjectId: item.subjectId }} />
-            <ActionButton request={{ action: "rejectProof", subjectId: item.subjectId }} />
+            <ActionButton
+              request={{ action: "acceptProof", subjectId: item.subjectId, proofCheckedAt: item.proof.checkedAt }}
+            />
+            <ActionButton
+              request={{ action: "rejectProof", subjectId: item.subjectId, proofCheckedAt: item.proof.checkedAt }}
+            />
           </>
         )}
       </div>

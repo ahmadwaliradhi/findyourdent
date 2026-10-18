@@ -2,7 +2,7 @@
 // team waits in the admin queue with its private file, the facts the agent read and the
 // reasons, and with the Testimonies whose Proof Fingerprints match it (ticket #130). An
 // admin accepts it (the Testimony becomes Proven, the fingerprint stays) or rejects it
-// with a note the author reads (the fingerprint goes); either way the file goes. Nobody
+// with a note the author reads (the fingerprint goes); either way its file goes. Nobody
 // deciding within 7 days is the proof expiry job's business (server/proof-expiry.ts):
 // never an accept.
 import {
@@ -15,12 +15,13 @@ import {
 import type { Firestore, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import type { AppLoadContext } from "react-router";
 import type { ProofAction, QueueItem, QueueProofMatch } from "~/lib/admin-queue";
+import { proofFacts } from "~/lib/proof-decision";
 import type { Bucket } from "../../server/firebase.ts";
-import { deleteStoredProofs, storedProofPaths } from "../../server/proof-files.ts";
-import { type Acting, AdminRefusal, logAction, queueItem } from "./admin-common.server.ts";
-import { recordTestimonyTransition } from "./impact.server.ts";
-import { fingerprintRef, matchingTestimonyIds, placeFingerprints } from "./proof-fingerprint.server.ts";
-import { publishedOf, writeProviderOnPublish } from "./testimonies.server.ts";
+import { deleteProofFile, isPdfProof } from "../../server/proof-files.ts";
+import { decidedRecord, rejectWaitingProof } from "../../server/waiting-proof.ts";
+import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
+import { matchingTestimonyIds, placeFingerprints } from "./proof-fingerprint.server.ts";
+import { markProven, readPublicSide } from "./testimonies.server.ts";
 
 const TESTIMONY_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -29,36 +30,43 @@ const testimonies = (firestore: Firestore) => firestore.collection(COLLECTIONS.t
 /** The admin-only route that streams a waiting proof file. */
 export const proofFileUrl = (testimonyId: string) => `/admin/proofs/${testimonyId}`;
 
-/**
- * The stored proof file of a Testimony, or null once it is gone. A new proof decision
- * deletes the files of the one it replaced, so there is at most one.
- */
-async function proofFile(uploads: Bucket | null, testimonyId: string): Promise<string | null> {
-  if (!uploads) return null;
-  const [path] = await storedProofPaths(uploads, testimonyId);
-  return path ?? null;
+/** The file a waiting proof names, or null when there is no waiting proof. */
+function waitingFilePath(testimony: TestimonyDoc | undefined): string | null {
+  const proof = testimony?.status === "deleted" ? undefined : testimony?.proofOfVisit;
+  return proof?.result === "pending" ? (proof.filePath ?? null) : null;
+}
+
+/** The waiting proof's file while it is stored, else null (the 7-day lifecycle rule deleted it). */
+async function storedWaitingFile(uploads: Bucket | null, testimony: TestimonyDoc): Promise<string | null> {
+  const path = waitingFilePath(testimony);
+  if (!uploads || !path) return null;
+  const [exists] = await uploads.file(path).exists();
+  return exists ? path : null;
 }
 
 /**
- * GET /admin/proofs/:testimonyId: streams a waiting proof file to an allowlisted admin
- * (the Express gate refuses everyone else first). 404 once the file is gone: decided,
+ * GET /admin/proofs/:testimonyId: streams the file of a waiting proof to an allowlisted
+ * admin (the Express gate refuses everyone else first). 404 once there is none: decided,
  * expired, or deleted by the bucket's 7-day lifecycle rule.
  */
 export async function proofFileResponse(context: AppLoadContext, testimonyId: string | undefined): Promise<Response> {
   if (!context.admin) return new Response(null, { status: 403 });
   if (!testimonyId || !TESTIMONY_ID.test(testimonyId)) return new Response(null, { status: 404 });
-  const path = await proofFile(context.uploads, testimonyId);
-  if (!path || !context.uploads) return new Response(null, { status: 404 });
+  const { firestore, uploads } = context;
+  if (!firestore || !uploads) return new Response(null, { status: 404 });
+  const snapshot = await testimonies(firestore).doc(testimonyId).get();
+  const path = waitingFilePath(snapshot.data() as TestimonyDoc | undefined);
+  if (!path) return new Response(null, { status: 404 });
   let bytes: Buffer;
   try {
-    [bytes] = await context.uploads.file(path).download();
+    [bytes] = await uploads.file(path).download();
   } catch {
-    // Deleted between the listing and the download.
+    // Gone: the lifecycle rule deleted it, or the proof was decided meanwhile.
     return new Response(null, { status: 404 });
   }
   return new Response(new Uint8Array(bytes), {
     headers: {
-      "Content-Type": path.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+      "Content-Type": isPdfProof(path) ? "application/pdf" : "image/jpeg",
       "Cache-Control": "private, no-store",
       "Content-Disposition": "inline",
       "X-Content-Type-Options": "nosniff",
@@ -76,7 +84,7 @@ export async function loadProofQueue(
   nowMs: number,
 ): Promise<QueueItem[]> {
   const pending = await testimonies(firestore).where("proofOfVisit.result", "==", "pending").get();
-  // The author's delete takes the file with it; the tombstone has nothing to review.
+  // Erasure takes the proof record; a Testimony deleted before it did has nothing to decide.
   const docs = pending.docs.filter((doc) => doc.get("status") !== "deleted");
   if (docs.length === 0) return [];
 
@@ -93,7 +101,7 @@ export async function loadProofQueue(
       const t = doc.data() as TestimonyDoc;
       const proof = t.proofOfVisit as ProofOfVisitRecord;
       const listedName = names.get(t.placeId);
-      const path = await proofFile(context.uploads, doc.id);
+      const path = await storedWaitingFile(context.uploads, t);
       return queueItem(
         {
           id: `proof-${doc.id}`,
@@ -105,13 +113,12 @@ export async function loadProofQueue(
             providerName: listedName ?? t.proposedProviderName ?? "",
             listed: listedName !== undefined,
             testimonyStatus: t.status,
+            checkedAt: iso(proof.checkedAt),
             visitMonth: t.visitMonth,
             displayName: t.displayName,
             fileUrl: path ? proofFileUrl(doc.id) : null,
-            ...(path ? { fileType: path.endsWith(".pdf") ? ("pdf" as const) : ("image" as const) } : {}),
-            ...(proof.clinicNameOnProof ? { clinicNameOnProof: proof.clinicNameOnProof } : {}),
-            ...(proof.proofDate ? { proofDate: proof.proofDate } : {}),
-            ...(proof.totalRupiah !== undefined ? { totalRupiah: proof.totalRupiah } : {}),
+            ...(path ? { fileType: isPdfProof(path) ? ("pdf" as const) : ("image" as const) } : {}),
+            ...proofFacts(proof),
             reasons: proof.reasons ?? [],
             attempts: proof.attempts ?? 1,
             matchingTestimonies: matches.get(doc.id) ?? [],
@@ -168,50 +175,34 @@ async function matchingTestimonies(
  * Accepts or rejects a waiting proof, logged in the same transaction. Accept makes the
  * Testimony Proven: when it is published, the Provider's aggregates are recomputed and
  * the impact counter moves now; otherwise both follow when it is published. Reject
- * keeps the admin's note for the author. Either way the file is deleted afterwards.
+ * keeps the admin's note for the author. Either way the proof's own file is deleted
+ * afterwards, never a newer proof's.
  */
 export async function proofAction(context: AppLoadContext, acting: Acting, action: ProofAction): Promise<void> {
   const { firestore } = acting;
   const ref = testimonies(firestore).doc(acting.request.subjectId);
-  await firestore.runTransaction(async (tx) => {
+  const decidedFile = await firestore.runTransaction(async (tx) => {
     const testimony = (await tx.get(ref)).data() as TestimonyDoc | undefined;
     if (!testimony || testimony.status === "deleted") throw new AdminRefusal(404, "not_found");
     const proof = testimony.proofOfVisit;
     if (proof?.result !== "pending") throw new AdminRefusal(404, "not_found");
-    const { reasons: _waitedFor, ...facts } = proof;
+    // The author replaced the proof since the admin was shown it: decide nothing unseen.
+    if (Date.parse(acting.request.proofCheckedAt ?? "") !== proof.checkedAt.toMillis()) {
+      throw new AdminRefusal(409, "proof_changed");
+    }
 
     if (action === "acceptProof") {
-      if (testimony.status === "published") {
-        const provider = await tx.get(firestore.collection(COLLECTIONS.providers).doc(testimony.placeId));
-        const published = await tx.get(publishedOf(firestore, testimony.placeId));
-        writeProviderOnPublish(tx, {
-          placeId: testimony.placeId,
-          provider,
-          published,
-          testimonyId: ref.id,
-          self: { ...testimony, verifiedVisit: true },
-          proposal: null,
-        });
-      }
-      const accepted: ProofOfVisitRecord = { ...facts, result: "accepted" };
+      const publicSide =
+        testimony.status === "published" ? await readPublicSide(tx, firestore, testimony.placeId) : null;
+      markProven(tx, firestore, ref.id, testimony, publicSide);
       // `updatedAt` stays: a held or hidden Testimony's queue target counts from it.
-      tx.update(ref, { proofOfVisit: accepted, verifiedVisit: true });
-      recordTestimonyTransition(
-        firestore,
-        tx,
-        { status: testimony.status, verifiedVisit: testimony.verifiedVisit },
-        { status: testimony.status, verifiedVisit: true },
-      );
+      tx.update(ref, { proofOfVisit: decidedRecord(proof, { result: "accepted" }), verifiedVisit: true });
     } else {
-      const rejected: ProofOfVisitRecord = {
-        ...facts,
-        result: "rejected",
+      const note = acting.request.reason;
+      rejectWaitingProof(tx, firestore, ref, proof, {
         reason: "adminRejected",
-        ...(acting.request.reason ? { adminReason: acting.request.reason } : {}),
-      };
-      tx.update(ref, { proofOfVisit: rejected });
-      // A rejected proof keeps no Proof Fingerprint; an accepted one keeps it.
-      tx.delete(fingerprintRef(firestore, ref.id));
+        ...(note ? { adminReason: note } : {}),
+      });
     }
     logAction(tx, acting, {
       subjectType: "proofOfVisit",
@@ -220,11 +211,12 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
       fromStatus: "pending",
       toStatus: action === "acceptProof" ? "accepted" : "rejected",
     });
+    return proof.filePath;
   });
 
-  if (!context.uploads) return;
+  if (!context.uploads || !decidedFile) return;
   try {
-    await deleteStoredProofs(context.uploads, ref.id);
+    await deleteProofFile(context.uploads, decidedFile);
   } catch (error) {
     // The bucket's 7-day lifecycle rule is the backstop; the decision itself stands.
     context.logger.warn("admin_action", {

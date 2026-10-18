@@ -48,7 +48,7 @@ class ProofCheckResponse(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    proofExtraction: Annotated[ProofExtraction, Field(title="ProofCheckExtraction")]
+    proofExtraction: ProofExtraction
 
 
 class ProofExtraction(BaseModel):

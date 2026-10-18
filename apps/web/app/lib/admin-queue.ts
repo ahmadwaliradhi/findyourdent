@@ -5,6 +5,7 @@ import type {
   ClaimDoc,
   ModerationDecisionDoc,
   ProcedureCode,
+  ProofFacts,
   ProofPendingReason,
   ProviderType,
   RegionRef,
@@ -67,6 +68,11 @@ export interface AdminActionRequest {
     | "spotCheckConfirm";
   subjectId: string;
   reason?: string;
+  /**
+   * Proof actions only, and required there: when the proof the admin was shown was checked
+   * (`QueueProof.checkedAt`). A proof the author replaced since is refused (`proof_changed`).
+   */
+  proofCheckedAt?: string;
 }
 
 export interface AdminActionResponse {
@@ -75,7 +81,7 @@ export interface AdminActionResponse {
 }
 
 export interface AdminApiError {
-  error: "invalid_action" | "reason_required" | "not_found" | "not_allowed" | "unavailable";
+  error: "invalid_action" | "reason_required" | "not_found" | "not_allowed" | "unavailable" | "proof_changed";
   message: string;
 }
 
@@ -221,26 +227,24 @@ export interface QueueProofMatch {
 }
 
 /**
- * A Proof of Visit waiting for the team (spec 09): the file, what the agent read from
- * it (never a patient name) and why it waits. Its Testimony stays as it is meanwhile.
+ * A Proof of Visit waiting for the team (spec 09): the file, the facts the agent read
+ * from it (never a patient name) and why it waits. Its Testimony stays as it is meanwhile.
  */
-export interface QueueProof {
+export interface QueueProof extends ProofFacts {
   testimonyId: string;
   placeId: string;
   /** The Listed name, or the name the author typed while the place is not Listed. */
   providerName: string;
   listed: boolean;
   testimonyStatus: TestimonyStatus;
+  /** When this proof was checked, ISO: which proof the admin decides on (`proofCheckedAt`). */
+  checkedAt: string;
   /** The visit month the author stated, YYYY-MM. */
   visitMonth: string;
   displayName: string;
   /** Admin-only route that streams the private file; null once it is gone. */
   fileUrl: string | null;
   fileType?: "image" | "pdf";
-  clinicNameOnProof?: string;
-  /** YYYY-MM-DD when a day was printed, else YYYY-MM. */
-  proofDate?: string;
-  totalRupiah?: number;
   reasons: ProofPendingReason[];
   /** Proofs checked for this Testimony so far, this one included. */
   attempts: number;

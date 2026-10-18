@@ -44,4 +44,4 @@ class ProofCheckRequest(BaseModel):
     """
     Live Google display name fetched by the web service and held in memory only, for rule R6 and the Proof of Visit match. Never stored.
     """
-    proofOfVisit: Annotated[ModerationProofOfVisit, Field(title="ProofCheckFile")]
+    proofOfVisit: ModerationProofOfVisit

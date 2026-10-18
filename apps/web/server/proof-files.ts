@@ -12,14 +12,19 @@ export const PROOF_RETENTION_DAYS = 7;
 /** Where a Testimony's Proof of Visit files are kept until decided. */
 export const proofPrefix = (testimonyId: string) => `proof-of-visit/${testimonyId}/`;
 
-/** Every stored Proof of Visit file of a Testimony: a pending one waits there for an admin. */
-export async function storedProofPaths(uploads: Bucket, testimonyId: string): Promise<string[]> {
-  const [files] = await uploads.getFiles({ prefix: proofPrefix(testimonyId) });
-  return files.map((file) => file.name);
+/** A stored proof is a PDF kept as sent, or an image re-encoded as JPEG (testimony-media.server.ts). */
+export const isPdfProof = (path: string) => path.endsWith(".pdf");
+
+/** Deletes one stored Proof of Visit file; a missing one is ignored. */
+export async function deleteProofFile(uploads: Bucket, path: string): Promise<void> {
+  await uploads.file(path).delete({ ignoreNotFound: true });
 }
 
-/** Deletes every stored Proof of Visit file of a Testimony; missing ones are ignored. */
+/**
+ * Deletes every stored Proof of Visit file of a Testimony; missing ones are ignored. Only
+ * for erasure: a decided proof deletes its own file (`filePath`), never a newer proof's.
+ */
 export async function deleteStoredProofs(uploads: Bucket, testimonyId: string): Promise<void> {
-  const paths = await storedProofPaths(uploads, testimonyId);
-  await Promise.all(paths.map((path) => uploads.file(path).delete({ ignoreNotFound: true })));
+  const [files] = await uploads.getFiles({ prefix: proofPrefix(testimonyId) });
+  await Promise.all(files.map((file) => deleteProofFile(uploads, file.name)));
 }

@@ -37,18 +37,50 @@ function stripRequiredOnlyCombinators(node: unknown): unknown {
   return out;
 }
 
+const readSchema = (file: string): unknown => JSON.parse(readFileSync(join(schemasDir, file), "utf8"));
+
+/**
+ * The named types a schema takes from other schema files through `$ref`
+ * (`other.schema.json#/json/pointer` to a node with a `title`), each imported from the
+ * file generated for it so the type is declared once. A reference to an untitled node
+ * (a plain string, say) is simply inlined.
+ */
+function externalTypes(node: unknown, found = new Map<string, string>()): Map<string, string> {
+  if (Array.isArray(node)) for (const item of node) externalTypes(item, found);
+  if (node === null || typeof node !== "object") return found;
+  for (const [key, value] of Object.entries(node)) {
+    const ref = key === "$ref" && typeof value === "string" ? /^([\w-]+)\.schema\.json#(.*)$/.exec(value) : null;
+    if (!ref) {
+      externalTypes(value, found);
+      continue;
+    }
+    const [, target = "", pointer = ""] = ref;
+    let resolved = readSchema(`${target}.schema.json`) as Record<string, unknown> | undefined;
+    for (const part of pointer.split("/").filter(Boolean)) resolved = resolved?.[part] as typeof resolved;
+    if (typeof resolved?.title === "string") found.set(resolved.title, target);
+  }
+  return found;
+}
+
 const expected = new Map<string, string>();
 for (const file of schemaFiles) {
-  const schema = stripRequiredOnlyCombinators(JSON.parse(readFileSync(join(schemasDir, file), "utf8"))) as {
-    title?: string;
-  };
+  const schema = stripRequiredOnlyCombinators(readSchema(file)) as { title?: string };
+  const imported = externalTypes(schema);
   const ts = await compile(schema, schema.title ?? file, {
-    bannerComment: banner.replace("{file}", file),
+    bannerComment: [
+      banner.replace("{file}", file),
+      ...(imported.size > 0 ? [""] : []),
+      ...[...imported].map(([title, target]) => `import type { ${title} } from "./${target}.js";`),
+    ].join("\n"),
     cwd: schemasDir,
     additionalProperties: false,
     unreachableDefinitions: true,
     strictIndexSignatures: true,
     ignoreMinAndMaxItems: true,
+    // A type from another file is imported (above), not declared again. This also
+    // leaves out every named type but the root, so such a schema keeps its own named
+    // parts in a file of their own.
+    declareExternallyReferenced: imported.size === 0,
     format: true,
     style: { semi: true, singleQuote: false, trailingComma: "all", printWidth: 100 },
   });

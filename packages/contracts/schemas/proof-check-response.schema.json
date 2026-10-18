@@ -8,8 +8,7 @@
   "required": ["proofExtraction"],
   "properties": {
     "proofExtraction": {
-      "$ref": "moderation-decision.schema.json#/properties/proofExtraction",
-      "title": "ProofCheckExtraction"
+      "$ref": "moderation-decision.schema.json#/properties/proofExtraction"
     }
   }
 }

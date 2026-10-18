@@ -2,10 +2,15 @@
 // agent read from the proof, the stated visit month, today in Asia/Jakarta and the
 // reuse check. The agent applies no date window and never decides; this does.
 //
-// Types only from the contracts, no `~` alias: the admin sweep (spec 09) runs from the
-// Cloud Run job image, which copies app/lib/ unbundled.
+// Types only from the contracts, no `~` alias, like the rest of app/lib/: the Cloud Run
+// job image copies it unbundled for the server/ code that imports some of it.
 import type { ProofExtraction } from "@findyourdent/contracts";
-import type { ProofOfVisitRecord, ProofPendingReason, ProofRejectedReason } from "@findyourdent/contracts/firestore";
+import type {
+  ProofFacts,
+  ProofOfVisitRecord,
+  ProofPendingReason,
+  ProofRejectedReason,
+} from "@findyourdent/contracts/firestore";
 
 /** A proof dated more than this many months before today is not accepted (spec 09). */
 export const PROOF_MAX_AGE_MONTHS = 12;
@@ -18,15 +23,6 @@ export const PROOF_VISIT_MONTH_TOLERANCE = 1;
  */
 export const MAX_PROOF_ATTEMPTS = 3;
 
-/**
- * Whether the proof matches another Testimony's Proof Fingerprint at the same Provider
- * (app/server/proof-fingerprint.server.ts: same key, same PDF, or a near-identical image).
- */
-export interface ReuseCheck {
-  matched: boolean;
-}
-export const NO_REUSE: ReuseCheck = { matched: false };
-
 export type ProofDecision =
   | { result: "accepted" }
   | { result: "pending"; reasons: ProofPendingReason[] }
@@ -38,7 +34,12 @@ export interface ProofDecisionInput {
   visitMonth: string;
   /** Today in Asia/Jakarta, YYYY-MM-DD. */
   today: string;
-  reuse?: ReuseCheck;
+  /**
+   * The reuse check: the proof matches another Testimony's Proof Fingerprint at the same
+   * Provider (app/server/proof-fingerprint.server.ts: same key, same PDF, or a
+   * near-identical image).
+   */
+  reused?: boolean;
 }
 
 /**
@@ -46,7 +47,7 @@ export interface ProofDecisionInput {
  * doubt (name, date, reuse) sends it to an admin, and with none it is accepted. A missing
  * total is fine; a missing date is a date doubt.
  */
-export function decideProof({ extraction, visitMonth, today, reuse = NO_REUSE }: ProofDecisionInput): ProofDecision {
+export function decideProof({ extraction, visitMonth, today, reused = false }: ProofDecisionInput): ProofDecision {
   if (!extraction.readable) return { result: "rejected", reason: "unreadable" };
   if (!extraction.isProofOfVisit) return { result: "rejected", reason: "notAProof" };
   const { proofDate } = extraction;
@@ -59,8 +60,17 @@ export function decideProof({ extraction, visitMonth, today, reuse = NO_REUSE }:
   if (!proofDate || Math.abs(monthIndex(proofDate) - monthIndex(visitMonth)) > PROOF_VISIT_MONTH_TOLERANCE) {
     reasons.push("dateMismatch");
   }
-  if (reuse.matched) reasons.push("possibleReuse");
+  if (reused) reasons.push("possibleReuse");
   return reasons.length > 0 ? { result: "pending", reasons } : { result: "accepted" };
+}
+
+/** The printed facts of a proof (or of its record), leaving out those not read: Firestore refuses `undefined`. */
+export function proofFacts({ clinicNameOnProof, proofDate, totalRupiah }: ProofFacts): ProofFacts {
+  return {
+    ...(clinicNameOnProof ? { clinicNameOnProof } : {}),
+    ...(proofDate ? { proofDate } : {}),
+    ...(totalRupiah !== undefined ? { totalRupiah } : {}),
+  };
 }
 
 /**

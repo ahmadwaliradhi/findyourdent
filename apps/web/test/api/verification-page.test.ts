@@ -87,6 +87,9 @@ describe(`GET ${PATH}`, () => {
     expect(text).toMatch(/tidak boleh menawarkan apa pun sebagai imbalan/);
     expect(text).toMatch(/hanya Pasien tertentu/);
     expect(text).toMatch(/ditampilkan secara publik/);
+    // A person confirms a violation: nothing on the page claims enforcement is automatic.
+    expect(text).toContain("Jika tim FindYourDent memastikan ada pelanggaran");
+    expect(text).not.toMatch(/otomatis/i);
     expect(text).toMatch(/Pelanggaran kebijakan testimoni/);
   });
 
@@ -97,8 +100,8 @@ describe(`GET ${PATH}`, () => {
     expect(html).toMatch(/<html[^>]*lang="en"/);
     const text = mainText(html);
     expect(text).toContain("How we verify Testimonies");
-    expect(text).toContain("Only Testimonies with a verified visit count");
-    expect(text).toContain("At least 3 verified Testimonies");
+    expect(text).toContain("Only Proven Testimonies count");
+    expect(text).toContain("At least 3 Proven Testimonies");
     expect(text).toContain("FindYourDent never pays for or rewards Testimonies.");
   });
 

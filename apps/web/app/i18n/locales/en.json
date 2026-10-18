@@ -185,7 +185,7 @@
         "claim": "Page claim",
         "ownerFacts": "Owner details held",
         "reply": "Reply held",
-        "proof": "Proof of visit to review"
+        "proof": "Proof of visit to check"
       },
       "status": {
         "submitted": "Being checked",
@@ -327,7 +327,7 @@
       "privateDentist": "Private dentist",
       "hospital": "Hospital"
     },
-    "verifiedOnly": "Verified visits only",
+    "verifiedOnly": "Proven visits only",
     "apply": "Apply",
     "reset": "Clear filters"
   },
@@ -356,7 +356,7 @@
     "searchPlaceholder": "For example: Klinik Gigi Sehat",
     "sortLabel": "Sort by",
     "sort": {
-      "testimoni": "Most verified Testimonies",
+      "testimoni": "Most Proven Testimonies",
       "skor": "Highest score",
       "jarak": "Nearest"
     },
@@ -375,7 +375,7 @@
     "score": "Score {{score}}",
     "testimonies_one": "{{count}} Testimony",
     "testimonies": "{{count}} Testimonies",
-    "verifiedVisits": "{{count}} Kunjungan terbukti",
+    "verifiedVisits": "{{count}} proven visits",
     "distance": "{{km}} km",
     "noLocation": "Distance unavailable",
     "locating": "Finding your location...",
@@ -390,20 +390,20 @@
     "title": "FindYourDent impact",
     "testimoniesPublished": "Testimonies",
     "kotaCovered": "Cities and regencies",
-    "verifiedVisits": "Verified visits",
+    "verifiedVisits": "Proven visits",
     "listedProviders": "Listed places",
     "guidanceSessionsCompleted": "Guidance sessions"
   },
   "proof": {
-    "proven": "Verified visit",
-    "unproven": "Not yet verified",
-    "notEnough": "Not enough verified Testimonies yet",
-    "provenCount_one": "{{count}} verified Testimony",
-    "provenCount": "{{count}} verified Testimonies"
+    "proven": "Proven visit",
+    "unproven": "Not yet proven",
+    "notEnough": "Not enough Proven Testimonies yet",
+    "provenCount_one": "{{count}} Proven Testimony",
+    "provenCount": "{{count}} Proven Testimonies"
   },
   "provider": {
     "title": "{{name}}, {{area}}",
-    "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} verified testimonies.",
+    "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} Proven Testimonies.",
     "metaDescriptionNoScores": "{{name}} in {{area}}. Read patient testimonies and share your own on FindYourDent.",
     "type": {
       "klinik": "Dental clinic",
@@ -419,7 +419,7 @@
       "materialsEquipment": "Materials and equipment"
     },
     "testimonyCount": "{{count}} testimonies",
-    "verifiedVisitCount": "{{count}} verified visits",
+    "verifiedVisitCount": "{{count}} proven visits",
     "testimoniesTitle": "Patient testimonies",
     "noTestimonies": "No published testimonies for this place yet.",
     "visitMonth": "Visited {{month}}",
@@ -459,7 +459,7 @@
     "priceListConfirmed": "Confirmed by the owner on {{date}}",
     "possiblyOutdated": "may have changed",
     "address": "Address",
-    "scoreScale": "Scale of 1 to 5, from verified Testimonies only."
+    "scoreScale": "Scale of 1 to 5, from Proven Testimonies only."
   },
   "shortlist": {
     "reason": {
@@ -467,7 +467,7 @@
       "emergencyNoDistance": "Hospital with an emergency department in the area you typed",
       "hospitalFit": "Hospital, suited to {{procedure}}",
       "listedService": "Lists {{procedure}} among its services",
-      "testimonies": "Testimony score {{score}} from {{count}} verified Testimonies",
+      "testimonies": "Testimony score {{score}} from {{count}} Proven Testimonies",
       "distance": "About {{distance}} from you",
       "procedure": "Can handle {{procedure}}",
       "generic": "Dentist near you"
@@ -484,7 +484,7 @@
     "search": "Search",
     "searching": "Searching…",
     "privacy": "Your location or area is used only for this search and is not stored.",
-    "rankingNote": "Ranked by fit with your complaint, verified Testimonies, price and distance. Never by payment.",
+    "rankingNote": "Ranked by fit with your complaint, Proven Testimonies, price and distance. Never by payment.",
     "fallbackNote": "Today's Google search limit has been reached. These are dentists listed on FindYourDent near you.",
     "empty": "No matching dentists near you yet.",
     "mapsSearch": "Search in Google Maps",
@@ -499,7 +499,7 @@
     "testimoniesNone": "No Testimonies yet",
     "testimoniesTotal_one": "{{count}} Testimony",
     "testimoniesTotal": "{{count}} Testimonies",
-    "testimoniesCount": "{{count}} Testimonies, {{verified}} verified visits",
+    "testimoniesCount": "{{count}} Testimonies, {{verified}} proven visits",
     "aspects": "Service {{service}} · Hygiene {{hygiene}} · Materials and equipment {{materials}}",
     "priceSource": {
       "testimonies": "Price paid by patients (median)",
@@ -543,7 +543,7 @@
     "photosReattach": "Photos and proof of visit are not kept in the draft. Choose them again before sending.",
     "filesTitle": "Photos and proof of visit",
     "proofLabel": "Proof of visit (optional, private)",
-    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown. Only Testimonies with an accepted proof of visit count toward the score and show Verified visit. The file is deleted after the check, or within 7 days if our team needs to look at it.",
+    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown. Only Testimonies with an accepted proof of visit count toward the score and show Proven visit. The file is deleted after the check, or within 7 days if our team needs to look at it.",
     "proofAdd": "Choose proof file",
     "proofRemove": "Remove proof of visit",
     "displayNameLabel": "Public name",
@@ -778,8 +778,8 @@
   },
   "proofStatus": {
     "title": "Proof of visit",
-    "accepted": "Your proof of visit was accepted, so this Testimony shows Verified visit. We have deleted the file.",
-    "pending": "Your proof of visit is waiting for the FindYourDent team to check it. Until then, this Testimony does not show Verified visit.",
+    "accepted": "Your proof of visit was accepted, so this Testimony shows Proven visit. We have deleted the file.",
+    "pending": "Your proof of visit is waiting for the FindYourDent team to check it. Until then, this Testimony does not show Proven visit.",
     "notChecked": "We could not check your proof of visit this time, so we deleted the file. Please send it again later.",
     "rejected": {
       "unreadable": "Your proof of visit was not accepted because its text could not be read.",
@@ -808,7 +808,8 @@
       "reason_required": "Write a reason for this action.",
       "not_found": "This item was not found or has already been decided.",
       "not_allowed": "This action is not possible in the current state.",
-      "unavailable": "The admin service is unavailable right now."
+      "unavailable": "The admin service is unavailable right now.",
+      "proof_changed": "The author has replaced this proof. Reload the page to see the new one."
     }
   },
   "report": {
@@ -1059,19 +1060,19 @@
     "eyebrow": "Testimonies",
     "title": "How we verify Testimonies",
     "lead": "Ratings on FindYourDent are only useful if they come from visits that really happened. That is why only Testimonies with an accepted proof of visit count. You can still read every other Testimony.",
-    "countTitle": "Only Testimonies with a verified visit count",
+    "countTitle": "Only Proven Testimonies count",
     "count": [
       {
-        "title": "Verified visit",
+        "title": "Proven visit",
         "body": "A Testimony whose proof of visit was accepted. Only these count toward the service, hygiene, and materials and equipment ratings, the Directory order and the list of dentists near you, and the price stats."
       },
       {
-        "title": "Not yet verified",
-        "body": "A Testimony without an accepted proof of visit is still published and can be read, labelled Not yet verified. It changes no rating, order or price."
+        "title": "Not yet proven",
+        "body": "A Testimony without an accepted proof of visit is still published and can be read, labelled Not yet proven. It changes no rating, order or price."
       },
       {
-        "title": "At least {{min}} verified Testimonies",
-        "body": "A star average appears only once a practice has {{min}} Testimonies with a verified visit. Until then it shows Not enough verified Testimonies yet, with their count."
+        "title": "At least {{min}} Proven Testimonies",
+        "body": "A star average appears only once a practice has {{min}} Proven Testimonies. Until then it shows Not enough Proven Testimonies yet, with their count."
       },
       {
         "title": "One rule for everyone",
@@ -1083,7 +1084,7 @@
     "checkSteps": [
       "AI reads your document: whether it is readable, and whether it really shows a visit to a dental practice.",
       "We match the clinic name on the document with the place you wrote about, and its date with the visit month you entered. The document must be less than 12 months old.",
-      "If everything matches, your Testimony is marked Verified visit. If something is doubtful, the FindYourDent team checks it, and your Testimony stays published as Not yet verified while it waits.",
+      "If everything matches, your Testimony is marked Proven visit. If something is doubtful, the FindYourDent team checks it, and your Testimony stays published as Not yet proven while it waits.",
       "If the document is unreadable, is not a proof of visit, or is too old, you see the reason and can try another document.",
       "One proof counts for one Testimony only. We keep a digital fingerprint of the proof, not the document, so one receipt cannot be used again and again."
     ],
@@ -1091,7 +1092,7 @@
     "keep": [
       {
         "title": "Never shown",
-        "body": "A proof of visit is private. A Testimony shows only its mark: Verified visit or Not yet verified."
+        "body": "A proof of visit is private. A Testimony shows only its mark: Proven visit or Not yet proven."
       },
       {
         "title": "Deleted after the check",
@@ -1112,7 +1113,7 @@
       "FindYourDent never pays for or rewards Testimonies.",
       "A practice may not offer anything in exchange for a Testimony, such as money, a discount, a gift or free treatment.",
       "A practice may not ask only selected Patients, such as only satisfied ones, to write a Testimony.",
-      "A confirmed violation is shown publicly on that practice’s page with a Testimony policy violation mark, and the Testimonies from that period stop counting. Before a decision, the practice is told and can explain."
+      "If the FindYourDent team confirms a violation, it is shown publicly on that practice’s page with a Testimony policy violation mark, and the Testimonies from that period stop counting. Before deciding, the team tells the practice, which can explain."
     ],
     "reportTitle": "Offered something in exchange for a Testimony?",
     "reportBody": "Tell the FindYourDent team by email. Include the practice’s name and what was offered."
@@ -1146,7 +1147,7 @@
             "<b>Your location or area</b> is used only to find dentists near you and is not stored. In the Directory, distance is computed on your device and your location is not sent to us.",
             "<b>Your Google account</b> is used when you write a Testimony or claim a page. Your account is never shown.",
             "<b>Testimonies</b>: ratings, story, month and year of visit, the name you choose, and the procedure, price and photos if you add them. These are public. Location data in photos is removed automatically.",
-            "<b>Proof of visit</b> is deleted after the check, or within 7 days if our team needs to look at it. It is never shown; only a Verified visit mark appears if it is accepted. From it we keep only the clinic name, date and total printed on it, never your name.",
+            "<b>Proof of visit</b> is deleted after the check, or within 7 days if our team needs to look at it. It is never shown; only a Proven visit mark appears if it is accepted. From it we keep only the clinic name, date and total printed on it, never your name.",
             "<b>Owner claim data</b>: your SIP or practice permit is kept private and deleted after the decision. Your phone number is only for the FindYourDent team and is never shown.",
             "<b>Owner price lists</b>: the original file is kept privately for 30 days in case of disputes, then deleted. Only rows the owner confirms are shown.",
             "<b>Reports</b> on a Testimony: the category and details you write, for the team to review."
