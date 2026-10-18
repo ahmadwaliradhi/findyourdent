@@ -337,6 +337,7 @@ async def moderate(
                 instruction=screening.instruction,
                 contents=contents,
                 response_schema=screening.schema,
+                timeout_seconds=settings.moderation_timeout_seconds,
             ),
             timeout=settings.moderation_timeout_seconds,
         )
