@@ -25,6 +25,7 @@ import { provinceName, regencyName, regionLabel } from "~/lib/regions";
 import { openGraphMeta } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import { loadDirectory } from "~/server/directory.server";
+import { districtName, initialDistrictsOf } from "~/server/districts.server";
 import type { Route } from "./+types/direktori";
 
 /** Server-rendered from FindYourDent's own data; never calls Google Places. */
@@ -35,12 +36,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const q = parseDirectoryQuery(params.get(DIRECTORY_PARAMS.query));
   const sort = parseDirectorySort(params.get(DIRECTORY_PARAMS.sort));
   const rows = context.firestore ? await loadDirectory(context.firestore, { filters, q, sort }) : [];
-  return { filters, q, sort, rows, url: `${url.origin}${url.pathname}${url.search}` };
+  return {
+    filters,
+    districts: initialDistrictsOf(filters.regencyCode),
+    districtName: filters.districtCode ? (districtName(filters.districtCode) ?? null) : null,
+    q,
+    sort,
+    rows,
+    url: `${url.origin}${url.pathname}${url.search}`,
+  };
 }
 
-/** The most specific named Region level of the filters (kecamatan names are not loaded in the browser yet). */
-function areaName(filters: ListingFilters | undefined): string | null {
-  if (filters?.regencyCode) return regencyName(filters.regencyCode);
+/** The most specific named Region levels of the filters: "Gambir, Kota Administrasi Jakarta Pusat". */
+function areaName(filters: ListingFilters | undefined, district: string | null | undefined): string | null {
+  if (filters?.regencyCode) {
+    return district ? `${district}, ${regencyName(filters.regencyCode)}` : regencyName(filters.regencyCode);
+  }
   if (filters?.provinceCode) return provinceName(filters.provinceCode);
   return null;
 }
@@ -48,7 +59,7 @@ function areaName(filters: ListingFilters | undefined): string | null {
 export function meta({ matches, loaderData }: Route.MetaArgs) {
   const language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
-  const area = areaName(loaderData?.filters);
+  const area = areaName(loaderData?.filters, loaderData?.districtName);
   const title = area ? t("directory.metaTitleArea", { area }) : t("directory.metaTitle");
   const description = area ? t("directory.metaDescriptionArea", { area }) : t("directory.metaDescription");
   return [
@@ -101,11 +112,11 @@ function sortByDistance(rows: DirectoryRow[], origin: LatLng): { row: DirectoryR
 }
 
 export default function Directory({ loaderData }: Route.ComponentProps) {
-  const { filters, q, sort, rows } = loaderData;
+  const { filters, districts, districtName, q, sort, rows } = loaderData;
   const { t, i18n } = useTranslation();
   const language: Language = isLanguage(i18n.language) ? i18n.language : "id";
   const location = useVisitorLocation(sort === "jarak");
-  const area = areaName(filters);
+  const area = areaName(filters, districtName);
   const shown = useMemo(
     () =>
       location.status === "ready" ? sortByDistance(rows, location.origin) : rows.map((row) => ({ row, km: null })),
@@ -123,7 +134,13 @@ export default function Directory({ loaderData }: Route.ComponentProps) {
 
       <div className="grid grid-cols-1 gap-6 desktop:grid-cols-[280px_minmax(0,1fr)] desktop:items-start desktop:gap-10">
         <aside className="desktop:sticky desktop:top-6">
-          <ListingFiltersForm id={FORM_ID} filters={filters} action="/direktori" layout="sidebar" />
+          <ListingFiltersForm
+            id={FORM_ID}
+            filters={filters}
+            districts={districts}
+            action="/direktori"
+            layout="sidebar"
+          />
         </aside>
 
         <section aria-labelledby="directory-results" className="flex flex-col gap-4">

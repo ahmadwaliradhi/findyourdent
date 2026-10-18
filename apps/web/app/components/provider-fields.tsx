@@ -143,8 +143,13 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
             mode="pick"
             value={value.region}
             onChange={(region) => onChange({ ...latest.current, region })}
-            errors={{ province: errors["region.provinceCode"], regency: errors["region.regencyCode"] }}
+            errors={{
+              province: errors["region.provinceCode"],
+              regency: errors["region.regencyCode"],
+              district: errors["region.districtCode"],
+            }}
             required
+            withDistrict
           />
         </>
       )}

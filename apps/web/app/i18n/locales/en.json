@@ -316,7 +316,11 @@
     "allRegencies": "All cities/regencies",
     "chooseProvince": "Choose a province",
     "chooseRegency": "Choose a city/regency",
-    "chooseProvinceFirst": "Choose a province first"
+    "chooseProvinceFirst": "Choose a province first",
+    "district": "District (kecamatan)",
+    "allDistricts": "All districts",
+    "chooseDistrict": "Choose a district (optional)",
+    "chooseRegencyFirst": "Choose a city or regency first"
   },
   "directory": {
     "metaTitle": "Directory of dentists and dental clinics | FindYourDent",

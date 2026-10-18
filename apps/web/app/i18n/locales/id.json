@@ -316,7 +316,11 @@
     "allRegencies": "Semua kota/kabupaten",
     "chooseProvince": "Pilih provinsi",
     "chooseRegency": "Pilih kota/kabupaten",
-    "chooseProvinceFirst": "Pilih provinsi dulu"
+    "chooseProvinceFirst": "Pilih provinsi dulu",
+    "district": "Kecamatan",
+    "allDistricts": "Semua kecamatan",
+    "chooseDistrict": "Pilih kecamatan (opsional)",
+    "chooseRegencyFirst": "Pilih kota/kabupaten dulu"
   },
   "directory": {
     "metaTitle": "Direktori dokter gigi dan klinik gigi | FindYourDent",

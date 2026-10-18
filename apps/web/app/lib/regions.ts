@@ -16,7 +16,19 @@ export function regencyName(code: string): string {
   return regencyNames.get(code) ?? code;
 }
 
-/** "Kota Jakarta Pusat, DKI Jakarta". Kecamatan are not shown yet: their names live in data/districts.json, not loaded here. */
+/** One kecamatan, as the Region fields list it. Names live in data/districts.json, which stays on the server (server/districts.server.ts). */
+export interface DistrictOption {
+  code: string;
+  name: string;
+}
+
+/** The kecamatan of one kota/kabupaten, sent by a loader so the Kecamatan select renders filled before JavaScript runs. */
+export interface InitialDistricts {
+  regencyCode: string;
+  districts: DistrictOption[];
+}
+
+/** "Kota Jakarta Pusat, DKI Jakarta". Kecamatan names are not loaded here; see DistrictOption. */
 export function regionLabel(region: Pick<RegionRef, "provinceCode" | "regencyCode">): string {
   return `${regencyName(region.regencyCode)}, ${provinceName(region.provinceCode)}`;
 }

@@ -29,8 +29,9 @@ import type { FeedItem, FeedPage } from "~/lib/feed";
 import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { type ListingFilters, listingFiltersToParams, parseListingFilters } from "~/lib/listing-filters";
-import { provinceName, regionLabel } from "~/lib/regions";
+import { type InitialDistricts, provinceName, regionLabel } from "~/lib/regions";
 import { openGraphMeta } from "~/lib/seo";
+import { districtName, initialDistrictsOf } from "~/server/districts.server";
 import { loadFeedPage } from "~/server/feed.server";
 import { guidanceBodyTooLarge, requestGuidance } from "~/server/guidance.server";
 import { readImpactCounter } from "~/server/impact.server";
@@ -39,10 +40,11 @@ import { getOrCreateSessionId } from "~/server/session.server";
 import { sharePath } from "~/server/share.server";
 import type { Route } from "./+types/home";
 
-/** "Kota Bandung, Jawa Barat" or "Jawa Barat" when the feed is filtered by area. */
-function filterArea(filters: ListingFilters): string | null {
+/** "Coblong, Kota Bandung, Jawa Barat", "Kota Bandung, Jawa Barat" or "Jawa Barat" when the feed is filtered by area. */
+function filterArea(filters: ListingFilters, district: string | null | undefined): string | null {
   if (filters.provinceCode && filters.regencyCode) {
-    return regionLabel({ provinceCode: filters.provinceCode, regencyCode: filters.regencyCode });
+    const label = regionLabel({ provinceCode: filters.provinceCode, regencyCode: filters.regencyCode });
+    return district ? `${district}, ${label}` : label;
   }
   return filters.provinceCode ? provinceName(filters.provinceCode) : null;
 }
@@ -51,7 +53,7 @@ export function meta({ matches, loaderData }: Route.MetaArgs) {
   const language = matches[0]?.loaderData?.language ?? "id";
   const t = getI18n(language).getFixedT(language);
   const filters = loaderData?.filters;
-  const area = filters ? filterArea(filters) : null;
+  const area = filters ? filterArea(filters, loaderData?.districtName) : null;
   const url = loaderData?.url;
   const preview = (title: string, description: string) => (url ? openGraphMeta({ title, description, url }) : []);
   if (!filters || !area) {
@@ -81,7 +83,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       : Promise.resolve<FeedPage>({ items: [], nextCursor: null }),
     readImpactCounter(context.firestore),
   ]);
-  return { filters, feed, impact, url: `${url.origin}${url.pathname}${url.search}` };
+  return {
+    filters,
+    districts: initialDistrictsOf(filters.regencyCode),
+    districtName: filters.districtCode ? (districtName(filters.districtCode) ?? null) : null,
+    feed,
+    impact,
+    url: `${url.origin}${url.pathname}${url.search}`,
+  };
 }
 
 /** A Guidance submit changes nothing in the feed, so it does not re-read it. */
@@ -275,7 +284,12 @@ export default function Home({ actionData: routeActionData, loaderData }: Route.
 
       <ImpactCounter counts={loaderData.impact} />
 
-      <Feed filters={loaderData.filters} feed={loaderData.feed} />
+      <Feed
+        filters={loaderData.filters}
+        districts={loaderData.districts}
+        districtName={loaderData.districtName}
+        feed={loaderData.feed}
+      />
     </div>
   );
 }
@@ -352,9 +366,19 @@ function useGuidanceAcrossReload(shown: HomeActionData | undefined): HomeActionD
   return restored?.entryKey === entryKey ? restored.data : undefined;
 }
 
-function Feed({ filters, feed }: { filters: ListingFilters; feed: FeedPage }) {
+function Feed({
+  filters,
+  districts,
+  districtName,
+  feed,
+}: {
+  filters: ListingFilters;
+  districts: InitialDistricts | null;
+  districtName: string | null;
+  feed: FeedPage;
+}) {
   const { t } = useTranslation();
-  const area = filterArea(filters);
+  const area = filterArea(filters, districtName);
   const query = listingFiltersToParams(filters).toString();
 
   return (
@@ -376,7 +400,7 @@ function Feed({ filters, feed }: { filters: ListingFilters; feed: FeedPage }) {
       <details className="rounded-lg border bg-card px-5 py-3" open={query !== ""}>
         <summary className="flex min-h-touch cursor-pointer items-center font-semibold">{t("filters.title")}</summary>
         <div className="pt-4 pb-2">
-          <ListingFiltersForm filters={filters} action="/" />
+          <ListingFiltersForm filters={filters} districts={districts} action="/" />
         </div>
       </details>
       {/* Keyed on the filters, so appended pages reset when the filters change. */}
