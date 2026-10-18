@@ -5,13 +5,15 @@ import type {
   GuidanceResponse,
   UrgencyTier,
 } from "@findyourdent/contracts";
-import type { ReactNode } from "react";
+import { Info, MapPin, TriangleAlert } from "lucide-react";
+import type { MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ShortlistPanel } from "~/components/shortlist-panel";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Textarea } from "~/components/ui/textarea";
+import { Field } from "~/components/ui/field";
+import { UrgencyNotice } from "~/components/ui/urgency-notice";
 import type { Language } from "~/i18n/config";
 import { formatRupiah } from "~/lib/format";
 import { procedureLabel } from "~/lib/procedures";
@@ -23,6 +25,9 @@ export interface ShareLink {
   origin: string;
 }
 
+/** The two-column split the Emergency card and the Guidance share on desktop. */
+const twoColumns = "grid gap-6 desktop:items-start desktop:gap-10";
+
 export function GuidanceResult({
   response,
   pending,
@@ -32,26 +37,77 @@ export function GuidanceResult({
   pending: boolean;
   share?: ShareLink | null;
 }) {
+  const transcript = response.transcript ? <Transcript text={response.transcript} /> : null;
+  if (response.kind === "emergency") {
+    return (
+      <div className={cn(twoColumns, "desktop:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]")}>
+        <div className="flex flex-col gap-4">
+          {transcript}
+          <EmergencyCard response={response} />
+        </div>
+        {/* Beside the alert, not inside it: the alert carries the IGD instruction alone. */}
+        <ShortlistPanel purpose="emergency" />
+      </div>
+    );
+  }
+  if (response.kind === "followUp") {
+    return (
+      <div className="flex max-w-2xl flex-col gap-4">
+        {transcript}
+        <FollowUpCard response={response} pending={pending} />
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-col gap-3">
-      {response.transcript && <Transcript text={response.transcript} />}
-      {response.kind === "emergency" && <EmergencyCard response={response} />}
-      {response.kind === "followUp" && <FollowUpCard response={response} pending={pending} />}
-      {response.kind === "guidance" && <LanguageNote guidance={response.guidance} />}
-      {response.kind === "guidance" && (
-        <GuidanceCard
-          guidance={response.guidance}
-          share={share ?? null}
-          guidanceToken={share ? shareTokenOf(share.path) : null}
-        />
-      )}
-    </div>
+    <GuidanceView
+      guidance={response.guidance}
+      share={share ?? null}
+      guidanceToken={share ? shareTokenOf(share.path) : null}
+      before={transcript}
+    />
   );
 }
 
 /** The signed Guidance token in /panduan/<token>; the Shortlist reads the Guidance from it. */
 export function shareTokenOf(path: string): string | null {
   return path.split("/").pop() || null;
+}
+
+/**
+ * The Guidance card with its share and Shortlist sections, and on desktop the Summary panel
+ * beside them. Used on the home page and at the shared Guidance link.
+ */
+export function GuidanceView({
+  guidance,
+  share,
+  guidanceToken,
+  before,
+}: {
+  guidance: Guidance;
+  share: ShareLink | null;
+  /** Signed Guidance token for the Shortlist; null hides "Lihat dokter gigi terdekat". */
+  guidanceToken: string | null;
+  /** Shown above the card, such as what the agent heard from a voice note. */
+  before?: ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className={cn(twoColumns, "desktop:grid-cols-[minmax(0,1fr)_360px]")}>
+      <div className="flex min-w-0 flex-col gap-6">
+        {before}
+        <LanguageNote guidance={guidance} />
+        <GuidanceCard guidance={guidance} />
+        {share && <ShareSection share={share} />}
+        {guidanceToken && (
+          // Focus lands here from the Summary panel's link.
+          <section id={SHORTLIST_ID} tabIndex={-1} aria-label={t("shortlist.title")} className="scroll-mt-6">
+            <ShortlistPanel purpose="shortlist" guidanceToken={guidanceToken} />
+          </section>
+        )}
+      </div>
+      <SummaryPanel guidance={guidance} hasShortlist={guidanceToken !== null} />
+    </div>
+  );
 }
 
 /**
@@ -63,8 +119,9 @@ function LanguageNote({ guidance }: { guidance: Guidance }) {
   const { t, i18n } = useTranslation();
   if (!guidance.language || guidance.language === i18n.language) return null;
   return (
-    <p role="note" className="rounded-md bg-muted px-3 py-2 text-sm" data-testid="guidance-language">
-      {t(`card.languageNote.${guidance.language}`)}
+    <p role="note" className="flex items-start gap-2.5 rounded-md bg-muted px-4 py-3" data-testid="guidance-language">
+      <Info aria-hidden="true" strokeWidth={1.75} className="mt-1 size-4 shrink-0 text-muted-foreground" />
+      <span>{t(`card.languageNote.${guidance.language}`)}</span>
     </p>
   );
 }
@@ -72,12 +129,12 @@ function LanguageNote({ guidance }: { guidance: Guidance }) {
 function Transcript({ text }: { text: string }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-1 rounded-md bg-muted px-3 py-2 text-sm" data-testid="transcript">
+    <div className="flex flex-col gap-1 rounded-md bg-muted px-4 py-3 text-sm" data-testid="transcript">
       <p>
-        <span className="font-medium">{t("card.transcriptLabel")}: </span>
+        <span className="font-semibold">{t("card.transcriptLabel")}: </span>
         {text}
       </p>
-      <p className="text-xs text-muted-foreground">{t("card.transcriptHint")}</p>
+      <p className="text-muted-foreground">{t("card.transcriptHint")}</p>
     </div>
   );
 }
@@ -89,35 +146,45 @@ function Transcript({ text }: { text: string }) {
  */
 const NEAREST_IGD_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("IGD rumah sakit terdekat")}`;
 
+/** The IGD instruction and nothing else: a plain alert, nothing promotional. */
 function EmergencyCard({ response }: { response: EmergencyResponse }) {
   const { t } = useTranslation();
   return (
-    <Card role="alert" className="border-destructive bg-destructive-soft" data-kind="emergency">
-      <CardHeader>
-        <CardTitle className="text-2xl text-destructive">{t("card.emergency.title")}</CardTitle>
+    <Card variant="emergency" data-kind="emergency" labelledBy="emergency-title" className="gap-5 p-6">
+      {/* The card is the alert already, so the notice is not a second one. */}
+      <UrgencyNotice
+        tier="darurat"
+        alert={false}
+        label={t("urgency.darurat.label")}
+        description={t("urgency.darurat.description")}
+      />
+      <CardHeader className="gap-2">
+        <CardTitle id="emergency-title">{t("card.emergency.title")}</CardTitle>
         <CardDescription className="text-base text-foreground">{response.reason}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <p className="font-medium">{t("card.emergency.action")}</p>
-        <div>
-          <h3 className="mb-1 text-sm font-semibold">{t("card.emergency.redFlagsLabel")}</h3>
-          <ul className="list-inside list-disc text-sm">
+      <CardContent className="flex flex-col gap-5">
+        <p className="text-lg leading-7 font-medium">{t("card.emergency.action")}</p>
+        <div className="flex flex-col gap-2">
+          <h3 className="font-[650]">{t("card.emergency.redFlagsLabel")}</h3>
+          <ul className="flex flex-col gap-2">
             {response.redFlags.map((flag) => (
-              <li key={flag}>{t(`redFlag.${flag}`)}</li>
+              <li key={flag} className="flex items-start gap-2.5">
+                <TriangleAlert
+                  aria-hidden="true"
+                  strokeWidth={1.75}
+                  className="mt-0.5 size-5 shrink-0 text-destructive"
+                />
+                <span>{t(`redFlag.${flag}`)}</span>
+              </li>
             ))}
           </ul>
         </div>
-        <Button
-          asChild
-          variant="destructive"
-          size="lg"
-          className="h-auto w-full whitespace-normal py-3 text-center sm:w-auto sm:self-start"
-        >
+        <Button asChild size="lg" block className="h-auto whitespace-normal py-3 text-center">
           <a href={NEAREST_IGD_MAPS_URL} target="_blank" rel="noreferrer">
+            <MapPin aria-hidden="true" strokeWidth={1.75} />
             {t("card.emergency.findIgd")}
           </a>
         </Button>
-        <ShortlistPanel purpose="emergency" />
       </CardContent>
     </Card>
   );
@@ -126,9 +193,9 @@ function EmergencyCard({ response }: { response: EmergencyResponse }) {
 function FollowUpCard({ response, pending }: { response: FollowUpResponse; pending: boolean }) {
   const { t } = useTranslation();
   return (
-    <Card data-kind="followUp">
+    <Card data-kind="followUp" labelledBy="follow-up-title" className="p-6">
       <CardHeader>
-        <CardTitle>{t("card.followUp.title")}</CardTitle>
+        <CardTitle id="follow-up-title">{t("card.followUp.title")}</CardTitle>
         <CardDescription className="text-base text-foreground">{response.question}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -151,10 +218,14 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
             ))}
           </fieldset>
         )}
-        <label htmlFor="followUpAnswer" className="text-sm font-medium">
-          {t("home.followUpAnswerLabel")}
-        </label>
-        <Textarea id="followUpAnswer" name="followUpAnswer" maxLength={1000} className="min-h-16" />
+        <Field
+          id="followUpAnswer"
+          name="followUpAnswer"
+          label={t("home.followUpAnswerLabel")}
+          rows={2}
+          maxLength={1000}
+          className="[&_textarea]:min-h-16"
+        />
         <Button type="submit" disabled={pending} className="self-start">
           {t("home.followUpSubmit")}
         </Button>
@@ -163,63 +234,92 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
   );
 }
 
-const urgencyStyles: Record<UrgencyTier, string> = {
-  darurat: "bg-destructive text-white",
-  segera: "bg-warning-soft text-warning-foreground border-warning-foreground/30",
-  terjadwal: "bg-secondary text-secondary-foreground",
-  rutin: "bg-muted text-muted-foreground",
-};
+const eyebrow = "text-xs leading-4 font-bold tracking-[.08em] text-muted-foreground uppercase";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-1.5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+    <section className="flex flex-col gap-2">
+      <h3 className={eyebrow}>{title}</h3>
       {children}
     </section>
   );
 }
 
-export function GuidanceCard({
-  guidance,
-  share,
-  guidanceToken,
-}: {
-  guidance: Guidance;
-  share: ShareLink | null;
-  /** Signed Guidance token for the Shortlist; null hides "Lihat dokter gigi terdekat". */
-  guidanceToken: string | null;
-}) {
+/** Least to most urgent, as the scale under the Urgency Tier reads. */
+const TIERS: readonly UrgencyTier[] = ["rutin", "terjadwal", "segera", "darurat"];
+const TIER_FILL: Record<UrgencyTier, string> = {
+  rutin: "bg-border-strong",
+  terjadwal: "bg-primary",
+  segera: "bg-warning-line",
+  darurat: "bg-destructive",
+};
+
+/** A picture of where the tier sits; the notice above already says it in words. */
+function UrgencyScale({ tier }: { tier: UrgencyTier }) {
+  const { t } = useTranslation();
+  const reached = TIERS.indexOf(tier);
+  return (
+    <div aria-hidden="true" className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-4 gap-1">
+        {TIERS.map((step, index) => (
+          <span key={step} className={cn("h-1.5 rounded-full", index <= reached ? TIER_FILL[tier] : "bg-muted")} />
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-1 text-xs leading-4 font-medium text-muted-foreground">
+        {TIERS.map((step) => (
+          <span key={step} className="text-center first:text-left last:text-right">
+            {t(`urgency.${step}.label`)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function GuidanceCard({ guidance }: { guidance: Guidance }) {
   const { t, i18n } = useTranslation();
   const language = (i18n.language === "en" ? "en" : "id") as Language;
   return (
-    <Card data-kind="guidance">
+    <Card data-kind="guidance" labelledBy="guidance-title" className="gap-7 p-6">
       <CardHeader>
-        <CardTitle>{t("card.guidance.title")}</CardTitle>
+        <CardTitle id="guidance-title" className="text-[28px] leading-[34px] font-bold tracking-[-.015em]">
+          {t("card.guidance.title")}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+      <CardContent className="flex flex-col gap-7">
         <Section title={t("card.guidance.urgencyLabel")}>
-          <div className={cn("flex flex-col gap-0.5 rounded-md border px-3 py-2", urgencyStyles[guidance.urgencyTier])}>
-            <span className="font-semibold">{t(`urgency.${guidance.urgencyTier}.label`)}</span>
-            <span className="text-sm">{t(`urgency.${guidance.urgencyTier}.description`)}</span>
-          </div>
+          <UrgencyNotice
+            tier={guidance.urgencyTier}
+            label={t(`urgency.${guidance.urgencyTier}.label`)}
+            description={t(`urgency.${guidance.urgencyTier}.description`)}
+          />
+          <UrgencyScale tier={guidance.urgencyTier} />
         </Section>
 
         <Section title={t("card.guidance.categoryLabel")}>
-          <p className="font-medium">{t(`category.${guidance.likelyCategory.code}`)}</p>
-          <p className="text-sm">{guidance.likelyCategory.explanation}</p>
+          <p className="text-lg leading-6 font-[650]">{t(`category.${guidance.likelyCategory.code}`)}</p>
+          <p className="text-muted-foreground">{guidance.likelyCategory.explanation}</p>
         </Section>
 
         <Section title={t("card.guidance.journeyLabel")}>
-          <p className="font-medium">
+          <p className="font-semibold">
             {guidance.journey.type === "single" ? t("card.guidance.journeySingle") : t("card.guidance.journeyMulti")}
           </p>
-          <ol className="flex flex-col gap-1 text-sm">
+          <ol className="flex flex-col gap-4">
             {[...guidance.journey.visits]
               .sort((a, b) => a.order - b.order)
               .map((visit) => (
-                <li key={visit.order}>
-                  <span className="font-medium">{t("card.guidance.visit", { order: visit.order })}: </span>
-                  {visit.purpose}
+                <li key={visit.order} className="grid grid-cols-[36px_minmax(0,1fr)] items-start gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex size-9 items-center justify-center rounded-full bg-secondary font-bold text-secondary-foreground tabular-nums"
+                  >
+                    {visit.order}
+                  </span>
+                  <span className="flex flex-col gap-1">
+                    <span className="font-semibold">{t("card.guidance.visit", { order: visit.order })}</span>
+                    <span className="text-muted-foreground">{visit.purpose}</span>
+                  </span>
                 </li>
               ))}
           </ol>
@@ -229,35 +329,27 @@ export function GuidanceCard({
           <ul className="flex flex-wrap gap-1.5">
             {guidance.likelyProcedures.map((code) => (
               <li key={code}>
-                <Badge variant="secondary">{procedureLabel(code, language)}</Badge>
+                <Badge variant="neutral">{procedureLabel(code, language)}</Badge>
               </li>
             ))}
           </ul>
         </Section>
 
-        <Section title={t("card.guidance.whyPricesVaryLabel")}>
-          <ul className="list-inside list-disc text-sm">
-            {guidance.whyPricesVary.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        </Section>
-
         <Section title={t("card.guidance.costLabel")}>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {guidance.costEstimate.map((cost) => (
-              <li key={cost.procedureCode} className="rounded-md bg-muted px-3 py-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">{procedureLabel(cost.procedureCode, language)}</span>
+              <li key={cost.procedureCode} className="flex flex-col gap-1 rounded-md bg-muted px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{procedureLabel(cost.procedureCode, language)}</span>
                   <Badge variant="outline">{t("estimate")}</Badge>
                 </div>
-                <p className="font-semibold">
+                <p className="text-[22px] leading-7 font-bold tracking-[-.01em] tabular-nums">
                   {t("card.guidance.costRange", {
                     min: formatRupiah(cost.minRupiah, language),
                     max: formatRupiah(cost.maxRupiah, language),
                   })}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs leading-4 font-medium text-muted-foreground">
                   {t("card.guidance.costSource", { source: cost.source })}
                 </p>
               </li>
@@ -265,13 +357,26 @@ export function GuidanceCard({
           </ul>
         </Section>
 
+        <Section title={t("card.guidance.whyPricesVaryLabel")}>
+          <ul className="flex list-disc flex-col gap-1 pl-5">
+            {guidance.whyPricesVary.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </Section>
+
         <Section title={t("card.guidance.bpjsLabel")}>
-          <p className="font-medium">{t(`bpjs.${guidance.bpjs.status}`)}</p>
-          <p className="text-sm">{guidance.bpjs.explanation}</p>
+          <div className="flex items-start gap-3 rounded-md border border-info-line bg-info-soft px-4 py-3">
+            <Info aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-5 shrink-0 text-info" />
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold">{t(`bpjs.${guidance.bpjs.status}`)}</p>
+              <p>{guidance.bpjs.explanation}</p>
+            </div>
+          </div>
         </Section>
 
         <Section title={t("card.guidance.sourcesLabel")}>
-          <ul className="flex flex-col gap-1 text-sm">
+          <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
             {guidance.sources.map((source) => (
               <li key={`${source.title}-${source.citation ?? ""}`}>
                 {source.url ? (
@@ -287,13 +392,75 @@ export function GuidanceCard({
           </ul>
         </Section>
 
-        <p className="border-t pt-4 text-sm font-medium">{guidance.disclaimer}</p>
-
-        {guidanceToken && <ShortlistPanel purpose="shortlist" guidanceToken={guidanceToken} />}
-
-        {share && <ShareSection share={share} />}
+        <p className="border-t pt-4 text-sm font-semibold">{guidance.disclaimer}</p>
       </CardContent>
     </Card>
+  );
+}
+
+const SHORTLIST_ID = "shortlist";
+
+/** Moves to the Shortlist section without a hash navigation, which would start a new history entry. */
+function goToShortlist(event: MouseEvent<HTMLAnchorElement>) {
+  const target = document.getElementById(SHORTLIST_ID);
+  if (!target) return;
+  event.preventDefault();
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  target.focus({ preventScroll: true });
+}
+
+/** Desktop only: the Guidance at a glance, with the next step always in view. */
+function SummaryPanel({ guidance, hasShortlist }: { guidance: Guidance; hasShortlist: boolean }) {
+  const { t, i18n } = useTranslation();
+  const language = (i18n.language === "en" ? "en" : "id") as Language;
+  // The first estimate is the main procedure's; a span across procedures would be neither one nor a total.
+  const cost = guidance.costEstimate[0];
+  return (
+    <aside aria-labelledby="summary-title" className="hidden desktop:sticky desktop:top-6 desktop:block">
+      <div className="flex flex-col gap-4 rounded-lg border bg-card p-6 shadow-sm">
+        <h2 id="summary-title" className={eyebrow}>
+          {t("card.summary.title")}
+        </h2>
+        {/* The Guidance card already announces a darurat tier. */}
+        <UrgencyNotice
+          tier={guidance.urgencyTier}
+          alert={false}
+          label={t(`urgency.${guidance.urgencyTier}.label`)}
+          description={t(`urgency.${guidance.urgencyTier}.description`)}
+        />
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-1">
+          <dt className="text-muted-foreground">{t("card.summary.likely")}</dt>
+          <dd className="font-semibold">{t(`category.${guidance.likelyCategory.code}`)}</dd>
+          <dt className="text-muted-foreground">{t("card.summary.visits")}</dt>
+          <dd className="font-semibold tabular-nums">
+            {t("card.summary.visitsCount", { count: guidance.journey.visits.length })}
+          </dd>
+          {cost && (
+            <>
+              <dt className="text-muted-foreground">{t("card.summary.cost")}</dt>
+              <dd className="font-semibold tabular-nums">
+                {t("card.guidance.costRange", {
+                  min: formatRupiah(cost.minRupiah, language),
+                  max: formatRupiah(cost.maxRupiah, language),
+                })}
+              </dd>
+            </>
+          )}
+          <dt className="text-muted-foreground">{t("card.summary.bpjs")}</dt>
+          <dd className="font-semibold">{t(`bpjs.${guidance.bpjs.status}`)}</dd>
+        </dl>
+        {hasShortlist && (
+          // A link, not a button: the Shortlist section keeps the one button with this name.
+          <Button asChild block>
+            <a href={`#${SHORTLIST_ID}`} onClick={goToShortlist}>
+              {t("card.summary.toShortlist")}
+            </a>
+          </Button>
+        )}
+        <p className="text-xs leading-4 font-medium text-muted-foreground">{t("card.summary.emergencyReminder")}</p>
+      </div>
+    </aside>
   );
 }
 
@@ -301,9 +468,14 @@ function ShareSection({ share }: { share: ShareLink }) {
   const { t } = useTranslation();
   const url = `${share.origin}${share.path}`;
   return (
-    <Section title={t("card.share.title")}>
-      <p className="text-sm text-muted-foreground">{t("card.share.privacy")}</p>
-      <div className="flex flex-wrap gap-2">
+    <Card variant="flat" labelledBy="share-title" className="p-6">
+      <CardHeader className="gap-2">
+        <CardTitle id="share-title" className="text-lg leading-6">
+          {t("card.share.title")}
+        </CardTitle>
+        <CardDescription>{t("card.share.privacy")}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
         <Button asChild variant="secondary" size="sm">
           <a href={`https://wa.me/?text=${encodeURIComponent(url)}`} rel="noreferrer" target="_blank">
             {t("card.share.whatsapp")}
@@ -312,7 +484,7 @@ function ShareSection({ share }: { share: ShareLink }) {
         <Button asChild variant="outline" size="sm">
           <a href={share.path}>{t("card.share.open")}</a>
         </Button>
-      </div>
-    </Section>
+      </CardContent>
+    </Card>
   );
 }

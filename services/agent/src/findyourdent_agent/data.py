@@ -11,6 +11,7 @@ import os
 from functools import cache
 from pathlib import Path
 
+from .contracts.districts import DistrictList
 from .contracts.procedures import ProcedureList
 from .contracts.regions import RegionList
 
@@ -36,6 +37,12 @@ def load_procedures() -> ProcedureList:
 def load_regions() -> RegionList:
     """Kemendagri region code list (provinces and kota/kabupaten)."""
     return RegionList.model_validate_json(_data_file("regions.json").read_bytes())
+
+
+@cache
+def load_districts() -> DistrictList:
+    """Kemendagri kecamatan list, each under a kota/kabupaten of ``load_regions()``."""
+    return DistrictList.model_validate_json(_data_file("districts.json").read_bytes())
 
 
 def procedure_codes() -> frozenset[str]:

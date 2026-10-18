@@ -5,11 +5,19 @@
   },
   "nav": {
     "skipToContent": "Skip to content",
-    "home": "FindYourDent, home"
+    "home": "FindYourDent, home",
+    "main": "Main",
+    "guidance": "Guidance",
+    "directory": "Directory",
+    "myTestimonies": "My Testimonies",
+    "share": "Share your experience",
+    "about": "About us"
   },
   "language": {
-    "switchTo": "Bahasa Indonesia",
-    "switchToLabel": "Switch language to Bahasa Indonesia"
+    "switchToLabel": "Switch language to Bahasa Indonesia",
+    "group": "Choose language",
+    "id": "Indonesia",
+    "en": "English"
   },
   "home": {
     "headline": "Toothache? Understand it before you see a dentist.",
@@ -30,7 +38,14 @@
     "voiceHint": "Press the button, then describe your problem. Up to 1 minute.",
     "voiceRecording": "Recording. Press Stop and send when you are done, up to 1 minute.",
     "voiceDenied": "Microphone access is blocked. Allow the microphone in your browser settings, or type your complaint.",
-    "voiceFailed": "Recording did not work. Try again, or type your complaint."
+    "voiceFailed": "Recording did not work. Try again, or type your complaint.",
+    "badge": "For Patients across Indonesia",
+    "benefits": {
+      "label": "What you get",
+      "urgency": "<b>How urgent it is</b>, from Routine to Emergency, with a clear next step.",
+      "cost": "<b>Cost estimates and BPJS coverage</b> from official sources, not guesses.",
+      "nearby": "<b>Dentists near you</b> that fit, with Patients' Testimonies."
+    }
   },
   "errors": {
     "title": "Sorry, something went wrong",
@@ -84,6 +99,16 @@
     "languageNote": {
       "id": "This Guidance is in Bahasa Indonesia, the language of your complaint. Write your complaint in English to get Guidance in English.",
       "en": "This Guidance is in English, the language of your complaint. Write your complaint in Bahasa Indonesia to get Guidance in Bahasa Indonesia."
+    },
+    "summary": {
+      "title": "Summary",
+      "likely": "Likely",
+      "visits": "Visits",
+      "visitsCount": "{{count}}",
+      "cost": "Cost",
+      "bpjs": "BPJS",
+      "toShortlist": "See dentists near you",
+      "emergencyReminder": "If your face swells, you get a fever or it becomes hard to swallow, go to the emergency department."
     }
   },
   "estimate": "estimasi (estimate)",
@@ -227,7 +252,10 @@
     }
   },
   "footer": {
-    "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription."
+    "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription.",
+    "links": "Footer",
+    "privacy": "Privacy policy",
+    "terms": "Terms of use"
   },
   "shared": {
     "title": "Shared guidance",
@@ -261,29 +289,38 @@
       "price": "Price paid",
       "byline": "by {{name}}",
       "readMore": "Read the full Testimony"
-    }
+    },
+    "seeDirectory": "See the directory",
+    "writeTitle": "Been to a dentist?",
+    "writeBody": "Share your experience so other patients can choose with confidence."
   },
   "filters": {
     "title": "Filter",
-    "province": "Province",
-    "allProvinces": "All provinces",
-    "regency": "City/regency",
-    "allRegencies": "All cities/regencies",
-    "chooseProvinceFirst": "Choose a province first",
-    "district": "District code",
-    "districtHint": "Optional, Kemendagri code, e.g. 31.71.01.",
     "procedure": "Procedure",
     "allProcedures": "All procedures",
     "providerType": "Provider type",
     "allProviderTypes": "All types",
     "providerTypes": {
-      "klinik": "Clinic",
+      "klinik": "Dental clinic",
       "privateDentist": "Private dentist",
       "hospital": "Hospital"
     },
     "verifiedOnly": "Verified visits only",
     "apply": "Apply",
     "reset": "Clear filters"
+  },
+  "regionFields": {
+    "province": "Province",
+    "regency": "City/regency",
+    "allProvinces": "All provinces",
+    "allRegencies": "All cities/regencies",
+    "chooseProvince": "Choose a province",
+    "chooseRegency": "Choose a city/regency",
+    "chooseProvinceFirst": "Choose a province first",
+    "district": "District (kecamatan)",
+    "allDistricts": "All districts",
+    "chooseDistrict": "Choose a district (optional)",
+    "chooseRegencyFirst": "Choose a city or regency first"
   },
   "directory": {
     "metaTitle": "Directory of dentists and dental clinics | FindYourDent",
@@ -303,6 +340,7 @@
     },
     "sortHint": "Distance is computed on your device. Your location is not sent to FindYourDent.",
     "resultsHeading": "Results",
+    "resultCount_one": "{{count}} place",
     "resultCount": "{{count}} places",
     "resultCapped": "Showing the first {{count}} places. Narrow down with filters or a name search.",
     "inferred": "estimated",
@@ -314,6 +352,7 @@
     },
     "score": "Score {{score}}",
     "noRatings": "No scores yet",
+    "testimonies_one": "{{count}} Testimony",
     "testimonies": "{{count}} Testimonies",
     "verifiedVisits": "{{count}} Kunjungan terbukti",
     "distance": "{{km}} km",
@@ -339,7 +378,7 @@
     "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} testimonies.",
     "metaDescriptionNoScores": "{{name}} in {{area}}. Read patient testimonies and share your own on FindYourDent.",
     "type": {
-      "klinik": "Clinic",
+      "klinik": "Dental clinic",
       "privateDentist": "Private dentist",
       "hospital": "Hospital"
     },
@@ -358,8 +397,6 @@
     "noTestimonies": "No published testimonies for this place yet.",
     "verifiedVisit": "Verified visit",
     "visitMonth": "Visited {{month}}",
-    "procedure": "Procedure: {{procedure}}",
-    "pricePaid": "Paid: {{price}}",
     "ratingsLabel": "Ratings for {{name}}",
     "metaDescriptionUnlisted": "Dental practice information on FindYourDent.",
     "unnamed": "Dental practice",
@@ -391,10 +428,12 @@
     "claimCta": "Claim this page",
     "ownerHint": "Own this practice?",
     "manageCta": "Manage page",
-    "services": "Services: {{services}}",
+    "services": "Services",
     "priceListTitle": "Owner's price list",
     "priceListConfirmed": "Confirmed by the owner on {{date}}",
-    "possiblyOutdated": "may have changed"
+    "possiblyOutdated": "may have changed",
+    "address": "Address",
+    "scoreScale": "Scale of 1 to 5, from published Testimonies."
   },
   "shortlist": {
     "reason": {
@@ -425,7 +464,7 @@
     "mapsSearch": "Search in Google Maps",
     "openInMaps": "Open in Google Maps",
     "type": {
-      "klinik": "Clinic",
+      "klinik": "Dental clinic",
       "privateDentist": "Private dentist",
       "hospital": "Hospital"
     },
@@ -447,7 +486,6 @@
     "metaTitle": "Share your experience",
     "metaDescription": "Write a Testimony about a dentist you visited.",
     "entryCta": "Share your experience",
-    "entryHint": "Been to a dentist? Share your experience so other patients can choose with confidence.",
     "title": "Share your experience",
     "editTitle": "Edit Testimony",
     "intro": "Write honestly about a dental practice you visited. You only sign in with Google when you press Send.",
@@ -475,6 +513,7 @@
     "photoAlt": "Photo {{index}}",
     "photoRemove": "Remove photo {{index}}",
     "photosReattach": "Photos and proof of visit are not kept in the draft. Choose them again before sending.",
+    "filesTitle": "Photos and proof of visit",
     "proofLabel": "Proof of visit (optional, private)",
     "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown: it is checked and then deleted right away. If it matches, your Testimony gets the Verified visit mark.",
     "proofAdd": "Choose proof file",
@@ -485,6 +524,7 @@
     "consentTitle": "Confirmation",
     "consentHonest": "This is my own experience, written honestly.",
     "consentNoOthers": "My text and photos contain no one else's personal data.",
+    "nameTitle": "Name and confirmation",
     "submit": "Send",
     "submitting": "Sending…",
     "signingIn": "Waiting for Google sign-in…",
@@ -546,6 +586,16 @@
       },
       "roundsLeft": "Fixes left before the FindYourDent team reviews it instead: {{count}}.",
       "lastRound": "If the next send still needs a fix, the FindYourDent team reviews it, usually within 24 hours."
+    },
+    "tips": {
+      "title": "What makes a helpful Testimony",
+      "what": "Say what happened: the dentist's explanation, the wait, any pain.",
+      "price": "Write the price you actually paid, if you remember it.",
+      "names": "Leave out staff names if you are not comfortable.",
+      "privacyTitle": "Your privacy",
+      "account": "Your Google account is never shown.",
+      "proof": "Proof of visit stays private and is never published.",
+      "edit": "You can edit or delete your Testimony at any time."
     }
   },
   "providerFields": {
@@ -566,11 +616,6 @@
     "listingFailed": "Could not check the place yet. Try picking it again.",
     "nameLabel": "Place name as on its signboard or as you know it",
     "nameHint": "Type the name yourself. This name will appear on FindYourDent.",
-    "provinceLabel": "Province",
-    "provincePlaceholder": "Choose a province",
-    "regencyLabel": "City/Regency",
-    "regencyPlaceholder": "Choose a city/regency",
-    "regencyNeedsProvince": "Choose a province first",
     "listedNote": "This place is already listed on FindYourDent.",
     "storedName": "Place name",
     "storedRegion": "Area",
@@ -655,12 +700,16 @@
       "submitted": "Being checked",
       "published": "Live",
       "needsAuthorFix": "Needs your fix",
-      "held": "Under review by the team (usually within 24 hours)",
+      "held": "Under review by the team",
       "rejected": "Not published",
-      "hidden": "Hidden for now after a report, under review by the team",
+      "hidden": "Hidden after a report",
       "removed": "Taken down by the team"
     },
-    "reason": "Reason: {{reason}}",
+    "statusHint": {
+      "held": "Usually within 24 hours. You will see the status change here.",
+      "hidden": "The team is reviewing a report, usually within 24 hours. You will see the status change here."
+    },
+    "reasonTitle": "Reason",
     "pendingRevision": {
       "submitted": "Your changes are being checked. The previous version stays live.",
       "needsAuthorFix": "Your changes need fixing. The previous version stays live.",
@@ -669,6 +718,7 @@
     "reply": "Reply from the practice",
     "view": "View on the practice page",
     "edit": "Edit",
+    "fix": "Fix this Testimony",
     "delete": "Delete",
     "confirmTitle": "Delete this Testimony?",
     "confirmBody": "Its text and photos will be deleted permanently and cannot be restored.",
@@ -676,7 +726,13 @@
     "cancel": "Cancel",
     "deleting": "Deleting…",
     "deleteFailed": "The Testimony was not deleted. Please try again.",
-    "deleted": "The Testimony was deleted."
+    "deleted": "The Testimony was deleted.",
+    "legend": {
+      "title": "What the statuses mean",
+      "published": "Shown on the practice page and on the home page.",
+      "needsAuthorFix": "Change the marked part, then send it again.",
+      "held": "The FindYourDent team decides, usually within 24 hours."
+    }
   },
   "reportApi": {
     "errors": {
@@ -763,7 +819,6 @@
     "submit": "Send claim",
     "sending": "Sending…",
     "failed": "Sending failed. Check your connection and try again.",
-    "choose": "Choose",
     "status": {
       "submitted": "Your claim is being checked. The FindYourDent team checks the document and phones the number on Google Maps within {{days}} working days. The result shows on this page.",
       "rejected": "Your previous claim was rejected: {{reason}}. You can send a new claim with the right document.",
@@ -778,8 +833,6 @@
       "name": "Practice name",
       "providerType": "Type",
       "region": "Region",
-      "province": "Province",
-      "regency": "City or regency",
       "address": "Address",
       "phone": "Phone",
       "whatsapp": "WhatsApp",
@@ -800,7 +853,9 @@
         "rejected": "Rejected"
       }
     },
-    "priceListCta": "Upload a price list"
+    "priceListCta": "Upload a price list",
+    "howItWorks": "How it works",
+    "formTitle": "Claim details"
   },
   "priceListApi": {
     "errors": {
@@ -839,7 +894,6 @@
     "notes": "Notes",
     "deleteRow": "Delete row",
     "addRow": "Add a row",
-    "rowInvalid": "Fill in the procedure and prices; the lowest price cannot be higher than the highest.",
     "noRows": "Add at least one row.",
     "confirm": "Confirm and publish",
     "confirming": "Saving…",
@@ -851,6 +905,280 @@
       "per_jaw": "per jaw",
       "per_visit": "per visit",
       "per_package": "per package"
-    }
+    },
+    "steps": {
+      "label": "Steps",
+      "upload": "Upload",
+      "review": "Check the price rows",
+      "publish": "Published",
+      "done": "done"
+    },
+    "rowMissing": "Row {{row}}: fill in the procedure and the lowest price.",
+    "rowRange": "Row {{row}}: the lowest price cannot be higher than the highest.",
+    "rowTooHigh": "Row {{row}}: the price is too high. Check the number of zeros."
+  },
+  "about": {
+    "metaTitle": "About us",
+    "metaDescription": "FindYourDent helps Patients in Indonesia understand their dental problem and choose a credible, affordable dentist.",
+    "eyebrow": "About us",
+    "title": "Understand your dental problem, then choose a dentist with confidence.",
+    "lead": "FindYourDent is a dentistry platform for Indonesia. We help Patients understand their dental problem and choose a credible, affordable dentist, and we give dentists and clinics a public identity.",
+    "builtFor": "Built for the AI Builder Cup 2026.",
+    "whatTitle": "What we do",
+    "what": [
+      {
+        "title": "Guidance for your problem",
+        "body": "Describe your problem in your own words, typed or as a voice note. We explain how urgent it is, what it may be, the visits it usually takes, why prices vary, and BPJS coverage."
+      },
+      {
+        "title": "Straight to the IGD when danger signs appear",
+        "body": "When danger signs appear, such as facial swelling with fever or difficulty swallowing, we send you to the nearest hospital emergency department first, ahead of anything else."
+      },
+      {
+        "title": "Dentists near you that fit",
+        "body": "A list of dental clinics, private dentists and hospitals near you, with Patients’ Testimonies and price signals."
+      },
+      {
+        "title": "Testimonies from real patients",
+        "body": "Patients write about their visit: service, hygiene, materials and equipment, and the price they paid."
+      }
+    ],
+    "safeTitle": "How we keep you safe",
+    "safeLead": "Gemini helps with the work that needs judgement. Anything that must never be wrong is handled by fixed rules and curated data.",
+    "safe": [
+      {
+        "title": "Danger signs are checked first",
+        "body": "The danger-sign check runs before any AI call, and the AI can never lower its urgency."
+      },
+      {
+        "title": "Costs and BPJS from official sources",
+        "body": "Cost estimates, BPJS coverage and safety rules come from knowledge files that cite their regulation, not from the AI model."
+      },
+      {
+        "title": "Your complaint is not stored",
+        "body": "Neither typed complaints nor voice notes are stored. A shared guidance link contains only the guidance, never your complaint."
+      },
+      {
+        "title": "People make the decisions",
+        "body": "The AI publishes clean Testimonies and holds doubtful ones. The FindYourDent team decides on every held or reported Testimony. The AI never deletes."
+      }
+    ],
+    "goTitle": "From Indonesia, for the world",
+    "goLead": "We start in Indonesia because it is where we best understand Patients, dentists and the care system, including BPJS. Going forward, we plan to expand FindYourDent worldwide in stages, starting with the Asia Pacific region.",
+    "roadmap": [
+      {
+        "status": "Now",
+        "title": "Indonesia",
+        "body": "Guidance, emergency (IGD) escalation, the Directory and Testimonies for Patients across Indonesia, in Indonesian and English."
+      },
+      {
+        "status": "Next stage",
+        "title": "Asia Pacific",
+        "body": "A step-by-step expansion into Asia Pacific countries, adapted to each country’s languages, health care system and rules."
+      },
+      {
+        "status": "Further ahead",
+        "title": "Worldwide",
+        "body": "Bringing the same approach to more countries, one at a time."
+      }
+    ],
+    "roadmapNote": "Each new country opens only once its cost guidance, coverage information and safety rules are built from that country’s official sources.",
+    "principlesTitle": "Our principles",
+    "principles": [
+      "Educational and navigation information, not a diagnosis or a prescription.",
+      "No promotion, advertising, discounts or paid ranking. Dentists are never ranked by payment.",
+      "Practices can reply to or report a Testimony, but cannot delete or hide it."
+    ],
+    "contactTitle": "Contact us",
+    "contactBody": "For partnerships and business enquiries, email the FindYourDent team.",
+    "sendEmail": "Send an email",
+    "start": "Start with your complaint"
+  },
+  "legal": {
+    "effective": "Effective from: [effective date]",
+    "updated": "Last updated: [date]",
+    "draft": "Draft for review by legal counsel before publishing.",
+    "contents": "Contents",
+    "questions": "Questions about this page?",
+    "emailUs": "Email <email/>"
+  },
+  "privacy": {
+    "metaTitle": "Privacy policy",
+    "title": "Privacy policy",
+    "lead": "What data we collect, why, and how you stay in control. In short: your complaint and location are not stored.",
+    "seeAlso": "See also: Terms of use",
+    "sections": [
+      {
+        "title": "Who we are",
+        "blocks": [
+          "FindYourDent is a dentistry platform for Indonesia operated by [legal entity name]. This policy explains what data we collect, why, how long we keep it, and your rights.",
+          "For privacy questions, contact us at <email/>."
+        ]
+      },
+      {
+        "title": "What we collect and why",
+        "blocks": [
+          [
+            "<b>Your dental complaint</b>, typed or as a voice note, is used to write your Guidance. It is not stored and is never logged.",
+            "<b>Your location or area</b> is used only to find dentists near you and is not stored. In the Directory, distance is computed on your device and your location is not sent to us.",
+            "<b>Your Google account</b> is used when you write a Testimony or claim a page. Your account is never shown.",
+            "<b>Testimonies</b>: ratings, story, month and year of visit, the name you choose, and the procedure, price and photos if you add them. These are public. Location data in photos is removed automatically.",
+            "<b>Proof of visit</b> is checked and then deleted right away. It is never shown; only a Verified visit mark appears if it matches.",
+            "<b>Owner claim data</b>: your SIP or practice permit is kept private and deleted after the decision. Your phone number is only for the FindYourDent team and is never shown.",
+            "<b>Owner price lists</b>: the original file is kept privately for 30 days in case of disputes, then deleted. Only rows the owner confirms are shown.",
+            "<b>Reports</b> on a Testimony: the category and details you write, for the team to review."
+          ]
+        ]
+      },
+      {
+        "title": "Cookies",
+        "blocks": [
+          "We use one cookie, <code>__session</code>, to remember your language, keep you signed in, and keep your Guidance session. It is kept for up to a year if you choose a language or sign in with Google.",
+          "We do not set advertising cookies."
+        ]
+      },
+      {
+        "title": "Security and abuse prevention",
+        "blocks": [
+          "We use App Check with Google reCAPTCHA Enterprise to prevent abuse. To limit request rates, we store a random value that cannot be turned back into your IP address, token or session ID."
+        ]
+      },
+      {
+        "title": "AI and service providers",
+        "blocks": [
+          [
+            "Your complaint is processed by Google AI (Gemini on Vertex AI) outside Indonesia.",
+            "Practice details, opening hours, Google ratings and reviews come from Google Maps.",
+            "Sign-in uses Google Firebase Authentication.",
+            "Testimonies, photos and account data are stored on Google Cloud in Jakarta."
+          ],
+          "We do not sell your personal data."
+        ]
+      },
+      {
+        "title": "How long we keep data",
+        "blocks": [
+          [
+            "Complaints and location: not stored.",
+            "Proof of visit: deleted right after it is checked.",
+            "Claim documents: deleted after the decision.",
+            "Original price list files: 30 days.",
+            "Testimonies: while published, until you or the team delete them.",
+            "The <code>__session</code> cookie: up to one year."
+          ]
+        ]
+      },
+      {
+        "title": "Your rights",
+        "blocks": [
+          "You can edit or delete a Testimony at any time from My Testimonies. Deleted text and photos are gone permanently.",
+          "To ask for a copy, correction or deletion of other data about you, email <email/>. We will reply within [time period]."
+        ]
+      },
+      {
+        "title": "Changes to this policy",
+        "blocks": [
+          "When this policy changes, we update the date at the top of this page. We will show important changes on the site before they take effect."
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "metaTitle": "Terms of use",
+    "title": "Terms of use",
+    "lead": "The rules for using FindYourDent, for Patients, Testimony writers, and practice owners and dentists.",
+    "seeAlso": "See also: Privacy policy",
+    "sections": [
+      {
+        "title": "Accepting these terms",
+        "blocks": [
+          "By using FindYourDent, you agree to these terms of use and our Privacy policy. If you do not agree, please do not use the service."
+        ]
+      },
+      {
+        "title": "Not a medical service",
+        "blocks": [
+          "FindYourDent gives educational and navigation information, not a diagnosis or a prescription. Guidance does not replace an examination by a dentist.",
+          "Cost estimates are a general picture, not a price quote from any practice."
+        ]
+      },
+      {
+        "title": "Emergencies",
+        "blocks": [
+          {
+            "box": "<b>If you have danger signs,</b> such as swelling of the face or neck, fever, difficulty swallowing or breathing, or bleeding that does not stop, go to the nearest hospital emergency department (IGD) now. Do not wait for a dentist appointment."
+          },
+          "FindYourDent does not monitor your condition and does not contact emergency services for you."
+        ]
+      },
+      {
+        "title": "Accounts",
+        "blocks": [
+          "You sign in with a Google account when you write a Testimony or claim a page. You are responsible for activity on your account. Each Patient can write one Testimony per practice."
+        ]
+      },
+      {
+        "title": "Rules for writing a Testimony",
+        "blocks": [
+          "A Testimony must be:",
+          [
+            "your own experience, written honestly;",
+            "free of other people’s personal data, such as phone numbers, addresses, ID numbers, or the full names of patients or staff;",
+            "free of accusations stated as fact and of harassment;",
+            "not an advert, link, promo code, or someone else’s story;",
+            "not medical advice for readers, such as medicine names and doses;",
+            "about the right practice."
+          ],
+          "Photos may only show the waiting room, treatment room, equipment or signboard, with no faces, receipts or screenshots."
+        ]
+      },
+      {
+        "title": "Moderation",
+        "blocks": [
+          "Every Testimony is screened. The AI publishes clean Testimonies, asks you to fix specific parts, or holds them for review. The FindYourDent team decides on every held or reported Testimony, usually within 24 hours, and may take it down if it breaks the rules. The AI never deletes a Testimony.",
+          "You can edit or delete your Testimony at any time."
+        ]
+      },
+      {
+        "title": "For owners and dentists",
+        "blocks": [
+          [
+            "Claiming a page needs a SIP or practice permit and a phone check by the FindYourDent team.",
+            "Practice details and replies are checked before they are shown.",
+            "In line with the dental code of ethics, there is no promotion, advertising, discounts or paid ranking. A claim does not change how dentists are ranked.",
+            "Practices can reply to or report a Testimony, but cannot delete or hide it.",
+            "Owners are responsible for the accuracy of the price lists they confirm."
+          ]
+        ]
+      },
+      {
+        "title": "Information from others",
+        "blocks": [
+          "Ratings, reviews, opening hours and place details from Google Maps are shown as they are, with their source. FindYourDent does not change or guarantee that information."
+        ]
+      },
+      {
+        "title": "Rights to content",
+        "blocks": [
+          "You keep ownership of the Testimonies and photos you send. By sending them, you allow FindYourDent to show them on this service. [The scope of this permission needs legal review.]"
+        ]
+      },
+      {
+        "title": "Limitation of liability",
+        "blocks": [
+          "[This section needs to be written by legal counsel.] Treatment decisions remain yours and your dentist’s."
+        ]
+      },
+      {
+        "title": "Governing law",
+        "blocks": ["These terms are governed by the laws of the Republic of Indonesia. [Needs legal review.]"]
+      },
+      {
+        "title": "Changes and contact",
+        "blocks": [
+          "When these terms change, we update the date at the top of this page. For questions, contact <email/>."
+        ]
+      }
+    ]
   }
 }

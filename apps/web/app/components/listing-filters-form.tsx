@@ -3,91 +3,87 @@
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import type { ProviderType } from "@findyourdent/contracts/firestore";
 import type * as React from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, Link } from "react-router";
+import { RegionFields, type RegionFieldsValue } from "~/components/region-fields";
 import { Button } from "~/components/ui/button";
+import { fieldClassName } from "~/components/ui/field";
 import { isLanguage } from "~/i18n/config";
 import { FILTER_PARAMS, hasActiveFilters, type ListingFilters } from "~/lib/listing-filters";
-import { PROVINCES, REGENCIES } from "~/lib/regions";
+import type { InitialDistricts } from "~/lib/regions";
+import { cn } from "~/lib/utils";
 
 const PROVIDER_TYPES: readonly ProviderType[] = ["klinik", "privateDentist", "hospital"];
 
-/** Native controls styled like the other inputs, so they stay keyboard and screen-reader friendly. */
-export const fieldClassName =
-  "h-10 w-full rounded-md border border-input bg-background px-3 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50";
-
-export function ListingFiltersForm(props: { filters: ListingFilters; action: string; children?: React.ReactNode }) {
-  const { filters, action, children } = props;
+export function ListingFiltersForm(props: {
+  filters: ListingFilters;
+  /** The kecamatan of the kota in the filters, from the loader. */
+  districts: InitialDistricts | null;
+  action: string;
+  /** Lets inputs elsewhere on the page join this form through their `form` attribute. */
+  id?: string;
+  /**
+   * "grid": two columns from the small breakpoint, labelled for screen readers only (the feed).
+   * "sidebar": one column in a card with a visible "Saring" heading (the Directory).
+   */
+  layout?: "grid" | "sidebar";
+  children?: React.ReactNode;
+}) {
+  const { filters, districts, action, id, layout = "grid", children } = props;
+  const sidebar = layout === "sidebar";
+  const headingId = useId();
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : "id";
-  // The kota list follows the chosen province. Without JavaScript it lists the
-  // province from the URL, so choosing a province and applying shows its kota.
-  const [provinceCode, setProvinceCode] = useState(filters.provinceCode ?? "");
-  const regencies = provinceCode ? REGENCIES.filter((r) => r.provinceCode === provinceCode) : [];
-  const keepsRegency = provinceCode === (filters.provinceCode ?? "");
+  // The kota list follows the chosen province, and the kecamatan list the chosen kota.
+  // Without JavaScript they list those of the URL, so choosing a level and applying
+  // shows the level below it.
+  const fromUrl: RegionFieldsValue = {
+    provinceCode: filters.provinceCode ?? "",
+    regencyCode: filters.regencyCode ?? "",
+    ...(filters.districtCode ? { districtCode: filters.districtCode } : {}),
+  };
+  const [region, setRegion] = useState(fromUrl);
+  // A new URL (applied filters, Reset, back) replaces what was chosen but not applied.
+  const [lastUrl, setLastUrl] = useState(fromUrl);
+  if (
+    lastUrl.provinceCode !== fromUrl.provinceCode ||
+    lastUrl.regencyCode !== fromUrl.regencyCode ||
+    lastUrl.districtCode !== fromUrl.districtCode
+  ) {
+    setLastUrl(fromUrl);
+    setRegion(fromUrl);
+  }
 
   return (
-    <Form method="get" action={action} className="flex flex-col gap-4" aria-label={t("filters.title")}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-province" className="text-sm font-medium">
-            {t("filters.province")}
-          </label>
-          <select
-            id="filter-province"
-            name={FILTER_PARAMS.provinceCode}
-            value={provinceCode}
-            onChange={(event) => setProvinceCode(event.currentTarget.value)}
-            className={fieldClassName}
-          >
-            <option value="">{t("filters.allProvinces")}</option>
-            {PROVINCES.map((p) => (
-              <option key={p.code} value={p.code}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-regency" className="text-sm font-medium">
-            {t("filters.regency")}
-          </label>
-          <select
-            // Remounts when the province changes, so a kota from another province is not kept.
-            key={provinceCode}
-            id="filter-regency"
-            name={FILTER_PARAMS.regencyCode}
-            defaultValue={keepsRegency ? (filters.regencyCode ?? "") : ""}
-            className={fieldClassName}
-          >
-            <option value="">{provinceCode ? t("filters.allRegencies") : t("filters.chooseProvinceFirst")}</option>
-            {regencies.map((r) => (
-              <option key={r.code} value={r.code}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-district" className="text-sm font-medium">
-            {t("filters.district")}
-          </label>
-          <input
-            id="filter-district"
-            name={FILTER_PARAMS.districtCode}
-            defaultValue={filters.districtCode ?? ""}
-            inputMode="decimal"
-            pattern="\d{2}\.\d{2}\.\d{2}"
-            placeholder="31.71.01"
-            aria-describedby="filter-district-hint"
-            className={fieldClassName}
+    <Form
+      id={id}
+      method="get"
+      action={action}
+      className={cn("flex flex-col gap-4", sidebar && "rounded-lg border bg-card p-5 text-card-foreground")}
+      aria-label={sidebar ? undefined : t("filters.title")}
+      aria-labelledby={sidebar ? headingId : undefined}
+    >
+      {sidebar && (
+        <h2 id={headingId} className="text-base leading-[22px] font-[650]">
+          {t("filters.title")}
+        </h2>
+      )}
+      <div className={sidebar ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
+        <div className={sidebar ? undefined : "sm:col-span-2"}>
+          <RegionFields
+            stacked={sidebar}
+            mode="filter"
+            value={region}
+            onChange={setRegion}
+            withDistrict
+            initialDistricts={districts ?? undefined}
+            names={{
+              province: FILTER_PARAMS.provinceCode,
+              regency: FILTER_PARAMS.regencyCode,
+              district: FILTER_PARAMS.districtCode,
+            }}
           />
-          <p id="filter-district-hint" className="text-xs text-muted-foreground">
-            {t("filters.districtHint")}
-          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -128,7 +124,7 @@ export function ListingFiltersForm(props: { filters: ListingFilters; action: str
           </select>
         </div>
 
-        <div className="flex items-center gap-2 self-end pb-2">
+        <div className={cn("flex min-h-touch items-center gap-2", !sidebar && "self-end")}>
           <input
             id="filter-verified"
             type="checkbox"
@@ -146,9 +142,11 @@ export function ListingFiltersForm(props: { filters: ListingFilters; action: str
       {children}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit">{t("filters.apply")}</Button>
+        <Button type="submit" size={sidebar ? "sm" : undefined}>
+          {t("filters.apply")}
+        </Button>
         {hasActiveFilters(filters) && (
-          <Button asChild variant="ghost">
+          <Button asChild variant="ghost" size={sidebar ? "sm" : undefined}>
             <Link to={action}>{t("filters.reset")}</Link>
           </Button>
         )}

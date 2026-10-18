@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "~/components/ui/button";
+import { FieldError } from "~/components/ui/field";
 
 /** Matches the 60-second cap in spec 01; the server also refuses anything bigger. */
 export const MAX_RECORDING_SECONDS = 60;
@@ -123,14 +124,16 @@ export function VoiceRecorder({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground">{t("home.voiceOr")}</p>
+      <p className="flex items-center gap-3 text-sm text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+        {t("home.voiceOr")}
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
           ref={recordButton}
           type="button"
           size="lg"
-          variant={recording ? "destructive" : "secondary"}
-          className="h-14 w-full gap-3 px-6 text-lg sm:w-auto"
+          variant={recording ? "outline" : "secondary"}
+          className="h-auto min-h-14 w-full gap-3 px-6 whitespace-normal"
           aria-describedby={statusId}
           disabled={disabled && !recording}
           onClick={() => (recording ? stop(false) : void start())}
@@ -146,18 +149,16 @@ export function VoiceRecorder({
           </Button>
         )}
       </div>
-      <p
-        id={statusId}
-        aria-live="polite"
-        className={
-          state === "denied" || state === "failed" ? "text-sm text-destructive" : "text-xs text-muted-foreground"
-        }
-      >
-        {recording && t("home.voiceRecording")}
-        {state === "idle" && t("home.voiceHint")}
-        {state === "denied" && t("home.voiceDenied")}
-        {state === "failed" && t("home.voiceFailed")}
-      </p>
+      {state === "denied" || state === "failed" ? (
+        <FieldError id={statusId} aria-live="polite">
+          {state === "denied" ? t("home.voiceDenied") : t("home.voiceFailed")}
+        </FieldError>
+      ) : (
+        <p id={statusId} aria-live="polite" className="text-center text-sm text-muted-foreground">
+          {recording && t("home.voiceRecording")}
+          {state === "idle" && t("home.voiceHint")}
+        </p>
+      )}
     </div>
   );
 }

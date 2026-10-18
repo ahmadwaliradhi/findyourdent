@@ -1,16 +1,21 @@
 import type { Language } from "~/i18n/config";
 
-/** English keeps Indonesian number separators, so prices and scores read the same in both languages. */
+/** English keeps Indonesian separators for counts, scores and distances; money follows the language (formatRupiah). */
 function locale(language: Language): string {
   return language === "id" ? "id-ID" : "en-ID";
 }
 
+/**
+ * "Rp 450.000" in Indonesian, "Rp 450,000" in English: money takes the language's own thousands
+ * separator. A no-break space keeps "Rp" and the amount on one line.
+ */
 export function formatRupiah(amount: number, language: Language): string {
-  return new Intl.NumberFormat(locale(language), {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return `Rp\u00a0${formatRupiahAmount(amount, language)}`;
+}
+
+/** The amount alone, "450.000" or "450,000", for a price field labelled "(Rp)". */
+export function formatRupiahAmount(amount: number, language: Language): string {
+  return new Intl.NumberFormat(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 0 }).format(amount);
 }
 
 export function formatCount(value: number, language: Language): string {
@@ -33,6 +38,18 @@ export function formatVisitMonth(visitMonth: string, language: Language): string
   return new Intl.DateTimeFormat(locale(language), { month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(Date.UTC(year, month - 1, 1)),
   );
+}
+
+/** "2026-09-12" as "12 September 2026"; UTC so server and browser agree. */
+export function formatDate(date: string, language: Language): string {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return date;
+  return new Intl.DateTimeFormat(locale(language), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 /** "450 m" or "1,2 km". */

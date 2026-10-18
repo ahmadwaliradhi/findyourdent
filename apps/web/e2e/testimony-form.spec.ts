@@ -23,7 +23,7 @@ async function rate(page: Page, aspect: string, score: number) {
 
 test("the Provider page links to the form with its place picked", async ({ page }) => {
   await page.goto("/tempat/sample-klinik-senyum");
-  const link = page.getByRole("link", { name: "Ceritakan pengalamanmu" });
+  const link = page.getByRole("main").getByRole("link", { name: "Ceritakan pengalamanmu" });
   await expect(link).toHaveAttribute("href", "/ceritakan?placeId=sample-klinik-senyum");
 });
 

@@ -2,13 +2,16 @@
 // kept in the browser, Google sign-in only when the Patient presses Kirim, and the
 // fix-before-submit loop when Moderation flags something the author can fix.
 import procedureList from "@findyourdent/contracts/data/procedures.json";
+import { Check, FileCheck, Plus, TriangleAlert, Upload } from "lucide-react";
 import type * as React from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { fieldClassName } from "~/components/listing-filters-form";
 import { ProviderFields } from "~/components/provider-fields";
 import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
+import { ErrorNotice } from "~/components/ui/error-notice";
+import { FieldError, fieldClassName } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { isLanguage, type Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
@@ -46,6 +49,7 @@ import {
   validateForm,
   visitYears,
 } from "~/lib/testimony-draft";
+import { cn } from "~/lib/utils";
 
 export interface TestimonyFormProps {
   /** create: POST /api/testimonies, with a browser draft. edit: POST /api/testimonies/:testimonyId. */
@@ -61,6 +65,9 @@ export interface TestimonyFormProps {
 /** 'Testimoni saya' (built with the edit page). */
 const MY_TESTIMONIES_PATH = "/testimoni-saya";
 const PROVIDER_ERROR_KEYS = ["placeId", "providerName", "region.provinceCode", "region.regencyCode"];
+/** Each card's title, and each field's visible label (the design system's h3 and label styles). */
+const sectionTitle = "text-lg leading-6 font-[650]";
+const labelClass = "text-sm leading-5 font-semibold text-foreground";
 const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
 
 interface NewPhoto {
@@ -338,43 +345,49 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   const photoCount = kept.length + photos.length;
   const years = visitYears(now);
   const fieldError = (name: string) =>
-    errors[name] ? (
-      <p id={id(`${name}-error`)} className="text-sm text-destructive">
-        {errors[name]}
-      </p>
-    ) : null;
+    errors[name] ? <FieldError id={id(`${name}-error`)}>{errors[name]}</FieldError> : null;
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6" aria-busy={busy}>
       {draftRestored && (
-        <div className="flex flex-col gap-2 rounded-md border bg-muted/40 px-4 py-3 text-sm" role="status">
-          <p>{t("testimonyForm.draftRestored")}</p>
-          <p className="text-muted-foreground">{t("testimonyForm.photosReattach")}</p>
-          <Button type="button" variant="link" size="sm" className="self-start px-0" onClick={discardDraft}>
-            {t("testimonyForm.discardDraft")}
-          </Button>
+        <div
+          className="flex flex-col gap-2 rounded-md border border-success-line bg-success-soft px-4 py-3 text-sm"
+          role="status"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-x-3">
+            <p className="flex items-center gap-2 font-semibold">
+              <Check aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0 text-success" />
+              <span>{t("testimonyForm.draftRestored")}</span>
+            </p>
+            <Button type="button" variant="link" size="sm" className="px-0" onClick={discardDraft}>
+              {t("testimonyForm.discardDraft")}
+            </Button>
+          </div>
+          <p>{t("testimonyForm.photosReattach")}</p>
         </div>
       )}
 
       <fieldset disabled={busy} className="flex min-w-0 flex-col gap-6">
-        {/* ProviderFields labels itself; the edit page shows the Provider, which cannot change. */}
-        {mode === "edit" ? (
-          <div className="rounded-md border px-4 py-3">
-            <p className="text-sm text-muted-foreground">{t("testimonyForm.providerReadOnly")}</p>
-            <p className="font-medium">{provider?.name}</p>
-          </div>
-        ) : (
-          <ProviderFields
-            value={state.provider}
-            onChange={(value) => update({ provider: value })}
-            errors={providerErrors}
-            disabled={busy}
-          />
-        )}
+        <Card labelledBy={id("provider-title")} className="p-5 desktop:p-6">
+          <h2 id={id("provider-title")} className={sectionTitle}>
+            {t("testimonyForm.providerReadOnly")}
+          </h2>
+          {/* The edit page shows the Provider, which cannot change. */}
+          {mode === "edit" ? (
+            <p className="rounded-md bg-muted px-4 py-3 font-semibold">{provider?.name}</p>
+          ) : (
+            <ProviderFields
+              value={state.provider}
+              onChange={(value) => update({ provider: value })}
+              errors={providerErrors}
+              disabled={busy}
+            />
+          )}
+        </Card>
 
-        <section className="flex flex-col gap-4" aria-labelledby={id("ratings-title")}>
-          <div>
-            <h2 id={id("ratings-title")} className="text-lg font-semibold">
+        <Card labelledBy={id("ratings-title")} className="p-5 desktop:p-6">
+          <div className="flex flex-col gap-1">
+            <h2 id={id("ratings-title")} className={sectionTitle}>
               {t("testimonyForm.ratingsTitle")}
             </h2>
             <p className="text-sm text-muted-foreground">{t("testimonyForm.ratingsHint")}</p>
@@ -390,47 +403,100 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
               onChange={(value) => update({ ratings: { ...state.ratings, [aspect]: value } })}
             />
           ))}
-        </section>
+        </Card>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={id("text")} className="font-medium">
-            {t("testimonyForm.textLabel")}
-          </label>
-          <p id={id("text-hint")} className="text-sm text-muted-foreground">
-            {t("testimonyForm.textHint")}
-          </p>
-          <Textarea
-            id={id("text")}
-            value={state.text}
-            maxLength={TESTIMONY_LIMITS.textMaxChars}
-            onChange={(event) => update({ text: event.currentTarget.value })}
-            className="min-h-40"
-            {...fieldProps("text", id("text-hint"))}
-            {...(fix ? { "aria-invalid": true } : {})}
-          />
-          <p className="self-end text-xs text-muted-foreground" aria-live="polite">
-            {t("testimonyForm.textCounter", {
-              used: state.text.length.toLocaleString(language === "id" ? "id-ID" : "en-ID"),
-              max: TESTIMONY_LIMITS.textMaxChars.toLocaleString(language === "id" ? "id-ID" : "en-ID"),
-            })}
-          </p>
-          {fieldError("text")}
+        {/* The card title is the textarea's visible label, so the card is not also named by it. */}
+        <Card className="p-5 desktop:p-6">
+          <h2 className={sectionTitle}>
+            <label htmlFor={id("text")}>{t("testimonyForm.textLabel")}</label>
+          </h2>
+          <div className="flex flex-col gap-2">
+            <Textarea
+              id={id("text")}
+              value={state.text}
+              maxLength={TESTIMONY_LIMITS.textMaxChars}
+              onChange={(event) => update({ text: event.currentTarget.value })}
+              className="min-h-40"
+              {...fieldProps("text", id("text-hint"))}
+              {...(fix ? { "aria-invalid": true } : {})}
+            />
+            <div className="flex flex-col gap-1 desktop:flex-row desktop:items-start desktop:justify-between desktop:gap-4">
+              <p id={id("text-hint")} className="text-sm text-muted-foreground">
+                {t("testimonyForm.textHint")}
+              </p>
+              <p className="shrink-0 text-sm text-muted-foreground tabular-nums" aria-live="polite">
+                {t("testimonyForm.textCounter", {
+                  used: state.text.length.toLocaleString(language === "id" ? "id-ID" : "en-ID"),
+                  max: TESTIMONY_LIMITS.textMaxChars.toLocaleString(language === "id" ? "id-ID" : "en-ID"),
+                })}
+              </p>
+            </div>
+            {fieldError("text")}
+          </div>
           {fix && <AuthorFixPanel fix={fix} panelRef={fixRef} />}
-        </div>
+        </Card>
 
-        <section className="flex flex-col gap-4" aria-labelledby={id("details-title")}>
-          <h2 id={id("details-title")} className="text-lg font-semibold">
+        <Card labelledBy={id("details-title")} className="p-5 desktop:p-6">
+          <h2 id={id("details-title")} className={sectionTitle}>
             {t("testimonyForm.detailsTitle")}
           </h2>
 
-          <fieldset className="flex flex-col gap-1.5" {...fieldProps("visitMonth", id("visit-hint"))}>
-            <legend className="font-medium">{t("testimonyForm.visitLabel")}</legend>
-            <p id={id("visit-hint")} className="text-sm text-muted-foreground">
-              {t("testimonyForm.visitHint")}
-            </p>
+          <div className="grid gap-4 desktop:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <label htmlFor={id("procedure")} className={labelClass}>
+                {t("testimonyForm.procedureLabel")}
+              </label>
+              <select
+                id={id("procedure")}
+                value={state.procedureCode}
+                onChange={(event) => update({ procedureCode: event.currentTarget.value })}
+                className={fieldClassName}
+                {...fieldProps("procedureCode")}
+              >
+                <option value="">{t("testimonyForm.procedureNone")}</option>
+                {procedureList.procedures.map((procedure) => (
+                  <option key={procedure.code} value={procedure.code}>
+                    {procedureLabel(procedure.code, language)}
+                  </option>
+                ))}
+              </select>
+              {fieldError("procedureCode")}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor={id("price")} className={labelClass}>
+                {t("testimonyForm.priceLabel")}
+              </label>
+              <div className="relative">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground"
+                >
+                  Rp
+                </span>
+                <input
+                  id={id("price")}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={formatPriceInput(state.price)}
+                  onChange={(event) => update({ price: event.currentTarget.value.replace(/\D/g, "").slice(0, 10) })}
+                  className={cn(fieldClassName, "pl-10 tabular-nums")}
+                  {...fieldProps("pricePaidRupiah", id("price-hint"))}
+                />
+              </div>
+              <p id={id("price-hint")} className="text-sm text-muted-foreground">
+                {t("testimonyForm.priceHint")}
+              </p>
+              {fieldError("pricePaidRupiah")}
+            </div>
+          </div>
+
+          <fieldset className="flex min-w-0 flex-col gap-2" {...fieldProps("visitMonth", id("visit-hint"))}>
+            <legend className={cn(labelClass, "pb-2")}>{t("testimonyForm.visitLabel")}</legend>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor={id("visit-month")} className="text-sm">
+                <label htmlFor={id("visit-month")} className="text-sm text-muted-foreground">
                   {t("testimonyForm.visitMonth")}
                 </label>
                 <select
@@ -453,7 +519,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor={id("visit-year")} className="text-sm">
+                <label htmlFor={id("visit-year")} className="text-sm text-muted-foreground">
                   {t("testimonyForm.visitYear")}
                 </label>
                 <select
@@ -473,69 +539,25 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
               </div>
             </div>
             {fieldError("visitMonth")}
-          </fieldset>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor={id("procedure")} className="font-medium">
-              {t("testimonyForm.procedureLabel")}
-            </label>
-            <select
-              id={id("procedure")}
-              value={state.procedureCode}
-              onChange={(event) => update({ procedureCode: event.currentTarget.value })}
-              className={fieldClassName}
-              {...fieldProps("procedureCode")}
-            >
-              <option value="">{t("testimonyForm.procedureNone")}</option>
-              {procedureList.procedures.map((procedure) => (
-                <option key={procedure.code} value={procedure.code}>
-                  {procedureLabel(procedure.code, language)}
-                </option>
-              ))}
-            </select>
-            {fieldError("procedureCode")}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor={id("price")} className="font-medium">
-              {t("testimonyForm.priceLabel")}
-            </label>
-            <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="text-muted-foreground">
-                Rp
-              </span>
-              <input
-                id={id("price")}
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                value={formatPriceInput(state.price)}
-                onChange={(event) => update({ price: event.currentTarget.value.replace(/\D/g, "").slice(0, 10) })}
-                className={fieldClassName}
-                {...fieldProps("pricePaidRupiah", id("price-hint"))}
-              />
-            </div>
-            <p id={id("price-hint")} className="text-sm text-muted-foreground">
-              {t("testimonyForm.priceHint")}
+            <p id={id("visit-hint")} className="text-sm text-muted-foreground">
+              {t("testimonyForm.visitHint")}
             </p>
-            {fieldError("pricePaidRupiah")}
-          </div>
-        </section>
+          </fieldset>
+        </Card>
 
-        <section className="flex flex-col gap-3" aria-labelledby={id("photos-title")}>
-          <h2 id={id("photos-title")} className="font-medium">
-            {t("testimonyForm.photosLabel", { max: TESTIMONY_LIMITS.photosMax })}
+        <Card labelledBy={id("files-title")} className="p-5 desktop:p-6">
+          <h2 id={id("files-title")} className={sectionTitle}>
+            {t("testimonyForm.filesTitle")}
           </h2>
-          <p id={id("photos-hint")} className="text-sm text-muted-foreground">
-            {t("testimonyForm.photosGuidance")}
-          </p>
-          {photoCount > 0 && (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+          <div className="flex flex-col gap-2">
+            <h3 className={labelClass}>{t("testimonyForm.photosLabel", { max: TESTIMONY_LIMITS.photosMax })}</h3>
+            <ul className="grid grid-cols-2 gap-3 desktop:grid-cols-4">
               {[
                 ...kept.map((photo) => ({ key: photo.path, url: photo.url, kept: true })),
                 ...photos.map((photo) => ({ key: photo.id, url: photo.url, kept: false })),
               ].map((photo, index) => (
-                <li key={photo.key} className="flex flex-col gap-1">
+                <li key={photo.key} className="flex flex-col gap-2">
                   <img
                     src={photo.url}
                     alt={t("testimonyForm.photoAlt", { index: index + 1 })}
@@ -555,128 +577,139 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
                   </Button>
                 </li>
               ))}
+              {photoCount < TESTIMONY_LIMITS.photosMax && (
+                <li>
+                  <label
+                    htmlFor={id("photos")}
+                    className="flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border-strong bg-card px-2 text-center text-sm font-semibold hover:border-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+                  >
+                    <Plus aria-hidden="true" strokeWidth={1.75} className="size-6 text-muted-foreground" />
+                    {t("testimonyForm.photosAdd")}
+                    <input
+                      id={id("photos")}
+                      type="file"
+                      multiple
+                      accept={PHOTO_MIME_TYPES.join(",")}
+                      onChange={addPhotos}
+                      className="sr-only"
+                      {...fieldProps("photos", id("photos-hint"))}
+                    />
+                  </label>
+                </li>
+              )}
             </ul>
-          )}
-          {photoCount < TESTIMONY_LIMITS.photosMax && (
-            <div>
-              <label
-                htmlFor={id("photos")}
-                className="inline-flex h-11 cursor-pointer items-center rounded-md border px-4 text-sm font-medium shadow-xs hover:bg-accent has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
-              >
-                {t("testimonyForm.photosAdd")}
-                <input
-                  id={id("photos")}
-                  type="file"
-                  multiple
-                  accept={PHOTO_MIME_TYPES.join(",")}
-                  onChange={addPhotos}
-                  className="sr-only"
-                  {...fieldProps("photos", id("photos-hint"))}
-                />
-              </label>
-            </div>
-          )}
-          {fieldError("photos")}
-        </section>
+            <p id={id("photos-hint")} className="text-sm text-muted-foreground">
+              {t("testimonyForm.photosGuidance")}
+            </p>
+            {fieldError("photos")}
+          </div>
 
-        <section className="flex flex-col gap-3" aria-labelledby={id("proof-title")}>
-          <h2 id={id("proof-title")} className="font-medium">
-            {t("testimonyForm.proofLabel")}
+          <div className="flex flex-col gap-2">
+            <h3 className={labelClass}>{t("testimonyForm.proofLabel")}</h3>
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border-strong bg-card px-5 py-5 text-center">
+              {proof ? (
+                <>
+                  <FileCheck aria-hidden="true" strokeWidth={1.75} className="size-6 text-success" />
+                  <span className="max-w-full break-all font-semibold">{proof.name}</span>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setProof(null)}>
+                    {t("testimonyForm.proofRemove")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Upload aria-hidden="true" strokeWidth={1.75} className="size-6 text-muted-foreground" />
+                  <label
+                    htmlFor={id("proof")}
+                    className="inline-flex min-h-touch cursor-pointer items-center rounded-md border border-border-strong bg-card px-4 text-base font-semibold shadow-xs hover:border-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+                  >
+                    {t("testimonyForm.proofAdd")}
+                    <input
+                      id={id("proof")}
+                      type="file"
+                      accept={PROOF_MIME_TYPES.join(",")}
+                      onChange={pickProof}
+                      className="sr-only"
+                      {...fieldProps("proof", id("proof-hint"))}
+                    />
+                  </label>
+                </>
+              )}
+              <p id={id("proof-hint")} className="text-sm text-muted-foreground">
+                {t("testimonyForm.proofHint")}
+              </p>
+            </div>
+            {fieldError("proof")}
+          </div>
+        </Card>
+
+        <Card labelledBy={id("name-title")} className="p-5 desktop:p-6">
+          <h2 id={id("name-title")} className="sr-only">
+            {t("testimonyForm.nameTitle")}
           </h2>
-          <p id={id("proof-hint")} className="text-sm text-muted-foreground">
-            {t("testimonyForm.proofHint")}
-          </p>
-          {proof ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm">
-              <span className="min-w-0 break-all">{proof.name}</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => setProof(null)}>
-                {t("testimonyForm.proofRemove")}
-              </Button>
-            </div>
-          ) : (
-            <div>
-              <label
-                htmlFor={id("proof")}
-                className="inline-flex h-11 cursor-pointer items-center rounded-md border px-4 text-sm font-medium shadow-xs hover:bg-accent has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
-              >
-                {t("testimonyForm.proofAdd")}
-                <input
-                  id={id("proof")}
-                  type="file"
-                  accept={PROOF_MIME_TYPES.join(",")}
-                  onChange={pickProof}
-                  className="sr-only"
-                  {...fieldProps("proof", id("proof-hint"))}
-                />
-              </label>
-            </div>
-          )}
-          {fieldError("proof")}
-        </section>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={id("display-name")} className="font-medium">
-            {t("testimonyForm.displayNameLabel")}
-          </label>
-          <input
-            id={id("display-name")}
-            type="text"
-            autoComplete="off"
-            maxLength={TESTIMONY_LIMITS.displayNameMaxChars}
-            placeholder={t("testimonyForm.displayNamePlaceholder")}
-            value={state.displayName}
-            onChange={(event) => update({ displayName: event.currentTarget.value })}
-            className={fieldClassName}
-            {...fieldProps("displayName", id("display-name-hint"))}
-          />
-          <p id={id("display-name-hint")} className="text-sm text-muted-foreground">
-            {t("testimonyForm.displayNameHint")}
-          </p>
-          {fieldError("displayName")}
-        </div>
-
-        <fieldset className="flex flex-col gap-3" {...fieldProps("consent")}>
-          <legend className="pb-2 font-medium">{t("testimonyForm.consentTitle")}</legend>
-          <label className="flex items-start gap-3">
+          <div className="flex flex-col gap-2">
+            <label htmlFor={id("display-name")} className={labelClass}>
+              {t("testimonyForm.displayNameLabel")}
+            </label>
             <input
-              type="checkbox"
-              checked={state.consentHonest}
-              onChange={(event) => update({ consentHonest: event.currentTarget.checked })}
-              className="mt-1 size-5 shrink-0 accent-primary"
+              id={id("display-name")}
+              type="text"
+              autoComplete="off"
+              maxLength={TESTIMONY_LIMITS.displayNameMaxChars}
+              placeholder={t("testimonyForm.displayNamePlaceholder")}
+              value={state.displayName}
+              onChange={(event) => update({ displayName: event.currentTarget.value })}
+              className={fieldClassName}
+              {...fieldProps("displayName", id("display-name-hint"))}
             />
-            <span>{t("testimonyForm.consentHonest")}</span>
-          </label>
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={state.consentNoOthers}
-              onChange={(event) => update({ consentNoOthers: event.currentTarget.checked })}
-              className="mt-1 size-5 shrink-0 accent-primary"
-            />
-            <span>{t("testimonyForm.consentNoOthers")}</span>
-          </label>
-          {fieldError("consent")}
-        </fieldset>
+            <p id={id("display-name-hint")} className="text-sm text-muted-foreground">
+              {t("testimonyForm.displayNameHint")}
+            </p>
+            {fieldError("displayName")}
+          </div>
+
+          <fieldset className="flex min-w-0 flex-col gap-1" {...fieldProps("consent")}>
+            <legend className={cn(labelClass, "pb-1")}>{t("testimonyForm.consentTitle")}</legend>
+            <label className="flex min-h-touch cursor-pointer items-start gap-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={state.consentHonest}
+                onChange={(event) => update({ consentHonest: event.currentTarget.checked })}
+                className="mt-0.5 size-5.5 shrink-0 accent-primary"
+              />
+              <span>{t("testimonyForm.consentHonest")}</span>
+            </label>
+            <label className="flex min-h-touch cursor-pointer items-start gap-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={state.consentNoOthers}
+                onChange={(event) => update({ consentNoOthers: event.currentTarget.checked })}
+                className="mt-0.5 size-5.5 shrink-0 accent-primary"
+              />
+              <span>{t("testimonyForm.consentNoOthers")}</span>
+            </label>
+            {fieldError("consent")}
+          </fieldset>
+        </Card>
       </fieldset>
 
       {problem && (
-        <div
-          ref={problemRef}
-          tabIndex={-1}
-          role="alert"
-          className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm outline-none"
-        >
+        <ErrorNotice ref={problemRef} tabIndex={-1} role="alert" className="px-4">
           <p>{problem.message}</p>
           {problem.alreadyPosted && (
             <Link to={MY_TESTIMONIES_PATH} className="font-medium underline underline-offset-4">
               {t("testimonyForm.myTestimonies")}
             </Link>
           )}
-        </div>
+        </ErrorNotice>
       )}
 
       <div className="flex flex-col gap-2">
-        <Button type="submit" size="lg" disabled={busy || !hydrated} className="w-full sm:w-auto sm:self-start">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={busy || !hydrated}
+          className="w-full desktop:w-auto desktop:self-start"
+        >
           {phase === "signingIn"
             ? t("testimonyForm.signingIn")
             : phase === "sending"
@@ -700,13 +733,13 @@ function RatingGroup(props: {
   const { aspect, name, value, error, errorId, onChange } = props;
   const { t } = useTranslation();
   return (
-    <fieldset className="flex flex-col gap-2" aria-describedby={error ? errorId : undefined}>
-      <legend className="pb-1 font-medium">{t(`provider.aspects.${aspect}`)}</legend>
-      <div className="grid grid-cols-5 gap-2">
+    <fieldset className="flex min-w-0 flex-col gap-2" aria-describedby={error ? errorId : undefined}>
+      <legend className="pb-2 text-sm leading-5 font-semibold">{t(`provider.aspects.${aspect}`)}</legend>
+      <div className="grid grid-cols-5 gap-1.5">
         {[1, 2, 3, 4, 5].map((score) => (
           <label
             key={score}
-            className="flex h-11 cursor-pointer items-center justify-center rounded-md border text-base font-medium has-checked:border-primary has-checked:bg-primary has-checked:text-primary-foreground has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50 has-disabled:cursor-not-allowed has-disabled:opacity-50"
+            className="flex min-h-touch cursor-pointer items-center justify-center rounded-md border border-border-strong bg-card text-base font-semibold tabular-nums has-aria-invalid:border-destructive has-checked:border-primary has-checked:bg-primary has-checked:text-primary-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring has-disabled:cursor-not-allowed has-disabled:opacity-50"
           >
             <input
               type="radio"
@@ -722,11 +755,7 @@ function RatingGroup(props: {
           </label>
         ))}
       </div>
-      {error && (
-        <p id={errorId} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
     </fieldset>
   );
 }
@@ -753,16 +782,19 @@ function AuthorFixPanel({
       ref={panelRef}
       tabIndex={-1}
       role="alert"
-      className="flex flex-col gap-3 rounded-md border border-amber-500/50 bg-amber-50 px-4 py-3 text-sm outline-none dark:bg-amber-950/30"
+      className="flex flex-col gap-3 rounded-md border border-warning-line bg-warning-soft px-4 py-3 text-sm text-foreground"
     >
-      <p className="font-semibold">{t("testimonyForm.fix.title")}</p>
+      <p className="flex items-start gap-2 font-semibold">
+        <TriangleAlert aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-4 shrink-0 text-warning" />
+        <span>{t("testimonyForm.fix.title")}</span>
+      </p>
       <p>{t("testimonyForm.fix.intro")}</p>
       {response.message && <p>{response.message}</p>}
       {issues.length > 0 && (
         <ul className="flex flex-col gap-3" aria-label={t("testimonyForm.fix.flagged")}>
           {issues.map((issue) => (
             <li key={`${issue.sentence}-${issue.marks[0]?.start}`} className="flex flex-col gap-1">
-              <blockquote className="border-l-2 border-amber-500 pl-3 break-words">
+              <blockquote className="border-l-2 border-warning-line pl-3 break-words">
                 <MarkedSentence issue={issue} />
               </blockquote>
               {issue.ruleCodes.map((code) => (
@@ -793,7 +825,7 @@ function MarkedSentence({ issue }: { issue: FixIssue }) {
     if (mark.start < at) continue;
     if (mark.start > at) parts.push(issue.sentence.slice(at, mark.start));
     parts.push(
-      <mark key={mark.start} className="rounded-sm bg-amber-200 px-0.5 dark:bg-amber-700/60 dark:text-white">
+      <mark key={mark.start} className="rounded-sm bg-highlight px-0.5 text-foreground">
         {issue.sentence.slice(mark.start, mark.end)}
       </mark>,
     );
@@ -823,8 +855,8 @@ function Result({
   const title = published ? t("testimonyForm.result.publishedTitle") : t("testimonyForm.result.reviewTitle");
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border px-5 py-6" aria-live="polite">
-      <h2 ref={headingRef} tabIndex={-1} className="text-xl font-bold outline-none">
+    <section className="flex flex-col gap-4 rounded-lg border bg-card p-5 shadow-sm desktop:p-6" aria-live="polite">
+      <h2 ref={headingRef} tabIndex={-1} className="text-xl font-bold">
         {title}
       </h2>
       {/* On held, the server's message carries the reason and the 24-hour target. */}
@@ -846,10 +878,39 @@ function Result({
             <Link to={providerPath(placeId)}>{t("testimonyForm.result.viewProvider")}</Link>
           </Button>
         )}
-        <Button asChild variant={published ? "outline" : "default"}>
+        <Button asChild variant={published ? "outline" : "primary"}>
           <Link to={MY_TESTIMONIES_PATH}>{t("testimonyForm.myTestimonies")}</Link>
         </Button>
       </div>
     </section>
+  );
+}
+
+/** Beside the form on desktop, under it on a phone: what helps other Patients, and what stays private. */
+export function TestimonyTips() {
+  const { t } = useTranslation();
+  const headingId = useId();
+  const tips = ["what", "price", "names"] as const;
+  const privacy = ["account", "proof", "edit"] as const;
+  return (
+    <aside aria-labelledby={headingId} className="desktop:sticky desktop:top-6">
+      <div className="flex flex-col gap-4 rounded-lg bg-secondary p-5 text-secondary-foreground desktop:p-6">
+        <h2 id={headingId} className={sectionTitle}>
+          {t("testimonyForm.tips.title")}
+        </h2>
+        <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+          {tips.map((key) => (
+            <li key={key}>{t(`testimonyForm.tips.${key}`)}</li>
+          ))}
+        </ul>
+        <hr className="border-border" />
+        <h3 className="text-base leading-[22px] font-[650]">{t("testimonyForm.tips.privacyTitle")}</h3>
+        <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+          {privacy.map((key) => (
+            <li key={key}>{t(`testimonyForm.tips.${key}`)}</li>
+          ))}
+        </ul>
+      </div>
+    </aside>
   );
 }

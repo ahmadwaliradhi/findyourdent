@@ -16,7 +16,27 @@ export function regencyName(code: string): string {
   return regencyNames.get(code) ?? code;
 }
 
-/** "Kota Jakarta Pusat, DKI Jakarta". Kecamatan names are not in the region list, so they are not shown. */
+/** One kecamatan, as the Region fields list it. Names live in data/districts.json, which stays on the server (server/districts.server.ts). */
+export interface DistrictOption {
+  code: string;
+  name: string;
+}
+
+/** The kecamatan of one kota/kabupaten, sent by a loader so the Kecamatan select renders filled before JavaScript runs. */
+export interface InitialDistricts {
+  regencyCode: string;
+  districts: DistrictOption[];
+}
+
+/** What a listing page's loader sends about the kecamatan level of its filters. */
+export interface ListingDistricts {
+  /** The kecamatan of the kota in the filters, for the Kecamatan select; null without a kota. */
+  options: InitialDistricts | null;
+  /** The name of the kecamatan in the filters, for headings and meta; null without one. */
+  chosenName: string | null;
+}
+
+/** "Kota Jakarta Pusat, DKI Jakarta". Kecamatan names are not loaded here; see DistrictOption. */
 export function regionLabel(region: Pick<RegionRef, "provinceCode" | "regencyCode">): string {
   return `${regencyName(region.regencyCode)}, ${provinceName(region.provinceCode)}`;
 }
@@ -37,8 +57,9 @@ export function regenciesOf(provinceCode: string): typeof REGENCIES {
 
 /**
  * A Region a Testimony or a "Sarankan koreksi" may carry: a province and one of its
- * own kota/kabupaten from the Kemendagri list. The list has no kecamatan, so an
- * optional `districtCode` is only checked for shape (`NN.NN.NN` inside the kota).
+ * own kota/kabupaten from the Kemendagri list. An optional `districtCode` is only
+ * checked for shape (`NN.NN.NN` inside the kota), so every kecamatan of
+ * data/districts.json passes without shipping that list to the browser.
  * Pure, for the form and the server alike.
  */
 export function isValidRegion(region: { provinceCode: string; regencyCode: string; districtCode?: string }): boolean {

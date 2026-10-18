@@ -11,14 +11,20 @@ import {
   ScrollRestoration,
   useRouteLoaderData,
 } from "react-router";
-import { LanguageToggle } from "~/components/language-toggle";
+import { pageWrap, SiteFooter, SiteHeader } from "~/components/site-shell";
 import { Button } from "~/components/ui/button";
 import { DEFAULT_LANGUAGE, getI18n, type Language } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
+import { cn } from "~/lib/utils";
 import type { Route } from "./+types/root";
 import "./app.css";
 
-export const links: Route.LinksFunction = () => [{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }];
+export const links: Route.LinksFunction = () => [
+  { rel: "preload", href: "/fonts/Figtree-Variable.woff2", as: "font", type: "font/woff2", crossOrigin: "anonymous" },
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+  { rel: "manifest", href: "/site.webmanifest" },
+];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const language = await detectLanguage(request);
@@ -36,11 +42,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#0f6e74" />
+        <meta name="theme-color" content="#0b6e6a" />
         <Meta />
         <Links />
       </head>
-      <body className="min-h-dvh">
+      <body>
         <I18nextProvider i18n={i18n}>
           <a
             href="#main"
@@ -48,18 +54,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             {t("nav.skipToContent")}
           </a>
-          <header className="border-b bg-card">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
-              <Link to="/" aria-label={t("nav.home")} className="text-lg font-bold tracking-tight text-primary">
-                FindYourDent
-              </Link>
-              <LanguageToggle language={language} />
-            </div>
-          </header>
-          <main id="main" className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
-            {children}
-          </main>
-          <footer className="mx-auto max-w-2xl px-4 pb-8 text-xs text-muted-foreground">{t("footer.note")}</footer>
+          <div className="flex min-h-dvh flex-col">
+            <SiteHeader language={language} />
+            <main id="main" className={cn(pageWrap, "flex-1 py-6 desktop:py-10")}>
+              {children}
+            </main>
+            <SiteFooter />
+          </div>
         </I18nextProvider>
         <ScrollRestoration />
         <Scripts />

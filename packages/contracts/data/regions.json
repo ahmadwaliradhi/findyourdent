@@ -3,7 +3,7 @@
   "source": "Kementerian Dalam Negeri (Kemendagri): Lampiran Keputusan Menteri Dalam Negeri Nomor 300.2.2-2138 Tahun 2025 tentang Pemberian dan Pemutakhiran Kode, Data Wilayah Administrasi Pemerintahan, dan Pulau, sebagaimana diubah dengan Keputusan Menteri Dalam Negeri Nomor 300.2.2-2430 Tahun 2025 (copies from JDIH BPK, peraturan.bpk.go.id/Details/322942 and /Details/322912)",
   "version": "Kepmendagri 300.2.2-2138/2025 as amended by 300.2.2-2430/2025",
   "complete": true,
-  "notes": "All 38 provinces and all 514 kabupaten/kota (416 kabupaten, 98 kota), extracted from Lampiran B of Kepmendagri 300.2.2-2138/2025 and checked against the per-province counts in its Lampiran A and in the Lampiran A of the 300.2.2-2430/2025 amendment, which changes island data only. Names are as printed in the annex. Kecamatan are not included.",
+  "notes": "All 38 provinces and all 514 kabupaten/kota (416 kabupaten, 98 kota), extracted from Lampiran B of Kepmendagri 300.2.2-2138/2025 and checked against the per-province counts in its Lampiran A and in the Lampiran A of the 300.2.2-2430/2025 amendment, which changes island data only. Names are as printed in the annex. Kecamatan are in data/districts.json.",
   "provinces": [
     {
       "code": "11",

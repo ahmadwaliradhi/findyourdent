@@ -1,12 +1,17 @@
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import type { ProviderType, RegionRef } from "@findyourdent/contracts/firestore";
-import { type FormEvent, useId, useState } from "react";
+import { FileUp, LogIn } from "lucide-react";
+import { type FormEvent, type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link, useRevalidator } from "react-router";
-import { fieldClassName } from "~/components/listing-filters-form";
+import { OwnerPageHeader } from "~/components/owner-page-header";
+import { RegionFields } from "~/components/region-fields";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { ErrorNotice } from "~/components/ui/error-notice";
+import { FieldError, fieldClassName, fileInputClassName } from "~/components/ui/field";
+import { Notice } from "~/components/ui/notice";
 import { Textarea } from "~/components/ui/textarea";
 import { getI18n, type Language } from "~/i18n/config";
 import {
@@ -24,8 +29,8 @@ import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
 import { sendOwnerRequest as send } from "~/lib/owner-request";
 import { providerPath } from "~/lib/paths";
-import { PROVINCES, regenciesOf } from "~/lib/regions";
 import { SITE_NAME } from "~/lib/seo";
+import { cn } from "~/lib/utils";
 import { type ClaimPageData, loadClaimPage, type OwnerTestimony } from "~/server/claims.server";
 import { isPlaceId } from "~/server/provider.server";
 import type { Route } from "./+types/tempat.$placeId.klaim";
@@ -50,124 +55,139 @@ export function meta({ matches }: Route.MetaArgs) {
 export default function ClaimPage({ loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
   const page = loaderData;
-  const backTo = providerPath(page.placeId);
+  const header = (
+    <OwnerPageHeader
+      backTo={providerPath(page.placeId)}
+      backLabel={t("claim.back")}
+      placeName={page.providerName}
+      title={page.owner ? t("claim.manageTitle") : t("claim.title")}
+      lead={page.owner ? t("claim.ownerIntro") : t("claim.intro")}
+    />
+  );
+  if (page.owner) {
+    return (
+      <div className="flex flex-col gap-8">
+        {header}
+        <OwnerTools page={page} />
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <Link to={backTo} className="text-sm underline">
-          {t("claim.back")}
-        </Link>
-        <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
-          {page.owner ? t("claim.manageTitle") : t("claim.title")}
-        </h1>
-        {page.providerName && <p className="text-muted-foreground">{page.providerName}</p>}
-      </header>
-      <ClaimBody page={page} />
+    <Split
+      main={
+        <div className="flex flex-col gap-8">
+          {header}
+          <Explainer />
+        </div>
+      }
+      side={<ClaimBody page={page} />}
+    />
+  );
+}
+
+/** Two columns from the desktop breakpoint (7:5), one column on a phone. */
+function Split({ main, side }: { main: ReactNode; side: ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 gap-6 desktop:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] desktop:items-start desktop:gap-10">
+      {main}
+      <div className="flex min-w-0 flex-col gap-4">{side}</div>
     </div>
   );
 }
 
 function ClaimBody({ page }: { page: ClaimPageData }) {
   const { t } = useTranslation();
-  if (page.owner) return <OwnerTools page={page} />;
   if (!page.signedIn) {
     const signIn = `/signin?redirectTo=${encodeURIComponent(`${providerPath(page.placeId)}/klaim`)}`;
     return (
-      <section className="flex flex-col gap-3">
-        <Explainer />
-        <Button asChild className="self-start">
-          <a href={signIn}>{t("claim.signIn")}</a>
+      <FormCard>
+        <Button asChild size="lg" block>
+          <a href={signIn}>
+            <LogIn aria-hidden="true" strokeWidth={1.75} />
+            {t("claim.signIn")}
+          </a>
         </Button>
-      </section>
+      </FormCard>
     );
   }
   const claim = page.myClaim;
   if (claim?.status === "submitted") {
     return (
-      <p role="status" className="rounded-md border bg-muted p-4">
-        {t("claim.status.submitted", { days: CLAIM_CHECK_WORKING_DAYS })}
-      </p>
+      <Notice tone="warning" role="status" className="text-base leading-6">
+        <p>{t("claim.status.submitted", { days: CLAIM_CHECK_WORKING_DAYS })}</p>
+      </Notice>
     );
   }
   if (page.claimedByOther || (page.claimed && claim?.status !== "approved")) {
-    return <p className="rounded-md border bg-muted p-4">{t("claim.status.claimedByOther")}</p>;
+    return (
+      <Notice tone="info" className="text-base leading-6">
+        <p>{t("claim.status.claimedByOther")}</p>
+      </Notice>
+    );
   }
   return (
-    <section className="flex flex-col gap-4">
+    <>
       {claim?.status === "rejected" && (
-        <p role="alert" className="rounded-md border border-destructive p-4">
-          {t("claim.status.rejected", { reason: claim.rejectionReason ?? "" })}
-        </p>
+        <ErrorNotice role="alert" className="p-4 text-base">
+          <p>{t("claim.status.rejected", { reason: claim.rejectionReason ?? "" })}</p>
+        </ErrorNotice>
       )}
-      {claim?.status === "revoked" && <p className="rounded-md border p-4">{t("claim.status.revoked")}</p>}
-      <Explainer />
-      <ClaimForm placeId={page.placeId} listed={page.providerName !== null} />
-    </section>
+      {claim?.status === "revoked" && (
+        <Notice tone="warning" className="text-base leading-6">
+          <p>{t("claim.status.revoked")}</p>
+        </Notice>
+      )}
+      <FormCard>
+        <ClaimForm placeId={page.placeId} listed={page.providerName !== null} />
+      </FormCard>
+    </>
+  );
+}
+
+function FormCard({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const id = useId();
+  return (
+    <Card labelledBy={id} className="gap-5 p-6 shadow-md">
+      <CardTitle id={id} className="text-lg leading-6">
+        {t("claim.formTitle")}
+      </CardTitle>
+      {children}
+    </Card>
   );
 }
 
 function Explainer() {
   const { t } = useTranslation();
-  return (
-    <div className="flex flex-col gap-2 text-sm">
-      <p>{t("claim.intro")}</p>
-      <ol className="list-decimal pl-5">
-        <li>{t("claim.steps.signIn")}</li>
-        <li>{t("claim.steps.permit")}</li>
-        <li>{t("claim.steps.check", { days: CLAIM_CHECK_WORKING_DAYS })}</li>
-      </ol>
-      <p className="text-muted-foreground">{t("claim.ethics")}</p>
-    </div>
-  );
-}
-
-function RegionFields(props: { value: RegionRef; onChange(value: RegionRef): void; disabled?: boolean }) {
-  const { t } = useTranslation();
   const id = useId();
+  const steps = [
+    t("claim.steps.signIn"),
+    t("claim.steps.permit"),
+    t("claim.steps.check", { days: CLAIM_CHECK_WORKING_DAYS }),
+  ];
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="flex flex-col gap-1">
-        <label htmlFor={`${id}-province`} className="text-sm font-medium">
-          {t("claim.facts.province")}
-        </label>
-        <select
-          id={`${id}-province`}
-          required
-          className={fieldClassName}
-          disabled={props.disabled}
-          value={props.value.provinceCode}
-          onChange={(event) => props.onChange({ provinceCode: event.target.value, regencyCode: "" })}
-        >
-          <option value="">{t("claim.choose")}</option>
-          {PROVINCES.map((province) => (
-            <option key={province.code} value={province.code}>
-              {province.name}
-            </option>
+    <div className="flex flex-col gap-8">
+      <section aria-labelledby={id} className="flex flex-col gap-4">
+        <h2 id={id} className="text-lg leading-6 font-[650]">
+          {t("claim.howItWorks")}
+        </h2>
+        <ol className="flex flex-col gap-4">
+          {steps.map((step, index) => (
+            <li key={step} className="grid grid-cols-[36px_minmax(0,1fr)] items-start gap-3">
+              <span
+                aria-hidden="true"
+                className="flex size-9 items-center justify-center rounded-full bg-secondary font-bold text-secondary-foreground tabular-nums"
+              >
+                {index + 1}
+              </span>
+              <p className="pt-1.5">{step}</p>
+            </li>
           ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor={`${id}-regency`} className="text-sm font-medium">
-          {t("claim.facts.regency")}
-        </label>
-        <select
-          id={`${id}-regency`}
-          required
-          className={fieldClassName}
-          disabled={props.disabled || !props.value.provinceCode}
-          value={props.value.regencyCode}
-          onChange={(event) =>
-            props.onChange({ provinceCode: props.value.provinceCode, regencyCode: event.target.value })
-          }
-        >
-          <option value="">{t("claim.choose")}</option>
-          {regenciesOf(props.value.provinceCode).map((regency) => (
-            <option key={regency.code} value={regency.code}>
-              {regency.name}
-            </option>
-          ))}
-        </select>
-      </div>
+        </ol>
+      </section>
+      <Notice tone="info">
+        <p>{t("claim.ethics")}</p>
+      </Notice>
     </div>
   );
 }
@@ -184,23 +204,24 @@ function TextField(props: {
 }) {
   const id = useId();
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium">
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-sm leading-5 font-semibold">
         {props.label}
       </label>
       <input
         id={id}
         type={props.type ?? "text"}
+        inputMode={props.type === "tel" ? "tel" : undefined}
         required={props.required}
         maxLength={props.maxLength}
         disabled={props.disabled}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
-        className={fieldClassName}
+        className={cn(fieldClassName, props.type === "tel" && "tabular-nums")}
         aria-describedby={props.hint ? `${id}-hint` : undefined}
       />
       {props.hint && (
-        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+        <p id={`${id}-hint`} className="text-sm text-muted-foreground">
           {props.hint}
         </p>
       )}
@@ -215,12 +236,18 @@ type Sending =
   | { phase: "error"; message: string };
 
 function Feedback({ state }: { state: Sending }) {
-  if (state.phase === "done") return <p role="status">{state.message}</p>;
+  if (state.phase === "done") {
+    return (
+      <Notice tone="success" role="status">
+        <p>{state.message}</p>
+      </Notice>
+    );
+  }
   if (state.phase === "error") {
     return (
-      <p role="alert" className="text-destructive">
+      <FieldError role="alert" className="text-base">
         {state.message}
-      </p>
+      </FieldError>
     );
   }
   return null;
@@ -261,25 +288,26 @@ function ClaimForm({ placeId, listed }: { placeId: string; listed: boolean }) {
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor={`${id}-role`} className="text-sm font-medium">
-          {t("claim.role")}
-        </label>
-        <select
-          id={`${id}-role`}
-          className={fieldClassName}
-          value={role}
-          disabled={sending}
-          onChange={(event) => setRole(event.target.value as ClaimSubmission["role"])}
-        >
-          {CLAIM_ROLES.map((value) => (
-            <option key={value} value={value}>
-              {t(`claim.roles.${value}`)}
-            </option>
-          ))}
-        </select>
-      </div>
+    <form onSubmit={submit} className="flex flex-col gap-5">
+      <fieldset className="flex flex-col gap-2" disabled={sending}>
+        <legend className="mb-2 text-sm leading-5 font-semibold">{t("claim.role")}</legend>
+        {CLAIM_ROLES.map((value) => (
+          <label
+            key={value}
+            className="flex min-h-13 cursor-pointer items-center gap-3 rounded-md border border-border-strong bg-card px-3.5 py-3 has-checked:border-2 has-checked:border-primary has-checked:bg-secondary has-checked:px-[13px]"
+          >
+            <input
+              type="radio"
+              name={`${id}-role`}
+              value={value}
+              checked={role === value}
+              onChange={() => setRole(value)}
+              className="size-5 shrink-0 accent-primary"
+            />
+            {t(`claim.roles.${value}`)}
+          </label>
+        ))}
+      </fieldset>
       <TextField
         label={t("claim.contactPhone")}
         hint={t("claim.contactPhoneHint")}
@@ -300,11 +328,12 @@ function ClaimForm({ placeId, listed }: { placeId: string; listed: boolean }) {
             onChange={setProviderName}
             disabled={sending}
           />
-          <RegionFields value={region} onChange={setRegion} disabled={sending} />
+          <RegionFields mode="pick" required withDistrict value={region} onChange={setRegion} disabled={sending} />
         </>
       )}
-      <div className="flex flex-col gap-1">
-        <label htmlFor={`${id}-permit`} className="text-sm font-medium">
+      <div className="flex flex-col gap-2">
+        <label htmlFor={`${id}-permit`} className="flex items-center gap-2 text-sm leading-5 font-semibold">
+          <FileUp aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
           {t("claim.permit")}
         </label>
         <input
@@ -315,13 +344,13 @@ function ClaimForm({ placeId, listed }: { placeId: string; listed: boolean }) {
           disabled={sending}
           onChange={(event) => setPermit(event.target.files?.[0] ?? null)}
           aria-describedby={`${id}-permit-hint`}
-          className="text-sm"
+          className={cn(fileInputClassName, "rounded-md bg-muted p-3")}
         />
-        <p id={`${id}-permit-hint`} className="text-xs text-muted-foreground">
+        <p id={`${id}-permit-hint`} className="text-sm text-muted-foreground">
           {t("claim.permitHint")}
         </p>
       </div>
-      <Button type="submit" className="self-start" disabled={sending || !permit}>
+      <Button type="submit" size="lg" block loading={sending} disabled={!permit}>
         {sending ? t("claim.sending") : t("claim.submit")}
       </Button>
       <div aria-live="polite">
@@ -335,33 +364,48 @@ function OwnerTools({ page }: { page: ClaimPageData }) {
   const { t } = useTranslation();
   const owner = page.owner as NonNullable<ClaimPageData["owner"]>;
   return (
-    <div className="flex flex-col gap-8">
-      <p className="text-sm text-muted-foreground">{t("claim.ownerIntro")}</p>
-      <section className="flex flex-col items-start gap-2 rounded-md border px-4 py-3">
-        <p className="text-sm text-muted-foreground">{t("priceList.intro")}</p>
-        <Button asChild size="sm">
-          <Link to={`${providerPath(page.placeId)}/daftar-harga`}>{t("claim.priceListCta")}</Link>
-        </Button>
-      </section>
-      <OwnerFactsForm placeId={page.placeId} owner={owner} />
-      <section aria-labelledby="replies-title" className="flex flex-col gap-3">
-        <h2 id="replies-title" className="text-lg font-semibold">
-          {t("claim.replies.title")}
-        </h2>
-        <p className="text-sm text-muted-foreground">{t("claim.replies.intro")}</p>
-        {owner.testimonies.length === 0 ? (
-          <p>{t("provider.noTestimonies")}</p>
-        ) : (
-          <ol className="flex flex-col gap-3">
-            {owner.testimonies.map((testimony) => (
-              <li key={testimony.id}>
-                <ReplyCard testimony={testimony} />
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-    </div>
+    <Split
+      main={
+        <div className="flex flex-col gap-8">
+          <OwnerFactsForm placeId={page.placeId} owner={owner} />
+          <section aria-labelledby="replies-title" className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <h2 id="replies-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+                {t("claim.replies.title")}
+              </h2>
+              <p className="text-sm text-muted-foreground">{t("claim.replies.intro")}</p>
+            </div>
+            {owner.testimonies.length === 0 ? (
+              <p>{t("provider.noTestimonies")}</p>
+            ) : (
+              <ol className="flex flex-col gap-4">
+                {owner.testimonies.map((testimony) => (
+                  <li key={testimony.id}>
+                    <ReplyCard testimony={testimony} />
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </div>
+      }
+      side={
+        <Card labelledBy="price-list-title" className="desktop:sticky desktop:top-4">
+          <CardHeader>
+            <CardTitle id="price-list-title" className="text-lg leading-6">
+              {t("priceList.title")}
+            </CardTitle>
+            <CardDescription>{t("priceList.intro")}</CardDescription>
+          </CardHeader>
+          <Button asChild variant="secondary" block>
+            <Link to={`${providerPath(page.placeId)}/daftar-harga`}>
+              <FileUp aria-hidden="true" strokeWidth={1.75} />
+              {t("claim.priceListCta")}
+            </Link>
+          </Button>
+        </Card>
+      }
+    />
   );
 }
 
@@ -402,15 +446,15 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
     set("services")(on ? [...facts.services, code as never] : facts.services.filter((service) => service !== code));
 
   return (
-    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 id={`${id}-title`} className="text-lg font-semibold">
-          {t("claim.facts.title")}
-        </h2>
-        {owner.factsStatus === "held" && <Badge variant="secondary">{t("claim.facts.held")}</Badge>}
-      </div>
-      <p className="text-sm text-muted-foreground">{t("claim.facts.intro")}</p>
-      <form onSubmit={submit} className="flex flex-col gap-4">
+    <Card labelledBy={`${id}-title`} className="gap-5 p-6">
+      <CardHeader className="gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle id={`${id}-title`}>{t("claim.facts.title")}</CardTitle>
+          {owner.factsStatus === "held" && <Badge variant="warning">{t("claim.facts.held")}</Badge>}
+        </div>
+        <CardDescription>{t("claim.facts.intro")}</CardDescription>
+      </CardHeader>
+      <form onSubmit={submit} className="flex flex-col gap-5">
         <TextField
           label={t("claim.facts.name")}
           required
@@ -419,8 +463,8 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
           onChange={set("name")}
           disabled={sending}
         />
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`${id}-type`} className="text-sm font-medium">
+        <div className="flex flex-col gap-2">
+          <label htmlFor={`${id}-type`} className="text-sm leading-5 font-semibold">
             {t("claim.facts.providerType")}
           </label>
           <select
@@ -437,7 +481,7 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
             ))}
           </select>
         </div>
-        <RegionFields value={facts.region} onChange={set("region")} disabled={sending} />
+        <RegionFields mode="pick" required value={facts.region} onChange={set("region")} disabled={sending} />
         <TextField
           label={t("claim.facts.address")}
           maxLength={OWNER_LIMITS.addressMax}
@@ -445,7 +489,7 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
           onChange={set("address")}
           disabled={sending}
         />
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField
             label={t("claim.facts.phone")}
             type="tel"
@@ -463,8 +507,8 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
             disabled={sending}
           />
         </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`${id}-hours`} className="text-sm font-medium">
+        <div className="flex flex-col gap-2">
+          <label htmlFor={`${id}-hours`} className="text-sm leading-5 font-semibold">
             {t("claim.facts.openingHours")}
           </label>
           <Textarea
@@ -477,31 +521,39 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
           />
         </div>
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium">{t("claim.facts.services")}</legend>
-          <div className="grid gap-1 sm:grid-cols-2">
+          <legend className="mb-1 text-sm leading-5 font-semibold">{t("claim.facts.services")}</legend>
+          <div className="grid gap-x-4 sm:grid-cols-2">
             {procedureList.procedures.map((procedure) => (
-              <label key={procedure.code} className="flex items-center gap-2 text-sm">
+              <label key={procedure.code} className="flex min-h-touch cursor-pointer items-center gap-3">
                 <input
                   type="checkbox"
                   checked={facts.services.includes(procedure.code as never)}
                   disabled={sending}
                   onChange={(event) => toggleService(procedure.code, event.target.checked)}
+                  className="size-5 shrink-0 accent-primary"
                 />
                 {procedure.label[language] ?? procedure.code}
               </label>
             ))}
           </div>
         </fieldset>
-        <Button type="submit" className="self-start" disabled={sending}>
+        <Button type="submit" className="self-start" loading={sending}>
           {sending ? t("claim.sending") : t("claim.facts.save")}
         </Button>
         <div aria-live="polite">
           <Feedback state={state} />
         </div>
       </form>
-    </section>
+    </Card>
   );
 }
+
+const REPLY_BADGE = {
+  submitted: "info",
+  published: "success",
+  held: "warning",
+  rejected: "danger",
+} as const;
 
 function ReplyCard({ testimony }: { testimony: OwnerTestimony }) {
   const { t, i18n } = useTranslation();
@@ -526,21 +578,27 @@ function ReplyCard({ testimony }: { testimony: OwnerTestimony }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="gap-1">
-        <CardTitle className="text-base">{testimony.displayName}</CardTitle>
-        <p className="text-xs text-muted-foreground">
+    <Card labelledBy={`${id}-name`}>
+      <CardHeader>
+        <CardTitle id={`${id}-name`} className="text-base leading-6">
+          {testimony.displayName}
+        </CardTitle>
+        <CardDescription>
           {t("provider.visitMonth", { month: formatVisitMonth(testimony.visitMonth, language) })}
-        </p>
+        </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+      <CardContent className="flex flex-col gap-4">
         <p className="whitespace-pre-line break-words">{testimony.text}</p>
-        <form onSubmit={submit} className="flex flex-col gap-2 border-l-2 pl-3">
+        <form onSubmit={submit} className="flex flex-col gap-2 border-l-2 border-secondary pl-3">
           <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor={`${id}-reply`} className="text-sm font-medium">
+            <label htmlFor={`${id}-reply`} className="text-sm leading-5 font-semibold">
               {testimony.reply ? t("claim.replies.edit") : t("claim.replies.write")}
             </label>
-            {testimony.reply && <Badge variant="outline">{t(`claim.replies.status.${testimony.reply.status}`)}</Badge>}
+            {testimony.reply && (
+              <Badge variant={REPLY_BADGE[testimony.reply.status]}>
+                {t(`claim.replies.status.${testimony.reply.status}`)}
+              </Badge>
+            )}
           </div>
           <Textarea
             id={`${id}-reply`}
@@ -551,7 +609,7 @@ function ReplyCard({ testimony }: { testimony: OwnerTestimony }) {
             onChange={(event) => setText(event.target.value)}
             className="min-h-20"
           />
-          <Button type="submit" size="sm" className="self-start" disabled={sending || !text.trim()}>
+          <Button type="submit" size="sm" className="self-start" loading={sending} disabled={!text.trim()}>
             {sending ? t("claim.sending") : t("claim.replies.send")}
           </Button>
           <div aria-live="polite" className="text-sm">

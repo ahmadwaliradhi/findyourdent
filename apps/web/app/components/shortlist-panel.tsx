@@ -4,6 +4,8 @@ import { Link, useLocation } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { ErrorNotice } from "~/components/ui/error-notice";
+import { FieldError } from "~/components/ui/field";
 import type { Language } from "~/i18n/config";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { keepAcrossReload, recallAcrossReload, recallEntry, rememberEntry } from "~/lib/entry-memory";
@@ -106,7 +108,7 @@ export function ShortlistPanel(
       <Button
         type="button"
         size="lg"
-        variant={emergency ? "outline" : "default"}
+        variant={emergency ? "outline" : "primary"}
         className="h-auto w-full whitespace-normal py-3 sm:w-auto sm:self-start"
         onClick={() => setState({ phase: "asking" })}
       >
@@ -123,9 +125,7 @@ export function ShortlistPanel(
         <Button type="button" onClick={shareLocation} disabled={busy} className="w-full sm:w-auto sm:self-start">
           {state.phase === "locating" ? t("shortlist.locating") : t("shortlist.useLocation")}
         </Button>
-        {state.phase === "asking" && state.locationDenied && (
-          <p className="text-sm text-destructive">{t("shortlist.locationDenied")}</p>
-        )}
+        {state.phase === "asking" && state.locationDenied && <FieldError>{t("shortlist.locationDenied")}</FieldError>}
         <label htmlFor={areaId} className="text-sm font-medium">
           {t("shortlist.areaLabel")}
         </label>
@@ -137,7 +137,7 @@ export function ShortlistPanel(
             onKeyDown={onAreaKey}
             maxLength={100}
             placeholder={t("shortlist.areaPlaceholder")}
-            className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-base"
+            className="min-h-touch min-w-0 flex-1 rounded-md border border-input bg-card px-3 text-base shadow-xs focus-visible:border-primary"
           />
           <Button type="button" variant="secondary" onClick={searchArea} disabled={busy || area.trim().length < 2}>
             {state.phase === "searching" ? t("shortlist.searching") : t("shortlist.search")}
@@ -148,9 +148,9 @@ export function ShortlistPanel(
 
       <div aria-live="polite" className="flex flex-col gap-3">
         {state.phase === "error" && (
-          <p role="alert" className="rounded-md border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm">
-            {t("shortlist.error")}
-          </p>
+          <ErrorNotice role="alert">
+            <p>{t("shortlist.error")}</p>
+          </ErrorNotice>
         )}
         {state.phase === "done" && <ShortlistProviders result={state.result} language={language} />}
       </div>
@@ -193,9 +193,9 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
           {provider.rank}. {provider.name}
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="secondary">{t(`shortlist.type.${provider.providerType}`)}</Badge>
+          <Badge variant="neutral">{t(`shortlist.type.${provider.providerType}`)}</Badge>
           {provider.providerTypeSource === "inferred" && <Badge variant="outline">{t("shortlist.estimated")}</Badge>}
-          {provider.claimed && <Badge>{t("shortlist.claimed")}</Badge>}
+          {provider.claimed && <Badge variant="brand">{t("shortlist.claimed")}</Badge>}
           {provider.distanceMeters !== null && (
             <span className="text-sm text-muted-foreground">{formatDistance(provider.distanceMeters, language)}</span>
           )}
@@ -224,7 +224,7 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
         )}
       </div>
       {provider.priceSignals.length > 0 && (
-        <ul className="flex flex-col gap-1 text-sm">
+        <ul className="flex flex-col gap-1 text-sm tabular-nums">
           {provider.priceSignals.map((signal) => (
             <li key={`${signal.procedureCode}-${signal.source}`}>
               <span className="font-medium">{procedureLabel(signal.procedureCode, language)}: </span>

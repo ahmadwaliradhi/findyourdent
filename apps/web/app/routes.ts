@@ -8,6 +8,7 @@ export default [
   route("api/providers/:placeId/google", "routes/api.providers.$placeId.google.ts"),
   route("api/providers/:placeId/reviews", "routes/api.providers.$placeId.reviews.ts"),
   route("api/places/autocomplete", "routes/api.places.autocomplete.ts"),
+  route("api/regions/:regencyCode/districts", "routes/api.regions.$regencyCode.districts.ts"),
   route("api/providers/:placeId/listing", "routes/api.providers.$placeId.listing.ts"),
   route("api/providers/:placeId/name-corrections", "routes/api.providers.$placeId.name-corrections.ts"),
   route("api/testimonies", "routes/api.testimonies.ts"),
@@ -36,6 +37,9 @@ export default [
   route("tempat/:placeId/daftar-harga", "routes/tempat.$placeId.daftar-harga.tsx"),
   route("dampak", "routes/dampak.ts"),
   route("sitemap.xml", "routes/sitemap.xml.ts"),
+  route("tentang", "routes/tentang.tsx"),
+  route("privasi", "routes/privasi.tsx"),
+  route("syarat", "routes/syarat.tsx"),
   route("ceritakan", "routes/ceritakan.tsx"),
   route("foto/:testimonyId/:photoId", "routes/foto.$testimonyId.$photoId.ts"),
 ] satisfies RouteConfig;

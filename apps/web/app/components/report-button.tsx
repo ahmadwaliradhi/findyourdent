@@ -2,6 +2,7 @@ import type { ReportCategory } from "@findyourdent/contracts/firestore";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "~/components/ui/button";
+import { FieldError } from "~/components/ui/field";
 import { Textarea } from "~/components/ui/textarea";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { getAppCheckToken } from "~/lib/firebase.client";
@@ -104,11 +105,7 @@ export function ReportButton({ testimonyId, onHidden }: { testimonyId: string; o
           className="min-h-16"
         />
       </div>
-      {state.step === "failed" && (
-        <p role="alert" className="text-sm text-destructive">
-          {state.message}
-        </p>
-      )}
+      {state.step === "failed" && <FieldError role="alert">{state.message}</FieldError>}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={!category || state.step === "sending"}>
           {state.step === "sending" ? t("report.sending") : t("report.submit")}

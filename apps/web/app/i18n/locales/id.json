@@ -5,11 +5,19 @@
   },
   "nav": {
     "skipToContent": "Langsung ke konten",
-    "home": "FindYourDent, halaman utama"
+    "home": "FindYourDent, halaman utama",
+    "main": "Utama",
+    "guidance": "Panduan",
+    "directory": "Direktori",
+    "myTestimonies": "Testimoni saya",
+    "share": "Ceritakan pengalamanmu",
+    "about": "Tentang kami"
   },
   "language": {
-    "switchTo": "English",
-    "switchToLabel": "Ganti bahasa ke English"
+    "switchToLabel": "Ganti bahasa ke English",
+    "group": "Pilih bahasa",
+    "id": "Indonesia",
+    "en": "English"
   },
   "home": {
     "headline": "Sakit gigi? Pahami dulu sebelum ke dokter gigi.",
@@ -30,7 +38,14 @@
     "voiceHint": "Tekan tombol, lalu ceritakan keluhan Anda. Maksimal 1 menit.",
     "voiceRecording": "Sedang merekam. Tekan Berhenti dan kirim jika sudah selesai, maksimal 1 menit.",
     "voiceDenied": "Mikrofon tidak diizinkan. Izinkan mikrofon di pengaturan peramban, atau tulis keluhan Anda.",
-    "voiceFailed": "Perekaman tidak berhasil. Coba lagi, atau tulis keluhan Anda."
+    "voiceFailed": "Perekaman tidak berhasil. Coba lagi, atau tulis keluhan Anda.",
+    "badge": "Untuk Pasien di seluruh Indonesia",
+    "benefits": {
+      "label": "Yang Anda dapatkan",
+      "urgency": "<b>Seberapa mendesak</b>, dari Rutin sampai Darurat, dengan langkah yang jelas.",
+      "cost": "<b>Perkiraan biaya dan cakupan BPJS</b> dari sumber resmi, bukan tebakan.",
+      "nearby": "<b>Dokter gigi terdekat</b> yang cocok, beserta Testimoni pasien."
+    }
   },
   "errors": {
     "title": "Maaf, ada yang tidak beres",
@@ -84,6 +99,16 @@
     "languageNote": {
       "id": "Panduan ini dalam Bahasa Indonesia, sesuai bahasa keluhan Anda. Tulis keluhan dalam bahasa Inggris untuk panduan dalam bahasa Inggris.",
       "en": "Panduan ini dalam bahasa Inggris, sesuai bahasa keluhan Anda. Tulis keluhan dalam Bahasa Indonesia untuk panduan dalam Bahasa Indonesia."
+    },
+    "summary": {
+      "title": "Ringkasan",
+      "likely": "Kemungkinan",
+      "visits": "Kunjungan",
+      "visitsCount": "{{count}} kali",
+      "cost": "Biaya",
+      "bpjs": "BPJS",
+      "toShortlist": "Lihat dokter gigi terdekat",
+      "emergencyReminder": "Jika muncul bengkak di wajah, demam, atau sulit menelan, segera ke IGD."
     }
   },
   "estimate": "estimasi",
@@ -227,7 +252,10 @@
     }
   },
   "footer": {
-    "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat."
+    "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat.",
+    "links": "Tautan kaki",
+    "privacy": "Kebijakan privasi",
+    "terms": "Syarat penggunaan"
   },
   "shared": {
     "title": "Panduan yang dibagikan",
@@ -261,29 +289,38 @@
       "price": "Biaya dibayar",
       "byline": "oleh {{name}}",
       "readMore": "Baca Testimoni lengkap"
-    }
+    },
+    "seeDirectory": "Lihat direktori",
+    "writeTitle": "Pernah ke dokter gigi?",
+    "writeBody": "Ceritakan pengalamanmu supaya pasien lain bisa memilih dengan tenang."
   },
   "filters": {
     "title": "Saring",
-    "province": "Provinsi",
-    "allProvinces": "Semua provinsi",
-    "regency": "Kota/kabupaten",
-    "allRegencies": "Semua kota/kabupaten",
-    "chooseProvinceFirst": "Pilih provinsi dulu",
-    "district": "Kode kecamatan",
-    "districtHint": "Opsional, kode Kemendagri, contoh 31.71.01.",
     "procedure": "Tindakan",
     "allProcedures": "Semua tindakan",
     "providerType": "Jenis tempat",
     "allProviderTypes": "Semua jenis",
     "providerTypes": {
-      "klinik": "Klinik",
+      "klinik": "Klinik Gigi",
       "privateDentist": "Praktik mandiri dokter gigi",
       "hospital": "Rumah sakit"
     },
     "verifiedOnly": "Hanya Kunjungan terbukti",
     "apply": "Terapkan",
     "reset": "Hapus saringan"
+  },
+  "regionFields": {
+    "province": "Provinsi",
+    "regency": "Kota/kabupaten",
+    "allProvinces": "Semua provinsi",
+    "allRegencies": "Semua kota/kabupaten",
+    "chooseProvince": "Pilih provinsi",
+    "chooseRegency": "Pilih kota/kabupaten",
+    "chooseProvinceFirst": "Pilih provinsi dulu",
+    "district": "Kecamatan",
+    "allDistricts": "Semua kecamatan",
+    "chooseDistrict": "Pilih kecamatan (opsional)",
+    "chooseRegencyFirst": "Pilih kota/kabupaten dulu"
   },
   "directory": {
     "metaTitle": "Direktori dokter gigi dan klinik gigi | FindYourDent",
@@ -303,6 +340,7 @@
     },
     "sortHint": "Jarak dihitung di perangkatmu. Lokasimu tidak dikirim ke FindYourDent.",
     "resultsHeading": "Hasil",
+    "resultCount_one": "{{count}} tempat",
     "resultCount": "{{count}} tempat",
     "resultCapped": "Menampilkan {{count}} tempat pertama. Persempit dengan filter atau pencarian nama.",
     "inferred": "perkiraan",
@@ -314,6 +352,7 @@
     },
     "score": "Skor {{score}}",
     "noRatings": "Belum ada skor",
+    "testimonies_one": "{{count}} testimoni",
     "testimonies": "{{count}} testimoni",
     "verifiedVisits": "{{count}} Kunjungan terbukti",
     "distance": "{{km}} km",
@@ -339,7 +378,7 @@
     "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni.",
     "metaDescriptionNoScores": "{{name}} di {{area}}. Baca testimoni pasien dan ceritakan pengalamanmu di FindYourDent.",
     "type": {
-      "klinik": "Klinik",
+      "klinik": "Klinik Gigi",
       "privateDentist": "Dokter gigi praktik mandiri",
       "hospital": "Rumah sakit"
     },
@@ -358,8 +397,6 @@
     "noTestimonies": "Belum ada testimoni yang terbit untuk tempat ini.",
     "verifiedVisit": "Kunjungan terbukti",
     "visitMonth": "Berkunjung {{month}}",
-    "procedure": "Tindakan: {{procedure}}",
-    "pricePaid": "Biaya: {{price}}",
     "ratingsLabel": "Penilaian {{name}}",
     "metaDescriptionUnlisted": "Info tempat praktik dokter gigi di FindYourDent.",
     "unnamed": "Tempat praktik dokter gigi",
@@ -391,10 +428,12 @@
     "claimCta": "Klaim halaman ini",
     "ownerHint": "Pemilik tempat ini?",
     "manageCta": "Kelola halaman",
-    "services": "Layanan: {{services}}",
+    "services": "Layanan",
     "priceListTitle": "Daftar harga dari pemilik",
     "priceListConfirmed": "Dikonfirmasi pemilik {{date}}",
-    "possiblyOutdated": "mungkin sudah berubah"
+    "possiblyOutdated": "mungkin sudah berubah",
+    "address": "Alamat",
+    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit."
   },
   "shortlist": {
     "reason": {
@@ -425,7 +464,7 @@
     "mapsSearch": "Cari di Google Maps",
     "openInMaps": "Buka di Google Maps",
     "type": {
-      "klinik": "Klinik",
+      "klinik": "Klinik Gigi",
       "privateDentist": "Dokter gigi praktik mandiri",
       "hospital": "Rumah sakit"
     },
@@ -447,7 +486,6 @@
     "metaTitle": "Ceritakan pengalaman Anda",
     "metaDescription": "Tulis Testimoni tentang dokter gigi yang pernah Anda kunjungi.",
     "entryCta": "Ceritakan pengalamanmu",
-    "entryHint": "Pernah ke dokter gigi? Ceritakan pengalamanmu supaya pasien lain bisa memilih dengan tenang.",
     "title": "Ceritakan pengalaman Anda",
     "editTitle": "Ubah Testimoni",
     "intro": "Tulis sejujurnya tentang tempat praktik dokter gigi yang pernah Anda kunjungi. Anda baru diminta masuk dengan Google saat menekan Kirim.",
@@ -475,6 +513,7 @@
     "photoAlt": "Foto {{index}}",
     "photoRemove": "Hapus foto {{index}}",
     "photosReattach": "Foto dan bukti kunjungan tidak ikut tersimpan di draf. Pilih lagi sebelum mengirim.",
+    "filesTitle": "Foto dan bukti kunjungan",
     "proofLabel": "Bukti kunjungan (opsional, pribadi)",
     "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan: hanya diperiksa lalu langsung dihapus. Jika cocok, Testimoni Anda diberi tanda Kunjungan terbukti.",
     "proofAdd": "Pilih file bukti",
@@ -485,6 +524,7 @@
     "consentTitle": "Pernyataan",
     "consentHonest": "Ini pengalaman saya sendiri, saya tulis dengan jujur.",
     "consentNoOthers": "Tulisan dan foto saya tidak memuat data pribadi orang lain.",
+    "nameTitle": "Nama dan pernyataan",
     "submit": "Kirim",
     "submitting": "Mengirim…",
     "signingIn": "Menunggu masuk dengan Google…",
@@ -546,6 +586,16 @@
       },
       "roundsLeft": "Anda masih bisa memperbaiki {{count}} kali lagi. Setelah itu, tim FindYourDent yang meninjaunya.",
       "lastRound": "Jika kiriman berikutnya masih perlu perbaikan, tim FindYourDent yang meninjaunya, biasanya dalam 24 jam."
+    },
+    "tips": {
+      "title": "Testimoni yang membantu",
+      "what": "Ceritakan apa yang terjadi: penjelasan dokter, lama menunggu, rasa sakit.",
+      "price": "Tulis biaya yang benar-benar dibayar, jika ingat.",
+      "names": "Tanpa nama dokter atau staf jika Anda tidak nyaman.",
+      "privacyTitle": "Privasi Anda",
+      "account": "Akun Google Anda tidak pernah ditampilkan.",
+      "proof": "Bukti kunjungan disimpan privat dan tidak pernah tayang.",
+      "edit": "Anda bisa mengubah atau menghapus Testimoni kapan saja."
     }
   },
   "providerFields": {
@@ -566,11 +616,6 @@
     "listingFailed": "Tempat belum bisa diperiksa. Coba pilih lagi.",
     "nameLabel": "Nama tempat sesuai papan nama atau yang kamu kenal",
     "nameHint": "Tulis sendiri namanya. Nama ini akan tampil di FindYourDent.",
-    "provinceLabel": "Provinsi",
-    "provincePlaceholder": "Pilih provinsi",
-    "regencyLabel": "Kota/Kabupaten",
-    "regencyPlaceholder": "Pilih kota/kabupaten",
-    "regencyNeedsProvince": "Pilih provinsi dulu",
     "listedNote": "Tempat ini sudah terdaftar di FindYourDent.",
     "storedName": "Nama tempat",
     "storedRegion": "Wilayah",
@@ -655,12 +700,16 @@
       "submitted": "Sedang diperiksa",
       "published": "Tayang",
       "needsAuthorFix": "Perlu Anda perbaiki",
-      "held": "Sedang ditinjau tim (biasanya dalam 24 jam)",
+      "held": "Sedang ditinjau tim",
       "rejected": "Tidak ditayangkan",
-      "hidden": "Disembunyikan sementara karena laporan, sedang ditinjau tim",
+      "hidden": "Disembunyikan karena laporan",
       "removed": "Diturunkan oleh tim"
     },
-    "reason": "Alasan: {{reason}}",
+    "statusHint": {
+      "held": "Biasanya dalam 24 jam. Anda akan melihat statusnya berubah di sini.",
+      "hidden": "Tim sedang meninjau laporan, biasanya dalam 24 jam. Anda akan melihat statusnya berubah di sini."
+    },
+    "reasonTitle": "Alasan",
     "pendingRevision": {
       "submitted": "Perubahan Anda sedang diperiksa. Versi sebelumnya tetap tayang.",
       "needsAuthorFix": "Perubahan Anda perlu diperbaiki. Versi sebelumnya tetap tayang.",
@@ -669,6 +718,7 @@
     "reply": "Balasan dari tempat praktik",
     "view": "Lihat di halaman tempat",
     "edit": "Ubah",
+    "fix": "Perbaiki Testimoni",
     "delete": "Hapus",
     "confirmTitle": "Hapus Testimoni ini?",
     "confirmBody": "Teks dan foto akan dihapus permanen dan tidak bisa dikembalikan.",
@@ -676,7 +726,13 @@
     "cancel": "Batal",
     "deleting": "Menghapus…",
     "deleteFailed": "Testimoni belum terhapus. Silakan coba lagi.",
-    "deleted": "Testimoni sudah dihapus."
+    "deleted": "Testimoni sudah dihapus.",
+    "legend": {
+      "title": "Arti status",
+      "published": "Tampil di halaman tempat dan di beranda.",
+      "needsAuthorFix": "Ubah bagian yang ditandai, lalu kirim lagi.",
+      "held": "Tim FindYourDent memutuskan, biasanya dalam 24 jam."
+    }
   },
   "reportApi": {
     "errors": {
@@ -763,7 +819,6 @@
     "submit": "Kirim klaim",
     "sending": "Mengirim…",
     "failed": "Gagal mengirim. Periksa koneksi lalu coba lagi.",
-    "choose": "Pilih",
     "status": {
       "submitted": "Klaim Anda sedang diperiksa. Tim FindYourDent memeriksa dokumen dan menelepon nomor di Google Maps dalam {{days}} hari kerja. Hasilnya muncul di halaman ini.",
       "rejected": "Klaim sebelumnya ditolak: {{reason}}. Anda bisa mengirim klaim baru dengan dokumen yang sesuai.",
@@ -778,8 +833,6 @@
       "name": "Nama tempat praktik",
       "providerType": "Jenis",
       "region": "Wilayah",
-      "province": "Provinsi",
-      "regency": "Kota atau kabupaten",
       "address": "Alamat",
       "phone": "Telepon",
       "whatsapp": "WhatsApp",
@@ -800,7 +853,9 @@
         "rejected": "Ditolak"
       }
     },
-    "priceListCta": "Unggah daftar harga"
+    "priceListCta": "Unggah daftar harga",
+    "howItWorks": "Cara kerjanya",
+    "formTitle": "Data klaim"
   },
   "priceListApi": {
     "errors": {
@@ -839,7 +894,6 @@
     "notes": "Catatan",
     "deleteRow": "Hapus baris",
     "addRow": "Tambah baris",
-    "rowInvalid": "Isi nama tindakan dan harga; harga terendah tidak boleh melebihi harga tertinggi.",
     "noRows": "Tambahkan setidaknya satu baris.",
     "confirm": "Konfirmasi dan tayangkan",
     "confirming": "Menyimpan…",
@@ -851,6 +905,280 @@
       "per_jaw": "per rahang",
       "per_visit": "per kunjungan",
       "per_package": "per paket"
-    }
+    },
+    "steps": {
+      "label": "Langkah",
+      "upload": "Unggah",
+      "review": "Periksa baris harga",
+      "publish": "Tayang",
+      "done": "selesai"
+    },
+    "rowMissing": "Baris {{row}}: isi nama tindakan dan harga terendah.",
+    "rowRange": "Baris {{row}}: harga terendah tidak boleh melebihi harga tertinggi.",
+    "rowTooHigh": "Baris {{row}}: harga terlalu tinggi. Periksa jumlah angka nol."
+  },
+  "about": {
+    "metaTitle": "Tentang kami",
+    "metaDescription": "FindYourDent membantu Pasien di Indonesia memahami keluhan giginya dan memilih dokter gigi yang kredibel dan terjangkau.",
+    "eyebrow": "Tentang kami",
+    "title": "Pahami keluhan gigi Anda, lalu pilih dokter gigi dengan tenang.",
+    "lead": "FindYourDent adalah platform kedokteran gigi untuk Indonesia. Kami membantu Pasien memahami keluhan giginya dan memilih dokter gigi yang kredibel dan terjangkau, sekaligus memberi dokter gigi dan klinik identitas publik.",
+    "builtFor": "Dibangun untuk AI Builder Cup 2026.",
+    "whatTitle": "Yang kami lakukan",
+    "what": [
+      {
+        "title": "Panduan untuk keluhan Anda",
+        "body": "Ceritakan keluhan dengan kata-kata sendiri, tertulis atau pesan suara. Kami jelaskan seberapa mendesak, kemungkinan masalahnya, perkiraan kunjungan, mengapa harganya berbeda-beda, dan cakupan BPJS."
+      },
+      {
+        "title": "Arahan ke IGD saat ada tanda bahaya",
+        "body": "Jika muncul tanda bahaya, seperti bengkak di wajah disertai demam atau sulit menelan, kami langsung mengarahkan Anda ke IGD rumah sakit terdekat, sebelum panduan lainnya."
+      },
+      {
+        "title": "Dokter gigi terdekat yang cocok",
+        "body": "Daftar klinik gigi, dokter gigi praktik mandiri dan rumah sakit di dekat Anda, lengkap dengan Testimoni pasien dan sinyal harga."
+      },
+      {
+        "title": "Testimoni dari pasien nyata",
+        "body": "Pasien menulis pengalaman kunjungannya: pelayanan, kebersihan, bahan dan peralatan, serta biaya yang dibayar."
+      }
+    ],
+    "safeTitle": "Cara kami menjaga Anda tetap aman",
+    "safeLead": "Gemini membantu pekerjaan yang butuh penilaian. Hal yang tidak boleh salah dikerjakan oleh aturan tetap dan data yang terkurasi.",
+    "safe": [
+      {
+        "title": "Pemeriksaan tanda bahaya lebih dulu",
+        "body": "Pemeriksaan tanda bahaya berjalan sebelum AI dipanggil, dan AI tidak pernah bisa menurunkan tingkat urgensinya."
+      },
+      {
+        "title": "Biaya dan BPJS dari sumber resmi",
+        "body": "Perkiraan biaya, cakupan BPJS dan aturan keselamatan diambil dari berkas pengetahuan yang mencantumkan regulasinya, bukan dari model AI."
+      },
+      {
+        "title": "Keluhan Anda tidak disimpan",
+        "body": "Keluhan tertulis maupun pesan suara tidak disimpan. Tautan panduan yang dibagikan hanya berisi panduan, tanpa keluhan Anda."
+      },
+      {
+        "title": "Manusia yang memutuskan",
+        "body": "AI menerbitkan Testimoni yang bersih dan menahan yang meragukan. Tim FindYourDent memutuskan setiap Testimoni yang ditahan atau dilaporkan. AI tidak pernah menghapus."
+      }
+    ],
+    "goTitle": "Dari Indonesia, untuk dunia",
+    "goLead": "Kami memulai dari Indonesia karena di sinilah kami paling memahami Pasien, dokter gigi, dan sistem layanannya, termasuk BPJS. Ke depan, kami berencana memperluas FindYourDent ke seluruh dunia secara bertahap, dimulai dari kawasan Asia Pasifik.",
+    "roadmap": [
+      {
+        "status": "Sekarang",
+        "title": "Indonesia",
+        "body": "Panduan, arahan ke IGD, Direktori dan Testimoni untuk Pasien di seluruh Indonesia, dalam Bahasa Indonesia dan English."
+      },
+      {
+        "status": "Tahap berikutnya",
+        "title": "Asia Pasifik",
+        "body": "Perluasan bertahap ke negara-negara Asia Pasifik, menyesuaikan bahasa, sistem layanan kesehatan, dan aturan di setiap negara."
+      },
+      {
+        "status": "Ke depan",
+        "title": "Seluruh dunia",
+        "body": "Membawa cara yang sama ke lebih banyak negara, satu per satu."
+      }
+    ],
+    "roadmapNote": "Setiap negara baru hanya dibuka setelah panduan biaya, cakupan layanan, dan aturan keselamatannya disusun dari sumber resmi negara tersebut.",
+    "principlesTitle": "Prinsip kami",
+    "principles": [
+      "Informasi edukasi dan navigasi, bukan diagnosis atau resep obat.",
+      "Tidak ada promosi, iklan, diskon, atau peringkat berbayar. Urutan dokter gigi tidak pernah berdasarkan bayaran.",
+      "Tempat praktik bisa membalas atau melaporkan Testimoni, tetapi tidak bisa menghapus atau menyembunyikannya."
+    ],
+    "contactTitle": "Hubungi kami",
+    "contactBody": "Untuk kerja sama dan pertanyaan bisnis, kirim email ke tim FindYourDent.",
+    "sendEmail": "Kirim email",
+    "start": "Mulai dari keluhan Anda"
+  },
+  "legal": {
+    "effective": "Berlaku sejak: [tanggal berlaku]",
+    "updated": "Terakhir diperbarui: [tanggal]",
+    "draft": "Draf untuk ditinjau penasihat hukum sebelum tayang.",
+    "contents": "Daftar isi",
+    "questions": "Pertanyaan tentang halaman ini?",
+    "emailUs": "Kirim email ke <email/>"
+  },
+  "privacy": {
+    "metaTitle": "Kebijakan privasi",
+    "title": "Kebijakan privasi",
+    "lead": "Data apa yang kami kumpulkan, untuk apa, dan bagaimana Anda mengendalikannya. Singkatnya: keluhan dan lokasi Anda tidak disimpan.",
+    "seeAlso": "Baca juga: Syarat penggunaan",
+    "sections": [
+      {
+        "title": "Siapa kami",
+        "blocks": [
+          "FindYourDent adalah platform kedokteran gigi untuk Indonesia yang dioperasikan oleh [nama badan hukum]. Kebijakan ini menjelaskan data apa yang kami kumpulkan, untuk apa, berapa lama disimpan, dan hak Anda.",
+          "Untuk pertanyaan tentang privasi, hubungi kami di <email/>."
+        ]
+      },
+      {
+        "title": "Data yang kami kumpulkan dan untuk apa",
+        "blocks": [
+          [
+            "<b>Keluhan gigi Anda</b>, tertulis maupun pesan suara, dipakai untuk menyusun Panduan. Keluhan tidak disimpan dan tidak dicatat di log.",
+            "<b>Lokasi atau area</b> yang Anda berikan hanya dipakai untuk mencari dokter gigi terdekat dan tidak disimpan. Di Direktori, jarak dihitung di perangkat Anda dan lokasi tidak dikirim ke kami.",
+            "<b>Akun Google</b> dipakai saat Anda menulis Testimoni atau mengklaim halaman. Akun Anda tidak pernah ditampilkan.",
+            "<b>Testimoni</b>: nilai, cerita, bulan dan tahun kunjungan, nama yang Anda pilih, serta tindakan, biaya dan foto jika Anda mengisinya. Bagian ini tampil untuk publik. Data lokasi di dalam foto dihapus otomatis.",
+            "<b>Bukti kunjungan</b> diperiksa lalu langsung dihapus. Bukti tidak pernah ditampilkan; yang tampil hanya tanda Kunjungan terbukti jika cocok.",
+            "<b>Data klaim pemilik</b>: dokumen SIP atau izin praktik disimpan privat dan dihapus setelah keputusan. Nomor telepon hanya untuk tim FindYourDent dan tidak ditampilkan.",
+            "<b>Daftar harga dari pemilik</b>: berkas asli disimpan privat selama 30 hari untuk keperluan sengketa, lalu dihapus. Hanya baris yang dikonfirmasi pemilik yang tampil.",
+            "<b>Laporan</b> atas Testimoni: kategori dan keterangan yang Anda tulis, untuk ditinjau tim."
+          ]
+        ]
+      },
+      {
+        "title": "Cookie",
+        "blocks": [
+          "Kami memakai satu cookie, <code>__session</code>, untuk mengingat pilihan bahasa, menjaga sesi masuk, dan menjaga sesi Panduan Anda. Cookie ini disimpan hingga satu tahun jika Anda memilih bahasa atau masuk dengan Google.",
+          "Kami tidak memasang cookie iklan."
+        ]
+      },
+      {
+        "title": "Keamanan dan pencegahan penyalahgunaan",
+        "blocks": [
+          "Kami memakai App Check dengan reCAPTCHA Enterprise dari Google untuk mencegah penyalahgunaan. Untuk membatasi jumlah permintaan, kami menyimpan nilai acak yang tidak bisa dikembalikan menjadi alamat IP, token, atau ID sesi Anda."
+        ]
+      },
+      {
+        "title": "AI dan penyedia layanan",
+        "blocks": [
+          [
+            "Keluhan Anda diproses oleh Google AI (Gemini di Vertex AI) di luar Indonesia.",
+            "Info tempat praktik, jam buka, rating dan ulasan Google berasal dari Google Maps.",
+            "Masuk akun memakai Firebase Authentication dari Google.",
+            "Testimoni, foto dan data akun disimpan di Google Cloud di Jakarta."
+          ],
+          "Kami tidak menjual data pribadi Anda."
+        ]
+      },
+      {
+        "title": "Berapa lama data disimpan",
+        "blocks": [
+          [
+            "Keluhan dan lokasi: tidak disimpan.",
+            "Bukti kunjungan: dihapus segera setelah diperiksa.",
+            "Dokumen klaim: dihapus setelah keputusan.",
+            "Berkas asli daftar harga: 30 hari.",
+            "Testimoni: selama tayang, sampai Anda atau tim menghapusnya.",
+            "Cookie <code>__session</code>: hingga satu tahun."
+          ]
+        ]
+      },
+      {
+        "title": "Hak Anda",
+        "blocks": [
+          "Anda bisa mengubah atau menghapus Testimoni kapan saja dari halaman Testimoni saya. Teks dan foto yang dihapus hilang permanen.",
+          "Untuk meminta salinan, perbaikan, atau penghapusan data lain tentang Anda, kirim email ke <email/>. Kami akan menjawab dalam [jangka waktu]."
+        ]
+      },
+      {
+        "title": "Perubahan kebijakan",
+        "blocks": [
+          "Jika kebijakan ini berubah, kami memperbarui tanggal di atas halaman ini. Perubahan penting akan kami tampilkan di situs sebelum berlaku."
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "metaTitle": "Syarat penggunaan",
+    "title": "Syarat penggunaan",
+    "lead": "Aturan memakai FindYourDent untuk Pasien, penulis Testimoni, serta pemilik dan dokter gigi.",
+    "seeAlso": "Baca juga: Kebijakan privasi",
+    "sections": [
+      {
+        "title": "Menerima syarat ini",
+        "blocks": [
+          "Dengan memakai FindYourDent, Anda menyetujui syarat penggunaan ini dan Kebijakan privasi kami. Jika tidak setuju, mohon tidak memakai layanan ini."
+        ]
+      },
+      {
+        "title": "Bukan layanan medis",
+        "blocks": [
+          "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat. Panduan tidak menggantikan pemeriksaan langsung oleh dokter gigi.",
+          "Perkiraan biaya adalah gambaran umum, bukan penawaran harga dari tempat praktik mana pun."
+        ]
+      },
+      {
+        "title": "Keadaan darurat",
+        "blocks": [
+          {
+            "box": "<b>Jika Anda mengalami tanda bahaya,</b> seperti bengkak di wajah atau leher, demam, sulit menelan atau bernapas, atau perdarahan yang tidak berhenti, segera pergi ke IGD rumah sakit terdekat. Jangan menunggu jadwal dokter gigi."
+          },
+          "FindYourDent tidak memantau kondisi Anda dan tidak menghubungi layanan darurat atas nama Anda."
+        ]
+      },
+      {
+        "title": "Akun",
+        "blocks": [
+          "Anda masuk dengan akun Google saat menulis Testimoni atau mengklaim halaman. Anda bertanggung jawab atas aktivitas di akun Anda. Satu Pasien hanya bisa menulis satu Testimoni untuk setiap tempat praktik."
+        ]
+      },
+      {
+        "title": "Aturan menulis Testimoni",
+        "blocks": [
+          "Testimoni harus:",
+          [
+            "pengalaman Anda sendiri, ditulis dengan jujur;",
+            "tanpa data pribadi orang lain, seperti nomor telepon, alamat, nomor identitas, atau nama lengkap pasien maupun staf;",
+            "tidak menyatakan tuduhan sebagai fakta dan tidak melecehkan siapa pun;",
+            "bukan iklan, tautan, kode promo, atau cerita dari orang lain;",
+            "bukan saran medis untuk pembaca, seperti nama obat dan dosisnya;",
+            "tentang tempat praktik yang benar."
+          ],
+          "Foto hanya boleh berisi ruang tunggu, ruang perawatan, peralatan, atau papan nama, tanpa wajah orang, struk, atau tangkapan layar."
+        ]
+      },
+      {
+        "title": "Moderasi",
+        "blocks": [
+          "Setiap Testimoni diperiksa. AI menerbitkan Testimoni yang bersih, meminta Anda memperbaiki bagian tertentu, atau menahannya untuk ditinjau. Tim FindYourDent memutuskan setiap Testimoni yang ditahan atau dilaporkan, biasanya dalam 24 jam, dan dapat menurunkannya jika melanggar aturan. AI tidak pernah menghapus Testimoni.",
+          "Anda bisa mengubah atau menghapus Testimoni Anda kapan saja."
+        ]
+      },
+      {
+        "title": "Untuk pemilik dan dokter gigi",
+        "blocks": [
+          [
+            "Klaim halaman memerlukan SIP atau izin praktik dan verifikasi telepon oleh tim FindYourDent.",
+            "Data praktik dan balasan diperiksa sebelum tayang.",
+            "Sesuai kode etik kedokteran gigi, tidak ada promosi, iklan, diskon, atau peringkat berbayar. Klaim tidak mengubah urutan dokter gigi.",
+            "Tempat praktik bisa membalas atau melaporkan Testimoni, tetapi tidak bisa menghapus atau menyembunyikannya.",
+            "Pemilik bertanggung jawab atas ketepatan daftar harga yang dikonfirmasinya."
+          ]
+        ]
+      },
+      {
+        "title": "Informasi dari pihak lain",
+        "blocks": [
+          "Rating, ulasan, jam buka dan info tempat dari Google Maps ditampilkan apa adanya dengan sumbernya. FindYourDent tidak mengubah atau menjamin informasi tersebut."
+        ]
+      },
+      {
+        "title": "Hak atas konten",
+        "blocks": [
+          "Anda tetap memiliki Testimoni dan foto yang Anda kirim. Dengan mengirimnya, Anda memberi FindYourDent izin untuk menampilkannya di layanan ini. [Lingkup izin perlu ditinjau penasihat hukum.]"
+        ]
+      },
+      {
+        "title": "Batasan tanggung jawab",
+        "blocks": [
+          "[Bagian ini perlu disusun oleh penasihat hukum.] Keputusan perawatan tetap ada di tangan Anda dan dokter gigi Anda."
+        ]
+      },
+      {
+        "title": "Hukum yang berlaku",
+        "blocks": ["Syarat ini tunduk pada hukum Republik Indonesia. [Perlu ditinjau penasihat hukum.]"]
+      },
+      {
+        "title": "Perubahan dan kontak",
+        "blocks": [
+          "Jika syarat ini berubah, kami memperbarui tanggal di atas halaman ini. Untuk pertanyaan, hubungi <email/>."
+        ]
+      }
+    ]
   }
 }
