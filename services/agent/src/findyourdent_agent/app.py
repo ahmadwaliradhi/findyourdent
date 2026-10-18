@@ -93,6 +93,9 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             # Guidance only: whether Agent Search or the curated files grounded it.
             if grounding := getattr(request.state, "grounding", None):
                 extra["grounding"] = grounding
+            # Moderation with a Proof of Visit: whether its facts were read (never the facts).
+            if proof := getattr(request.state, "proof", None):
+                extra["proof"] = proof
             log.info("request", extra=extra)
 
     @app.exception_handler(RequestValidationError)
@@ -161,6 +164,8 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             detail = {"type": "invalid_base64", "loc": ["body"], "msg": "attachment is not base64"}
             return JSONResponse(status_code=422, content={"detail": [detail]})
         request.state.outcome = result.outcome
+        if result.proof_outcome:
+            request.state.proof = result.proof_outcome
         return result.decision
 
     @app.post(

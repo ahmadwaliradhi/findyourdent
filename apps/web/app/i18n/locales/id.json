@@ -568,8 +568,6 @@
       "publishedBody": "Terima kasih. Testimoni Anda sekarang membantu pasien lain memilih.",
       "viewProvider": "Lihat di halaman tempat",
       "reviewTitle": "Testimoni Anda sedang ditinjau",
-      "verifiedVisit": "Bukti kunjungan Anda cocok, jadi Testimoni ini ditandai Kunjungan terbukti. File buktinya sudah kami hapus.",
-      "proofNotVerified": "Bukti kunjungan Anda belum bisa kami cocokkan, jadi Testimoni ini tampil tanpa tanda Kunjungan terbukti. File buktinya sudah kami hapus.",
       "editReviewNote": "Versi sebelumnya tetap tampil sampai selesai.",
       "ownHealthDataNote": "Anda menulis detail kesehatan Anda sendiri. Detail itu ikut tampil di Testimoni, dan bisa Anda ubah kapan saja lewat Testimoni saya."
     },
@@ -733,6 +731,21 @@
       "needsAuthorFix": "Ubah bagian yang ditandai, lalu kirim lagi.",
       "held": "Tim FindYourDent memutuskan, biasanya dalam 24 jam."
     }
+  },
+  "proofStatus": {
+    "title": "Bukti kunjungan",
+    "accepted": "Bukti kunjungan diterima, jadi Testimoni ini ditandai Kunjungan terbukti. File buktinya sudah kami hapus.",
+    "pending": "Bukti kunjungan Anda menunggu pemeriksaan tim FindYourDent. Sampai selesai, Testimoni ini belum ditandai Kunjungan terbukti.",
+    "notChecked": "Bukti kunjungan belum bisa kami periksa kali ini, jadi filenya sudah kami hapus. Silakan kirim lagi nanti.",
+    "rejected": {
+      "unreadable": "Bukti kunjungan tidak diterima karena tulisannya tidak terbaca.",
+      "notAProof": "Bukti kunjungan tidak diterima karena dokumennya bukan struk, kuitansi, atau bukti janji temu dari tempat praktik gigi.",
+      "tooOld": "Bukti kunjungan tidak diterima karena tanggalnya lebih dari 12 bulan yang lalu.",
+      "adminRejected": "Bukti kunjungan tidak diterima setelah diperiksa tim FindYourDent.",
+      "expired": "Bukti kunjungan tidak sempat diperiksa tim dalam 7 hari.",
+      "other": "Bukti kunjungan tidak diterima."
+    },
+    "tryAnother": "File buktinya sudah kami hapus. Anda bisa mencoba dokumen lain."
   },
   "reportApi": {
     "errors": {

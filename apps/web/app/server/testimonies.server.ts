@@ -15,10 +15,17 @@
 // - Fix before submit: an authorFix decision is answered with the flagged spans and
 //   stores nothing (no Testimony, no decision, no photos); only the round count is kept,
 //   per Patient and place (`authorFixCounterId`), until a submission is stored.
+// - Proof of Visit (spec 09): the agent reads the facts, `decideProof` decides. The file
+//   is deleted once the result is accepted or rejected (or the proof could not be
+//   checked); a pending one stays for an admin. An edit may carry a new proof: it
+//   replaces a proof that is not accepted yet and counts as another attempt; a Testimony
+//   already proven keeps its proof and the new file is simply deleted.
+import type { ProofExtraction } from "@findyourdent/contracts";
 import {
   type AspectRatings,
   authorFixCounterId,
   COLLECTIONS,
+  type ProofOfVisitRecord,
   type ProviderDoc,
   type ProviderType,
   type RegionRef,
@@ -40,6 +47,7 @@ import { getI18n, type Language } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { normalizeName } from "~/lib/normalize-name";
+import { decideProof, type ProofDecision, type ProofOfVisitStatus, proofStatusForAuthor } from "~/lib/proof-decision";
 import {
   MAX_AUTHOR_FIX_ROUNDS,
   SUBMISSION_FIELDS,
@@ -63,6 +71,7 @@ import {
   deleteTestimonyMedia,
   readTestimonyFiles,
   type StoredMedia,
+  storedProofPaths,
   storeTestimonyMedia,
 } from "./testimony-media.server.ts";
 import {
@@ -173,8 +182,8 @@ function contentUpdate(content: TestimonyContent): Record<string, unknown> {
 }
 
 /**
- * Moderates the content with every photo it will have, then deletes the Proof of
- * Visit file whatever happened (spec 03).
+ * Moderates the content with every photo it will have, and has the Proof of Visit read.
+ * The caller deletes the new files when anything fails, and the proof file once decided.
  */
 async function moderate(
   context: AppLoadContext,
@@ -200,10 +209,14 @@ async function moderate(
       photoPaths: [...(input.keptPhotoPaths ?? []), ...input.media.photoPaths],
       ...(input.media.proofPath ? { proofPath: input.media.proofPath } : {}),
     });
-  } finally {
-    if (input.media.proofPath) await deleteTestimonyMedia(writerInfo.uploads, [input.media.proofPath]);
+  } catch (error) {
+    await deleteTestimonyMedia(writerInfo.uploads, newPaths(input.media)).catch(() => {});
+    throw error;
   }
 }
+
+/** The objects one submission wrote: its new photos and its Proof of Visit. */
+const newPaths = (media: StoredMedia) => [...media.photoPaths, ...(media.proofPath ? [media.proofPath] : [])];
 
 /** An unused round count expires (Firestore TTL on `counters.expiresAt`) after this long. */
 const AUTHOR_FIX_COUNTER_DAYS = 30;
@@ -218,7 +231,8 @@ async function authorFixRoundsUsed(firestore: Firestore, uid: string, placeId: s
 
 /**
  * The authorFix answer: spans and message back to the author, nothing stored but the
- * round count. The new photos go; the Proof of Visit is already deleted.
+ * round count. The new photos and the Proof of Visit go (the proof was not decided, so
+ * it is no attempt: the form keeps it for the next Kirim).
  */
 async function authorFixResponse(
   writerInfo: Writer,
@@ -228,12 +242,12 @@ async function authorFixResponse(
     text: string;
     roundsUsed: number;
     outcome: ModerationOutcome;
-    newPhotoPaths: string[];
+    media: StoredMedia;
     testimonyId?: string;
   },
 ): Promise<Response> {
-  // A leftover photo is private and unreferenced; the author still gets their answer.
-  await deleteTestimonyMedia(writerInfo.uploads, input.newPhotoPaths).catch(() => {});
+  // A leftover file is private and unreferenced; the author still gets their answer.
+  await deleteTestimonyMedia(writerInfo.uploads, newPaths(input.media)).catch(() => {});
   const now = Date.now();
   await authorFixCounter(writerInfo.firestore, writerInfo.user.uid, input.placeId).set(
     {
@@ -272,10 +286,69 @@ function storedFeedback(
   };
 }
 
-/** The kept Proof of Visit result: only when the check ran, never the file. */
-function proofRecord(outcome: ModerationOutcome, now: Timestamp): Pick<TestimonyDoc, "proofOfVisit"> {
-  const result = outcome.decision.proofOfVisit;
-  return result === "accepted" || result === "rejected" ? { proofOfVisit: { result, checkedAt: now } } : {};
+// Proof of Visit (spec 09) ------------------------------------------------------
+
+/** The decided Proof of Visit, or `checked: false` when the agent could not read it. */
+type ProofCheck = { checked: false } | CheckedProof;
+type CheckedProof = { checked: true; decision: ProofDecision; extraction: ProofExtraction };
+
+/** Decides the proof sent with a submission from what the agent read, against the stated visit month. */
+function checkProof(outcome: ModerationOutcome, visitMonth: string): ProofCheck {
+  const extraction = outcome.decision.proofExtraction;
+  if (!extraction) return { checked: false };
+  // Ticket #130 passes the Proof Fingerprint reuse check here; until then nothing matches.
+  const decision = decideProof({ extraction, visitMonth, today: jakartaDate(Date.now()) });
+  return { checked: true, decision, extraction };
+}
+
+/** What is kept of a decided proof: never the file, never a patient name. */
+function proofRecord({ decision, extraction }: CheckedProof, attempts: number, now: Timestamp): ProofOfVisitRecord {
+  return {
+    result: decision.result,
+    ...(decision.result === "pending" ? { reasons: decision.reasons } : {}),
+    ...(decision.result === "rejected" ? { reason: decision.reason } : {}),
+    checkedAt: now,
+    ...(extraction.clinicNameOnProof ? { clinicNameOnProof: extraction.clinicNameOnProof } : {}),
+    ...(extraction.proofDate ? { proofDate: extraction.proofDate } : {}),
+    ...(extraction.totalRupiah !== undefined ? { totalRupiah: extraction.totalRupiah } : {}),
+    attempts,
+  };
+}
+
+/** Proofs checked so far for a Testimony; a proof checked before spec 09 counts as one. */
+const proofAttempts = (testimony: TestimonyDoc) =>
+  testimony.proofOfVisit ? (testimony.proofOfVisit.attempts ?? 1) : 0;
+
+/** What the author reads about the proof they sent. */
+const proofFeedback = (proof: ProofCheck): ProofOfVisitStatus =>
+  proof.checked ? proofStatusForAuthor(proof.decision) : { result: "notChecked" };
+
+const isPending = (proof: ProofCheck | null): proof is CheckedProof =>
+  proof?.checked === true && proof.decision.result === "pending";
+
+/**
+ * Deletes proof files once the result they belong to is final: the given paths, or
+ * (`allBut`) every proof file of the Testimony except a pending one, so a new decision
+ * also clears a proof it replaced. Never fails the request: the bucket lifecycle rule
+ * is the backstop.
+ */
+async function deleteProofFiles(
+  context: AppLoadContext,
+  uploads: Bucket,
+  target: { paths: string[] } | { testimonyId: string; allBut?: string },
+): Promise<void> {
+  try {
+    const paths =
+      "paths" in target
+        ? target.paths
+        : (await storedProofPaths(uploads, target.testimonyId)).filter((path) => path !== target.allBut);
+    await deleteTestimonyMedia(uploads, paths);
+  } catch (error) {
+    context.logger.warn("testimony", {
+      outcome: "proof_delete_failed",
+      error: error instanceof Error ? error.name : "unknown",
+    });
+  }
 }
 
 /** Coordinates for a new Listed Provider (Essentials Place Details). On failure it is listed without them. */
@@ -417,31 +490,21 @@ export async function createTestimony(context: AppLoadContext, request: Request)
   const roundsUsed = await authorFixRoundsUsed(firestore, user.uid, value.placeId);
   const media = await storeTestimonyMedia(uploads, ref.id, files.files);
   let status: "published" | "held";
-  let outcome: ModerationOutcome;
   let verifiedVisit = false;
-  try {
-    const listedName = listedAtStart ? (providerAtStart?.get("name") as string) : undefined;
-    outcome = await moderate(context, gate, {
-      value,
-      typedProviderName: listedName ?? value.providerName,
-      authorFixRound: roundsUsed,
-      media,
-    });
-  } catch (error) {
-    await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
-    throw error;
-  }
+  const listedName = listedAtStart ? (providerAtStart?.get("name") as string) : undefined;
+  const outcome = await moderate(context, gate, {
+    value,
+    typedProviderName: listedName ?? value.providerName,
+    authorFixRound: roundsUsed,
+    media,
+  });
   const { decision: moderation } = outcome;
   if (moderation.decision === "authorFix") {
     context.logger.info("testimony", { outcome: "author_fix", round: roundsUsed + 1 });
-    return authorFixResponse(gate, {
-      placeId: value.placeId,
-      text: value.text,
-      roundsUsed,
-      outcome,
-      newPhotoPaths: media.photoPaths,
-    });
+    return authorFixResponse(gate, { placeId: value.placeId, text: value.text, roundsUsed, outcome, media });
   }
+  // Decided whatever Moderation said about the text: the proof never holds a Testimony.
+  const proof = media.proofPath ? checkProof(outcome, value.visitMonth) : null;
   try {
     status = statusForDecision(moderation.decision);
     const location = status === "published" && !listedAtStart ? await coordinatesFor(context, value.placeId) : null;
@@ -459,7 +522,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
       const published = decided === "published" ? await tx.get(publishedOf(firestore, value.placeId)) : null;
 
       const now = Timestamp.now();
-      verifiedVisit = moderation.proofOfVisit === "accepted";
+      verifiedVisit = proof?.checked === true && proof.decision.result === "accepted";
       const content = contentOf(value, media.photoPaths);
       let region: RegionRef;
       let providerType: ProviderType;
@@ -504,7 +567,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         displayName: value.displayName,
         status: decided,
         verifiedVisit,
-        ...proofRecord(decidedOutcome, now),
+        ...(proof?.checked ? { proofOfVisit: proofRecord(proof, 1, now) } : {}),
         consent: { termsVersion: TESTIMONY_TERMS_VERSION, acceptedAt: now },
         authorFixRounds: roundsUsed,
         moderationDecisionId: decisionRef.id,
@@ -516,16 +579,23 @@ export async function createTestimony(context: AppLoadContext, request: Request)
       recordTestimonyTransition(firestore, tx, null, { status: decided, verifiedVisit });
     });
   } catch (error) {
-    await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
+    await deleteTestimonyMedia(uploads, newPaths(media)).catch(() => {});
     return refusalResponse(request, error);
   }
 
-  context.logger.info("testimony", { outcome: "created", status });
+  if (media.proofPath && !isPending(proof)) await deleteProofFiles(context, uploads, { paths: [media.proofPath] });
+  const proofStatus = proof ? proofFeedback(proof) : undefined;
+  context.logger.info("testimony", {
+    outcome: "created",
+    status,
+    ...(proofStatus ? { proof: proofStatus.result } : {}),
+  });
   const body: TestimonyStoredResponse = {
     testimonyId: ref.id,
     status,
     ...storedFeedback(t, status, outcome, { authorFixRound: roundsUsed }),
     verifiedVisit,
+    ...(proofStatus ? { proof: proofStatus } : {}),
   };
   return Response.json(body, { status: 201 });
 }
@@ -604,20 +674,14 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
   const media = await storeTestimonyMedia(uploads, testimonyId, files.files);
   const editingPublished = current.status === "published";
   const proposedName = value.providerName ?? current.proposedProviderName;
-  let outcome: ModerationOutcome;
-  try {
-    const typedProviderName = listedAtStart ? (providerAtStart.data() as ProviderDoc).name : proposedName;
-    outcome = await moderate(context, gate, {
-      value,
-      typedProviderName,
-      authorFixRound: roundsUsed,
-      keptPhotoPaths: keep,
-      media,
-    });
-  } catch (error) {
-    await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
-    throw error;
-  }
+  const typedProviderName = listedAtStart ? (providerAtStart.data() as ProviderDoc).name : proposedName;
+  const outcome = await moderate(context, gate, {
+    value,
+    typedProviderName,
+    authorFixRound: roundsUsed,
+    keptPhotoPaths: keep,
+    media,
+  });
   if (outcome.decision.decision === "authorFix") {
     // The Testimony stays exactly as it was until the author sends a fixed edit.
     context.logger.info("testimony", { outcome: "author_fix", round: roundsUsed + 1, revision: editingPublished });
@@ -626,7 +690,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       text: value.text,
       roundsUsed,
       outcome,
-      newPhotoPaths: media.photoPaths,
+      media,
       testimonyId,
     });
   }
@@ -634,8 +698,13 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
   // again but cannot Moderate its way past that, so it stays held for the queue.
   const withAdmin = ADMIN_DECIDES.has(current.status);
   const decided: "published" | "held" = withAdmin ? "held" : statusForDecision(outcome.decision.decision);
+  const proof = media.proofPath ? checkProof(outcome, value.visitMonth) : null;
   let verifiedVisitAfter = current.verifiedVisit;
   let orphaned: string[] = [];
+  // The proof result this edit wrote, if any, and what the author reads about it. Both
+  // are assigned inside the transaction callback, which control flow analysis cannot see.
+  let proofWritten = null as ProofOfVisitRecord | null;
+  let proofStatus = undefined as ProofOfVisitStatus | undefined;
   try {
     const status = decided;
     const becomesPublished = !editingPublished && status === "published";
@@ -650,13 +719,19 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       if (before.status !== current.status || !canAuthorEdit(before.status)) {
         throw new TestimonyRefusal(409, "not_editable");
       }
+      // A proven Testimony keeps its accepted proof; any other proof result is replaced.
+      const newProof = proof?.checked && !before.verifiedVisit ? proof : null;
+      const proofAccepted = newProof?.decision.result === "accepted";
+      // Accepted while an edit of the published version waits: the public version is proven now.
+      const provenWhilePending = editingPublished && status !== "published" && proofAccepted;
       const provider = await tx.get(providers(firestore).doc(before.placeId));
-      const publicChanges = becomesPublished || (editingPublished && status === "published");
+      const publicChanges = becomesPublished || (editingPublished && status === "published") || provenWhilePending;
       const published = publicChanges ? await tx.get(publishedOf(firestore, before.placeId)) : null;
 
       const now = Timestamp.now();
       const content = contentOf(value, [...keep, ...media.photoPaths]);
-      const verifiedVisit = before.verifiedVisit || outcome.decision.proofOfVisit === "accepted";
+      const verifiedVisit = before.verifiedVisit || proofAccepted;
+      const proofOfVisit = newProof ? proofRecord(newProof, proofAttempts(before) + 1, now) : null;
       tx.create(
         decisionRef,
         moderationDecisionDoc(
@@ -682,16 +757,35 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
             submittedAt: now,
             moderationDecisionId: decisionRef.id,
           },
+          ...(proofOfVisit ? { proofOfVisit } : {}),
           updatedAt: now,
         };
         after = { photoPaths: before.photoPaths, pending: content.photoPaths };
+        if (provenWhilePending && published) {
+          writeProviderOnPublish(tx, {
+            placeId: before.placeId,
+            provider,
+            published,
+            testimonyId,
+            self: { ...before, verifiedVisit: true },
+            proposal: null,
+          });
+          update.verifiedVisit = true;
+          verifiedVisitAfter = true;
+          recordTestimonyTransition(
+            firestore,
+            tx,
+            { status: before.status, verifiedVisit: before.verifiedVisit },
+            { status: before.status, verifiedVisit: true },
+          );
+        }
       } else {
         update = {
           ...contentUpdate(content),
           displayName: value.displayName,
           status,
           verifiedVisit,
-          ...proofRecord(outcome, now),
+          ...(proofOfVisit ? { proofOfVisit } : {}),
           moderationDecisionId: decisionRef.id,
           pendingRevision: FieldValue.delete(),
           authorFixRounds: roundsUsed,
@@ -731,26 +825,51 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       tx.delete(authorFixCounter(firestore, user.uid, before.placeId));
       const kept = new Set([...after.photoPaths, ...after.pending]);
       orphaned = storedPhotoPaths(before).filter((path) => !kept.has(path));
+      proofWritten = proofOfVisit;
+      if (proof) {
+        proofStatus = proofOfVisit
+          ? proofStatusForAuthor(proofOfVisit)
+          : before.verifiedVisit
+            ? { result: "accepted" }
+            : { result: "notChecked" };
+      }
     });
   } catch (error) {
-    await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
+    await deleteTestimonyMedia(uploads, newPaths(media)).catch(() => {});
     return refusalResponse(request, error);
   }
 
   await deleteTestimonyMedia(uploads, orphaned);
-  context.logger.info("testimony", { outcome: "edited", status: decided, revision: editingPublished });
+  if (media.proofPath) {
+    // A new result also clears the proof it replaced; otherwise only the new file goes.
+    await deleteProofFiles(
+      context,
+      uploads,
+      proofWritten
+        ? { testimonyId, ...(proofWritten.result === "pending" ? { allBut: media.proofPath } : {}) }
+        : { paths: [media.proofPath] },
+    );
+  }
+  context.logger.info("testimony", {
+    outcome: "edited",
+    status: decided,
+    revision: editingPublished,
+    ...(proofStatus ? { proof: proofStatus.result } : {}),
+  });
   const body: TestimonyStoredResponse = {
     testimonyId,
     status: decided,
     ...storedFeedback(t, decided, outcome, { withAdmin, authorFixRound: roundsUsed }),
     verifiedVisit: verifiedVisitAfter,
+    ...(proofStatus ? { proof: proofStatus } : {}),
   };
   return Response.json(body);
 }
 
 /**
  * DELETE /api/testimonies/:testimonyId: the author erases their Testimony from any
- * state. Text, photos (and their stored objects), a pending edit and any reply go;
+ * state. Text, photos (and their stored objects), a pending proof file, a pending edit
+ * and any reply go;
  * aggregates and counters are recomputed when it was published. Not rate limited
  * (erasure must always work), but needs App Check like every write.
  */
@@ -800,6 +919,8 @@ export async function deleteTestimony(context: AppLoadContext, request: Request,
   }
 
   await deleteTestimonyMedia(uploads, removedPaths);
+  // A proof still waiting for an admin goes with the Testimony.
+  await deleteProofFiles(context, uploads, { testimonyId });
   context.logger.info("testimony", { outcome: "deleted" });
   const body: TestimonyDeleteResponse = { testimonyId, status: "deleted" };
   return Response.json(body);
@@ -822,6 +943,8 @@ export interface MyTestimony {
   text: string;
   visitMonth: string;
   verifiedVisit: boolean;
+  /** Where the Proof of Visit stands, when one was checked (spec 09). */
+  proof?: ProofOfVisitStatus;
   /** The Provider's published reply. */
   reply?: string;
   editable: boolean;
@@ -857,6 +980,7 @@ export async function loadMyTestimonies(firestore: Firestore, uid: string): Prom
       text: testimony.pendingRevision?.text ?? testimony.text,
       visitMonth: testimony.visitMonth,
       verifiedVisit: testimony.verifiedVisit === true,
+      ...(testimony.proofOfVisit ? { proof: proofStatusForAuthor(testimony.proofOfVisit) } : {}),
       ...(testimony.reply?.status === "published" ? { reply: testimony.reply.text } : {}),
       editable: canAuthorEdit(testimony.status),
     };

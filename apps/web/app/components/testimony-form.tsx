@@ -7,6 +7,7 @@ import type * as React from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
+import { ProofStatusNote } from "~/components/proof-status";
 import { ProviderFields } from "~/components/provider-fields";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -129,7 +130,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [phase, setPhase] = useState<Phase>("editing");
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [result, setResult] = useState<{ response: TestimonyStoredResponse; proofSent: boolean } | null>(null);
+  const [result, setResult] = useState<{ response: TestimonyStoredResponse } | null>(null);
   const [fix, setFix] = useState<TestimonyAuthorFixResponse | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
   // The create draft loads after hydration; nothing is saved before it has.
@@ -276,7 +277,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
         return;
       }
       setFix(null);
-      setResult({ response: body, proofSent: proof !== null });
+      setResult({ response: body });
       if (mode === "create") writeDraft(null);
       for (const photo of photos) URL.revokeObjectURL(photo.url);
       setPhotos([]);
@@ -838,12 +839,10 @@ function MarkedSentence({ issue }: { issue: FixIssue }) {
 /** What the Patient sees once the Testimony is stored (spec 03, user stories 21 and 23). */
 function Result({
   response,
-  proofSent,
   mode,
   placeId,
 }: {
   response: TestimonyStoredResponse;
-  proofSent: boolean;
   mode: "create" | "edit";
   placeId: string;
 }) {
@@ -865,13 +864,8 @@ function Result({
       {response.ownHealthDataWarning && (
         <p className="text-sm text-muted-foreground">{t("testimonyForm.result.ownHealthDataNote")}</p>
       )}
-      {proofSent && (
-        <p className="text-sm text-muted-foreground">
-          {response.verifiedVisit
-            ? t("testimonyForm.result.verifiedVisit")
-            : t("testimonyForm.result.proofNotVerified")}
-        </p>
-      )}
+      {/* Present whenever a Proof of Visit was sent: accepted, waiting for the team, or not accepted and why. */}
+      {response.proof && <ProofStatusNote status={response.proof} />}
       <div className="flex flex-wrap gap-3">
         {published && placeId && (
           <Button asChild>

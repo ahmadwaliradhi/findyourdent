@@ -18,7 +18,7 @@ class ModerationImage(BaseModel):
 
 class ModerationProofOfVisit(BaseModel):
     """
-    Optional private Proof of Visit, deleted by the web service right after this call.
+    Optional private Proof of Visit (Testimonies only). Read in its own model call for the facts in `proofExtraction`; never screened as a photo. The web service deletes the file once the proof is decided, or keeps it for an admin while pending (spec 09).
     """
 
     model_config = ConfigDict(
@@ -71,7 +71,7 @@ class ModerationRequest(BaseModel):
         ModerationProofOfVisit | None, Field(title="ModerationProofOfVisit")
     ] = None
     """
-    Optional private Proof of Visit, deleted by the web service right after this call.
+    Optional private Proof of Visit (Testimonies only). Read in its own model call for the facts in `proofExtraction`; never screened as a photo. The web service deletes the file once the proof is decided, or keeps it for an admin while pending (spec 09).
     """
     authorFixRound: Annotated[int | None, Field(ge=0)] = None
     """

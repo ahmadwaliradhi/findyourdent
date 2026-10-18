@@ -9,6 +9,7 @@ import asyncio
 import base64
 import json
 import logging
+from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -23,7 +24,9 @@ from findyourdent_agent.adapters.fakes import (
 )
 from findyourdent_agent.app import create_app
 from findyourdent_agent.config import Settings
+from findyourdent_agent.contracts.moderation_request import ModerationProofOfVisit
 from findyourdent_agent.data import contracts_dir
+from findyourdent_agent.moderation import extract_proof
 
 CLEAN_TEXT = (
     "Ruang tunggunya bersih dan dokternya menjelaskan pilihan tambalan dengan sabar. "
@@ -83,7 +86,7 @@ def test_clean_testimony_is_published(client: TestClient, fake_gemini: FakeGemin
     assert decision["decision"] == "publish"
     assert decision["ruleCodes"] == []
     assert decision["flaggedSpans"] == []
-    assert decision["proofOfVisit"] == "notProvided"
+    assert "proofExtraction" not in decision
 
 
 def test_uses_moderation_model_with_the_testimony_output_schema(
@@ -310,26 +313,81 @@ def photo(data: str = PNG) -> dict[str, str]:
     return {"mimeType": "image/png", "dataBase64": data}
 
 
-def test_photos_and_proof_of_visit_reach_the_model_as_inline_data(
-    client: TestClient, fake_gemini: FakeGeminiAdapter
-) -> None:
-    fake_gemini.outputs.append(model_output(proofOfVisit="accepted"))
+def a_proof() -> dict[str, str]:
+    return {"mimeType": "application/pdf", "dataBase64": PDF}
 
-    screen(
-        client,
-        a_testimony(
-            photos=[photo(), photo()],
-            proofOfVisit={"mimeType": "application/pdf", "dataBase64": PDF},
-        ),
-    )
 
-    (call,) = fake_gemini.calls
+def extraction_output(**overrides: Any) -> dict[str, Any]:
+    """The canned Gemini answer of the Proof of Visit extraction call."""
+    output: dict[str, Any] = {
+        "readable": True,
+        "isProofOfVisit": True,
+        "clinicNameOnProof": "KLINIK GIGI SENYUM SEHAT",
+        "proofDate": "2026-08-14",
+        "totalRupiah": 350000,
+        "clinicNameMatches": True,
+    }
+    output.update(overrides)
+    return output
+
+
+@dataclass
+class RoutingGemini(FakeGeminiAdapter):
+    """Answers the screening call from ``outputs`` and the Proof of Visit extraction call
+    from ``extractions``, whichever order the two concurrent calls arrive in."""
+
+    extractions: list[dict[str, Any] | Exception] = field(default_factory=list)
+
+    async def generate_structured(self, **kwargs: Any) -> dict[str, Any]:
+        if not is_extraction(kwargs):
+            return await super().generate_structured(**kwargs)
+        self.calls.append(kwargs)
+        output = self.extractions.pop(0)
+        if isinstance(output, Exception):
+            raise output
+        return output
+
+
+def is_extraction(call: dict[str, Any]) -> bool:
+    return "isProofOfVisit" in call["response_schema"]["properties"]
+
+
+def calls_of(gemini: FakeGeminiAdapter) -> tuple[dict[str, Any], dict[str, Any]]:
+    (screening,) = [c for c in gemini.calls if not is_extraction(c)]
+    (extraction,) = [c for c in gemini.calls if is_extraction(c)]
+    return screening, extraction
+
+
+def blobs_of(call: dict[str, Any]) -> list[tuple[str, bytes]]:
     blobs = [p.inline_data for p in call["contents"] if p.inline_data is not None]
-    assert [(b.mime_type, b.data) for b in blobs] == [
+    return [(b.mime_type, b.data) for b in blobs]
+
+
+def data_parts_of(call: dict[str, Any]) -> list[dict[str, Any]]:
+    return [json.loads(p.text) for p in call["contents"] if p.text and p.text[0] == "{"]
+
+
+def test_a_proof_of_visit_is_read_in_its_own_call_and_its_facts_returned() -> None:
+    gemini = RoutingGemini(outputs=[model_output()], extractions=[extraction_output()])
+
+    with client_with(gemini) as client:
+        decision = screen(
+            client,
+            a_testimony(photos=[photo(), photo()], proofOfVisit=a_proof(), visitMonth="2026-08"),
+        )
+
+    assert decision["decision"] == "publish"
+    assert decision["proofExtraction"] == extraction_output()
+    screening, extraction = calls_of(gemini)
+    # The screening call sees the photos only; the extraction call sees the proof only.
+    assert blobs_of(screening) == [
         ("image/png", base64.b64decode(PNG)),
         ("image/png", base64.b64decode(PNG)),
-        ("application/pdf", base64.b64decode(PDF)),
     ]
+    assert blobs_of(extraction) == [("application/pdf", base64.b64decode(PDF))]
+    assert extraction["model"] == "gemini-3.5-flash-lite"
+    assert extraction["instruction"] != screening["instruction"]
+    assert "ruleCodes" not in extraction["response_schema"]["properties"]
 
 
 def test_a_photo_flagged_under_any_rule_is_held(
@@ -343,17 +401,6 @@ def test_a_photo_flagged_under_any_rule_is_held(
     decision = screen(client, a_testimony(photos=[photo()]))
 
     assert decision["decision"] == "hold"
-
-
-def test_low_confidence_hold_keeps_the_proof_of_visit_result(
-    client: TestClient, fake_gemini: FakeGeminiAdapter
-) -> None:
-    fake_gemini.outputs.append(model_output(confidence=0.4, proofOfVisit="accepted"))
-
-    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
-
-    assert decision["decision"] == "hold"
-    assert decision["proofOfVisit"] == "accepted"
 
 
 def test_a_flagged_photo_is_held(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
@@ -373,26 +420,200 @@ def test_a_flagged_photo_is_held(client: TestClient, fake_gemini: FakeGeminiAdap
     assert decision["flaggedPhotos"] == [{"photoIndex": 1, "ruleCode": "photo_not_clinic_setting"}]
 
 
-@pytest.mark.parametrize("result", ["accepted", "rejected"])
-def test_proof_of_visit_result_never_holds(
-    client: TestClient, fake_gemini: FakeGeminiAdapter, result: str
-) -> None:
-    fake_gemini.outputs.append(model_output(proofOfVisit=result))
+SCREENING_PATHS = {
+    "publish": model_output(),
+    "authorFix": model_output(
+        ruleCodes=["r1_personal_data"],
+        flaggedSpans=[{"text": "Saya bayar sesuai daftar harga.", "ruleCode": "r1_personal_data"}],
+    ),
+    "hold": model_output(ruleCodes=["r2_accusation_as_fact"]),
+    "low_confidence": model_output(confidence=0.4),
+    "model_error": RuntimeError("503 from Vertex AI"),
+}
 
-    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+@pytest.mark.parametrize("path", SCREENING_PATHS)
+@pytest.mark.parametrize(
+    "facts",
+    [
+        extraction_output(),
+        extraction_output(clinicNameMatches=False, clinicNameOnProof="Apotek Sehat"),
+        extraction_output(isProofOfVisit=False),
+        {"readable": False, "isProofOfVisit": False, "clinicNameMatches": False},
+    ],
+)
+def test_the_proof_never_changes_the_decision_and_its_facts_ride_on_every_path(
+    path: str, facts: dict[str, Any]
+) -> None:
+    without = RoutingGemini(outputs=[SCREENING_PATHS[path]])
+    with client_with(without) as client:
+        alone = screen(client, a_testimony())
+    gemini = RoutingGemini(outputs=[SCREENING_PATHS[path]], extractions=[facts])
+    with client_with(gemini) as client:
+        decision = screen(client, a_testimony(proofOfVisit=a_proof(), visitMonth="2026-08"))
+
+    assert decision.pop("proofExtraction") == facts
+    assert decision == alone
+
+
+def test_the_agent_applies_no_date_window() -> None:
+    # Years before the stated visit month: a fact to report, not the agent's to judge.
+    facts = extraction_output(proofDate="2019-03")
+    gemini = RoutingGemini(outputs=[model_output()], extractions=[facts])
+
+    with client_with(gemini) as client:
+        decision = screen(client, a_testimony(proofOfVisit=a_proof(), visitMonth="2026-08"))
 
     assert decision["decision"] == "publish"
-    assert decision["proofOfVisit"] == result
+    assert decision["proofExtraction"]["proofDate"] == "2019-03"
+    _, extraction = calls_of(gemini)
+    assert "visitMonth" not in json.dumps(data_parts_of(extraction))
+    assert "24 months" not in extraction["instruction"]
 
 
-def test_proof_of_visit_is_not_provided_when_none_was_sent(
+def test_the_proof_is_matched_against_the_provider_names_only() -> None:
+    gemini = RoutingGemini(outputs=[model_output()], extractions=[extraction_output()])
+
+    with client_with(gemini) as client:
+        screen(client, a_testimony(proofOfVisit=a_proof(), visitMonth="2026-08"))
+
+    screening, extraction = calls_of(gemini)
+    assert data_parts_of(extraction) == [
+        {"typedProviderName": "Klinik Gigi Senyum", "googleDisplayName": "Klinik Gigi Senyum Sehat"}
+    ]
+    # The screening call is told no proof was given, so its old proof judgment stays idle.
+    assert [s["proofOfVisitGiven"] for s in data_parts_of(screening)] == [False]
+
+
+def test_the_patient_name_is_never_asked_for_nor_returned() -> None:
+    named = extraction_output(patientName="Budi Santoso")
+    gemini = RoutingGemini(outputs=[model_output()], extractions=[named])
+
+    with client_with(gemini) as client:
+        decision = screen(client, a_testimony(proofOfVisit=a_proof()))
+
+    _, extraction = calls_of(gemini)
+    assert set(extraction["response_schema"]["properties"]) == {
+        "readable",
+        "isProofOfVisit",
+        "clinicNameOnProof",
+        "proofDate",
+        "totalRupiah",
+        "clinicNameMatches",
+    }
+    # A model that volunteers a name gave output outside its schema: nothing is returned.
+    assert "proofExtraction" not in decision
+    assert "Budi" not in json.dumps(decision)
+    assert decision["decision"] == "publish"
+
+
+class HangingProofGemini(RoutingGemini):
+    async def generate_structured(self, **kwargs: Any) -> dict[str, Any]:
+        if is_extraction(kwargs):
+            await asyncio.sleep(60)
+        return await super().generate_structured(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("failure", "outcome"),
+    [
+        (RuntimeError("503 from Vertex AI"), "model_error"),
+        ({"readable": True}, "model_invalid_output"),
+        (extraction_output(proofDate="2026-02-30"), "model_invalid_output"),
+        (extraction_output(proofDate="14/08/2026"), "model_invalid_output"),
+        (extraction_output(totalRupiah=-5), "model_invalid_output"),
+    ],
+)
+def test_a_failed_extraction_leaves_the_proof_unchecked(
+    failure: dict[str, Any] | Exception, outcome: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    gemini = RoutingGemini(outputs=[model_output()], extractions=[failure])
+
+    with caplog.at_level(logging.INFO), client_with(gemini) as client:
+        decision = screen(client, a_testimony(proofOfVisit=a_proof()))
+
+    assert decision["decision"] == "publish"
+    assert "proofExtraction" not in decision
+    (line,) = [r for r in caplog.records if hasattr(r, "outcome")]
+    assert (line.outcome, line.proof) == ("publish", outcome)
+
+
+def test_a_slow_extraction_times_out_without_holding_the_testimony(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    gemini = HangingProofGemini(outputs=[model_output()])
+
+    with (
+        caplog.at_level(logging.INFO),
+        client_with(gemini, moderation_timeout_seconds=0.05) as client,
+    ):
+        decision = screen(client, a_testimony(proofOfVisit=a_proof()))
+
+    assert decision["decision"] == "publish"
+    assert "proofExtraction" not in decision
+    assert [r.proof for r in caplog.records if hasattr(r, "proof")] == ["model_timeout"]
+
+
+def test_month_only_date_blank_fields_and_long_names_are_read_leniently() -> None:
+    facts = extraction_output(proofDate="2026-08", clinicNameOnProof="  ")
+    del facts["totalRupiah"]
+    long_name = extraction_output(clinicNameOnProof="PT " + "Senyum " * 60)
+    gemini = RoutingGemini(outputs=[model_output(), model_output()], extractions=[facts, long_name])
+
+    with client_with(gemini) as client:
+        first = screen(client, a_testimony(proofOfVisit=a_proof()))
+        second = screen(client, a_testimony(proofOfVisit=a_proof()))
+
+    assert first["proofExtraction"] == {
+        "readable": True,
+        "isProofOfVisit": True,
+        "proofDate": "2026-08",
+        "clinicNameMatches": True,
+    }
+    assert len(second["proofExtraction"]["clinicNameOnProof"]) == 200
+
+
+def test_no_proof_means_one_call_and_no_extraction(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    fake_gemini.outputs.append(model_output(proofOfVisit="accepted"))
+    fake_gemini.outputs.append(model_output())
 
     decision = screen(client, a_testimony())
 
-    assert decision["proofOfVisit"] == "notProvided"
+    assert "proofExtraction" not in decision
+    assert len(fake_gemini.calls) == 1
+
+
+def test_a_proof_that_is_not_base64_is_refused_before_any_call(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    broken = {"mimeType": "application/pdf", "dataBase64": "not base64!"}
+
+    response = client.post("/v1/moderation", json=a_testimony(proofOfVisit=broken))
+
+    assert response.status_code == 422
+    assert fake_gemini.calls == []
+
+
+def test_the_proof_alone_can_be_read_without_screening() -> None:
+    # Ticket #131's proof-only mode reuses this call.
+    gemini = RoutingGemini(extractions=[extraction_output()])
+
+    check = asyncio.run(
+        extract_proof(
+            ModerationProofOfVisit.model_validate(a_proof()),
+            typed_provider_name="Klinik Gigi Senyum",
+            google_display_name=None,
+            gemini=gemini,
+            settings=Settings(),
+        )
+    )
+
+    assert check.outcome == "extracted"
+    assert check.extraction is not None
+    assert check.extraction.model_dump(exclude_none=True) == extraction_output()
+    (call,) = gemini.calls
+    assert is_extraction(call)
 
 
 def test_own_health_details_only_warn(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
@@ -613,7 +834,7 @@ def test_promotional_provider_facts_are_held(
     assert decision["ruleCodes"] == ["promotional_wording"]
     (span,) = decision["flaggedSpans"]
     assert text[span["start"] : span["end"]] == "Klinik termurah se-Bandung"
-    assert "proofOfVisit" not in decision
+    assert "proofExtraction" not in decision
     assert [r.outcome for r in caplog.records if hasattr(r, "outcome")] == ["hold"]
 
 

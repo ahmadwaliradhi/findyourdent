@@ -87,17 +87,28 @@ const STUB_PROMOTIONAL = /\b(terbaik|termurah|diskon|promo)\b/i;
  * A stub Moderation decision, valid against moderation-decision.schema.json. A
  * Testimony with an Indonesian mobile number is an R1 authorFix (a hold after three
  * rounds); owner facts or a reply with promotional wording are held (a practice's own
- * phone is expected there). Anything else publishes, and a Proof of Visit is always
- * accepted. Lets local runs and browser tests walk both flows without Gemini.
+ * phone is expected there). Anything else publishes, and a Proof of Visit always reads
+ * as a receipt from the typed Provider dated in the visit month, so the web service
+ * accepts it (spec 09). Lets local runs and browser tests walk both flows without Gemini.
  */
 export function stubModeration(request: ModerationRequest): ModerationDecision {
   const en = request.language === "en";
   if (request.subjectType !== "testimony") return stubOwnerModeration(request, en);
-  const proofOfVisit = request.proofOfVisit ? "accepted" : "notProvided";
+  const proof = request.proofOfVisit
+    ? {
+        proofExtraction: {
+          readable: true,
+          isProofOfVisit: true,
+          ...(request.typedProviderName ? { clinicNameOnProof: request.typedProviderName } : {}),
+          ...(request.visitMonth ? { proofDate: request.visitMonth } : {}),
+          clinicNameMatches: true,
+        },
+      }
+    : {};
   const phone = STUB_PHONE_NUMBER.exec(request.text);
   if (!phone) {
     const authorMessage = en ? "Thank you! Your Testimony is live." : "Terima kasih! Testimoni Anda sudah tayang.";
-    return { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.95, authorMessage, proofOfVisit };
+    return { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.95, authorMessage, ...proof };
   }
   const span = { start: phone.index, end: phone.index + phone[0].length, text: phone[0], ruleCode: "r1_personal_data" };
   const fixable = (request.authorFixRound ?? 0) < MAX_AUTHOR_FIX_ROUNDS;
@@ -109,7 +120,7 @@ export function stubModeration(request: ModerationRequest): ModerationDecision {
     authorMessage: en
       ? "Please remove the phone number before sending."
       : "Mohon hapus nomor telepon sebelum mengirim.",
-    proofOfVisit,
+    ...proof,
   };
 }
 

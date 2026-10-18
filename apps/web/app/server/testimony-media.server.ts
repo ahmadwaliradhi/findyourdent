@@ -177,7 +177,7 @@ export async function storeTestimonyMedia(
     if (!files.proof) return { photoPaths };
 
     const pdf = files.proof.type === "application/pdf";
-    const proofPath = `proof-of-visit/${testimonyId}/${randomUUID()}.${pdf ? "pdf" : "jpg"}`;
+    const proofPath = `${proofPrefix(testimonyId)}${randomUUID()}.${pdf ? "pdf" : "jpg"}`;
     const body = pdf
       ? Buffer.from(await files.proof.arrayBuffer())
       : await strippedJpeg(files.proof, PROOF_MAX_EDGE_PX);
@@ -192,4 +192,13 @@ export async function storeTestimonyMedia(
 /** Deletes stored objects; missing ones are ignored. */
 export async function deleteTestimonyMedia(uploads: Bucket, paths: readonly string[]): Promise<void> {
   await Promise.all(paths.map((path) => uploads.file(path).delete({ ignoreNotFound: true })));
+}
+
+/** Where a Testimony's Proof of Visit files are kept until decided (spec 09). */
+export const proofPrefix = (testimonyId: string) => `proof-of-visit/${testimonyId}/`;
+
+/** Every stored Proof of Visit file of a Testimony: a pending one waits there for an admin. */
+export async function storedProofPaths(uploads: Bucket, testimonyId: string): Promise<string[]> {
+  const [files] = await uploads.getFiles({ prefix: proofPrefix(testimonyId) });
+  return files.map((file) => file.name);
 }
