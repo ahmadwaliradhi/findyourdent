@@ -16,6 +16,7 @@ import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
+import { receiptJpeg } from "../support/receipts.ts";
 
 let server: TestServer;
 
@@ -61,16 +62,6 @@ const PUBLISH: ModerationDecision = {
   authorMessage: "Terima kasih!",
 };
 
-/** A receipt-like JPEG with printed text. */
-async function receipt(label = "Klinik Gigi Ceria"): Promise<Buffer> {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="640">
-    <rect width="100%" height="100%" fill="#fdfcf7"/>
-    <text x="24" y="60" font-size="28" font-family="sans-serif">${label}</text>
-    <text x="24" y="120" font-size="20" font-family="monospace">${THIS_MONTH}-02  Scaling  Rp300.000</text>
-  </svg>`;
-  return sharp(Buffer.from(svg)).jpeg().toBuffer();
-}
-
 /** What the agent read from a receipt whose clinic name does not match the Provider. */
 function doubtfulFacts(overrides: Partial<ProofExtraction> = {}): ProofExtraction {
   return {
@@ -86,11 +77,17 @@ function doubtfulFacts(overrides: Partial<ProofExtraction> = {}): ProofExtractio
 
 /**
  * Posts a Testimony with a receipt the agent reads as `facts` (a doubtful one by
- * default, so it waits for the team) and returns its id.
+ * default, so it waits for the team) and returns its id. The receipt is the author's
+ * own unless one is given.
  */
 async function postWithProof(
   email: string,
-  options: { facts?: ProofExtraction; decision?: ModerationDecision; overrides?: Partial<TestimonySubmission> } = {},
+  options: {
+    facts?: ProofExtraction;
+    decision?: ModerationDecision;
+    overrides?: Partial<TestimonySubmission>;
+    receipt?: Buffer;
+  } = {},
 ): Promise<string> {
   server.fakes.agent.respondToModerationWith({
     ...(options.decision ?? PUBLISH),
@@ -99,7 +96,8 @@ async function postWithProof(
   const cookie = await server.signInWithGoogle(email);
   const form = new FormData();
   form.set("testimony", JSON.stringify(submission(options.overrides)));
-  form.set("proof", new File([new Uint8Array(await receipt())], "struk.jpg", { type: "image/jpeg" }));
+  const receipt = options.receipt ?? (await receiptJpeg(`Struk ${email}`));
+  form.set("proof", new File([new Uint8Array(receipt)], "struk.jpg", { type: "image/jpeg" }));
   const response = await fetch(new URL("/api/testimonies", server.baseUrl), {
     method: "POST",
     headers: { cookie, [APP_CHECK_HEADER]: server.appCheckToken() },
@@ -111,6 +109,10 @@ async function postWithProof(
 
 async function testimony(id: string): Promise<TestimonyDoc> {
   return (await server.firestore.collection(COLLECTIONS.testimonies).doc(id).get()).data() as TestimonyDoc;
+}
+
+async function hasFingerprint(id: string): Promise<boolean> {
+  return (await server.firestore.collection(COLLECTIONS.proofFingerprints).doc(id).get()).exists;
 }
 
 async function storedObjects(prefix: string): Promise<string[]> {
@@ -163,6 +165,44 @@ describe("admin queue: proof review", () => {
       attempts: 1,
       matchingTestimonies: [],
     });
+  });
+
+  it("links a reused receipt to the Testimonies whose fingerprints it matches", async () => {
+    const shared = await receiptJpeg("Struk bersama");
+    const matching = doubtfulFacts({ clinicNameMatches: true });
+    const first = await postWithProof("satu@example.com", {
+      facts: matching,
+      receipt: shared,
+      overrides: { displayName: "Budi S." },
+    });
+    // The same picture read with another total: the file matches, the key does not.
+    const second = await postWithProof("dua@example.com", {
+      facts: doubtfulFacts({ clinicNameMatches: true, totalRupiah: 450_000 }),
+      receipt: shared,
+    });
+    // Another receipt at the same place, waiting for its name only, matches nothing.
+    await postWithProof("tiga@example.com", { facts: doubtfulFacts({ totalRupiah: 99_000 }) });
+    expect((await testimony(first)).proofOfVisit?.result).toBe("accepted");
+    const cookie = await adminCookie();
+
+    const proofs = (await queue(cookie)).items.filter((item) => item.kind === "proof");
+
+    expect(proofs.map((item) => [item.subjectId, item.proof?.reasons, item.proof?.matchingTestimonies])).toEqual(
+      expect.arrayContaining([
+        [
+          second,
+          ["possibleReuse"],
+          [{ testimonyId: first, placeId: PLACE, displayName: "Budi S.", status: "published" }],
+        ],
+        [expect.any(String), ["nameMismatch"], []],
+      ]),
+    );
+    expect(proofs).toHaveLength(2);
+
+    const html = await (await server.get("/admin", { headers: { cookie } })).text();
+    expect(html).toContain("Mirip bukti Testimoni lain di tempat ini");
+    expect(html).toContain("Testimoni dengan bukti yang mirip");
+    expect(html).toContain(`href="/tempat/${PLACE}#testimoni-${first}"`);
   });
 });
 
@@ -234,6 +274,8 @@ describe("admin accepts a proof", () => {
     expect(stored.status).toBe("published");
     expect(stored.proofOfVisit).toMatchObject({ result: "accepted", clinicNameOnProof: "Klinik Gigi Sentosa" });
     expect(stored.proofOfVisit?.reasons).toBeUndefined();
+    // An accepted receipt keeps its fingerprint, so it cannot prove another Testimony.
+    expect(await hasFingerprint(id)).toBe(true);
     expect(await verifiedVisitCount()).toBe(1);
     expect(await counter("verifiedVisits")).toBe(1);
     expect(await storedObjects("proof-of-visit/")).toEqual([]);
@@ -281,15 +323,17 @@ describe("admin accepts a proof", () => {
 describe("admin rejects a proof", () => {
   const NOTE = "Nama klinik di struk bukan klinik ini.";
 
-  it("only with a reason, which the author reads on Testimoni saya; the file goes and nothing is counted", async () => {
+  it("only with a reason, which the author reads on Testimoni saya; the file and fingerprint go and nothing is counted", async () => {
     const id = await postWithProof("pasien@example.com");
     const cookie = await adminCookie();
 
     expect((await act(cookie, { action: "rejectProof", subjectId: id })).status).toBe(400);
     expect((await testimony(id)).proofOfVisit?.result).toBe("pending");
     expect(await storedObjects(`proof-of-visit/${id}/`)).toHaveLength(1);
+    expect(await hasFingerprint(id)).toBe(true);
 
     expect((await act(cookie, { action: "rejectProof", subjectId: id, reason: NOTE })).status).toBe(200);
+    expect(await hasFingerprint(id)).toBe(false);
 
     const stored = await testimony(id);
     expect(stored).toMatchObject({ status: "published", verifiedVisit: false });

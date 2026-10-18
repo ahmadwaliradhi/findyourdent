@@ -1,7 +1,8 @@
 /**
  * The proof expiry job (spec 09, ADR-0011). A Proof of Visit the decision sent to the
  * team waits at most 7 days: one nobody decided by then becomes `rejected` (`expired`)
- * and its file is deleted. Waiting is never a way in, so nothing here ever accepts.
+ * and its file and Proof Fingerprint are deleted. Waiting is never a way in, so nothing
+ * here ever accepts.
  * The bucket's lifecycle rule on `proof-of-visit/` (infra/gcp/setup.sh) is the backstop
  * for the file.
  *
@@ -77,6 +78,8 @@ async function expireIfStillWaiting(firestore: Firestore, ref: DocumentReference
     const { reasons: _waitedFor, ...facts } = proof;
     const expired: ProofOfVisitRecord = { ...facts, result: "rejected", reason: "expired" };
     tx.update(ref, { proofOfVisit: expired });
+    // A rejected proof keeps no Proof Fingerprint (document id = the Testimony id).
+    tx.delete(firestore.collection(COLLECTIONS.proofFingerprints).doc(ref.id));
     return true;
   });
 }
