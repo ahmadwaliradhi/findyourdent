@@ -1,7 +1,7 @@
 # findyourdent
 An integrated agentic platform that connects dentists, dental clinics, and their patients seamlessly
 
-FindYourDent is a dentistry platform for Indonesia, built for the AI Builder Cup 2026. A Patient describes a dental problem and gets Guidance (urgency, likely category, journey, why prices vary, BPJS coverage), with Emergency Escalation to an IGD when red flags appear, then a Shortlist of nearby Providers with Testimonies and price signals. Specs are in [`docs/specs/`](docs/specs/README.md), decisions in [`docs/adr/`](docs/adr/), vocabulary in [`GLOSSARY.md`](GLOSSARY.md).
+FindYourDent is a dentistry platform for Indonesia, built for the AI Builder Cup 2026. A Patient describes a dental problem and gets Guidance (urgency, likely category, journey, why prices vary, BPJS coverage), with Emergency Escalation to an IGD when red flags appear, then a Shortlist of nearby Providers with Testimonies and price signals. Specs are in [`docs/specs/`](docs/specs/README.md), decisions in [`docs/adr/`](docs/adr/), vocabulary in [`GLOSSARY.md`](GLOSSARY.md). The Hack2skill submission's brief description is in [`docs/submission/brief-description.md`](docs/submission/brief-description.md).
 
 **Live demo:** https://findyourdent.com (also https://findyourdent.web.app; Firebase Hosting in front of Cloud Run in Jakarta; deploy with `infra/gcp/deploy.sh`, see [`infra/gcp/README.md`](infra/gcp/README.md)).
 
