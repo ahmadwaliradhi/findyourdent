@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { Firestore } from "firebase-admin/firestore";
 import { test as seeded, seedProvider, seedTestimony } from "./seeded";
+import { filterSection, openFilters } from "./support";
 
 // The Kecamatan level of the Region fields (spec 08): the select waits for a
 // kota/kabupaten, lists its kecamatan by name, and narrows the page to one. The listing
@@ -44,6 +45,8 @@ seeded(
     await expect(page.getByText(inMenteng.name)).toBeVisible();
 
     await page.goto("/direktori");
+    // Below desktop width the directory filters sit folded under "Filter" until one is applied.
+    await openFilters(page);
     const kecamatan = page.getByLabel("Kecamatan");
     await expect(kecamatan).toBeDisabled();
     await expect(kecamatan.locator("option:checked")).toHaveText("Pilih kota/kabupaten dulu");
@@ -80,8 +83,8 @@ seeded("Home: the feed filter's Kecamatan narrows the Testimonies to one", async
   await expect(page.getByText(mentengText)).toBeVisible();
 
   await page.goto("/");
-  // The feed filters sit folded under "Saring" until a filter is applied.
-  await page.locator("summary", { hasText: "Saring" }).click();
+  // The feed filters sit folded under "Filter" until a filter is applied.
+  await filterSection(page).locator("summary").click();
   await expect(page.getByLabel("Kecamatan")).toBeDisabled();
   await chooseKota(page);
   await page.getByLabel("Kecamatan").selectOption({ label: "Menteng" });

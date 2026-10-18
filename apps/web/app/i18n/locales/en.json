@@ -926,7 +926,8 @@
     "eyebrow": "About us",
     "title": "Understand your dental problem, then choose a dentist with confidence.",
     "lead": "FindYourDent is a dentistry platform for Indonesia. We help Patients understand their dental problem and choose a credible, affordable dentist, and we give dentists and clinics a public identity.",
-    "builtFor": "Built for the AI Builder Cup 2026.",
+    "builtFor": "Started at the AI Builder Cup 2026, for the people of Indonesia",
+    "flag": "Flag of Indonesia",
     "whatTitle": "What we do",
     "what": [
       {
@@ -998,9 +999,8 @@
     "start": "Start with your complaint"
   },
   "legal": {
-    "effective": "Effective from: [effective date]",
-    "updated": "Last updated: [date]",
-    "draft": "Draft for review by legal counsel before publishing.",
+    "effective": "Effective from: 18 October 2026",
+    "updated": "Last updated: 18 October 2026",
     "contents": "Contents",
     "questions": "Questions about this page?",
     "emailUs": "Email <email/>"
@@ -1014,7 +1014,7 @@
       {
         "title": "Who we are",
         "blocks": [
-          "FindYourDent is a dentistry platform for Indonesia operated by [legal entity name]. This policy explains what data we collect, why, how long we keep it, and your rights.",
+          "FindYourDent is a dentistry platform for Indonesia, run by the FindYourDent team. This policy explains what data we collect, why, how long we keep it, and your rights.",
           "For privacy questions, contact us at <email/>."
         ]
       },
@@ -1075,7 +1075,7 @@
         "title": "Your rights",
         "blocks": [
           "You can edit or delete a Testimony at any time from My Testimonies. Deleted text and photos are gone permanently.",
-          "To ask for a copy, correction or deletion of other data about you, email <email/>. We will reply within [time period]."
+          "To ask for a copy, correction or deletion of other data about you, email <email/>. We will reply within 30 working days."
         ]
       },
       {
@@ -1163,18 +1163,20 @@
       {
         "title": "Rights to content",
         "blocks": [
-          "You keep ownership of the Testimonies and photos you send. By sending them, you allow FindYourDent to show them on this service. [The scope of this permission needs legal review.]"
+          "You keep ownership of the Testimonies and photos you send. By sending them, you give FindYourDent a free, non-exclusive permission to store, show and moderate them on this service for as long as they are published. The permission ends when you or the team delete them."
         ]
       },
       {
         "title": "Limitation of liability",
         "blocks": [
-          "[This section needs to be written by legal counsel.] Treatment decisions remain yours and your dentist’s."
+          "FindYourDent is provided as is. To the extent permitted by Indonesian law, FindYourDent is not liable for losses arising from treatment decisions, from a practice’s services, or from information supplied by others, such as Testimonies, price lists and Google Maps details. Treatment decisions remain yours and your dentist’s."
         ]
       },
       {
         "title": "Governing law",
-        "blocks": ["These terms are governed by the laws of the Republic of Indonesia. [Needs legal review.]"]
+        "blocks": [
+          "These terms are governed by the laws of the Republic of Indonesia. Disputes are settled by consultation first; if that fails, through the competent court in Indonesia."
+        ]
       },
       {
         "title": "Changes and contact",

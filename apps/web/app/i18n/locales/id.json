@@ -298,7 +298,7 @@
     "writeBody": "Ceritakan pengalamanmu supaya pasien lain bisa memilih dengan tenang."
   },
   "filters": {
-    "title": "Saring",
+    "title": "Filter",
     "procedure": "Tindakan",
     "allProcedures": "Semua tindakan",
     "providerType": "Jenis tempat",
@@ -310,7 +310,7 @@
     },
     "verifiedOnly": "Hanya Kunjungan terbukti",
     "apply": "Terapkan",
-    "reset": "Hapus saringan"
+    "reset": "Hapus filter"
   },
   "regionFields": {
     "province": "Provinsi",
@@ -332,7 +332,7 @@
     "metaDescriptionArea": "Bandingkan klinik gigi, dokter gigi praktik pribadi dan rumah sakit di {{area}} yang sudah diceritakan pasien di FindYourDent: skor pelayanan, kebersihan, bahan dan alat, serta Kunjungan terbukti.",
     "title": "Direktori tempat perawatan gigi",
     "titleArea": "Tempat perawatan gigi di {{area}}",
-    "intro": "Klinik, dokter gigi praktik pribadi dan rumah sakit yang sudah diceritakan pasien di FindYourDent.",
+    "intro": "Klinik gigi, dokter gigi praktik pribadi dan rumah sakit yang sudah diceritakan pasien di FindYourDent.",
     "searchLabel": "Cari nama tempat",
     "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
     "sortLabel": "Urutkan",
@@ -926,7 +926,8 @@
     "eyebrow": "Tentang kami",
     "title": "Pahami keluhan gigi Anda, lalu pilih dokter gigi dengan tenang.",
     "lead": "FindYourDent adalah platform kedokteran gigi untuk Indonesia. Kami membantu Pasien memahami keluhan giginya dan memilih dokter gigi yang kredibel dan terjangkau, sekaligus memberi dokter gigi dan klinik identitas publik.",
-    "builtFor": "Dibangun untuk AI Builder Cup 2026.",
+    "builtFor": "Berawal dari AI Builder Cup 2026 untuk masyarakat Indonesia",
+    "flag": "Bendera Indonesia",
     "whatTitle": "Yang kami lakukan",
     "what": [
       {
@@ -998,9 +999,8 @@
     "start": "Mulai dari keluhan Anda"
   },
   "legal": {
-    "effective": "Berlaku sejak: [tanggal berlaku]",
-    "updated": "Terakhir diperbarui: [tanggal]",
-    "draft": "Draf untuk ditinjau penasihat hukum sebelum tayang.",
+    "effective": "Berlaku sejak: 18 Oktober 2026",
+    "updated": "Terakhir diperbarui: 18 Oktober 2026",
     "contents": "Daftar isi",
     "questions": "Pertanyaan tentang halaman ini?",
     "emailUs": "Kirim email ke <email/>"
@@ -1014,7 +1014,7 @@
       {
         "title": "Siapa kami",
         "blocks": [
-          "FindYourDent adalah platform kedokteran gigi untuk Indonesia yang dioperasikan oleh [nama badan hukum]. Kebijakan ini menjelaskan data apa yang kami kumpulkan, untuk apa, berapa lama disimpan, dan hak Anda.",
+          "FindYourDent adalah platform kedokteran gigi untuk Indonesia yang dikelola oleh tim FindYourDent. Kebijakan ini menjelaskan data apa yang kami kumpulkan, untuk apa, berapa lama disimpan, dan hak Anda.",
           "Untuk pertanyaan tentang privasi, hubungi kami di <email/>."
         ]
       },
@@ -1075,7 +1075,7 @@
         "title": "Hak Anda",
         "blocks": [
           "Anda bisa mengubah atau menghapus Testimoni kapan saja dari halaman Testimoni saya. Teks dan foto yang dihapus hilang permanen.",
-          "Untuk meminta salinan, perbaikan, atau penghapusan data lain tentang Anda, kirim email ke <email/>. Kami akan menjawab dalam [jangka waktu]."
+          "Untuk meminta salinan, perbaikan, atau penghapusan data lain tentang Anda, kirim email ke <email/>. Kami akan menjawab dalam 30 hari kerja."
         ]
       },
       {
@@ -1163,18 +1163,20 @@
       {
         "title": "Hak atas konten",
         "blocks": [
-          "Anda tetap memiliki Testimoni dan foto yang Anda kirim. Dengan mengirimnya, Anda memberi FindYourDent izin untuk menampilkannya di layanan ini. [Lingkup izin perlu ditinjau penasihat hukum.]"
+          "Anda tetap memiliki Testimoni dan foto yang Anda kirim. Dengan mengirimnya, Anda memberi FindYourDent izin gratis dan tidak eksklusif untuk menyimpan, menampilkan, dan memoderasinya di layanan ini selama masih tayang. Izin ini berakhir saat Anda atau tim menghapusnya."
         ]
       },
       {
         "title": "Batasan tanggung jawab",
         "blocks": [
-          "[Bagian ini perlu disusun oleh penasihat hukum.] Keputusan perawatan tetap ada di tangan Anda dan dokter gigi Anda."
+          "FindYourDent disediakan apa adanya. Sejauh diizinkan hukum Indonesia, FindYourDent tidak bertanggung jawab atas kerugian yang timbul dari keputusan perawatan, layanan praktik, atau informasi dari pihak lain, seperti Testimoni, daftar harga, dan detail Google Maps. Keputusan perawatan tetap ada di tangan Anda dan dokter gigi Anda."
         ]
       },
       {
         "title": "Hukum yang berlaku",
-        "blocks": ["Syarat ini tunduk pada hukum Republik Indonesia. [Perlu ditinjau penasihat hukum.]"]
+        "blocks": [
+          "Syarat ini tunduk pada hukum Republik Indonesia. Sengketa diselesaikan lebih dulu secara musyawarah; jika tidak berhasil, melalui pengadilan yang berwenang di Indonesia."
+        ]
       },
       {
         "title": "Perubahan dan kontak",

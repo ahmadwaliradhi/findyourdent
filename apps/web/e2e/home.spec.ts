@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { FAKE_FOLLOW_UP_TRIGGER, STUB_FOLLOW_UP_RESPONSE } from "../server/adapters/fakes.ts";
+import { filterSection } from "./support";
 
 test("home shows the consent line in Indonesian before the complaint box, and the toggle switches to English", async ({
   page,
@@ -105,4 +106,22 @@ test("a follow-up question takes focus, spans the page on desktop, keeps its sen
   const [, , noPain] = STUB_FOLLOW_UP_RESPONSE.quickReplies;
   await card.getByRole("button", { name: noPain }).click();
   await expect(page.getByText("Panduan untuk keluhan Anda")).toBeVisible();
+});
+
+test("the feed's Filter section starts folded, opens on a click, and starts open once a filter is applied", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const filter = filterSection(page);
+  const form = page.getByRole("form", { name: "Filter" });
+  await expect(filter).not.toHaveAttribute("open");
+  await expect(form).toBeHidden();
+
+  await filter.locator("summary").click();
+  await expect(filter).toHaveAttribute("open");
+  await expect(form).toBeVisible();
+
+  await page.goto("/?provinsi=31");
+  await expect(filter).toHaveAttribute("open");
+  await expect(form).toBeVisible();
 });

@@ -12,6 +12,7 @@ import {
   useNavigation,
   useSubmit,
 } from "react-router";
+import { FilterSection } from "~/components/filter-section";
 import { GuidanceResult, shareTokenOf } from "~/components/guidance-result";
 import { ImpactCounter } from "~/components/impact-counter";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
@@ -384,12 +385,9 @@ function Feed({ filters, kecamatan, feed }: { filters: ListingFilters; kecamatan
           <Link to="/direktori">{t("feed.seeDirectory")}</Link>
         </Button>
       </div>
-      <details className="rounded-lg border bg-card px-5 py-3" open={query !== ""}>
-        <summary className="flex min-h-touch cursor-pointer items-center font-semibold">{t("filters.title")}</summary>
-        <div className="pt-4 pb-2">
-          <ListingFiltersForm filters={filters} districts={kecamatan.options} action="/" />
-        </div>
-      </details>
+      <FilterSection open={query !== ""}>
+        <ListingFiltersForm filters={filters} districts={kecamatan.options} action="/" />
+      </FilterSection>
       {/* Keyed on the filters, so appended pages reset when the filters change. */}
       <FeedList key={query} query={query} feed={feed} />
     </section>

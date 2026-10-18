@@ -25,7 +25,7 @@ export function ListingFiltersForm(props: {
   id?: string;
   /**
    * "grid": two columns from the small breakpoint, labelled for screen readers only (the feed).
-   * "sidebar": one column in a card with a visible "Saring" heading (the Directory).
+   * "sidebar": one column; at desktop-unfolded width, in a card with a visible "Filter" heading (the Directory).
    */
   layout?: "grid" | "sidebar";
   children?: React.ReactNode;
@@ -60,12 +60,17 @@ export function ListingFiltersForm(props: {
       id={id}
       method="get"
       action={action}
-      className={cn("flex flex-col gap-4", sidebar && "rounded-lg border bg-card p-5 text-card-foreground")}
+      className={cn(
+        "flex flex-col gap-4",
+        sidebar &&
+          "desktop-unfolded:rounded-lg desktop-unfolded:border desktop-unfolded:bg-card desktop-unfolded:p-5 desktop-unfolded:text-card-foreground",
+      )}
       aria-label={sidebar ? undefined : t("filters.title")}
       aria-labelledby={sidebar ? headingId : undefined}
     >
       {sidebar && (
-        <h2 id={headingId} className="text-base leading-[22px] font-[650]">
+        // Folded, the Filter row above names it, so the heading only labels the form.
+        <h2 id={headingId} className="text-base leading-[22px] font-[650] sr-only desktop-unfolded:not-sr-only">
           {t("filters.title")}
         </h2>
       )}

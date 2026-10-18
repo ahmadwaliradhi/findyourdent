@@ -30,3 +30,14 @@ export async function guidanceAndShortlist(page: Page) {
   await page.getByRole("button", { name: "Cari", exact: true }).click();
   await expect(page.getByText("Klinik Gigi Senyum Contoh")).toBeVisible();
 }
+
+/** The folded "Filter" section over a listing (the feed, and the Directory below desktop width). */
+export function filterSection(page: Page) {
+  return page.locator("details", { has: page.locator("summary", { hasText: "Filter" }) });
+}
+
+/** Opens the Filter section where it is folded; on the desktop Directory it is already open. */
+export async function openFilters(page: Page) {
+  const summary = filterSection(page).locator("summary");
+  if (await summary.isVisible()) await summary.click();
+}
