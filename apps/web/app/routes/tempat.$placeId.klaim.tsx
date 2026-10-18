@@ -485,6 +485,7 @@ function OwnerFactsForm({ placeId, owner }: { placeId: string; owner: NonNullabl
           mode="pick"
           required
           withDistrict
+          stacked
           value={facts.region}
           onChange={set("region")}
           disabled={sending}
