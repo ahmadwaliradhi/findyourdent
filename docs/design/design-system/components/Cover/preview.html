@@ -1,0 +1,39 @@
+<!-- @dsCard height=288 -->
+<style>
+body{margin:0;background:var(--surface-100);font-family:var(--font-sans)}
+.cover{position:relative;width:960px;height:288px;overflow:hidden;background:var(--surface-100)}
+.cover svg{position:absolute;left:0;top:0}
+.brand{fill:var(--brand)}.ink{fill:var(--ink)}.deep{fill:var(--on-brand-tint)}.star{fill:var(--star)}.danger{fill:var(--danger)}
+.name{position:absolute;left:40px;bottom:56px;margin:0;font:700 68px/.95 var(--font-sans);letter-spacing:-.02em;color:var(--ink)}
+.tag{position:absolute;left:40px;bottom:28px;margin:0;font:400 14px/20px var(--font-sans);color:var(--ink-muted);width:400px}
+</style>
+<div class="cover">
+<svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+<!-- blocks: brand 160sq slab (radius-xl), ink 104sq, on-brand-tint tiles, star and danger kept to one 48 disc each; pitch 56 = space-12 + space-2
+ arrangement: staggered modular grid on x>=480, big slab top-left of the field, wide pills along the bottom
+ pattern: teardrops (three round corners, one square) = the pin of the logo built from the radius scale; chosen because the brand is a pin around a tooth and every UI shape is soft
+ steps: 48 unit, 8 gap (space-2), radii 20 (radius-xl) and 24 (half of 48) -->
+<rect class="brand" x="496" y="8" width="160" height="160" rx="20"/>
+<rect class="ink" x="664" y="8" width="104" height="104" rx="20"/>
+<path class="deep" d="M776 32A24 24 0 0 1 800 8A24 24 0 0 1 824 32V56H800A24 24 0 0 1 776 32Z"/>
+<path class="brand" d="M832 32A24 24 0 0 1 856 8A24 24 0 0 1 880 32V56H856A24 24 0 0 1 832 32Z"/>
+<circle class="star" cx="912" cy="32" r="24"/>
+<rect class="deep" x="776" y="64" width="104" height="104" rx="20"/>
+<circle class="ink" cx="912" cy="88" r="24"/>
+<path class="brand" d="M888 144A24 24 0 0 1 912 120A24 24 0 0 1 936 144V168H912A24 24 0 0 1 888 144Z"/>
+<path class="deep" d="M664 144A24 24 0 0 1 688 120A24 24 0 0 1 712 144V168H688A24 24 0 0 1 664 144Z"/>
+<circle class="brand" cx="744" cy="144" r="24"/>
+<path class="ink" d="M496 200A24 24 0 0 1 520 176A24 24 0 0 1 544 200V224H520A24 24 0 0 1 496 200Z"/>
+<circle class="deep" cx="576" cy="200" r="24"/>
+<circle class="danger" cx="632" cy="200" r="24"/>
+<rect class="brand" x="664" y="176" width="216" height="48" rx="24"/>
+<circle class="brand" cx="520" cy="256" r="24"/>
+<path class="deep" d="M552 256A24 24 0 0 1 576 232A24 24 0 0 1 600 256V280H576A24 24 0 0 1 552 256Z"/>
+<rect class="ink" x="608" y="232" width="104" height="48" rx="24"/>
+<path class="brand" d="M720 256A24 24 0 0 1 744 232A24 24 0 0 1 768 256V280H744A24 24 0 0 1 720 256Z"/>
+<circle class="deep" cx="800" cy="256" r="24"/>
+<path class="ink" d="M832 256A24 24 0 0 1 856 232A24 24 0 0 1 880 256V280H856A24 24 0 0 1 832 256Z"/>
+</svg>
+<h1 class="name">FindYourDent</h1>
+<p class="tag">Pahami keluhan gigi, temukan dokter gigi yang tepat.</p>
+</div>

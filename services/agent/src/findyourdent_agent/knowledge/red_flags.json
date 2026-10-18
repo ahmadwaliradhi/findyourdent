@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-17.3",
+  "version": "2026-10-18.1",
   "notes": [
     "Emergency Escalation red flags (spec 01), checked before any model call. A clinical reviewer extends this file; bump version on every change and add must-escalate or must-not-escalate cases to services/agent/tests/test_emergency_escalation.py.",
     "Matching is on normalised words: lower case, no accents or apostrophes, repeated letters collapsed (bengkaaak = bengkak, tinggi = tingi), 'gigi2' = 'gigi'. Write phrases in plain spelling; misspellings and slang go in synonyms.",
@@ -192,7 +192,11 @@
     "knocks": "knocked",
     "avulsed": "knocked out",
     "avulsion": "knocked out",
-    "teeth": "tooth"
+    "teeth": "tooth",
+
+    "ludwigs": "ludwig",
+    "cellulitis": "selulitis",
+    "selulitisnya": "selulitis"
   },
   "flags": {
     "facial_or_neck_swelling": {
@@ -208,7 +212,10 @@
         "swollen cheek", "cheek swollen",
         "swollen jaw", "jaw swollen",
         "swollen neck", "neck swollen",
-        "swollen under jaw"
+        "swollen under jaw",
+        "selulitis wajah", "selulitis pipi", "selulitis leher", "selulitis rahang",
+        "wajah selulitis", "pipi selulitis", "leher selulitis",
+        "facial selulitis", "selulitis face", "selulitis neck", "selulitis jaw"
       ],
       "max_gap": 5
     },
@@ -222,7 +229,9 @@
     "difficulty_swallowing": {
       "phrases": [
         "susah menelan", "tidak bisa menelan", "menelan susah", "ludah tidak bisa menelan",
-        "sakit menelan", "menelan sakit",
+        "sakit menelan", "menelan sakit", "menelan tidak bisa",
+        "menelan buka mulut susah", "menelan buka mulut tidak bisa",
+        "angina ludwig", "ludwig angina",
         "difficulty swallow", "cannot swallow", "can not swallow", "pain swallow", "swallow pain"
       ]
     },
@@ -237,8 +246,9 @@
       "phrases": [
         "tidak bisa buka mulut", "susah buka mulut", "mulut tidak bisa buka",
         "mulut susah buka", "mulut terkunci", "rahang terkunci",
+        "buka mulut susah", "buka mulut tidak bisa", "trismus",
         "cannot open mouth", "can not open mouth", "difficulty open mouth",
-        "mouth cannot open", "mouth will not open", "lockjaw", "jaw locked", "locked jaw"
+        "mouth cannot open", "mouth will not open", "mouth difficulty open", "lockjaw", "jaw locked", "locked jaw"
       ]
     },
     "uncontrolled_bleeding": {

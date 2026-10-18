@@ -86,6 +86,10 @@ _Avoid_: Search results, directory, recommendations
 The first-level health facility a BPJS Kesehatan member is registered with; the member's covered dental care happens there or at its partner dentist.
 _Avoid_: BPJS clinic, faskes (unqualified)
 
+**Payment Method**:
+How a Patient paid for the visit a Testimony describes: Pribadi (out of pocket), BPJS, or Asuransi swasta with the insurer named. It is a fact about that visit, never a claim about what a Provider accepts; dental plafon belongs to the Patient's policy and is never shown.
+_Avoid_: Accepts BPJS, menerima BPJS, insurance partner, plafon (as a Provider fact)
+
 ## Dental terms
 
 The words Patients and dentists use for teeth, conditions and treatments. Each headword is the word a Patient is most likely to say; clinical and English synonyms follow in brackets. Being listed here does not make a condition an Emergency Escalation red flag.

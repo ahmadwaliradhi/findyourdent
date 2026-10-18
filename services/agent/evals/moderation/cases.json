@@ -1,8 +1,8 @@
 {
   "labelling": {
-    "labeller": null,
-    "reviewedOn": null,
-    "status": "draft"
+    "labeller": "ahmadwaliradhi",
+    "reviewedOn": "2026-10-18",
+    "status": "team-reviewed"
   },
   "gates": {
     "maxFalsePublishes": 0,

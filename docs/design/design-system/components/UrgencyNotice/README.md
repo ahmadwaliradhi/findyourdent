@@ -1,0 +1,3 @@
+UrgencyNotice shows how urgent the Guidance is, using the four tiers `darurat`, `segera`, `terjadwal` and `rutin`. Each tier has its own icon, color pair and a label plus a one-line instruction, so the tier is readable without color.
+
+The consumer provides `tier`, `label` and `description` from the translation files (for example "Segera" and "Temui dokter gigi dalam 1 sampai 3 hari"). Place it first inside the Guidance card, directly under the "Urgensi" eyebrow. `darurat` renders with `role="alert"`. Don't invent more tiers, don't downgrade a tier's styling to look calmer, and don't show it without its description.

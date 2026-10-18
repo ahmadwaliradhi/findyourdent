@@ -1,0 +1,8 @@
+<!-- @dsCard group="Trust" height=420 subtitle="Feed card: provider, aspect ratings, excerpt, price paid" -->
+<style>body{margin:0;padding:16px;background:var(--surface-100);font-family:var(--font-sans)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.col{display:flex;flex-direction:column;gap:12px;max-width:420px}</style>
+<div id="root"></div>
+<script>
+var F=window.FYD,h=React.createElement;
+function App(){return h('div',{style:{maxWidth:460}},h(F.TestimonyCard,{providerName:'Klinik Gigi Contoh Senyum',meta:'Klinik · Kota Bandung, Jawa Barat',verified:true,ratings:[{label:'Pelayanan',score:5},{label:'Kebersihan',score:4},{label:'Bahan & alat',score:4}],ratingsLabel:'Nilai per aspek',excerpt:'Dokternya menjelaskan pilihan perawatan dengan sabar dan tidak memaksa tindakan yang mahal. Ruang tunggu bersih.',procedure:'Tambal gigi',price:'Rp 350.000',byline:'Mei 2026 · oleh Contoh P.'}))}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>

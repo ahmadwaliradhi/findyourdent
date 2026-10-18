@@ -1,12 +1,12 @@
 ---
-title: "Spec 07: Proven Testimonies and buzzer defence"
+title: "Spec 09: Proven Testimonies and buzzer defence"
 labels: [ready-for-agent]
 owner: B (web) for scoring, Proof Fingerprints, admin queue and detection; A (agent) for the Proof of Visit extraction in Moderation
 depends_on: ["02", "03", "04"]
 cut_order: part 1 never cut; part 2 (detection and Testimony Policy Violations) follows the hackathon build
 ---
 
-# Spec 07: Proven Testimonies and buzzer defence
+# Spec 09: Proven Testimonies and buzzer defence
 
 Written 18 October 2026 from a grilling session. Decision recorded in [ADR-0011](../adr/0011-only-proven-testimonies-count.md). Part 1 changes rules in specs 02, 03 and 04; where they disagree, this spec wins.
 

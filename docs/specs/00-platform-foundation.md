@@ -14,7 +14,7 @@ Every FindYourDent feature (Guidance, Shortlist, Testimonies, the feed, Claims) 
 
 ## Solution
 
-A Patient opens findyourdent.com (until the domain is bought, the default Firebase Hosting or Cloud Run URL) and gets a fast, mobile-first, Indonesian-first web app with an English toggle, a one-line consent notice before sharing any symptom, and Google sign-in only when they post a Testimony or make a Claim. Behind it, two Cloud Run services (web and agent) run in Jakarta, data stays in Jakarta, Gemini is called on the global endpoint with that disclosed, Google keys never reach the browser, and bots are stopped by App Check, rate limits and hard daily caps on every paid API before they can cost money.
+A Patient opens findyourdent.com and gets a fast, mobile-first, Indonesian-first web app with an English toggle, a one-line consent notice before sharing any symptom, and Google sign-in only when they post a Testimony or make a Claim. Behind it, two Cloud Run services (web and agent) run in Jakarta, data stays in Jakarta, Gemini is called on the global endpoint with that disclosed, Google keys never reach the browser, and bots are stopped by App Check, rate limits and hard daily caps on every paid API before they can cost money.
 
 ## User Stories
 

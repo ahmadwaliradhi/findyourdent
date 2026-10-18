@@ -1,0 +1,11 @@
+<!-- @dsCard group="Actions" height=250 subtitle="Primary, secondary, outline, ghost, danger; sizes; loading; disabled" -->
+<style>body{margin:0;padding:16px;background:var(--surface-100);font-family:var(--font-sans)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.col{display:flex;flex-direction:column;gap:12px;max-width:420px}</style>
+<div id="root"></div>
+<script>
+var F=window.FYD,h=React.createElement;
+function App(){return h('div',null,
+ h('div',{className:'row'},h(F.Button,{},'Lihat panduan'),h(F.Button,{variant:'secondary'},'Simpan'),h(F.Button,{variant:'outline'},'Batal'),h(F.Button,{variant:'ghost'},'Lewati'),h(F.Button,{variant:'danger'},'Hapus testimoni')),
+ h('div',{className:'row'},h(F.Button,{size:'sm'},'Kecil 44px'),h(F.Button,{},'Standar 48px'),h(F.Button,{size:'lg',icon:'mic'},'Rekam pesan suara')),
+ h('div',{className:'row'},h(F.Button,{loading:true},'Sedang memproses…'),h(F.Button,{disabled:true},'Tidak tersedia'),h(F.Button,{variant:'outline',icon:'map-pin'},'Cari IGD terdekat')))}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>

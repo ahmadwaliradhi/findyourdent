@@ -1,0 +1,111 @@
+/* FindYourDent component styles. Every value comes from tokens.css. */
+.fyd, .fyd * { box-sizing: border-box; }
+.fyd { font-family: var(--font-sans); color: var(--ink); }
+
+/* Focus: one solid ring for everything interactive. */
+.fyd-btn:focus-visible, .fyd-input:focus-visible, .fyd-link:focus-visible, .fyd-chip:focus-visible {
+  outline: 3px solid var(--focus-ring); outline-offset: 2px;
+}
+
+/* Button */
+.fyd-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 48px; min-width: var(--touch-target); padding: 0 var(--space-5);
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  font: 600 16px/1.25 var(--font-sans); letter-spacing: 0; text-decoration: none; white-space: nowrap;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background-color .15s ease, border-color .15s ease, transform .1s ease;
+}
+.fyd-btn:active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(1px); }
+.fyd-btn--sm { min-height: var(--touch-target); padding: 0 var(--space-4); font-size: 14px; }
+.fyd-btn--lg { min-height: 56px; padding: 0 var(--space-6); font-size: 17px; }
+.fyd-btn--block { display: flex; width: 100%; }
+.fyd-btn--primary { background: var(--brand); color: var(--on-brand); box-shadow: var(--shadow-xs); }
+.fyd-btn--primary:hover { background: var(--brand-hover); }
+.fyd-btn--secondary { background: var(--brand-tint); color: var(--on-brand-tint); }
+.fyd-btn--secondary:hover { border-color: var(--brand); }
+.fyd-btn--outline { background: var(--surface-200); color: var(--ink); border-color: var(--border-strong); }
+.fyd-btn--outline:hover { border-color: var(--ink); }
+.fyd-btn--ghost { background: transparent; color: var(--brand); }
+.fyd-btn--ghost:hover { background: var(--brand-tint); }
+.fyd-btn--danger { background: var(--danger); color: var(--on-danger); box-shadow: var(--shadow-xs); }
+.fyd-btn--danger:hover { filter: brightness(.92); }
+.fyd-btn:disabled, .fyd-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.fyd-btn[aria-busy="true"] { cursor: progress; }
+.fyd-spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: fyd-rot .7s linear infinite; }
+@keyframes fyd-rot { to { transform: rotate(360deg); } }
+
+/* Icon */
+.fyd-icon { flex: none; width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Badge */
+.fyd-badge {
+  display: inline-flex; align-items: center; gap: var(--space-1); width: fit-content;
+  padding: 2px var(--space-2); border: 1px solid transparent; border-radius: var(--radius-sm);
+  font: 600 12px/16px var(--font-sans); letter-spacing: .01em; white-space: nowrap;
+}
+.fyd-badge--neutral { background: var(--surface-300); color: var(--ink); }
+.fyd-badge--brand { background: var(--brand-tint); color: var(--on-brand-tint); }
+.fyd-badge--success { background: var(--success-soft); color: var(--success); border-color: var(--success-line); }
+.fyd-badge--warning { background: var(--warning-soft); color: var(--warning); border-color: var(--warning-line); }
+.fyd-badge--danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger-line); }
+.fyd-badge--info { background: var(--info-soft); color: var(--info); border-color: var(--info-line); }
+.fyd-badge--outline { background: transparent; color: var(--ink); border-color: var(--border-strong); }
+
+/* Card */
+.fyd-card { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5); background: var(--surface-200); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.fyd-card--flat { box-shadow: none; }
+.fyd-card--emergency { background: var(--danger-soft); border: 2px solid var(--danger-line); box-shadow: none; }
+.fyd-card__title { margin: 0; font: 650 20px/26px var(--font-sans); letter-spacing: -.005em; }
+.fyd-card--emergency .fyd-card__title { color: var(--danger); font-size: 24px; line-height: 30px; }
+.fyd-card__desc { margin: 0; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.fyd-card__head { display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* Field */
+.fyd-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.fyd-label { font: 600 14px/20px var(--font-sans); color: var(--ink); }
+.fyd-input {
+  width: 100%; min-height: 112px; padding: var(--space-3); resize: vertical;
+  background: var(--surface-200); color: var(--ink); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  font: 400 16px/24px var(--font-sans); box-shadow: var(--shadow-xs);
+}
+.fyd-input::placeholder { color: var(--ink-muted); }
+.fyd-input:focus-visible { border-color: var(--brand); outline-offset: 0; }
+.fyd-input[aria-invalid="true"] { border-color: var(--danger); border-width: 2px; }
+.fyd-input:disabled { opacity: .55; cursor: not-allowed; }
+.fyd-hint { margin: 0; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.fyd-error { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; font: 500 14px/20px var(--font-sans); color: var(--danger); }
+.fyd-error .fyd-icon { margin-top: 2px; }
+
+/* Urgency notice */
+.fyd-notice { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border: 1px solid transparent; border-radius: var(--radius-md); }
+.fyd-notice .fyd-icon { font-size: 22px; margin-top: 1px; }
+.fyd-notice__label { display: block; font: 700 16px/22px var(--font-sans); }
+.fyd-notice__desc { display: block; font: 400 14px/20px var(--font-sans); }
+.fyd-notice--darurat { background: var(--danger); color: var(--on-danger); }
+.fyd-notice--segera { background: var(--warning-soft); border-color: var(--warning-line); color: var(--warning); }
+.fyd-notice--terjadwal { background: var(--brand-tint); color: var(--on-brand-tint); }
+.fyd-notice--rutin { background: var(--surface-300); color: var(--ink); }
+
+/* Testimony card */
+.fyd-testi { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); background: var(--surface-200); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.fyd-testi__head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); align-items: flex-start; }
+.fyd-testi__name { margin: 0; font: 650 20px/26px var(--font-sans); }
+.fyd-testi__name a { color: inherit; text-underline-offset: 4px; }
+.fyd-testi__meta { margin: 0; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.fyd-rates { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; }
+.fyd-rate { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2); background: var(--brand-tint); border-radius: var(--radius-md); }
+.fyd-rate dt { font: 500 12px/16px var(--font-sans); color: var(--on-brand-tint); }
+.fyd-rate dd { display: flex; align-items: center; gap: var(--space-1); margin: 0; font: 700 16px/20px var(--font-sans); color: var(--ink); font-variant-numeric: tabular-nums; }
+.fyd-rate .fyd-icon { color: var(--star); fill: var(--star); stroke: var(--star); }
+.fyd-testi__text { margin: 0; font: 400 16px/24px var(--font-sans); }
+.fyd-testi__facts { display: grid; grid-template-columns: auto 1fr; gap: 2px var(--space-2); margin: 0; font: 400 14px/20px var(--font-sans); }
+.fyd-testi__facts dt { color: var(--ink-muted); }
+.fyd-testi__facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.fyd-testi__foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.fyd-link { color: var(--brand); font-weight: 600; text-underline-offset: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fyd-btn, .fyd-input { transition: none; }
+  .fyd-spin { animation-duration: 2s; }
+}
