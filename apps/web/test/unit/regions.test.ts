@@ -1,6 +1,6 @@
 import districtList from "@findyourdent/contracts/data/districts.json";
 import { describe, expect, it } from "vitest";
-import { isValidRegion, regenciesOf } from "../../app/lib/regions.ts";
+import { isValidRegion, REGENCIES, regenciesOf } from "../../app/lib/regions.ts";
 
 describe("Region from the Kemendagri list", () => {
   it("accepts a province with one of its own kota/kabupaten", () => {
@@ -19,9 +19,14 @@ describe("Region from the Kemendagri list", () => {
   });
 
   it("accepts every kecamatan of the Kemendagri list inside its own kota/kabupaten", () => {
-    const provinceOf = (code: string) => code.slice(0, 2);
+    const provinceOf = new Map(REGENCIES.map((r) => [r.code, r.provinceCode] as const));
     const refused = districtList.districts.filter(
-      (d) => !isValidRegion({ provinceCode: provinceOf(d.code), regencyCode: d.regencyCode, districtCode: d.code }),
+      (d) =>
+        !isValidRegion({
+          provinceCode: provinceOf.get(d.regencyCode) ?? "",
+          regencyCode: d.regencyCode,
+          districtCode: d.code,
+        }),
     );
     expect(refused).toEqual([]);
   });

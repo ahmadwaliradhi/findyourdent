@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/districts.schema.json",
-  "source": "Kementerian Dalam Negeri (Kemendagri): Lampiran Keputusan Menteri Dalam Negeri Nomor 300.2.2-2138 Tahun 2025 tentang Pemberian dan Pemutakhiran Kode, Data Wilayah Administrasi Pemerintahan, dan Pulau, sebagaimana diubah dengan Keputusan Menteri Dalam Negeri Nomor 300.2.2-2430 Tahun 2025, the same decree as data/regions.json",
+  "source": "Kementerian Dalam Negeri (Kemendagri): Lampiran Keputusan Menteri Dalam Negeri Nomor 300.2.2-2138 Tahun 2025 tentang Pemberian dan Pemutakhiran Kode, Data Wilayah Administrasi Pemerintahan, dan Pulau, sebagaimana diubah dengan Keputusan Menteri Dalam Negeri Nomor 300.2.2-2430 Tahun 2025, the same decree as data/regions.json, as transcribed in cahyadsn/wilayah (see retrievedFrom)",
   "retrievedFrom": "https://github.com/cahyadsn/wilayah/blob/d68e8d5516f969d1905d0b2940f20034becb0db7/db/wilayah.sql",
   "retrievedOn": "2026-10-18",
-  "notes": "All 7285 kecamatan of Lampiran B, from the MIT-licensed transcription of Kepmendagri 300.2.2-2138/2025 in cahyadsn/wilayah (file db/wilayah.sql at the commit in retrievedFrom). Its 38 provinces and 514 kabupaten/kota match data/regions.json code for code and name for name (ignoring one trailing space in the source), and every one of the 514 has at least one kecamatan. Names are as given there, without a Kecamatan prefix. Desa/kelurahan are not included.",
+  "notes": "All 7285 kecamatan of Lampiran B, from the MIT-licensed transcription of Kepmendagri 300.2.2-2138/2025 in cahyadsn/wilayah (file db/wilayah.sql at the commit in retrievedFrom). Its 38 provinces and 514 kabupaten/kota match data/regions.json code for code and name for name (ignoring one trailing space in the source), and every one of the 514 has at least one kecamatan. Names are as given there, without a Kecamatan prefix, except 53.02.10 KI'E, written Ki'e like every other name. Per-province kecamatan counts were not checked against Lampiran A. Desa/kelurahan are not included.",
   "districts": [
     {
       "code": "11.01.01",
@@ -21603,7 +21603,7 @@
     {
       "code": "53.02.10",
       "regencyCode": "53.02",
-      "name": "KI'E"
+      "name": "Ki'e"
     },
     {
       "code": "53.02.11",

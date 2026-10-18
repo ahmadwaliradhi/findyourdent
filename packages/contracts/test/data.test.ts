@@ -3,7 +3,7 @@ import districtList from "../data/districts.json" with { type: "json" };
 import procedureList from "../data/procedures.json" with { type: "json" };
 import regionList from "../data/regions.json" with { type: "json" };
 import {
-  DISTRICTS,
+  type DistrictList,
   isProcedureCode,
   PROCEDURE_CODES,
   PROCEDURES,
@@ -118,6 +118,8 @@ describe("data/regions.json", () => {
 });
 
 describe("data/districts.json", () => {
+  const DISTRICTS = districtList as DistrictList;
+
   it("validates against its schema", () => {
     expect(validateDistrictList(districtList), JSON.stringify(validateDistrictList.errors)).toBe(true);
   });

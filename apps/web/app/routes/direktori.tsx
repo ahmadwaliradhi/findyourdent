@@ -35,7 +35,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return { filters, q, sort, rows, url: `${url.origin}${url.pathname}${url.search}` };
 }
 
-/** The most specific named area of the filters (kecamatan names are not loaded in the browser yet). */
+/** The most specific named Region level of the filters (kecamatan names are not loaded in the browser yet). */
 function areaName(filters: ListingFilters | undefined): string | null {
   if (filters?.regencyCode) return regencyName(filters.regencyCode);
   if (filters?.provinceCode) return provinceName(filters.provinceCode);

@@ -3,7 +3,6 @@
 // (draft 2020-12 + formats), and the shared data files are typed here.
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import addFormatsModule from "ajv-formats";
-import districtListJson from "../data/districts.json" with { type: "json" };
 import procedureListJson from "../data/procedures.json" with { type: "json" };
 import regionListJson from "../data/regions.json" with { type: "json" };
 import districtsSchema from "../schemas/districts.schema.json" with { type: "json" };
@@ -96,12 +95,8 @@ export function isProcedureCode(code: string): boolean {
 /**
  * Kemendagri region codes (data/regions.json): all `provinces` and
  * `regencies` (kabupaten/kota) from Kepmendagri 300.2.2-2138/2025 as amended
- * by 300.2.2-2430/2025. Kecamatan are in DISTRICTS.
+ * by 300.2.2-2430/2025. Kecamatan are in data/districts.json, imported directly
+ * (`@findyourdent/contracts/data/districts.json`) where needed: at about 700 KB it
+ * stays out of this index.
  */
 export const REGIONS: RegionList = regionListJson as RegionList;
-
-/**
- * Kemendagri kecamatan codes (data/districts.json), each under one of the
- * REGIONS kota/kabupaten, from the same decree.
- */
-export const DISTRICTS: DistrictList = districtListJson as DistrictList;
