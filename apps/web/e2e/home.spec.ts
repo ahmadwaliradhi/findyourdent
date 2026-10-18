@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { filterSection } from "./support";
 
 test("home shows the consent line in Indonesian before the complaint box, and the toggle switches to English", async ({
   page,
@@ -68,7 +69,7 @@ test("the feed's Filter section starts folded, opens on a click, and starts open
   page,
 }) => {
   await page.goto("/");
-  const filter = page.locator("details", { has: page.locator("summary", { hasText: "Filter" }) });
+  const filter = filterSection(page);
   const form = page.getByRole("form", { name: "Filter" });
   await expect(filter).not.toHaveAttribute("open");
   await expect(form).toBeHidden();

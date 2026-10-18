@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/*
+ * Desktop width in a browser that can style ::details-content: there a FilterSection with
+ * unfoldOnDesktop drops its fold and its children join the page grid. Older browsers keep the
+ * phone layout at every width, so the Directory's desktop placement uses this, not desktop:.
+ */
+@custom-variant desktop-unfolded {
+  @supports selector(::details-content) {
+    @variant desktop {
+      @slot;
+    }
+  }
+}
+
 /* Figtree, self-hosted from the design package (SIL Open Font License 1.1) and preloaded in root.tsx. */
 @font-face {
   font-family: "Figtree";
