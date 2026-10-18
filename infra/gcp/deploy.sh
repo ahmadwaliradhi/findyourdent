@@ -14,6 +14,7 @@ REGION="${REGION:-asia-southeast2}"
 REPOSITORY="${REPOSITORY:-findyourdent}"
 WEB_SERVICE=fyd-web
 COORDINATES_JOB=coordinates-refresh
+RECOMPUTE_JOB=aggregates-recompute
 PROOF_EXPIRY_JOB=proof-expiry
 AGENT_SERVICE=fyd-agent
 WEB_SA="fyd-web@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -317,6 +318,19 @@ gcloud scheduler jobs "$verb" http "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" -
   --oauth-service-account-email="$SCHEDULER_SA" \
   --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
 echo "    ${PROOF_EXPIRY_JOB}: 0 * * * * (Asia/Jakarta)"
+
+# Release recompute (spec 09, ADR-0011): every Listed Provider's aggregates rebuilt
+# under "only Proven Testimonies count" (apps/web/server/aggregates-recompute.ts).
+# One-off, so no Scheduler job: run it by hand once this deploy is live (README,
+# "Spec 09 release"). Redeployed with every web image so a rerun uses current code.
+log "Aggregates recompute job"
+gcloud run jobs deploy "$RECOMPUTE_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --image "$IMAGE" --service-account "$WEB_SA" \
+  --command=node --args=recompute-aggregates.ts \
+  --tasks=1 --max-retries=1 --task-timeout=30m --cpu=1 --memory=512Mi \
+  --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
+  --quiet >/dev/null
+echo "    ${RECOMPUTE_JOB}: run once by hand: gcloud run jobs execute ${RECOMPUTE_JOB} --region ${REGION} --wait"
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).
 log "Firebase Hosting"

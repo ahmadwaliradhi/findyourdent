@@ -306,7 +306,6 @@
         "hygiene": "Hygiene",
         "materialsEquipment": "Materials and equipment"
       },
-      "verified": "Verified visit",
       "visitMonth": "Visited {{month}}",
       "procedure": "Procedure",
       "price": "Price paid",
@@ -357,7 +356,7 @@
     "searchPlaceholder": "For example: Klinik Gigi Sehat",
     "sortLabel": "Sort by",
     "sort": {
-      "testimoni": "Most Testimonies",
+      "testimoni": "Most verified Testimonies",
       "skor": "Highest score",
       "jarak": "Nearest"
     },
@@ -374,7 +373,6 @@
       "materialsEquipment": "Materials and equipment"
     },
     "score": "Score {{score}}",
-    "noRatings": "No scores yet",
     "testimonies_one": "{{count}} Testimony",
     "testimonies": "{{count}} Testimonies",
     "verifiedVisits": "{{count}} Kunjungan terbukti",
@@ -396,9 +394,16 @@
     "listedProviders": "Listed places",
     "guidanceSessionsCompleted": "Guidance sessions"
   },
+  "proof": {
+    "proven": "Verified visit",
+    "unproven": "Not yet verified",
+    "notEnough": "Not enough verified Testimonies yet",
+    "provenCount_one": "{{count}} verified Testimony",
+    "provenCount": "{{count}} verified Testimonies"
+  },
   "provider": {
     "title": "{{name}}, {{area}}",
-    "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} testimonies.",
+    "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} verified testimonies.",
     "metaDescriptionNoScores": "{{name}} in {{area}}. Read patient testimonies and share your own on FindYourDent.",
     "type": {
       "klinik": "Dental clinic",
@@ -413,12 +418,10 @@
       "hygiene": "Hygiene",
       "materialsEquipment": "Materials and equipment"
     },
-    "noScores": "No ratings yet.",
     "testimonyCount": "{{count}} testimonies",
     "verifiedVisitCount": "{{count}} verified visits",
     "testimoniesTitle": "Patient testimonies",
     "noTestimonies": "No published testimonies for this place yet.",
-    "verifiedVisit": "Verified visit",
     "visitMonth": "Visited {{month}}",
     "ratingsLabel": "Ratings for {{name}}",
     "metaDescriptionUnlisted": "Dental practice information on FindYourDent.",
@@ -456,7 +459,7 @@
     "priceListConfirmed": "Confirmed by the owner on {{date}}",
     "possiblyOutdated": "may have changed",
     "address": "Address",
-    "scoreScale": "Scale of 1 to 5, from published Testimonies."
+    "scoreScale": "Scale of 1 to 5, from verified Testimonies only."
   },
   "shortlist": {
     "reason": {
@@ -464,7 +467,7 @@
       "emergencyNoDistance": "Hospital with an emergency department in the area you typed",
       "hospitalFit": "Hospital, suited to {{procedure}}",
       "listedService": "Lists {{procedure}} among its services",
-      "testimonies": "Testimony score {{score}} from {{count}} patients",
+      "testimonies": "Testimony score {{score}} from {{count}} verified Testimonies",
       "distance": "About {{distance}} from you",
       "procedure": "Can handle {{procedure}}",
       "generic": "Dentist near you"
@@ -481,7 +484,7 @@
     "search": "Search",
     "searching": "Searching…",
     "privacy": "Your location or area is used only for this search and is not stored.",
-    "rankingNote": "Ranked by fit with your complaint, Testimonies, price and distance. Never by payment.",
+    "rankingNote": "Ranked by fit with your complaint, verified Testimonies, price and distance. Never by payment.",
     "fallbackNote": "Today's Google search limit has been reached. These are dentists listed on FindYourDent near you.",
     "empty": "No matching dentists near you yet.",
     "mapsSearch": "Search in Google Maps",
@@ -494,7 +497,9 @@
     "estimated": "perkiraan (estimated)",
     "claimed": "Claimed by owner",
     "testimoniesNone": "No Testimonies yet",
-    "testimoniesCount": "{{count}} Testimonies, {{verified}} proven visits",
+    "testimoniesTotal_one": "{{count}} Testimony",
+    "testimoniesTotal": "{{count}} Testimonies",
+    "testimoniesCount": "{{count}} Testimonies, {{verified}} verified visits",
     "aspects": "Service {{service}} · Hygiene {{hygiene}} · Materials and equipment {{materials}}",
     "priceSource": {
       "testimonies": "Price paid by patients (median)",
@@ -538,7 +543,7 @@
     "photosReattach": "Photos and proof of visit are not kept in the draft. Choose them again before sending.",
     "filesTitle": "Photos and proof of visit",
     "proofLabel": "Proof of visit (optional, private)",
-    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown: it is checked and then deleted right away. If it matches, your Testimony gets the Verified visit mark.",
+    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown. Only Testimonies with an accepted proof of visit count toward the score and show Verified visit. The file is deleted after the check, or within 7 days if our team needs to look at it.",
     "proofAdd": "Choose proof file",
     "proofRemove": "Remove proof of visit",
     "displayNameLabel": "Public name",

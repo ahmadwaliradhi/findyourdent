@@ -306,7 +306,6 @@
         "hygiene": "Kebersihan",
         "materialsEquipment": "Bahan dan peralatan"
       },
-      "verified": "Kunjungan terbukti",
       "visitMonth": "Kunjungan {{month}}",
       "procedure": "Tindakan",
       "price": "Biaya dibayar",
@@ -357,7 +356,7 @@
     "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
     "sortLabel": "Urutkan",
     "sort": {
-      "testimoni": "Testimoni terbanyak",
+      "testimoni": "Testimoni terbukti terbanyak",
       "skor": "Skor tertinggi",
       "jarak": "Jarak terdekat"
     },
@@ -374,7 +373,6 @@
       "materialsEquipment": "Bahan dan alat"
     },
     "score": "Skor {{score}}",
-    "noRatings": "Belum ada skor",
     "testimonies_one": "{{count}} testimoni",
     "testimonies": "{{count}} testimoni",
     "verifiedVisits": "{{count}} Kunjungan terbukti",
@@ -396,9 +394,16 @@
     "listedProviders": "Tempat terdaftar",
     "guidanceSessionsCompleted": "Sesi panduan"
   },
+  "proof": {
+    "proven": "Kunjungan terbukti",
+    "unproven": "Belum terbukti",
+    "notEnough": "Belum cukup testimoni terbukti",
+    "provenCount_one": "{{count}} testimoni terbukti",
+    "provenCount": "{{count}} testimoni terbukti"
+  },
   "provider": {
     "title": "{{name}}, {{area}}",
-    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni.",
+    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni terbukti.",
     "metaDescriptionNoScores": "{{name}} di {{area}}. Baca testimoni pasien dan ceritakan pengalamanmu di FindYourDent.",
     "type": {
       "klinik": "Klinik Gigi",
@@ -413,12 +418,10 @@
       "hygiene": "Kebersihan",
       "materialsEquipment": "Bahan dan alat"
     },
-    "noScores": "Belum ada penilaian.",
     "testimonyCount": "{{count}} testimoni",
     "verifiedVisitCount": "{{count}} kunjungan terbukti",
     "testimoniesTitle": "Testimoni pasien",
     "noTestimonies": "Belum ada testimoni yang terbit untuk tempat ini.",
-    "verifiedVisit": "Kunjungan terbukti",
     "visitMonth": "Berkunjung {{month}}",
     "ratingsLabel": "Penilaian {{name}}",
     "metaDescriptionUnlisted": "Info tempat praktik dokter gigi di FindYourDent.",
@@ -456,7 +459,7 @@
     "priceListConfirmed": "Dikonfirmasi pemilik {{date}}",
     "possiblyOutdated": "mungkin sudah berubah",
     "address": "Alamat",
-    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit."
+    "scoreScale": "Skala 1 sampai 5, hanya dari Testimoni terbukti."
   },
   "shortlist": {
     "reason": {
@@ -464,7 +467,7 @@
       "emergencyNoDistance": "Rumah sakit dengan IGD di area yang Anda tulis",
       "hospitalFit": "Rumah sakit, sesuai untuk {{procedure}}",
       "listedService": "Mencantumkan layanan {{procedure}}",
-      "testimonies": "Nilai Testimoni {{score}} dari {{count}} pasien",
+      "testimonies": "Nilai Testimoni {{score}} dari {{count}} Testimoni terbukti",
       "distance": "Sekitar {{distance}} dari lokasi Anda",
       "procedure": "Dapat menangani {{procedure}}",
       "generic": "Dokter gigi di dekat Anda"
@@ -481,7 +484,7 @@
     "search": "Cari",
     "searching": "Mencari…",
     "privacy": "Lokasi atau area Anda hanya dipakai untuk pencarian ini dan tidak disimpan.",
-    "rankingNote": "Diurutkan menurut kecocokan dengan keluhan, Testimoni, harga, dan jarak. Tidak pernah berdasarkan bayaran.",
+    "rankingNote": "Diurutkan menurut kecocokan dengan keluhan, Testimoni terbukti, harga, dan jarak. Tidak pernah berdasarkan bayaran.",
     "fallbackNote": "Batas pencarian Google hari ini sudah tercapai. Berikut dokter gigi yang terdaftar di FindYourDent di sekitar Anda.",
     "empty": "Belum ada dokter gigi yang cocok di sekitar Anda.",
     "mapsSearch": "Cari di Google Maps",
@@ -494,6 +497,8 @@
     "estimated": "perkiraan",
     "claimed": "Diklaim pemilik",
     "testimoniesNone": "Belum ada Testimoni",
+    "testimoniesTotal_one": "{{count}} Testimoni",
+    "testimoniesTotal": "{{count}} Testimoni",
     "testimoniesCount": "{{count}} Testimoni, {{verified}} Kunjungan terbukti",
     "aspects": "Pelayanan {{service}} · Kebersihan {{hygiene}} · Bahan dan alat {{materials}}",
     "priceSource": {
@@ -538,7 +543,7 @@
     "photosReattach": "Foto dan bukti kunjungan tidak ikut tersimpan di draf. Pilih lagi sebelum mengirim.",
     "filesTitle": "Foto dan bukti kunjungan",
     "proofLabel": "Bukti kunjungan (opsional, pribadi)",
-    "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan: hanya diperiksa lalu langsung dihapus. Jika cocok, Testimoni Anda diberi tanda Kunjungan terbukti.",
+    "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan. Hanya Testimoni dengan bukti kunjungan yang diterima yang dihitung dalam nilai dan ditandai Kunjungan terbukti. File bukti dihapus setelah diperiksa, atau paling lama 7 hari jika tim kami perlu melihatnya.",
     "proofAdd": "Pilih file bukti",
     "proofRemove": "Hapus bukti kunjungan",
     "displayNameLabel": "Nama yang ditampilkan",

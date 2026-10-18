@@ -4,6 +4,7 @@ import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
+import { NotEnoughProven, ProofLabel } from "~/components/proof-label";
 import { ReportButton } from "~/components/report-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -64,7 +65,7 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
         service: formatScore(provider.averages.service, language),
         hygiene: formatScore(provider.averages.hygiene, language),
         materials: formatScore(provider.averages.materialsEquipment, language),
-        count: provider.testimonyCount,
+        count: provider.verifiedVisitCount,
       })
     : t("provider.metaDescriptionNoScores", { name: provider.name, area: provider.area });
   return [
@@ -257,8 +258,9 @@ function Aspects({ provider, language }: { provider: ProviderSummary; language: 
           {t("provider.aspectsTitle")}
         </h2>
         <span className="text-sm text-muted-foreground">
-          {t("provider.testimonyCount", { count: provider.testimonyCount })} ·{" "}
-          {t("provider.verifiedVisitCount", { count: provider.verifiedVisitCount })}
+          {t("provider.testimonyCount", { count: provider.testimonyCount })}
+          {/* Without averages the Proven count is in the card body. */}
+          {averages && ` · ${t("provider.verifiedVisitCount", { count: provider.verifiedVisitCount })}`}
         </span>
       </div>
       {averages ? (
@@ -284,7 +286,7 @@ function Aspects({ provider, language }: { provider: ProviderSummary; language: 
           <p className="text-xs font-medium text-muted-foreground">{t("provider.scoreScale")}</p>
         </>
       ) : (
-        <p className="text-muted-foreground">{t("provider.noScores")}</p>
+        <NotEnoughProven count={provider.verifiedVisitCount} className="text-muted-foreground" />
       )}
     </Card>
   );
@@ -467,7 +469,7 @@ function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; la
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-semibold">{testimony.displayName}</span>
-          {testimony.verifiedVisit && <Badge variant="success">{t("provider.verifiedVisit")}</Badge>}
+          <ProofLabel proven={testimony.verifiedVisit} />
         </div>
         <p className="text-sm text-muted-foreground">
           {t("provider.visitMonth", { month: formatVisitMonth(testimony.visitMonth, language) })}

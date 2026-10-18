@@ -45,14 +45,19 @@ function toRow(provider: ProviderDoc, score: number | null): DirectoryRow {
 }
 
 const byName = (a: DirectoryRow, b: DirectoryRow) => a.name.localeCompare(b.name, "id");
-const byTestimonies = (a: DirectoryRow, b: DirectoryRow) => b.testimonyCount - a.testimonyCount || byName(a, b);
+/**
+ * "Most Testimonies" counts Proven ones only, and ties go to the name, never to the
+ * count of all Testimonies: unproven Testimonies cannot move a row (spec 09).
+ */
+const byProvenTestimonies = (a: DirectoryRow, b: DirectoryRow) =>
+  b.verifiedVisitCount - a.verifiedVisitCount || byName(a, b);
 const byScore = (a: DirectoryRow, b: DirectoryRow) =>
-  (b.score ?? Number.NEGATIVE_INFINITY) - (a.score ?? Number.NEGATIVE_INFINITY) || byTestimonies(a, b);
+  (b.score ?? Number.NEGATIVE_INFINITY) - (a.score ?? Number.NEGATIVE_INFINITY) || byProvenTestimonies(a, b);
 
 /**
  * Listed Providers matching the filters and name prefix, sorted. Region and
  * Provider type are Firestore equality filters; the name search is a range on
- * `nameNormalized`. The score prior is the Testimony-weighted mean over the
+ * `nameNormalized`. The score prior is the Proven-Testimony-weighted mean over the
  * Providers read for this request (so it follows the region filter).
  */
 export async function loadDirectory(
@@ -68,7 +73,7 @@ export async function loadDirectory(
   const prefix = normalizeName(q);
   query = prefix
     ? query.where("nameNormalized", ">=", prefix).where("nameNormalized", "<", `${prefix}`).orderBy("nameNormalized")
-    : query.orderBy("aggregates.testimonyCount", "desc");
+    : query.orderBy("aggregates.verifiedVisitCount", "desc");
 
   const snapshot = await query.limit(DIRECTORY_SCAN_LIMIT).get();
   const providers = snapshot.docs.map((doc) => doc.data() as ProviderDoc);
@@ -79,6 +84,6 @@ export async function loadDirectory(
     .filter((p) => !filters.procedureCode || offersProcedure(p, filters.procedureCode))
     .map((p) => toRow(p, shrunkAspectScore(p.aggregates, prior)));
 
-  rows.sort(sort === "skor" ? byScore : byTestimonies);
+  rows.sort(sort === "skor" ? byScore : byProvenTestimonies);
   return rows.slice(0, DIRECTORY_ROW_LIMIT);
 }

@@ -113,6 +113,17 @@ describe(`GET ${PATH}`, () => {
     expect(form).toMatch(link);
   });
 
+  it("has the Testimony form say, beside the Proof of Visit field, what counts and that the file is deleted", async () => {
+    const { html } = await get("/ceritakan");
+
+    const hint = html.match(/<p id="[^"]*proof-hint"[^>]*>([^<]*)<\/p>/)?.[1] ?? "";
+    expect(hint).toContain("Hanya Testimoni dengan bukti kunjungan yang diterima yang dihitung dalam nilai");
+    expect(hint).toContain(
+      "File bukti dihapus setelah diperiksa, atau paling lama 7 hari jika tim kami perlu melihatnya.",
+    );
+    expect(hint).not.toContain("langsung dihapus");
+  });
+
   it("states no detection threshold: the only numbers are the published policy numbers", async () => {
     for (const cookie of [undefined, await englishCookie()]) {
       const text = mainText((await get(PATH, cookie)).html);

@@ -28,12 +28,14 @@ WORKDIR /repo/apps/web
 COPY --from=prod-deps /repo/node_modules /repo/node_modules
 COPY --from=prod-deps /repo/apps/web/node_modules ./node_modules
 COPY --from=build /repo/apps/web/build ./build
-COPY apps/web/package.json apps/web/server.ts apps/web/refresh-coordinates.ts apps/web/expire-proofs.ts ./
+COPY apps/web/package.json apps/web/server.ts apps/web/refresh-coordinates.ts apps/web/recompute-aggregates.ts \
+     apps/web/expire-proofs.ts ./
 COPY apps/web/server ./server
 # server/ runs unbundled, so what it imports at runtime must be here too: the plain
-# modules it shares with the app, and the contracts package its pnpm symlink
-# (node_modules/@findyourdent/contracts) points at.
+# modules it shares with the app (and the aggregates math the recompute job reuses),
+# and the contracts package its pnpm symlink (node_modules/@findyourdent/contracts) points at.
 COPY apps/web/app/lib ./app/lib
+COPY apps/web/app/server/aggregates.ts ./app/server/aggregates.ts
 COPY packages/contracts /repo/packages/contracts
 USER node
 EXPOSE 8080
