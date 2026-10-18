@@ -11,8 +11,11 @@ import { fileURLToPath } from "node:url";
 import { parseScript } from "./narrate.ts";
 
 export type Shot =
-  | { kind: "still"; card: string; seconds: number }
-  | { kind: "clip"; clip: string; from: number; to: number; speed?: number; panel: string };
+  | { kind: "still"; card: CardId; seconds: number }
+  | { kind: "clip"; clip: string; from: number; to: number; speed?: number; panel: PanelId };
+
+type CardId = "intro" | "figures" | "architecture" | "roadmap" | "outro";
+type PanelId = (typeof PANELS)[number]["id"];
 
 export type LaidShot = Shot & { start: number; seconds: number; hold: number };
 
@@ -112,12 +115,7 @@ function round(value: number): number {
 // Storyboard: what is on screen in each scene. Clip times are seconds into the
 // #111 captures; they were read off one-frame-per-second contact sheets.
 
-interface Panel {
-  id: string;
-  indonesian: string;
-  english: string;
-  note?: string;
-}
+type Panel = { id: string; indonesian: string; english: string; note?: string };
 
 interface StoryScene {
   id: string;
@@ -128,18 +126,20 @@ interface StoryScene {
   shots: Shot[];
 }
 
-const PANELS: Panel[] = [
+const DEMO_NOTE = "Demo account “Demo FindYourDent”; the demo Testimony was deleted after recording";
+
+const PANELS = [
   { id: "landing", indonesian: "Testimoni terbaru", english: "Patient Testimonies that FindYourDent owns", note: "findyourdent.com, live" },
   { id: "guidance", indonesian: "Lihat panduan", english: "Guidance from Gemini on Vertex AI: urgency, likely problem, visits, cost, BPJS" },
-  { id: "emergency", indonesian: "Ke IGD sekarang", english: "A red-flag check runs before Gemini and sends the Patient to the emergency department" },
-  { id: "shortlist", indonesian: "Dokter gigi terdekat", english: "Shortlist: up to five Providers, ranked by fit, Testimonies, price and distance, never by payment" },
+  { id: "emergency", indonesian: "Ke IGD sekarang", english: "Emergency Escalation: a red-flag check runs before Gemini and sends the Patient to an IGD" },
+  { id: "shortlist", indonesian: "Dokter gigi terdekat", english: "Shortlist: up to five Providers, ranked by fit, Proven Testimonies, price and distance, never by payment" },
   { id: "provider", indonesian: "Lihat ulasan Google", english: "Testimonies first; Google reviews load only on tap" },
-  { id: "testimony", indonesian: "Ceritakan pengalamanmu", english: "Posting a Testimony", note: "Demo account “Demo FindYourDent”; the demo Testimony was deleted after recording" },
-  { id: "fix", indonesian: "Sedikit perbaikan sebelum terkirim", english: "Gemini Moderation marks the exact sentence to fix before it publishes", note: "Demo account “Demo FindYourDent”; the demo Testimony was deleted after recording" },
-  { id: "published", indonesian: "Testimoni Anda sudah terbit", english: "Published after Moderation", note: "Demo account “Demo FindYourDent”; the demo Testimony was deleted after recording" },
+  { id: "testimony", indonesian: "Ceritakan pengalamanmu", english: "Posting a Testimony", note: DEMO_NOTE },
+  { id: "fix", indonesian: "Sedikit perbaikan sebelum terkirim", english: "Gemini Moderation marks the exact sentence to fix before it publishes", note: DEMO_NOTE },
+  { id: "published", indonesian: "Testimoni Anda sudah terbit", english: "Published after Moderation", note: DEMO_NOTE },
   { id: "proven", indonesian: "Kunjungan terbukti", english: "Proof of Visit is checked, then deleted", note: "A real Patient’s Testimony on findyourdent.com" },
   { id: "impact", indonesian: "Dampak FindYourDent", english: "Live counter: Testimonies, Kunjungan terbukti and Guidance sessions" },
-];
+] as const satisfies readonly Panel[];
 
 const CAPTURES = "captures/";
 
@@ -350,6 +350,10 @@ async function renderPngs(jobs: { html: string; file: string; transparent?: bool
   }
 }
 
+function writeConcatList(file: string, parts: string[]) {
+  writeFileSync(file, parts.map((part) => `file '${part}'`).join("\n"));
+}
+
 function encodeShot(shot: LaidShot, background: string, out: string) {
   const video = ["-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p", "-r", String(FPS), "-an"];
   if (shot.kind === "still") {
@@ -416,7 +420,7 @@ async function main() {
       return out;
     });
     const list = `${build}${scene.id}-shots.txt`;
-    writeFileSync(list, shotFiles.map((file) => `file '${file}'`).join("\n"));
+    writeConcatList(list, shotFiles);
 
     const inputs = ["-f", "concat", "-safe", "0", "-i", list];
     inputs.push(...(audio ? ["-i", audio] : ["-f", "lavfi", "-t", String(seconds), "-i", "anullsrc=r=44100:cl=stereo"]));
@@ -431,17 +435,17 @@ async function main() {
     chain += audio
       ? `;[1:a]aformat=sample_rates=44100:channel_layouts=stereo,adelay=${delay}|${delay},apad[a]`
       : ";[1:a]anull[a]";
-    const out = `${build}${scene.id}.mp4`;
+    const sceneFile = `${build}${scene.id}.mov`;
     ffmpeg([
       ...inputs, "-filter_complex", chain, "-map", "[v]", "-map", "[a]", "-t", String(seconds),
       "-c:v", "libx264", "-crf", "18", "-preset", "medium", "-r", String(FPS),
-      "-c:a", "pcm_s16le", "-ar", "44100", out.replace(/\.mp4$/, ".mov"),
+      "-c:a", "pcm_s16le", "-ar", "44100", sceneFile,
     ]);
-    sceneFiles.push(out.replace(/\.mp4$/, ".mov"));
+    sceneFiles.push(sceneFile);
   }
 
   const list = `${build}scenes.txt`;
-  writeFileSync(list, sceneFiles.map((file) => `file '${file}'`).join("\n"));
+  writeConcatList(list, sceneFiles);
   const final = path("findyourdent-demo.mp4");
   ffmpeg([
     "-f", "concat", "-safe", "0", "-i", list, "-c:v", "copy",
@@ -453,6 +457,7 @@ async function main() {
   for (const { scene, seconds } of plans) console.log(`${scene.id}\t${seconds.toFixed(1)}s`);
   console.log(`total\t${total.toFixed(2)}s (${Math.floor(total / 60)}:${String(Math.floor(total % 60)).padStart(2, "0")})`);
   if (total < 180 || total > 240) throw new Error(`The video runs ${total}s; the rules require 3:00 to 4:00`);
+  if (total < 200 || total > 220) console.warn("The video is outside the 3:20 to 3:40 target in issue #24");
 }
 
 function missing(id: string): never {

@@ -18,7 +18,7 @@ The issue asked for Claude Motion. That tool could not be reached from the agent
 | 1. Problem | 0:40 | The three SKI 2023 figures with their citations (held while the figures are spoken), then the live landing page down to "Testimoni terbaru" |
 | 2. Guidance | 0:53 | A typed complaint, the follow-up question (3× speed), the Guidance card down to the cost and BPJS Kesehatan answers, then the swollen face with a fever reaching "Ke IGD sekarang" |
 | 3. Shortlist | 0:29 | "Gunakan lokasi saya" (2×), five Providers with their reasons and the ranking note (1.33×), a Provider page and "Lihat ulasan Google" |
-| 4. Posting a Testimony | 0:36 | The demo draft with a phone number (1.5×), "Sedikit perbaikan sebelum terkirim", the fix (4×), "Testimoni Anda sudah terbit" (2×), then a real Proven Testimony with Kunjungan terbukti |
+| 4. Posting a Testimony | 0:36 | The demo Testimony's story with a phone number (1.5×), "Sedikit perbaikan sebelum terkirim", the fix (4×), "Testimoni Anda sudah terbit" (2×), then a real Proven Testimony with Kunjungan terbukti |
 | 5. Architecture and impact | 0:33 | The README architecture diagram, the live "Dampak FindYourDent" counter, the roadmap card ("Berikutnya": Providers claim their pages and publish their own prices) |
 | Closing card | 0:06 | findyourdent.com, the Google Cloud services named in the narration, "Voice: ElevenLabs" (the free plan requires this credit) |
 | Total | 3:21.8 | Measured with `ffprobe` on the exported file |
