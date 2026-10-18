@@ -111,6 +111,21 @@ export interface TestimonyAuthorFixResponse {
 
 export type TestimonySubmitResponse = TestimonyStoredResponse | TestimonyAuthorFixResponse;
 
+/**
+ * 200 body of POST /api/testimonies/:testimonyId/proof (multipart, one `proof` file): a
+ * Proof of Visit attached to a published Testimony was checked on its own, without
+ * screening the Testimony again (spec 09).
+ */
+export interface ProofAttachResponse {
+  testimonyId: string;
+  /** Whether the Testimony shows Kunjungan terbukti now. */
+  verifiedVisit: boolean;
+  /** What became of the proof: accepted, waiting for the team, or rejected with a reason. */
+  proof: ProofOfVisitStatus;
+  /** Proofs the author may still send for this Testimony (3 in all, the first included). */
+  attemptsLeft: number;
+}
+
 /** 200 body of delete. */
 export interface TestimonyDeleteResponse {
   testimonyId: string;
@@ -130,6 +145,14 @@ export interface TestimonyApiError {
     | "forbidden"
     /** Edit refused: the Testimony is hidden (a report is under review) or removed. Delete still works. */
     | "not_editable"
+    /** Attach refused: only a published Testimony takes a proof later. */
+    | "proof_not_attachable"
+    /** Attach refused: the Testimony's proof is already accepted. */
+    | "proof_already_accepted"
+    /** A proof (attached later or sent with an edit) refused: 3 were checked already. */
+    | "proof_attempts_used"
+    /** The attached proof could not be checked this time; it was deleted and used no attempt. */
+    | "proof_check_unavailable"
     | "unavailable";
   /** Friendly message in the Patient's language. */
   message: string;

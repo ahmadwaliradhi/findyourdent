@@ -2,6 +2,7 @@ import type { TestimonyStatus } from "@findyourdent/contracts/firestore";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, redirect } from "react-router";
+import { AttachProof } from "~/components/attach-proof";
 import { ProofStatusNote } from "~/components/proof-status";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
@@ -13,6 +14,7 @@ import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
 import { testimonyPath } from "~/lib/paths";
+import type { ProofAttachResponse } from "~/lib/testimony";
 import { testimonyStatusBadge } from "~/lib/testimony-status";
 import { cn } from "~/lib/utils";
 import { loadMyTestimonies, type MyTestimony } from "~/server/testimonies.server";
@@ -73,6 +75,11 @@ export default function MyTestimonies({ loaderData }: Route.ComponentProps) {
                     setItems((list) => list.filter((other) => other.id !== item.id));
                     setNotice(t("myTestimonies.deleted"));
                   }}
+                  onProofAttached={(response) => {
+                    setItems((list) =>
+                      list.map((other) => (other.id === item.id ? withProof(other, response) : other)),
+                    );
+                  }}
                 />
               </li>
             ))}
@@ -85,6 +92,17 @@ export default function MyTestimonies({ loaderData }: Route.ComponentProps) {
       <StatusLegend />
     </div>
   );
+}
+
+/** The card after a Proof of Visit was attached: its new result, and whether another may follow. */
+function withProof(item: MyTestimony, response: ProofAttachResponse): MyTestimony {
+  const { proofAttemptsLeft: _, ...rest } = item;
+  return {
+    ...rest,
+    verifiedVisit: response.verifiedVisit,
+    proof: response.proof,
+    ...(response.proof.result === "accepted" ? {} : { proofAttemptsLeft: response.attemptsLeft }),
+  };
 }
 
 /** One status Badge: the word with its icon, so the status never rides on color alone. */
@@ -120,7 +138,15 @@ function StatusLegend() {
   );
 }
 
-function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: () => void }) {
+function MyTestimonyCard({
+  item,
+  onDeleted,
+  onProofAttached,
+}: {
+  item: MyTestimony;
+  onDeleted: () => void;
+  onProofAttached: (response: ProofAttachResponse) => void;
+}) {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === "en" ? "en" : "id";
   const firebase = useFirebaseConfig();
@@ -183,7 +209,10 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
         </div>
       ) : null}
       <p className="line-clamp-4 whitespace-pre-line">{item.text}</p>
-      {item.proof ? <ProofStatusNote status={item.proof} /> : null}
+      {item.proof ? <ProofStatusNote status={item.proof} attemptsUsed={item.proofAttemptsLeft === 0} /> : null}
+      {item.proofAttemptsLeft ? (
+        <AttachProof testimonyId={item.id} attemptsLeft={item.proofAttemptsLeft} onAttached={onProofAttached} />
+      ) : null}
       {item.reply ? (
         <div className="flex flex-col gap-1 rounded-md border bg-muted px-4 py-3 text-sm">
           <span className="font-semibold">{t("myTestimonies.reply")}</span>

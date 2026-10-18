@@ -11,6 +11,12 @@ import type { ProofOfVisitRecord, ProofPendingReason, ProofRejectedReason } from
 export const PROOF_MAX_AGE_MONTHS = 12;
 /** A proof month further than this from the stated visit month waits for an admin. */
 export const PROOF_VISIT_MONTH_TOLERANCE = 1;
+/**
+ * Proofs checked per Testimony, at submission, with an edit or attached later (spec 09),
+ * so a buzzer cannot try fake receipts until one passes. A proof the agent could not
+ * read is no attempt.
+ */
+export const MAX_PROOF_ATTEMPTS = 3;
 
 /**
  * Whether the proof matches another Testimony's Proof Fingerprint at the same Provider

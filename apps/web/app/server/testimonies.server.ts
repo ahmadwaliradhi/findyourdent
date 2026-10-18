@@ -19,7 +19,10 @@
 //   is deleted once the result is accepted or rejected (or the proof could not be
 //   checked); a pending one stays for an admin. An edit may carry a new proof: it
 //   replaces a proof that is not accepted yet and counts as another attempt; a Testimony
-//   already proven keeps its proof and the new file is simply deleted.
+//   already proven keeps its proof and the new file is simply deleted. A published
+//   Testimony takes a proof later too (`attachProof`, proof-only Moderation). Every
+//   proof checked is an attempt, 3 per Testimony; a fourth is refused before any model
+//   call, and a proof the agent could not read uses none.
 import type { ProofExtraction } from "@findyourdent/contracts";
 import {
   type AspectRatings,
@@ -47,9 +50,16 @@ import { getI18n, type Language } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { normalizeName } from "~/lib/normalize-name";
-import { decideProof, type ProofDecision, type ProofOfVisitStatus, proofStatusForAuthor } from "~/lib/proof-decision";
+import {
+  decideProof,
+  MAX_PROOF_ATTEMPTS,
+  type ProofDecision,
+  type ProofOfVisitStatus,
+  proofStatusForAuthor,
+} from "~/lib/proof-decision";
 import {
   MAX_AUTHOR_FIX_ROUNDS,
+  type ProofAttachResponse,
   SUBMISSION_FIELDS,
   TESTIMONY_TERMS_VERSION,
   type TestimonyApiError,
@@ -70,11 +80,13 @@ import { protectionRefusalResponse, protectPaidRequest } from "./protection.serv
 import { inferProviderType } from "./shortlist.server.ts";
 import {
   deleteTestimonyMedia,
+  readProofFile,
   readTestimonyFiles,
   type StoredMedia,
   storeTestimonyMedia,
 } from "./testimony-media.server.ts";
 import {
+  checkProofOnly,
   holdMessage,
   isSpotCheck,
   type ModerationOutcome,
@@ -295,7 +307,11 @@ type CheckedProof = { checked: true; decision: ProofDecision; extraction: ProofE
 /** Decides the proof sent with a submission from what the agent read, against the stated visit month. */
 function checkProof(outcome: ModerationOutcome, visitMonth: string): ProofCheck {
   const extraction = outcome.decision.proofExtraction;
-  if (!extraction) return { checked: false };
+  return extraction ? decidedProof(extraction, visitMonth) : { checked: false };
+}
+
+/** The proof decision on what the agent read, at submission, with an edit or attached later. */
+function decidedProof(extraction: ProofExtraction, visitMonth: string): CheckedProof {
   // Ticket #130 passes the Proof Fingerprint reuse check here; until then nothing matches.
   const decision = decideProof({ extraction, visitMonth, today: jakartaDate(Date.now()) });
   return { checked: true, decision, extraction };
@@ -318,6 +334,20 @@ function proofRecord({ decision, extraction }: CheckedProof, attempts: number, n
 /** Proofs checked so far for a Testimony; a proof checked before spec 09 counts as one. */
 const proofAttempts = (testimony: TestimonyDoc) =>
   testimony.proofOfVisit ? (testimony.proofOfVisit.attempts ?? 1) : 0;
+
+/** Proofs the author may still send for a Testimony (spec 09: 3 in all, the first included). */
+const proofAttemptsLeft = (testimony: TestimonyDoc) => Math.max(0, MAX_PROOF_ATTEMPTS - proofAttempts(testimony));
+
+/** A Proven Testimony, or one whose proof was accepted while it was not published. */
+const hasAcceptedProof = (testimony: TestimonyDoc) =>
+  testimony.verifiedVisit || testimony.proofOfVisit?.result === "accepted";
+
+/**
+ * Every proof attempt is used, so another proof is refused before any model call. A
+ * proof sent for an accepted one is no attempt: it is never checked.
+ */
+const proofAttemptsUsed = (testimony: TestimonyDoc) =>
+  !hasAcceptedProof(testimony) && proofAttemptsLeft(testimony) === 0;
 
 /** What the author reads about the proof they sent. */
 const proofFeedback = (proof: ProofCheck): ProofOfVisitStatus =>
@@ -669,6 +699,12 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
     return invalidResponse(request, fieldErrors, checked.ok && !keepErrors.photos);
   }
   const value = checked.value;
+  // A proof sent with an edit is an attempt too (spec 09): refused before Moderation runs.
+  if (files.files.proof && proofAttemptsUsed(current)) {
+    return errorResponse(request, 409, "proof_attempts_used", {
+      fieldErrors: { proof: t("testimonyApi.fields.proofAttemptsUsed") },
+    });
+  }
 
   const roundsUsed = await authorFixRoundsUsed(firestore, user.uid, current.placeId);
   const media = await storeTestimonyMedia(uploads, testimonyId, files.files);
@@ -721,6 +757,8 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       }
       // A proven Testimony keeps its accepted proof; any other proof result is replaced.
       const newProof = proof?.checked && !before.verifiedVisit ? proof : null;
+      // Another proof was checked meanwhile (attached later) and used the last attempt.
+      if (newProof && proofAttemptsUsed(before)) throw new TestimonyRefusal(409, "proof_attempts_used");
       const proofAccepted = newProof?.decision.result === "accepted";
       // Accepted while an edit of the published version waits: the public version is proven now.
       const provenWhilePending = editingPublished && status !== "published" && proofAccepted;
@@ -866,6 +904,112 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
   return Response.json(body);
 }
 
+/** A proof may be attached later only to a published Testimony without an accepted proof, while attempts are left. */
+function checkAttachable(testimony: TestimonyDoc): void {
+  if (testimony.status !== "published") throw new TestimonyRefusal(409, "proof_not_attachable");
+  if (hasAcceptedProof(testimony)) throw new TestimonyRefusal(409, "proof_already_accepted");
+  if (proofAttemptsUsed(testimony)) throw new TestimonyRefusal(409, "proof_attempts_used");
+}
+
+/**
+ * POST /api/testimonies/:testimonyId/proof: the author attaches a Proof of Visit to their
+ * published Testimony (spec 09). Moderation runs in proof-only mode: the text and photos
+ * are not screened again, nothing waits in `pendingRevision`, no decision is recorded and
+ * the public Testimony stays as it is. The submission's proof decision applies; accepted
+ * makes it Proven, with aggregates and the impact counter following. Each check is an
+ * attempt (3 in all, the one at submission included); a proof the agent could not read
+ * is none, and its file goes. Shares the per-account limit of submissions and edits.
+ */
+export async function attachProof(context: AppLoadContext, request: Request, testimonyId: string) {
+  const gate = await gateSubmission(context, request);
+  if (gate instanceof Response) return gate;
+  const { firestore, uploads, user, language, t } = gate;
+
+  let current: TestimonyDoc;
+  try {
+    ({ testimony: current } = await ownTestimony(firestore, testimonyId, user.uid));
+    checkAttachable(current);
+  } catch (error) {
+    return refusalResponse(request, error);
+  }
+
+  const formData = await readForm(request);
+  const file = formData ? await readProofFile(formData, { language }) : null;
+  if (!file?.ok || !file.proof) {
+    const fieldErrors = file && !file.ok ? file.fieldErrors : { proof: t("testimonyApi.fields.proofMissing") };
+    return errorResponse(request, 400, "invalid_file", { fieldErrors });
+  }
+
+  const listedProvider = await providers(firestore).doc(current.placeId).get();
+  const { proofPath } = await storeTestimonyMedia(uploads, testimonyId, { photos: [], proof: file.proof });
+  if (!proofPath) throw new Error("the proof was not stored");
+  const extraction = await checkProofOnly(context, {
+    placeId: current.placeId,
+    language,
+    ...(listedProvider.exists ? { typedProviderName: (listedProvider.data() as ProviderDoc).name } : {}),
+    proofPath,
+  });
+  if (!extraction) {
+    // Not checked, so no attempt: the author may simply send it again later.
+    await deleteProofFiles(context, uploads, { paths: [proofPath] });
+    context.logger.info("testimony", { outcome: "proof_attached", proof: "notChecked" });
+    return errorResponse(request, 503, "proof_check_unavailable");
+  }
+  const proof = decidedProof(extraction, current.visitMonth);
+
+  const ref = testimonies(firestore).doc(testimonyId);
+  let after: TestimonyDoc;
+  try {
+    after = await firestore.runTransaction(async (tx) => {
+      const before = checkOwn(await tx.get(ref), user.uid);
+      // Moved meanwhile (hidden after a report, another proof decided): ask again.
+      checkAttachable(before);
+      const accepted = proof.decision.result === "accepted";
+      const provider = accepted ? await tx.get(providers(firestore).doc(before.placeId)) : null;
+      const published = accepted ? await tx.get(publishedOf(firestore, before.placeId)) : null;
+
+      const now = Timestamp.now();
+      const proofOfVisit = proofRecord(proof, proofAttempts(before) + 1, now);
+      const update: Record<string, unknown> = { proofOfVisit, updatedAt: now };
+      if (provider && published) {
+        // The public version is Proven now; a pending edit of it changes nothing here.
+        writeProviderOnPublish(tx, {
+          placeId: before.placeId,
+          provider,
+          published,
+          testimonyId,
+          self: { ...before, verifiedVisit: true },
+          proposal: null,
+        });
+        update.verifiedVisit = true;
+        recordTestimonyTransition(
+          firestore,
+          tx,
+          { status: before.status, verifiedVisit: before.verifiedVisit },
+          { status: before.status, verifiedVisit: true },
+        );
+      }
+      tx.update(ref, update);
+      return { ...before, proofOfVisit, verifiedVisit: accepted };
+    });
+  } catch (error) {
+    await deleteProofFiles(context, uploads, { paths: [proofPath] });
+    return refusalResponse(request, error);
+  }
+
+  const result = proof.decision.result;
+  // The new result also clears a proof it replaced; a pending one stays for the team.
+  await deleteProofFiles(context, uploads, { testimonyId, ...(result === "pending" ? { allBut: proofPath } : {}) });
+  context.logger.info("testimony", { outcome: "proof_attached", proof: result });
+  const body: ProofAttachResponse = {
+    testimonyId,
+    verifiedVisit: after.verifiedVisit,
+    proof: proofStatusForAuthor(proof.decision),
+    attemptsLeft: proofAttemptsLeft(after),
+  };
+  return Response.json(body);
+}
+
 /**
  * DELETE /api/testimonies/:testimonyId: the author erases their Testimony from any
  * state. Text, photos (and their stored objects), a pending proof file, a pending edit
@@ -945,6 +1089,11 @@ export interface MyTestimony {
   verifiedVisit: boolean;
   /** Where the Proof of Visit stands, when one was checked (spec 09). */
   proof?: ProofOfVisitStatus;
+  /**
+   * Published without an accepted proof, so a Proof of Visit may be attached: the proofs
+   * the author may still send (0 when all 3 were checked). Absent otherwise.
+   */
+  proofAttemptsLeft?: number;
   /** The Provider's published reply. */
   reply?: string;
   editable: boolean;
@@ -981,6 +1130,9 @@ export async function loadMyTestimonies(firestore: Firestore, uid: string): Prom
       visitMonth: testimony.visitMonth,
       verifiedVisit: testimony.verifiedVisit === true,
       ...(testimony.proofOfVisit ? { proof: proofStatusForAuthor(testimony.proofOfVisit) } : {}),
+      ...(testimony.status === "published" && !hasAcceptedProof(testimony)
+        ? { proofAttemptsLeft: proofAttemptsLeft(testimony) }
+        : {}),
       ...(testimony.reply?.status === "published" ? { reply: testimony.reply.text } : {}),
       editable: canAuthorEdit(testimony.status),
     };

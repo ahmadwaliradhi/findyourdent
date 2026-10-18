@@ -17,6 +17,8 @@ import priceListExtractionResponseSchema from "../schemas/price-list-extraction-
   type: "json",
 };
 import proceduresSchema from "../schemas/procedures.schema.json" with { type: "json" };
+import proofCheckRequestSchema from "../schemas/proof-check-request.schema.json" with { type: "json" };
+import proofCheckResponseSchema from "../schemas/proof-check-response.schema.json" with { type: "json" };
 import regionsSchema from "../schemas/regions.schema.json" with { type: "json" };
 import shortlistReasonsRequestSchema from "../schemas/shortlist-reasons-request.schema.json" with { type: "json" };
 import shortlistReasonsResponseSchema from "../schemas/shortlist-reasons-response.schema.json" with { type: "json" };
@@ -30,6 +32,8 @@ import type {
   PriceListExtractionResponse,
   Procedure,
   ProcedureList,
+  ProofCheckRequest,
+  ProofCheckResponse,
   RegionList,
   ShortlistReasonsRequest,
   ShortlistReasonsResponse,
@@ -48,6 +52,8 @@ export const SCHEMAS = {
   "price-list-extraction-request": priceListExtractionRequestSchema,
   "price-list-extraction-response": priceListExtractionResponseSchema,
   procedures: proceduresSchema,
+  "proof-check-request": proofCheckRequestSchema,
+  "proof-check-response": proofCheckResponseSchema,
   regions: regionsSchema,
   "shortlist-reasons-request": shortlistReasonsRequestSchema,
   "shortlist-reasons-response": shortlistReasonsResponseSchema,
@@ -70,6 +76,10 @@ export const validateShortlistReasonsRequest = compile<ShortlistReasonsRequest>(
 export const validateShortlistReasonsResponse = compile<ShortlistReasonsResponse>(shortlistReasonsResponseSchema);
 export const validateModerationRequest = compile<ModerationRequest>(moderationRequestSchema);
 export const validateModerationDecision = compile<ModerationDecision>(moderationDecisionSchema);
+// Proof-only mode reuses the Moderation shapes by $ref, resolved against the two
+// Moderation schemas compiled just above.
+export const validateProofCheckRequest = compile<ProofCheckRequest>(proofCheckRequestSchema);
+export const validateProofCheckResponse = compile<ProofCheckResponse>(proofCheckResponseSchema);
 export const validatePriceListExtractionRequest = compile<PriceListExtractionRequest>(priceListExtractionRequestSchema);
 export const validatePriceListExtractionResponse = compile<PriceListExtractionResponse>(
   priceListExtractionResponseSchema,

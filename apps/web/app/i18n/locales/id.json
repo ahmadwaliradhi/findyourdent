@@ -676,6 +676,10 @@
       "not_found": "Testimoni ini tidak ditemukan atau sudah dihapus.",
       "forbidden": "Hanya penulis yang bisa mengubah atau menghapus Testimoni ini.",
       "not_editable": "Testimoni ini sedang ditinjau tim atau sudah diturunkan, jadi tidak bisa diubah. Anda tetap bisa menghapusnya.",
+      "proof_not_attachable": "Bukti kunjungan hanya bisa dilampirkan ke Testimoni yang sudah tayang.",
+      "proof_already_accepted": "Bukti kunjungan untuk Testimoni ini sudah diterima.",
+      "proof_attempts_used": "Bukti kunjungan untuk Testimoni ini sudah 3 kali dikirim, jadi tidak bisa dikirim lagi. Tunggu keputusan tim jika bukti terakhir sedang diperiksa, atau hapus Testimoni ini lalu tulis yang baru.",
+      "proof_check_unavailable": "Bukti kunjungan belum bisa kami periksa sekarang. Filenya sudah kami hapus dan tidak dihitung sebagai percobaan. Silakan coba lagi nanti.",
       "unavailable": "Layanan Testimoni sedang tidak tersedia. Silakan coba lagi sebentar lagi."
     },
     "fields": {
@@ -693,7 +697,9 @@
       "pricePaidRupiah": "Tulis biaya dalam rupiah tanpa titik atau koma, atau kosongkan.",
       "displayName": "Tulis nama yang ditampilkan (maksimal {{max}} karakter).",
       "consent": "Centang kedua pernyataan sebelum mengirim.",
-      "keepPhotoPaths": "Ada foto yang tidak lagi tersimpan. Muat ulang halaman lalu coba lagi."
+      "keepPhotoPaths": "Ada foto yang tidak lagi tersimpan. Muat ulang halaman lalu coba lagi.",
+      "proofMissing": "Pilih foto atau PDF bukti kunjungan.",
+      "proofAttemptsUsed": "Bukti kunjungan sudah 3 kali dikirim. Hapus file ini untuk menyimpan perubahan lainnya."
     },
     "moderation": {
       "published": "Terima kasih! Testimoni Anda sudah tayang.",
@@ -753,6 +759,16 @@
     "deleting": "Menghapus…",
     "deleteFailed": "Testimoni belum terhapus. Silakan coba lagi.",
     "deleted": "Testimoni sudah dihapus.",
+    "attachProof": {
+      "title": "Lampirkan bukti kunjungan",
+      "hint": "Foto atau PDF struk, kuitansi, atau kartu janji temu. Hanya Testimoni dengan bukti yang diterima yang dihitung dalam skor. Testimoni Anda tetap tayang dan tidak diperiksa ulang.",
+      "attemptsLeft_one": "Sisa {{count}} kali kesempatan.",
+      "attemptsLeft": "Sisa {{count}} kali kesempatan.",
+      "choose": "Pilih file",
+      "send": "Kirim bukti",
+      "sending": "Memeriksa bukti…",
+      "failed": "Bukti belum terkirim. Silakan coba lagi."
+    },
     "legend": {
       "title": "Arti status",
       "published": "Tampil di halaman tempat dan di beranda.",
@@ -774,6 +790,7 @@
       "other": "Bukti kunjungan tidak diterima."
     },
     "tryAnother": "File buktinya sudah kami hapus. Anda bisa mencoba dokumen lain.",
+    "noAttemptsLeft": "File buktinya sudah kami hapus. Bukti untuk Testimoni ini sudah 3 kali dikirim, jadi tidak bisa dikirim lagi.",
     "adminNote": "Catatan tim FindYourDent: {{note}}"
   },
   "reportApi": {

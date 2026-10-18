@@ -4,10 +4,13 @@ import type {
   ModerationRequest,
   PriceListExtractionRequest,
   PriceListExtractionResponse,
+  ProofCheckRequest,
+  ProofCheckResponse,
   ShortlistReasonsRequest,
   ShortlistReasonsResponse,
 } from "@findyourdent/contracts";
 import { MAX_AUTHOR_FIX_ROUNDS } from "../../app/lib/testimony.ts";
+import { jakartaDate } from "../quota.ts";
 import type { AgentAdapter } from "./agent.ts";
 import type { AppCheckVerifier } from "./app-check.ts";
 import type { GeminiAdapter, GeminiStructuredRequest } from "./gemini.ts";
@@ -124,6 +127,23 @@ export function stubModeration(request: ModerationRequest): ModerationDecision {
   };
 }
 
+/**
+ * A stub proof-only check (spec 09), valid against proof-check-response.schema.json: a
+ * receipt from the typed Provider dated this month in Asia/Jakarta, so a proof attached
+ * later to a recent visit is accepted in local runs.
+ */
+export function stubProofCheck(request: ProofCheckRequest): ProofCheckResponse {
+  return {
+    proofExtraction: {
+      readable: true,
+      isProofOfVisit: true,
+      ...(request.typedProviderName ? { clinicNameOnProof: request.typedProviderName } : {}),
+      proofDate: jakartaDate(Date.now()).slice(0, 7),
+      clinicNameMatches: true,
+    },
+  };
+}
+
 function stubOwnerModeration(request: ModerationRequest, en: boolean): ModerationDecision {
   const hit = STUB_PROMOTIONAL.exec(request.text);
   if (!hit) {
@@ -182,6 +202,12 @@ export interface FakeAgentAdapter extends AgentAdapter {
    * the default is `stubModeration`.
    */
   respondToModerationWith(response: unknown): void;
+  readonly proofCheckCalls: ProofCheckRequest[];
+  /**
+   * Next value returned (or thrown, if an Error) by requestProofCheck, until changed;
+   * the default is `stubProofCheck`.
+   */
+  respondToProofCheckWith(response: unknown): void;
   readonly extractionCalls: PriceListExtractionRequest[];
   /**
    * Next value returned (or thrown, if an Error) by requestPriceListExtraction, until
@@ -198,15 +224,18 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
   let next: unknown = initial;
   let nextReasons: unknown;
   let nextModeration: unknown;
+  let nextProofCheck: unknown;
   let nextExtraction: unknown = STUB_PRICE_LIST_EXTRACTION;
   const extractionCalls: PriceListExtractionRequest[] = [];
   const calls: GuidanceRequest[] = [];
   const reasonsCalls: ShortlistReasonsRequest[] = [];
   const moderationCalls: ModerationRequest[] = [];
+  const proofCheckCalls: ProofCheckRequest[] = [];
   return {
     calls,
     reasonsCalls,
     moderationCalls,
+    proofCheckCalls,
     extractionCalls,
     respondToExtractionWith(response) {
       nextExtraction = response;
@@ -223,6 +252,14 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
       moderationCalls.push(structuredClone(request));
       if (nextModeration instanceof Error) throw nextModeration;
       return nextModeration === undefined ? stubModeration(request) : structuredClone(nextModeration);
+    },
+    respondToProofCheckWith(response) {
+      nextProofCheck = response;
+    },
+    async requestProofCheck(request) {
+      proofCheckCalls.push(structuredClone(request));
+      if (nextProofCheck instanceof Error) throw nextProofCheck;
+      return nextProofCheck === undefined ? stubProofCheck(request) : structuredClone(nextProofCheck);
     },
     respondWith(response) {
       next = response;

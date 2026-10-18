@@ -6,9 +6,15 @@ import { useTranslation } from "react-i18next";
 import type { ProofOfVisitStatus } from "~/lib/proof-decision";
 import { cn } from "~/lib/utils";
 
-export function proofStatusMessage(t: TFunction, status: ProofOfVisitStatus): string {
+/** `attemptsUsed`: no more proofs may be sent, so a rejected one does not invite another document. */
+export function proofStatusMessage(
+  t: TFunction,
+  status: ProofOfVisitStatus,
+  options: { attemptsUsed?: boolean } = {},
+): string {
   if (status.result !== "rejected") return t(`proofStatus.${status.result}`);
-  return `${t(`proofStatus.rejected.${status.reason ?? "other"}`)} ${t("proofStatus.tryAnother")}`;
+  const next = options.attemptsUsed ? t("proofStatus.noAttemptsLeft") : t("proofStatus.tryAnother");
+  return `${t(`proofStatus.rejected.${status.reason ?? "other"}`)} ${next}`;
 }
 
 const TONE: Record<ProofOfVisitStatus["result"], string> = {
@@ -19,12 +25,20 @@ const TONE: Record<ProofOfVisitStatus["result"], string> = {
 };
 
 /** The proof status as a labelled note; the label and words carry it, never colour alone. */
-export function ProofStatusNote({ status, className }: { status: ProofOfVisitStatus; className?: string }) {
+export function ProofStatusNote({
+  status,
+  attemptsUsed,
+  className,
+}: {
+  status: ProofOfVisitStatus;
+  attemptsUsed?: boolean;
+  className?: string;
+}) {
   const { t } = useTranslation();
   return (
     <p className={cn("flex flex-col gap-1 rounded-md border px-4 py-3 text-sm", TONE[status.result], className)}>
       <span className="font-semibold">{t("proofStatus.title")}</span>
-      <span>{proofStatusMessage(t, status)}</span>
+      <span>{proofStatusMessage(t, status, { attemptsUsed })}</span>
       {status.result === "rejected" && status.adminReason && (
         <span className="whitespace-pre-line">{t("proofStatus.adminNote", { note: status.adminReason })}</span>
       )}
