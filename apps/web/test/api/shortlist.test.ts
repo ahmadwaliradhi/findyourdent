@@ -267,7 +267,7 @@ describe("POST /api/shortlist", () => {
       listedProvider(GOOGLE_CLINIC.placeId, {
         claimStatus: "claimed",
         claimId: "claim-current",
-        aggregates: { testimonyCount: 2, verifiedVisitCount: 0, averages: null, procedurePrices: paid },
+        aggregates: { testimonyCount: 2, verifiedVisitCount: 2, averages: null, procedurePrices: paid },
       }),
       listedProvider(GOOGLE_DRG.placeId, { claimStatus: "claimed", claimId: "claim-current-drg" }),
     );
@@ -334,7 +334,7 @@ describe("POST /api/shortlist", () => {
     server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG]);
     const ratings = (average: number) => ({
       testimonyCount: 5,
-      verifiedVisitCount: 0,
+      verifiedVisitCount: 5,
       averages: { service: average, hygiene: average, materialsEquipment: average },
       procedurePrices: {},
     });
@@ -358,7 +358,7 @@ describe("POST /api/shortlist", () => {
   it("ranks a claimed Provider exactly as the same Provider unclaimed", async () => {
     const ratings = {
       testimonyCount: 4,
-      verifiedVisitCount: 1,
+      verifiedVisitCount: 3,
       averages: { service: 4.2, hygiene: 4.4, materialsEquipment: 4 },
       procedurePrices: {},
     };

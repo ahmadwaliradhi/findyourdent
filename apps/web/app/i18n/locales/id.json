@@ -334,7 +334,7 @@
     "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
     "sortLabel": "Urutkan",
     "sort": {
-      "testimoni": "Testimoni terbanyak",
+      "testimoni": "Testimoni terbukti terbanyak",
       "skor": "Skor tertinggi",
       "jarak": "Jarak terdekat"
     },
@@ -462,7 +462,7 @@
     "search": "Cari",
     "searching": "Mencari…",
     "privacy": "Lokasi atau area Anda hanya dipakai untuk pencarian ini dan tidak disimpan.",
-    "rankingNote": "Diurutkan menurut kecocokan dengan keluhan, Testimoni, harga, dan jarak. Tidak pernah berdasarkan bayaran.",
+    "rankingNote": "Diurutkan menurut kecocokan dengan keluhan, Testimoni terbukti, harga, dan jarak. Tidak pernah berdasarkan bayaran.",
     "fallbackNote": "Batas pencarian Google hari ini sudah tercapai. Berikut dokter gigi yang terdaftar di FindYourDent di sekitar Anda.",
     "empty": "Belum ada dokter gigi yang cocok di sekitar Anda.",
     "mapsSearch": "Cari di Google Maps",

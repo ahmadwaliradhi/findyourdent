@@ -334,7 +334,7 @@
     "searchPlaceholder": "For example: Klinik Gigi Sehat",
     "sortLabel": "Sort by",
     "sort": {
-      "testimoni": "Most Testimonies",
+      "testimoni": "Most verified Testimonies",
       "skor": "Highest score",
       "jarak": "Nearest"
     },
@@ -462,7 +462,7 @@
     "search": "Search",
     "searching": "Searching…",
     "privacy": "Your location or area is used only for this search and is not stored.",
-    "rankingNote": "Ranked by fit with your complaint, Testimonies, price and distance. Never by payment.",
+    "rankingNote": "Ranked by fit with your complaint, verified Testimonies, price and distance. Never by payment.",
     "fallbackNote": "Today's Google search limit has been reached. These are dentists listed on FindYourDent near you.",
     "empty": "No matching dentists near you yet.",
     "mapsSearch": "Search in Google Maps",
