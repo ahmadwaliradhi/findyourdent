@@ -2,6 +2,7 @@ import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
+import { NotEnoughProven } from "~/components/proof-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ErrorNotice } from "~/components/ui/error-notice";
@@ -206,20 +207,23 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
       <div className="text-sm">
         {testimonies.count === 0 ? (
           <p className="text-muted-foreground">{t("shortlist.testimoniesNone")}</p>
-        ) : (
+        ) : testimonies.averages ? (
           <>
             <p>
               {t("shortlist.testimoniesCount", { count: testimonies.count, verified: testimonies.verifiedVisitCount })}
             </p>
-            {testimonies.averages && (
-              <p className="text-muted-foreground">
-                {t("shortlist.aspects", {
-                  service: formatScore(testimonies.averages.service, language),
-                  hygiene: formatScore(testimonies.averages.hygiene, language),
-                  materials: formatScore(testimonies.averages.materialsEquipment, language),
-                })}
-              </p>
-            )}
+            <p className="text-muted-foreground">
+              {t("shortlist.aspects", {
+                service: formatScore(testimonies.averages.service, language),
+                hygiene: formatScore(testimonies.averages.hygiene, language),
+                materials: formatScore(testimonies.averages.materialsEquipment, language),
+              })}
+            </p>
+          </>
+        ) : (
+          <>
+            <p>{t("shortlist.testimoniesTotal", { count: testimonies.count })}</p>
+            <NotEnoughProven count={testimonies.verifiedVisitCount} className="text-muted-foreground" />
           </>
         )}
       </div>

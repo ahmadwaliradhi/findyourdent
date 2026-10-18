@@ -106,6 +106,7 @@ infra/gcp/smoke.sh           # on its own at any time
 | `fyd-web` | public; minimum 0, maximum 4 instances; `AGENT_AUTH=id_token`; secrets `PLACES_API_KEY`, `ADMIN_EMAILS`, `RATE_LIMIT_SALT`, `SHARE_LINK_SECRET` from Secret Manager; public Firebase web config and reCAPTCHA site key looked up at deploy; `TRUST_PROXY_HOPS=2` |
 | `fyd-agent` | `--no-allow-unauthenticated`; `roles/run.invoker` only for `fyd-web` and the Monitoring service agent (uptime check); maximum 4 instances |
 | `coordinates-refresh` | Cloud Run Job on the web image (`node refresh-coordinates.ts`, as `fyd-web`, secret `PLACES_API_KEY`), run by the Cloud Scheduler job of the same name at 03:00 Jakarta time every day as `fyd-scheduler`. Each run refreshes at most 7 Listed Providers whose coordinates are 25 or more days old or missing, and deletes coordinates that could not be refreshed and would be older than 30 days by the next run, so each Provider comes up once a month (spec 02). At 7 a day it keeps up with about 175 Listed Providers; past that, raise `COORDINATES_DAILY_CAP` and the Get Place quota together. Run it by hand: `gcloud run jobs execute coordinates-refresh --region asia-southeast2` |
+| `aggregates-recompute` | Cloud Run Job on the web image (`node recompute-aggregates.ts`, as `fyd-web`), with no Scheduler job: run once by hand at the spec 09 release (below). It rewrites every Listed Provider's `aggregates` from its published Testimonies so only Proven Testimonies count (ADR-0011); it reads Testimonies but never changes them. Safe to rerun: a Provider already right is not written |
 | Warm agent instance | service-level minimum 1 from 19 October to 7 November 2026 (Jakarta time), 0 otherwise |
 | Uptime checks | `fyd-web health` (through Hosting) and `fyd-agent health` (with an identity token), `/health` every minute from three regions |
 | Alert policy | `FindYourDent demo is down`: either uptime check failing, or 5xx responses every minute, for five minutes; email to the `admin-emails` allowlist |
@@ -113,6 +114,16 @@ infra/gcp/smoke.sh           # on its own at any time
 The warm instance is a service-level minimum, which changes without a new revision. Cloud Scheduler jobs `agent-warm-on` (00:00 on 19 October) and `agent-warm-off` (00:00 on 8 November) set it through the Cloud Run Admin API as `fyd-scheduler`, and every agent deploy sets the value for the current date. Cron has no year, so at 02:00 on 8 November `agent-warm-cleanup` runs the `scheduler-cleanup` workflow once (`scheduler-cleanup.workflow.yaml`). It deletes both warm jobs and `agent-warm-cleanup` itself. Both services keep running after the hackathon; the agent just goes back to starting on demand. To flip it by hand: `gcloud run services update fyd-agent --region asia-southeast2 --min=1` (or `--min=0`). A redeploy of the agent after 8 November recreates the jobs, which do nothing until the next October; delete them, or remove the warm-instance section from `deploy.sh` then.
 
 Request bodies never reach Cloud Logging. Cloud Run's request log has only the method, URL, status, latency and sizes. Both services write one JSON line per request with the request id (Cloud Run's trace id, passed to the agent as `X-Request-Id`), path, status and outcome code, and never a body, header or query string.
+
+### Spec 09 release (once)
+
+Only Proven Testimonies count toward averages and price stats from spec 09 on, with no grandfathering. Testimonies stored before it counted unproven ones, so after `deploy.sh web` has put the spec 09 web service live, recompute every Listed Provider once:
+
+```bash
+gcloud run jobs execute aggregates-recompute --region asia-southeast2 --wait
+```
+
+It logs `aggregates_recompute` with `outcome: done` and the counts of Providers read and changed, and exits non-zero if any Provider failed; run it again to retry those. Testimonies already marked Kunjungan terbukti under the old 24-month rule stay Proven.
 
 ## Manual steps
 

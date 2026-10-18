@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { ProofLabel } from "~/components/proof-label";
 import { TestimonyCard as TestimonyCardView } from "~/components/ui/testimony-card";
 import { isLanguage } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
@@ -27,7 +28,7 @@ export function TestimonyCard({ item }: { item: FeedItem }) {
       providerName={item.providerName}
       href={providerPath(item.placeId)}
       meta={`${t(`filters.providerTypes.${item.providerType}`)} · ${regionLabel(item.region)}`}
-      verifiedLabel={item.verifiedVisit ? t("feed.card.verified") : undefined}
+      proofLabel={<ProofLabel proven={item.verifiedVisit} />}
       ratingsLabel={t("feed.card.ratingsLabel")}
       ratings={ASPECTS.map((aspect) => ({
         label: t(`feed.card.aspects.${aspect}`),

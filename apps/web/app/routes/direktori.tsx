@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
+import { NotEnoughProven } from "~/components/proof-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { fieldClassName } from "~/components/ui/field";
@@ -317,12 +318,15 @@ function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: stri
             </span>
           </p>
         ) : (
-          <p className="text-sm text-muted-foreground">{t("directory.noRatings")}</p>
+          <NotEnoughProven count={row.verifiedVisitCount} className="text-sm text-muted-foreground" />
         )}
 
         <p className="text-xs font-medium text-muted-foreground">
           {t("directory.testimonies", { count: row.testimonyCount })}
-          {row.verifiedVisitCount > 0 && ` · ${t("directory.verifiedVisits", { count: row.verifiedVisitCount })}`}
+          {/* Without averages the Proven count is already in the line above. */}
+          {row.averages &&
+            row.verifiedVisitCount > 0 &&
+            ` · ${t("directory.verifiedVisits", { count: row.verifiedVisitCount })}`}
         </p>
       </div>
 
