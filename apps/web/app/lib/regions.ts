@@ -16,7 +16,7 @@ export function regencyName(code: string): string {
   return regencyNames.get(code) ?? code;
 }
 
-/** "Kota Jakarta Pusat, DKI Jakarta". Kecamatan names are not in the region list, so they are not shown. */
+/** "Kota Jakarta Pusat, DKI Jakarta". Kecamatan are not shown yet: their names live in data/districts.json, not loaded here. */
 export function regionLabel(region: Pick<RegionRef, "provinceCode" | "regencyCode">): string {
   return `${regencyName(region.regencyCode)}, ${provinceName(region.provinceCode)}`;
 }
@@ -37,8 +37,9 @@ export function regenciesOf(provinceCode: string): typeof REGENCIES {
 
 /**
  * A Region a Testimony or a "Sarankan koreksi" may carry: a province and one of its
- * own kota/kabupaten from the Kemendagri list. The list has no kecamatan, so an
- * optional `districtCode` is only checked for shape (`NN.NN.NN` inside the kota).
+ * own kota/kabupaten from the Kemendagri list. An optional `districtCode` is only
+ * checked for shape (`NN.NN.NN` inside the kota), so every kecamatan of
+ * data/districts.json passes without shipping that list to the browser.
  * Pure, for the form and the server alike.
  */
 export function isValidRegion(region: { provinceCode: string; regencyCode: string; districtCode?: string }): boolean {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from findyourdent_agent.data import load_procedures, load_regions, procedure_codes
+from findyourdent_agent.data import load_districts, load_procedures, load_regions, procedure_codes
 from findyourdent_agent.knowledge import bpjs_coverage, cost_estimates
 
 
@@ -17,6 +17,14 @@ def test_kemendagri_region_list_loads() -> None:
     assert len(regions.provinces) == 38
     province_codes = {str(p.code) for p in regions.provinces}
     assert all(str(r.provinceCode) in province_codes for r in regions.regencies)
+
+
+def test_kemendagri_kecamatan_list_loads_under_its_kota_kabupaten() -> None:
+    regency_codes = {str(r.code) for r in load_regions().regencies}
+    districts = load_districts().districts
+
+    assert len(districts) == 7285
+    assert all(str(d.regencyCode) in regency_codes for d in districts)
 
 
 def test_every_procedure_has_a_cost_range_and_a_bpjs_answer() -> None:

@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import districtList from "../data/districts.json" with { type: "json" };
 import procedureList from "../data/procedures.json" with { type: "json" };
 import regionList from "../data/regions.json" with { type: "json" };
 import {
+  DISTRICTS,
   isProcedureCode,
   PROCEDURE_CODES,
   PROCEDURES,
   REGIONS,
+  validateDistrictList,
   validateProcedureList,
   validateRegionList,
 } from "../src/index.js";
@@ -111,5 +114,37 @@ describe("data/regions.json", () => {
     expect(REGIONS.regencies.filter((r) => r.type === "kabupaten")).toHaveLength(416);
     expect(REGIONS.regencies.filter((r) => r.type === "kota")).toHaveLength(98);
     expect(REGIONS.complete).toBe(true);
+  });
+});
+
+describe("data/districts.json", () => {
+  it("validates against its schema", () => {
+    expect(validateDistrictList(districtList), JSON.stringify(validateDistrictList.errors)).toBe(true);
+  });
+
+  it("records where the list came from and when it was retrieved", () => {
+    expect(DISTRICTS.source).toMatch(/300\.2\.2-2138/);
+    expect(DISTRICTS.retrievedFrom).toMatch(/^https:\/\//);
+    expect(DISTRICTS.retrievedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("every kecamatan sits under a listed kota/kabupaten and has a unique code", () => {
+    const regencies = new Set(REGIONS.regencies.map((r) => r.code));
+    const codes = DISTRICTS.districts.map((d) => d.code);
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const d of DISTRICTS.districts) {
+      expect(regencies.has(d.regencyCode), d.code).toBe(true);
+      expect(d.code.startsWith(`${d.regencyCode}.`), d.code).toBe(true);
+    }
+  });
+
+  it("covers every kota/kabupaten, with the national kecamatan total of Kepmendagri 300.2.2-2138/2025", () => {
+    expect(new Set(DISTRICTS.districts.map((d) => d.regencyCode)).size).toBe(REGIONS.regencies.length);
+    expect(DISTRICTS.districts).toHaveLength(7285);
+  });
+
+  it("has no two kecamatan with the same name inside one kota/kabupaten", () => {
+    const keys = DISTRICTS.districts.map((d) => `${d.regencyCode} ${d.name.toLowerCase()}`);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });

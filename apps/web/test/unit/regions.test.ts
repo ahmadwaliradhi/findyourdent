@@ -1,3 +1,4 @@
+import districtList from "@findyourdent/contracts/data/districts.json";
 import { describe, expect, it } from "vitest";
 import { isValidRegion, regenciesOf } from "../../app/lib/regions.ts";
 
@@ -17,7 +18,15 @@ describe("Region from the Kemendagri list", () => {
     expect(isValidRegion({ provinceCode: "35", regencyCode: "" })).toBe(false);
   });
 
-  it("accepts a well-formed kecamatan inside the kota, which the list itself does not carry", () => {
+  it("accepts every kecamatan of the Kemendagri list inside its own kota/kabupaten", () => {
+    const provinceOf = (code: string) => code.slice(0, 2);
+    const refused = districtList.districts.filter(
+      (d) => !isValidRegion({ provinceCode: provinceOf(d.code), regencyCode: d.regencyCode, districtCode: d.code }),
+    );
+    expect(refused).toEqual([]);
+  });
+
+  it("checks a kecamatan for shape inside the kota, not against the kecamatan list", () => {
     expect(isValidRegion({ provinceCode: "35", regencyCode: "35.78", districtCode: "35.78.01" })).toBe(true);
     expect(isValidRegion({ provinceCode: "35", regencyCode: "35.78", districtCode: "31.71.01" })).toBe(false);
     expect(isValidRegion({ provinceCode: "35", regencyCode: "35.78", districtCode: "Gubeng" })).toBe(false);

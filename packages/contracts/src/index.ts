@@ -3,8 +3,10 @@
 // (draft 2020-12 + formats), and the shared data files are typed here.
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import addFormatsModule from "ajv-formats";
+import districtListJson from "../data/districts.json" with { type: "json" };
 import procedureListJson from "../data/procedures.json" with { type: "json" };
 import regionListJson from "../data/regions.json" with { type: "json" };
+import districtsSchema from "../schemas/districts.schema.json" with { type: "json" };
 import guidanceRequestSchema from "../schemas/guidance-request.schema.json" with { type: "json" };
 import guidanceResponseSchema from "../schemas/guidance-response.schema.json" with { type: "json" };
 import moderationDecisionSchema from "../schemas/moderation-decision.schema.json" with { type: "json" };
@@ -20,6 +22,7 @@ import regionsSchema from "../schemas/regions.schema.json" with { type: "json" }
 import shortlistReasonsRequestSchema from "../schemas/shortlist-reasons-request.schema.json" with { type: "json" };
 import shortlistReasonsResponseSchema from "../schemas/shortlist-reasons-response.schema.json" with { type: "json" };
 import type {
+  DistrictList,
   GuidanceRequest,
   GuidanceResponse,
   ModerationDecision,
@@ -38,6 +41,7 @@ export type { ValidateFunction };
 
 /** Every schema in schemas/, keyed by file name without `.schema.json`. */
 export const SCHEMAS = {
+  districts: districtsSchema,
   "guidance-request": guidanceRequestSchema,
   "guidance-response": guidanceResponseSchema,
   "moderation-decision": moderationDecisionSchema,
@@ -73,6 +77,7 @@ export const validatePriceListExtractionResponse = compile<PriceListExtractionRe
 );
 export const validateProcedureList = compile<ProcedureList>(proceduresSchema);
 export const validateRegionList = compile<RegionList>(regionsSchema);
+export const validateDistrictList = compile<DistrictList>(districtsSchema);
 
 /** One-line summary of Ajv errors for logs and error responses (never includes the data). */
 export function formatValidationErrors(errors: ValidateFunction["errors"]): string {
@@ -91,6 +96,12 @@ export function isProcedureCode(code: string): boolean {
 /**
  * Kemendagri region codes (data/regions.json): all `provinces` and
  * `regencies` (kabupaten/kota) from Kepmendagri 300.2.2-2138/2025 as amended
- * by 300.2.2-2430/2025. Kecamatan are not included.
+ * by 300.2.2-2430/2025. Kecamatan are in DISTRICTS.
  */
 export const REGIONS: RegionList = regionListJson as RegionList;
+
+/**
+ * Kemendagri kecamatan codes (data/districts.json), each under one of the
+ * REGIONS kota/kabupaten, from the same decree.
+ */
+export const DISTRICTS: DistrictList = districtListJson as DistrictList;

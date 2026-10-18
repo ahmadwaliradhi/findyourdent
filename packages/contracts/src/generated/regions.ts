@@ -2,7 +2,7 @@
 // Run `pnpm contracts:generate` after changing the schema.
 
 /**
- * Shape of data/regions.json: Kemendagri administrative region codes (province NN, kabupaten/kota NN.NN). Kecamatan (NN.NN.NN) are not shipped yet.
+ * Shape of data/regions.json: Kemendagri administrative region codes (province NN, kabupaten/kota NN.NN). Kecamatan (NN.NN.NN) are in data/districts.json.
  */
 export interface RegionList {
   $schema?: string;
