@@ -11,12 +11,15 @@ import { Button } from "~/components/ui/button";
 import { fieldClassName } from "~/components/ui/field";
 import { isLanguage } from "~/i18n/config";
 import { FILTER_PARAMS, hasActiveFilters, type ListingFilters } from "~/lib/listing-filters";
+import type { InitialDistricts } from "~/lib/regions";
 import { cn } from "~/lib/utils";
 
 const PROVIDER_TYPES: readonly ProviderType[] = ["klinik", "privateDentist", "hospital"];
 
 export function ListingFiltersForm(props: {
   filters: ListingFilters;
+  /** The kecamatan of the kota in the filters, from the loader. */
+  districts: InitialDistricts | null;
   action: string;
   /** Lets inputs elsewhere on the page join this form through their `form` attribute. */
   id?: string;
@@ -27,26 +30,30 @@ export function ListingFiltersForm(props: {
   layout?: "grid" | "sidebar";
   children?: React.ReactNode;
 }) {
-  const { filters, action, id, layout = "grid", children } = props;
+  const { filters, districts, action, id, layout = "grid", children } = props;
   const sidebar = layout === "sidebar";
   const headingId = useId();
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : "id";
-  // The kota list follows the chosen province. Without JavaScript it lists the
-  // province from the URL, so choosing a province and applying shows its kota.
+  // The kota list follows the chosen province, and the kecamatan list the chosen kota.
+  // Without JavaScript they list those of the URL, so choosing a level and applying
+  // shows the level below it.
   const fromUrl: RegionFieldsValue = {
     provinceCode: filters.provinceCode ?? "",
     regencyCode: filters.regencyCode ?? "",
+    ...(filters.districtCode ? { districtCode: filters.districtCode } : {}),
   };
   const [region, setRegion] = useState(fromUrl);
   // A new URL (applied filters, Reset, back) replaces what was chosen but not applied.
   const [lastUrl, setLastUrl] = useState(fromUrl);
-  if (lastUrl.provinceCode !== fromUrl.provinceCode || lastUrl.regencyCode !== fromUrl.regencyCode) {
+  if (
+    lastUrl.provinceCode !== fromUrl.provinceCode ||
+    lastUrl.regencyCode !== fromUrl.regencyCode ||
+    lastUrl.districtCode !== fromUrl.districtCode
+  ) {
     setLastUrl(fromUrl);
     setRegion(fromUrl);
   }
-  // No kecamatan select yet: a kecamatan from the URL is kept while its kota stays chosen.
-  const keepsDistrict = Boolean(filters.districtCode) && region.regencyCode === filters.regencyCode;
 
   return (
     <Form
@@ -69,9 +76,14 @@ export function ListingFiltersForm(props: {
             mode="filter"
             value={region}
             onChange={setRegion}
-            names={{ province: FILTER_PARAMS.provinceCode, regency: FILTER_PARAMS.regencyCode }}
+            withDistrict
+            initialDistricts={districts ?? undefined}
+            names={{
+              province: FILTER_PARAMS.provinceCode,
+              regency: FILTER_PARAMS.regencyCode,
+              district: FILTER_PARAMS.districtCode,
+            }}
           />
-          {keepsDistrict && <input type="hidden" name={FILTER_PARAMS.districtCode} value={filters.districtCode} />}
         </div>
 
         <div className="flex flex-col gap-1.5">

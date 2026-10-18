@@ -328,7 +328,7 @@ function ClaimForm({ placeId, listed }: { placeId: string; listed: boolean }) {
             onChange={setProviderName}
             disabled={sending}
           />
-          <RegionFields mode="pick" required value={region} onChange={setRegion} disabled={sending} />
+          <RegionFields mode="pick" required withDistrict value={region} onChange={setRegion} disabled={sending} />
         </>
       )}
       <div className="flex flex-col gap-2">

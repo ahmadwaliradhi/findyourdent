@@ -1,31 +1,70 @@
-// Region fields (spec 08): Provinsi, then Kota/Kabupaten, from the Kemendagri list,
-// chosen by name; codes stay underneath. Shared by the listing filters, the Testimony
-// form's provider fields, its "Sarankan koreksi", and the Claim form. Each level is
-// disabled until the level above is chosen. Kecamatan joins as a third level later.
+// Region fields (spec 08): Provinsi, then Kota/Kabupaten, then an optional Kecamatan,
+// from the Kemendagri list, chosen by name; codes stay underneath. Shared by the listing
+// filters, the Testimony form's provider fields, its "Sarankan koreksi", and the Claim
+// form. Each level is disabled until the level above is chosen.
 import type { RegionRef } from "@findyourdent/contracts/firestore";
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FieldError, fieldClassName } from "~/components/ui/field";
-import { PROVINCES, regenciesOf } from "~/lib/regions";
+import { type DistrictOption, type InitialDistricts, PROVINCES, regenciesOf } from "~/lib/regions";
 
-/** The levels these fields offer today; `districtCode` joins with the Kecamatan level. */
-export type RegionFieldsValue = Pick<RegionRef, "provinceCode" | "regencyCode">;
+/** `districtCode` is absent, never "", when no kecamatan is chosen. */
+export type RegionFieldsValue = Pick<RegionRef, "provinceCode" | "regencyCode" | "districtCode">;
 
 export interface RegionFieldsProps {
   value: RegionFieldsValue;
   onChange(value: RegionFieldsValue): void;
   /**
    * "filter": each level is optional and its empty choice reads "all".
-   * "pick": the empty choice reads "choose", and `required` applies.
+   * "pick": the empty choice reads "choose", and `required` applies (never to the Kecamatan).
    */
   mode: "filter" | "pick";
   required?: boolean;
   disabled?: boolean;
+  /** Offers the optional Kecamatan level. */
+  withDistrict?: boolean;
+  initialDistricts?: InitialDistricts;
   /** Form field names, for a plain form that submits the codes (the listing filters' GET form). */
-  names?: { province: string; regency: string };
-  errors?: { province?: string; regency?: string };
+  names?: { province: string; regency: string; district?: string };
+  errors?: { province?: string; regency?: string; district?: string };
   /** One level per row at every width, for a narrow column such as the Directory's filter sidebar. */
   stacked?: boolean;
+}
+
+// The kecamatan lists fetched in this page view, shared by every Region fields on it.
+const districtRequests = new Map<string, Promise<DistrictOption[]>>();
+
+function fetchDistricts(regencyCode: string): Promise<DistrictOption[]> {
+  let request = districtRequests.get(regencyCode);
+  if (!request) {
+    request = fetch(`/api/regions/${encodeURIComponent(regencyCode)}/districts`)
+      .then((response) => (response.ok ? (response.json() as Promise<{ districts: DistrictOption[] }>) : null))
+      .then((body) => body?.districts ?? []);
+    // A failed request is not kept, so choosing the kota again retries it.
+    request.catch(() => districtRequests.delete(regencyCode));
+    districtRequests.set(regencyCode, request);
+  }
+  return request;
+}
+
+/** The kecamatan of `regencyCode`, or null while they load (and for no kota). */
+function useDistricts(regencyCode: string, enabled: boolean, initial?: InitialDistricts): DistrictOption[] | null {
+  const fromLoader = initial && initial.regencyCode === regencyCode ? initial.districts : null;
+  const [loaded, setLoaded] = useState<InitialDistricts | null>(null);
+  useEffect(() => {
+    if (!enabled || !regencyCode || fromLoader) return;
+    let current = true;
+    fetchDistricts(regencyCode).then(
+      (districts) => current && setLoaded({ regencyCode, districts }),
+      // The Kecamatan is optional: when its list cannot load, the select offers only the empty choice.
+      () => current && setLoaded({ regencyCode, districts: [] }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [enabled, regencyCode, fromLoader]);
+  if (!regencyCode) return null;
+  return fromLoader ?? (loaded?.regencyCode === regencyCode ? loaded.districts : null);
 }
 
 export function RegionFields({
@@ -34,6 +73,8 @@ export function RegionFields({
   mode,
   required,
   disabled,
+  withDistrict,
+  initialDistricts,
   names,
   errors = {},
   stacked,
@@ -41,10 +82,12 @@ export function RegionFields({
   const { t } = useTranslation();
   const id = useId();
   const regencies = value.provinceCode ? regenciesOf(value.provinceCode) : [];
+  const districts = useDistricts(value.regencyCode, Boolean(withDistrict), initialDistricts);
   const filter = mode === "filter";
+  const columns = stacked ? "grid gap-4" : withDistrict ? "grid gap-4 sm:grid-cols-3" : "grid gap-4 sm:grid-cols-2";
 
   return (
-    <div className={stacked ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
+    <div className={columns}>
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${id}-province`} className="text-sm font-medium">
           {t("regionFields.province")}
@@ -55,7 +98,7 @@ export function RegionFields({
           required={required}
           disabled={disabled}
           value={value.provinceCode}
-          // A new province drops the kota, which belonged to the old one.
+          // A new province drops the kota and kecamatan, which belonged to the old one.
           onChange={(event) => onChange({ provinceCode: event.currentTarget.value, regencyCode: "" })}
           aria-invalid={errors.province ? true : undefined}
           aria-describedby={errors.province ? `${id}-province-error` : undefined}
@@ -100,6 +143,44 @@ export function RegionFields({
         </select>
         {errors.regency ? <FieldError id={`${id}-regency-error`}>{errors.regency}</FieldError> : null}
       </div>
+      {withDistrict && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={`${id}-district`} className="text-sm font-medium">
+            {t("regionFields.district")}
+          </label>
+          <select
+            id={`${id}-district`}
+            name={names?.district}
+            disabled={disabled || !value.regencyCode || districts === null}
+            value={value.districtCode ?? ""}
+            onChange={(event) => {
+              const districtCode = event.currentTarget.value;
+              onChange({
+                provinceCode: value.provinceCode,
+                regencyCode: value.regencyCode,
+                ...(districtCode ? { districtCode } : {}),
+              });
+            }}
+            aria-invalid={errors.district ? true : undefined}
+            aria-describedby={errors.district ? `${id}-district-error` : undefined}
+            className={fieldClassName}
+          >
+            <option value="">
+              {!value.regencyCode
+                ? t("regionFields.chooseRegencyFirst")
+                : filter
+                  ? t("regionFields.allDistricts")
+                  : t("regionFields.chooseDistrict")}
+            </option>
+            {(districts ?? []).map((d) => (
+              <option key={d.code} value={d.code}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+          {errors.district ? <FieldError id={`${id}-district-error`}>{errors.district}</FieldError> : null}
+        </div>
+      )}
     </div>
   );
 }

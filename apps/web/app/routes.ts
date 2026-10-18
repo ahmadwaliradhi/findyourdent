@@ -8,6 +8,7 @@ export default [
   route("api/providers/:placeId/google", "routes/api.providers.$placeId.google.ts"),
   route("api/providers/:placeId/reviews", "routes/api.providers.$placeId.reviews.ts"),
   route("api/places/autocomplete", "routes/api.places.autocomplete.ts"),
+  route("api/regions/:regencyCode/districts", "routes/api.regions.$regencyCode.districts.ts"),
   route("api/providers/:placeId/listing", "routes/api.providers.$placeId.listing.ts"),
   route("api/providers/:placeId/name-corrections", "routes/api.providers.$placeId.name-corrections.ts"),
   route("api/testimonies", "routes/api.testimonies.ts"),
