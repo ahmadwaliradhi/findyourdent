@@ -1,4 +1,3 @@
-import { Info } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -90,8 +89,8 @@ function Contents({ sections }: { sections: readonly LegalSection[] }) {
 }
 
 /**
- * Privacy and Terms (spec 08): a draft banner, a contents list (side column on desktop,
- * collapsed on phones) and numbered sections. Copy and its placeholders wait for legal review.
+ * Privacy and Terms (spec 08): effective and updated dates, a contents list (side column on
+ * desktop, collapsed on phones) and numbered sections.
  */
 export function LegalPage({
   title,
@@ -115,10 +114,6 @@ export function LegalPage({
         <p className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
           <span>{t("legal.effective")}</span>
           <span>{t("legal.updated")}</span>
-        </p>
-        <p className="flex items-start gap-2.5 rounded-md border border-warning-line bg-warning-soft p-3 text-sm">
-          <Info aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0 text-warning" />
-          <span>{t("legal.draft")}</span>
         </p>
       </header>
       <div className="grid grid-cols-1 gap-10 desktop:grid-cols-[280px_minmax(0,1fr)] desktop:items-start">

@@ -76,6 +76,21 @@ function Features({ items, icons }: { items: readonly { title: string; body: str
   );
 }
 
+/** Drawn, not an emoji: Windows renders the flag emoji as the letters "ID". */
+function IndonesianFlag({ label }: { label: string }) {
+  return (
+    <svg
+      viewBox="0 0 3 2"
+      role="img"
+      aria-label={label}
+      className="h-3.5 w-[21px] shrink-0 rounded-[2px] ring-1 ring-border"
+    >
+      <rect width="3" height="1" fill="#ce1126" />
+      <rect y="1" width="3" height="1" fill="#fff" />
+    </svg>
+  );
+}
+
 /** The mockup's soft brand shapes behind the hero, desktop only. Token fills, never hex. */
 function HeroShapes() {
   return (
@@ -111,7 +126,10 @@ export default function About() {
           {t("about.title")}
         </h1>
         <p className={cn(lead, "relative")}>{t("about.lead")}</p>
-        <p className="relative text-sm text-muted-foreground">{t("about.builtFor")}</p>
+        <p className="relative flex items-center gap-2 text-sm text-muted-foreground">
+          {t("about.builtFor")}
+          <IndonesianFlag label={t("about.flag")} />
+        </p>
       </section>
 
       <section aria-labelledby="what-title" className="flex flex-col gap-6">

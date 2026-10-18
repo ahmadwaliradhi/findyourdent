@@ -34,6 +34,8 @@ describe("GET /sitemap.xml", () => {
         `${server.baseUrl}/`,
         `${server.baseUrl}/direktori`,
         `${server.baseUrl}/tentang`,
+        `${server.baseUrl}/privasi`,
+        `${server.baseUrl}/syarat`,
         `${server.baseUrl}/tempat/${first.placeId}`,
         `${server.baseUrl}/tempat/ChIJ%20second%26odd`,
       ].sort(),
@@ -41,17 +43,17 @@ describe("GET /sitemap.xml", () => {
     expect(server.fakes.places.calls).toEqual([]);
   });
 
-  it("leaves out Privacy and Terms until legal review", async () => {
+  it("lists About, Privacy and Terms", async () => {
     const xml = await (await fetch(new URL("/sitemap.xml", server.baseUrl))).text();
 
     expect(xml).toContain(`<loc>${server.baseUrl}/tentang</loc>`);
-    expect(xml).not.toContain("/privasi");
-    expect(xml).not.toContain("/syarat");
+    expect(xml).toContain(`<loc>${server.baseUrl}/privasi</loc>`);
+    expect(xml).toContain(`<loc>${server.baseUrl}/syarat</loc>`);
   });
 
   it("is still valid with no Listed Providers yet", async () => {
     const xml = await (await fetch(new URL("/sitemap.xml", server.baseUrl))).text();
 
-    expect([...xml.matchAll(/<loc>/g)]).toHaveLength(3);
+    expect([...xml.matchAll(/<loc>/g)]).toHaveLength(5);
   });
 });
