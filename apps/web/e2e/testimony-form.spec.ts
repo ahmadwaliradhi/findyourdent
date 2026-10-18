@@ -160,3 +160,88 @@ test("held: shows the plain reason and the 24-hour target", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Testimoni Anda sedang ditinjau" })).toBeVisible();
   await expect(page.getByText("Tim FindYourDent akan memutuskan dalam 24 jam.")).toBeVisible();
 });
+
+/** The answer for a Listed Provider, as RSGM UNAIR's page gets on findyourdent.com. */
+const LISTED = {
+  listed: true,
+  name: "Klinik Gigi Senyum Contoh",
+  region: { provinceCode: "35", regencyCode: "35.78" },
+};
+
+/** Fills everything but the Provider, as a Patient who came from a Provider page does. */
+async function fillAfterProvider(page: Page) {
+  await rate(page, "Pelayanan", 5);
+  await rate(page, "Kebersihan", 4);
+  await rate(page, "Bahan dan alat", 4);
+  await page.getByLabel("Cerita Anda").fill("Dokternya sabar dan ruangannya bersih.");
+  await page.getByLabel("Tahun").selectOption({ index: 2 });
+  await page.getByLabel("Bulan", { exact: true }).selectOption("01");
+  await page.getByLabel("Nama yang ditampilkan").fill("Siti R.");
+  await page.getByLabel("Ini pengalaman saya sendiri, saya tulis dengan jujur.").check();
+  await page.getByLabel("Tulisan dan foto saya tidak memuat data pribadi orang lain.").check();
+}
+
+test("Kirim pressed while the place is still being checked waits for the check, then sends", async ({ page }) => {
+  let answer: () => void = () => {};
+  const answered = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  let asked: () => void = () => {};
+  const askedOnce = new Promise<void>((resolve) => {
+    asked = resolve;
+  });
+  await page.route("**/api/providers/*/listing", async (route) => {
+    asked();
+    await answered;
+    await route.fulfill({ json: LISTED });
+  });
+  let sent = 0;
+  await page.route("**/api/testimonies", (route) => {
+    sent += 1;
+    return route.fulfill({
+      status: 201,
+      json: { testimonyId: "t-3", status: "published", message: "Terima kasih!", verifiedVisit: false },
+    });
+  });
+
+  await page.goto("/ceritakan?placeId=sample-klinik-senyum");
+  // The check starts once the form has hydrated, so what is filled from here stays.
+  await askedOnce;
+  await expect(page.getByText("Memeriksa tempat…")).toBeVisible();
+  await fillAfterProvider(page);
+
+  // Still checking: Kirim waits instead of refusing the name and Region it has not shown.
+  const kirim = page.getByRole("button", { name: "Kirim" });
+  await expect(kirim).toBeDisabled();
+  const pressed = kirim.click();
+  await page.waitForTimeout(300);
+  await expect(page.getByText("Periksa kembali isian yang ditandai.")).toHaveCount(0);
+  answer();
+  await pressed;
+
+  await expect(page.getByRole("heading", { name: "Testimoni Anda sudah terbit" })).toBeVisible();
+  expect(sent).toBe(1);
+});
+
+test("a failed place check shows its retry, not errors on hidden fields", async ({ page }) => {
+  let fail = true;
+  await page.route("**/api/providers/*/listing", (route) =>
+    fail ? route.fulfill({ status: 503, json: { error: "unavailable" } }) : route.fulfill({ json: LISTED }),
+  );
+
+  await page.goto("/ceritakan?placeId=sample-klinik-senyum");
+  await expect(page.getByText("Tempat belum bisa diperiksa.")).toBeVisible();
+  await fillAfterProvider(page);
+
+  await page.getByRole("button", { name: "Kirim" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Periksa kembali isian yang ditandai." })).toBeVisible();
+  // The marked field is the place check itself, with its retry.
+  await expect(page.getByText("Tekan Coba lagi untuk memeriksa tempat.")).toBeVisible();
+  await expect(page.getByText("Isi nama tempat sesuai papan nama atau yang Anda kenal.")).toHaveCount(0);
+  await noHorizontalScroll(page);
+
+  fail = false;
+  await page.getByRole("button", { name: "Coba lagi" }).click();
+  await expect(page.getByText("Tempat ini sudah terdaftar di FindYourDent.")).toBeVisible();
+  await expect(page.getByText("Tekan Coba lagi untuk memeriksa tempat.")).toHaveCount(0);
+});

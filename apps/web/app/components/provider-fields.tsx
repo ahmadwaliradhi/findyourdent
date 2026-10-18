@@ -26,6 +26,7 @@ import {
   type ProviderListingResponse,
   TESTIMONY_LIMITS,
 } from "~/lib/testimony";
+import type { ListingCheck } from "~/lib/testimony-draft";
 import { cn } from "~/lib/utils";
 
 export interface ProviderFieldsProps {
@@ -34,6 +35,8 @@ export interface ProviderFieldsProps {
   /** Field name to message, from the server's fieldErrors (placeId, providerName, region.provinceCode, region.regencyCode). */
   errors?: Record<string, string>;
   disabled?: boolean;
+  /** Where the picked place's listing check stands, for the form to hold Kirim until it answers. */
+  onListingChange?(listing: ListingCheck): void;
 }
 
 type Suggestion = AutocompleteResponse["suggestions"][number];
@@ -75,7 +78,7 @@ function prefillRegion(address: string, onDistrict: (regencyCode: string, distri
  * the typed-name field and Region selects (not Listed) or the stored name and Region
  * read-only with "Sarankan koreksi" (Listed).
  */
-export function ProviderFields({ value, onChange, errors = {}, disabled }: ProviderFieldsProps) {
+export function ProviderFields({ value, onChange, errors = {}, disabled, onListingChange }: ProviderFieldsProps) {
   const { t } = useTranslation();
   const id = useId();
   // The latest value, for the listing answer that arrives after the Patient typed on.
@@ -83,7 +86,12 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
   latest.current = value;
   const emit = useRef(onChange);
   emit.current = onChange;
-  const [listing, setListing] = useState<"checking" | "checked" | "failed">("checked");
+  // A place already picked (a Provider page link, a restored draft) is checked from the start.
+  const [listing, setListing] = useState<ListingCheck>(value.placeId ? "checking" : "checked");
+  // Bumped by "Coba lagi" to ask again after a failed check.
+  const [attempt, setAttempt] = useState(0);
+  const report = useRef(onListingChange);
+  report.current = onListingChange;
   // The address shown with the picked suggestion, kept until the listing check says
   // whether to pre-fill the Region from it. Never in `value`, so never in the draft.
   const pickedAddress = useRef<{ placeId: string; text: string } | null>(null);
@@ -91,6 +99,7 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
   // Whether the picked place is Listed: asked on every pick and again for a restored
   // draft, since the place may have become Listed since. A free Firestore read.
   const placeId = value.placeId;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the check on "Coba lagi".
   useEffect(() => {
     if (!placeId) return;
     const controller = new AbortController();
@@ -123,7 +132,11 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
         if (!controller.signal.aborted) setListing("failed");
       });
     return () => controller.abort();
-  }, [placeId]);
+  }, [placeId, attempt]);
+
+  // With no place picked there is nothing to wait for, even if a check was cut short.
+  const reported = placeId ? listing : "checked";
+  useEffect(() => report.current?.(reported), [reported]);
 
   if (!placeId) {
     return (
@@ -156,7 +169,12 @@ export function ProviderFields({ value, onChange, errors = {}, disabled }: Provi
           {t("providerFields.checkingListing")}
         </p>
       ) : listing === "failed" ? (
-        <ErrorLine role="alert">{t("providerFields.listingFailed")}</ErrorLine>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <ErrorLine role="alert">{t("providerFields.listingFailed")}</ErrorLine>
+          <Button type="button" variant="outline" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+            {t("providerFields.retryListing")}
+          </Button>
+        </div>
       ) : value.listed ? (
         <ListedProvider placeId={placeId} listed={value.listed} />
       ) : (

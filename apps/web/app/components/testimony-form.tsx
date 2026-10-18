@@ -41,6 +41,7 @@ import {
   formatPriceInput,
   hasContent,
   isFutureMonth,
+  type ListingCheck,
   parseDraft,
   serializeDraft,
   stateFromInitial,
@@ -132,6 +133,8 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   const [result, setResult] = useState<{ response: TestimonyStoredResponse; proofSent: boolean } | null>(null);
   const [fix, setFix] = useState<TestimonyAuthorFixResponse | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
+  // Whether the picked place is Listed decides which Provider fields count; Kirim waits for it.
+  const [listing, setListing] = useState<ListingCheck>("checked");
   // The create draft loads after hydration; nothing is saved before it has.
   const [draftLoaded, setDraftLoaded] = useState(mode !== "create");
   // Kirim needs JavaScript (files and sign-in), so it waits for hydration.
@@ -233,6 +236,18 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
 
   const placeId = provider?.placeId ?? state.provider.placeId ?? initialPlaceId ?? "";
 
+  // A new answer from the listing check replaces the mark it left on the place.
+  const listingChanged = (next: ListingCheck) => {
+    setListing(next);
+    if (next !== "failed") {
+      setErrors((current) => {
+        if (!("placeId" in current)) return current;
+        const { placeId: _, ...rest } = current;
+        return rest;
+      });
+    }
+  };
+
   const send = async (): Promise<Response> => {
     const body = new FormData();
     const submission = toSubmission(state, {
@@ -310,7 +325,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
-    const found = validateForm(state, { mode, now: new Date() });
+    const found = validateForm(state, { mode, now: new Date(), listing });
     if (Object.keys(found).length > 0) {
       setErrors(Object.fromEntries(Object.entries(found).map(([field, error]) => [field, message(error)])));
       setProblem({ message: t("testimonyForm.errorSummary") });
@@ -381,6 +396,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
               onChange={(value) => update({ provider: value })}
               errors={providerErrors}
               disabled={busy}
+              onListingChange={listingChanged}
             />
           )}
         </Card>
@@ -707,7 +723,7 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
         <Button
           type="submit"
           size="lg"
-          disabled={busy || !hydrated}
+          disabled={busy || !hydrated || (mode === "create" && listing === "checking")}
           className="w-full desktop:w-auto desktop:self-start"
         >
           {phase === "signingIn"
