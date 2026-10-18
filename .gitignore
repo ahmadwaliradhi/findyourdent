@@ -23,3 +23,5 @@ ui-debug.log
 test-results/
 playwright-report/
 .lighthouseci/
+# Saved Google session for the deployed journeys (apps/web/e2e-deployed/login.ts)
+apps/web/e2e-deployed/.auth/
