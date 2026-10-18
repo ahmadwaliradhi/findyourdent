@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { redirect } from "react-router";
-import { TestimonyForm } from "~/components/testimony-form";
+import { TestimonyForm, TestimonyTips } from "~/components/testimony-form";
 import { getI18n } from "~/i18n/config";
 import { loadTestimonyForEdit } from "~/server/testimonies.server";
 import { readSession } from "../../server/auth.ts";
@@ -31,16 +31,22 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 export default function EditTestimony({ loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
   return (
-    <section className="flex flex-col gap-4" aria-labelledby="edit-testimony-title">
-      <h1 id="edit-testimony-title" className="text-2xl font-bold">
-        {t("testimonyForm.editTitle")}
-      </h1>
-      <TestimonyForm
-        mode="edit"
-        testimonyId={loaderData.testimonyId}
-        provider={loaderData.provider}
-        initial={loaderData.initial}
-      />
-    </section>
+    <div className="grid grid-cols-1 items-start gap-6 desktop:grid-cols-[minmax(0,1fr)_360px] desktop:gap-10">
+      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="edit-testimony-title">
+        <h1
+          id="edit-testimony-title"
+          className="text-[28px] leading-[34px] font-bold tracking-[-.015em] desktop:text-[36px] desktop:leading-[42px]"
+        >
+          {t("testimonyForm.editTitle")}
+        </h1>
+        <TestimonyForm
+          mode="edit"
+          testimonyId={loaderData.testimonyId}
+          provider={loaderData.provider}
+          initial={loaderData.initial}
+        />
+      </section>
+      <TestimonyTips />
+    </div>
   );
 }

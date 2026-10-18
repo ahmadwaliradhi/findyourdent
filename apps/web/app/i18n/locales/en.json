@@ -505,6 +505,7 @@
     "photoAlt": "Photo {{index}}",
     "photoRemove": "Remove photo {{index}}",
     "photosReattach": "Photos and proof of visit are not kept in the draft. Choose them again before sending.",
+    "filesTitle": "Photos and proof of visit",
     "proofLabel": "Proof of visit (optional, private)",
     "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown: it is checked and then deleted right away. If it matches, your Testimony gets the Verified visit mark.",
     "proofAdd": "Choose proof file",
@@ -515,6 +516,7 @@
     "consentTitle": "Confirmation",
     "consentHonest": "This is my own experience, written honestly.",
     "consentNoOthers": "My text and photos contain no one else's personal data.",
+    "nameTitle": "Name and confirmation",
     "submit": "Send",
     "submitting": "Sending…",
     "signingIn": "Waiting for Google sign-in…",
@@ -576,6 +578,16 @@
       },
       "roundsLeft": "Fixes left before the FindYourDent team reviews it instead: {{count}}.",
       "lastRound": "If the next send still needs a fix, the FindYourDent team reviews it, usually within 24 hours."
+    },
+    "tips": {
+      "title": "What makes a helpful Testimony",
+      "what": "Say what happened: the dentist's explanation, the wait, any pain.",
+      "price": "Write the price you actually paid, if you remember it.",
+      "names": "Leave out staff names if you are not comfortable.",
+      "privacyTitle": "Your privacy",
+      "account": "Your Google account is never shown.",
+      "proof": "Proof of visit stays private and is never published.",
+      "edit": "You can edit or delete your Testimony at any time."
     }
   },
   "providerFields": {
