@@ -51,9 +51,7 @@ export async function expireProofs({
     .collection(COLLECTIONS.testimonies)
     .where("proofOfVisit.result", "==", "pending")
     .get();
-  const due = pending.docs.filter(
-    (doc) => ((doc.data() as TestimonyDoc).proofOfVisit?.checkedAt.toMillis() ?? 0) <= cutoffMs,
-  );
+  const due = pending.docs.filter((doc) => isDue(doc.data() as TestimonyDoc, cutoffMs));
 
   const summary: ExpirySummary = { expired: 0, failed: 0 };
   for (const doc of due) {
@@ -70,11 +68,21 @@ export async function expireProofs({
   return summary;
 }
 
-/** Expires the proof only if it still waits and is still old enough: an admin may have decided it meanwhile. */
+/**
+ * A proof still waiting, checked at or before the cutoff. Never one on a deleted
+ * Testimony: erasure takes the proof record, and one deleted before it did is left alone.
+ */
+function isDue(testimony: TestimonyDoc | undefined, cutoffMs: number): boolean {
+  const proof = testimony?.proofOfVisit;
+  return testimony?.status !== "deleted" && proof?.result === "pending" && proof.checkedAt.toMillis() <= cutoffMs;
+}
+
+/** Expires the proof only if it is still due: an admin or the author may have acted meanwhile. */
 async function expireIfStillWaiting(firestore: Firestore, ref: DocumentReference, cutoffMs: number): Promise<boolean> {
   return firestore.runTransaction(async (tx) => {
-    const proof = ((await tx.get(ref)).data() as TestimonyDoc | undefined)?.proofOfVisit;
-    if (proof?.result !== "pending" || proof.checkedAt.toMillis() > cutoffMs) return false;
+    const testimony = (await tx.get(ref)).data() as TestimonyDoc | undefined;
+    const proof = testimony?.proofOfVisit;
+    if (!isDue(testimony, cutoffMs) || !proof) return false;
     const { reasons: _waitedFor, ...facts } = proof;
     const expired: ProofOfVisitRecord = { ...facts, result: "rejected", reason: "expired" };
     tx.update(ref, { proofOfVisit: expired });

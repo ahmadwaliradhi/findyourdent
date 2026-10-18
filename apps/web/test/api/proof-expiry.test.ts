@@ -115,4 +115,16 @@ describe("proof expiry job", () => {
     expect((await proofOf(rejected)).proofOfVisit).toMatchObject({ result: "rejected", reason: "tooOld" });
     expect(await proofOf(old)).toMatchObject({ verifiedVisit: false, proofOfVisit: { result: "rejected" } });
   });
+
+  it("never touches a deleted Testimony, even one still carrying a waiting proof", async () => {
+    const id = await waitingProof(9 * DAY_MS);
+    await server.firestore.collection(COLLECTIONS.testimonies).doc(id).update({ status: "deleted" });
+    const before = await proofOf(id);
+
+    const summary = await run();
+
+    expect(summary.expired).toBe(0);
+    expect(summary.failed).toBe(0);
+    expect(await proofOf(id)).toEqual(before);
+  });
 });

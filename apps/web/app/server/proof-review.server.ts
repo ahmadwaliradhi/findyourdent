@@ -76,7 +76,7 @@ export async function loadProofQueue(
   nowMs: number,
 ): Promise<QueueItem[]> {
   const pending = await testimonies(firestore).where("proofOfVisit.result", "==", "pending").get();
-  // The author's delete takes the file with it; the tombstone has nothing to review.
+  // Erasure takes the proof record; a Testimony deleted before it did has nothing to decide.
   const docs = pending.docs.filter((doc) => doc.get("status") !== "deleted");
   if (docs.length === 0) return [];
 

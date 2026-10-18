@@ -48,7 +48,7 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `authorFixRounds` | authorFix rounds used before this version was stored (the next authorFix after three is held). An authorFix itself stores nothing on the Testimony; the count waits in `counters` meanwhile. |
 | `pendingRevision` | Edit of a published Testimony under Moderation; the public fields stay visible until it is decided. |
 | `reply` | The claimed Provider's one public reply (editable), with its own Moderation status and the `claimId` it was written under; shown only while that Claim is the place's current one. |
-| `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply, a waiting proof file and the Proof Fingerprint (`proofFingerprints`) are removed. |
+| `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply, the Proof of Visit record (`proofOfVisit`: the facts read from it and any admin note), a waiting proof file and the Proof Fingerprint (`proofFingerprints`) are removed; `verifiedVisit` stays as it was. The admin queue and the proof expiry job never touch a `deleted` Testimony. |
 
 Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`, `providerType`, `verifiedVisit` combinations for feed filters; `placeId` + `status` + `publishedAt desc` (Provider page); `authorUid` + `placeId` (uniqueness).
 

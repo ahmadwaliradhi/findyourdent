@@ -1108,10 +1108,10 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
 
 /**
  * DELETE /api/testimonies/:testimonyId: the author erases their Testimony from any
- * state. Text, photos (and their stored objects), a pending proof file, a pending edit
- * and any reply go;
- * aggregates and counters are recomputed when it was published. Not rate limited
- * (erasure must always work), but needs App Check like every write.
+ * state. Text, photos (and their stored objects), the Proof of Visit record, its
+ * fingerprint and any waiting file, a pending edit and any reply go; aggregates and
+ * counters are recomputed when it was published. Not rate limited (erasure must always
+ * work), but needs App Check like every write.
  */
 export async function deleteTestimony(context: AppLoadContext, request: Request, testimonyId: string) {
   const user = await readSession(context.auth, request.headers.get("cookie"));
@@ -1145,6 +1145,9 @@ export async function deleteTestimony(context: AppLoadContext, request: Request,
         pendingRevision: FieldValue.delete(),
         reply: FieldValue.delete(),
         proposedProviderName: FieldValue.delete(),
+        // The proof record goes too: the facts read from it and any admin note. Only
+        // `verifiedVisit` stays, a yes or no that the counters above already settled.
+        proofOfVisit: FieldValue.delete(),
       });
       // Erasure takes the Proof Fingerprint too, which frees the receipt.
       tx.delete(fingerprintRef(firestore, testimonyId));

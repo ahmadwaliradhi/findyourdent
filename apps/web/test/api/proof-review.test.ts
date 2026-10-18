@@ -14,6 +14,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AdminActionRequest, AdminQueueResponse } from "../../app/lib/admin-queue.ts";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
+import { silentLogger } from "../../server/logger.ts";
+import { expireProofs } from "../../server/proof-expiry.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 import { receiptJpeg } from "../support/receipts.ts";
@@ -480,5 +482,53 @@ describe("a proof the author replaces while an admin looks at it", () => {
 
     expect(await testimony(id)).toMatchObject({ verifiedVisit: false, proofOfVisit: { result: "pending" } });
     expect(await adminActions()).toEqual([]);
+  });
+});
+
+describe("a deleted Testimony's proof", () => {
+  const NOTE = "Nama klinik di struk bukan klinik ini.";
+
+  async function deleteAsAuthor(email: string, id: string): Promise<void> {
+    const response = await fetch(new URL(`/api/testimonies/${id}`, server.baseUrl), {
+      method: "DELETE",
+      headers: { cookie: await server.signInWithGoogle(email), [APP_CHECK_HEADER]: server.appCheckToken() },
+    });
+    if (response.status !== 200) throw new Error(`delete failed: ${response.status} ${await response.text()}`);
+  }
+
+  it("goes with it: no facts read from it, no admin note, and neither the queue nor the expiry job touches it", async () => {
+    // A total unlike the price the Testimony itself states, which its tombstone keeps.
+    const facts = doubtfulFacts({ totalRupiah: 275_000 });
+    const waiting = await postWithProof("satu@example.com", { facts });
+    const turnedDown = await postWithProof("dua@example.com", { facts, overrides: { placeId: "ChIJ-lain" } });
+    const cookie = await adminCookie();
+    const proofCheckedAt = await shownProof(cookie, turnedDown);
+    expect(
+      (await act(cookie, { action: "rejectProof", subjectId: turnedDown, reason: NOTE, proofCheckedAt })).status,
+    ).toBe(200);
+
+    await deleteAsAuthor("satu@example.com", waiting);
+    await deleteAsAuthor("dua@example.com", turnedDown);
+
+    for (const id of [waiting, turnedDown]) {
+      const stored = await testimony(id);
+      expect(stored.status).toBe("deleted");
+      expect(stored.proofOfVisit).toBeUndefined();
+      const kept = JSON.stringify(stored);
+      for (const fact of ["Klinik Gigi Sentosa", `${THIS_MONTH}-02`, "275000", NOTE]) expect(kept).not.toContain(fact);
+      expect(await hasFingerprint(id)).toBe(false);
+    }
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect((await queue(cookie)).items).toEqual([]);
+
+    const before = await testimony(waiting);
+    const summary = await expireProofs({
+      firestore: server.firestore,
+      uploads: server.uploads,
+      logger: silentLogger,
+      now: () => Date.now() + 8 * 24 * HOUR_MS,
+    });
+    expect(summary.expired).toBe(0);
+    expect(await testimony(waiting)).toEqual(before);
   });
 });
