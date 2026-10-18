@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { formatRupiah } from "../../app/lib/format";
+import { formatDate, formatRupiah } from "../../app/lib/format";
 
 // A no-break space keeps "Rp" and the amount on one line.
-const rp = (amount: string) => `Rp\u00a0${amount}`;
+const rp = (amount: string) => `Rp ${amount}`;
 
 describe("formatRupiah", () => {
   it("uses the Indonesian thousands separator in Indonesian", () => {
@@ -17,5 +17,17 @@ describe("formatRupiah", () => {
 
   it("rounds to whole rupiah", () => {
     expect(formatRupiah(999.6, "id")).toBe(rp("1.000"));
+  });
+});
+
+describe("formatDate", () => {
+  it("reads a YYYY-MM-DD date as day, month name and year in each language", () => {
+    expect(formatDate("2026-09-12", "id")).toBe("12 September 2026");
+    expect(formatDate("2026-10-01", "id")).toBe("1 Oktober 2026");
+    expect(formatDate("2026-10-01", "en")).toBe("1 October 2026");
+  });
+
+  it("returns anything that is not a date unchanged", () => {
+    expect(formatDate("soon", "id")).toBe("soon");
   });
 });

@@ -67,31 +67,11 @@ function TestimonyCard({
         <p className="text-sm text-muted-foreground">{meta}</p>
       </header>
 
-      <dl className="grid grid-cols-3 gap-2" aria-label={ratingsLabel}>
-        {ratings.map((rating) => (
-          <div key={rating.label} className="flex flex-col gap-0.5 rounded-md bg-secondary p-2">
-            <dt className="text-xs font-medium text-secondary-foreground">{rating.label}</dt>
-            <dd className="flex items-center gap-1 text-base leading-5 font-bold tabular-nums">
-              <Star aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0 fill-star text-star" />
-              <span aria-hidden="true">{rating.score}/5</span>
-              <span className="sr-only">{rating.spokenScore}</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <AspectRatings ratings={ratings} label={ratingsLabel} />
 
       <p className="whitespace-pre-line">{excerpt}</p>
 
-      {facts.length > 0 && (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-sm">
-          {facts.map((fact) => (
-            <Fragment key={fact.label}>
-              <dt className="text-muted-foreground">{fact.label}:</dt>
-              <dd className="font-semibold tabular-nums">{fact.value}</dd>
-            </Fragment>
-          ))}
-        </dl>
-      )}
+      <FactList facts={facts} />
 
       <footer className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
         <span>{byline}</span>
@@ -107,4 +87,37 @@ function TestimonyCard({
   );
 }
 
-export { TestimonyCard };
+/** The three aspect scores, each with a star and a spoken "n dari 5". */
+function AspectRatings({ ratings, label }: { ratings: Rating[]; label: string }) {
+  return (
+    <dl className="grid grid-cols-3 gap-2" aria-label={label}>
+      {ratings.map((rating) => (
+        <div key={rating.label} className="flex flex-col gap-0.5 rounded-md bg-secondary p-2">
+          <dt className="text-xs font-medium text-secondary-foreground">{rating.label}</dt>
+          <dd className="flex items-center gap-1 text-base leading-5 font-bold tabular-nums">
+            <Star aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0 fill-star text-star" />
+            <span aria-hidden="true">{rating.score}/5</span>
+            <span className="sr-only">{rating.spokenScore}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Procedure and price, label beside value. Renders nothing without facts. */
+function FactList({ facts }: { facts: Fact[] }) {
+  if (facts.length === 0) return null;
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-sm">
+      {facts.map((fact) => (
+        <Fragment key={fact.label}>
+          <dt className="text-muted-foreground">{fact.label}:</dt>
+          <dd className="font-semibold tabular-nums">{fact.value}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  );
+}
+
+export { AspectRatings, FactList, TestimonyCard };

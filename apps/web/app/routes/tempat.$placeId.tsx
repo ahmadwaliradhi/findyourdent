@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import type { TFunction } from "i18next";
+import { Check, ChevronLeft, Clock, Info, MapPin, MessageCircle, Phone, Star } from "lucide-react";
+import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
 import { ReportButton } from "~/components/report-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card } from "~/components/ui/card";
+import { AspectRatings, FactList } from "~/components/ui/testimony-card";
 import { getI18n, type Language } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { formatRupiah, formatScore, formatVisitMonth } from "~/lib/format";
+import { formatDate, formatRupiah, formatScore, formatVisitMonth } from "~/lib/format";
 import { fetchGoogleRoute } from "~/lib/google-routes";
 import { providerPath } from "~/lib/paths";
 import type { PublicPriceList } from "~/lib/price-lists";
@@ -100,37 +103,58 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
   const phone = provider?.owner?.phone ?? google?.nationalPhoneNumber;
   const whatsappUri = provider?.owner?.whatsappUri ?? google?.whatsappUri;
   const mapsUri = google?.googleMapsUri ?? loaderData.googleMapsUri;
+  const hasPrices = Boolean(provider && (provider.priceSignals.length > 0 || provider.priceList));
 
   return (
-    <div className="flex flex-col gap-6" data-place-id={placeId}>
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{name}</h1>
-        {provider && <p className="text-muted-foreground">{provider.area}</p>}
+    <div className="flex flex-col gap-8" data-place-id={placeId}>
+      <header className="flex flex-col gap-3">
+        <Link
+          to="/direktori"
+          className="inline-flex min-h-touch items-center gap-1 self-start font-semibold text-foreground no-underline"
+        >
+          <ChevronLeft aria-hidden="true" strokeWidth={1.75} className="size-5" />
+          {t("nav.directory")}
+        </Link>
+        {(providerType || provider?.claimed) && (
+          <div className="flex flex-wrap gap-2">
+            {providerType && (
+              <Badge variant="neutral">
+                {t(`provider.type.${providerType}`)}
+                {typeInferred && ` (${t("provider.typeInferred")})`}
+              </Badge>
+            )}
+            {provider?.claimed && (
+              <Badge variant="brand" icon={Check}>
+                {t("provider.claimed")}
+              </Badge>
+            )}
+          </div>
+        )}
+        <h1 className="text-[28px] leading-[34px] font-bold tracking-[-.015em]">{name}</h1>
+        {provider && (
+          <p className="flex items-center gap-1.5 text-muted-foreground">
+            <MapPin aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
+            {provider.area}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
-          {providerType && (
-            <Badge variant="neutral">
-              {t(`provider.type.${providerType}`)}
-              {typeInferred && ` (${t("provider.typeInferred")})`}
-            </Badge>
-          )}
-          {provider?.claimed && <Badge variant="brand">{t("provider.claimed")}</Badge>}
-        </div>
-        <div className="flex flex-wrap gap-2 pt-1">
-          {phone && (
-            <Button asChild size="sm">
-              <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
-                {t("provider.call")} {phone}
-              </a>
-            </Button>
-          )}
           {whatsappUri && (
-            <Button asChild size="sm" variant="secondary">
+            <Button asChild>
               <a href={whatsappUri} target="_blank" rel="noreferrer">
+                <MessageCircle aria-hidden="true" strokeWidth={1.75} />
                 {t("provider.whatsapp")}
               </a>
             </Button>
           )}
-          <Button asChild size="sm" variant="outline">
+          {phone && (
+            <Button asChild variant={whatsappUri ? "outline" : "primary"}>
+              <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
+                <Phone aria-hidden="true" strokeWidth={1.75} />
+                {t("provider.call")} {phone}
+              </a>
+            </Button>
+          )}
+          <Button asChild variant="ghost">
             <a href={mapsUri} target="_blank" rel="noreferrer">
               {t("shortlist.openInMaps")}
             </a>
@@ -138,172 +162,240 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
         </div>
       </header>
 
-      {provider ? <Aspects provider={provider} language={language} /> : <p>{t("provider.notListed")}</p>}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 desktop:grid-cols-[minmax(0,1fr)_360px] desktop:items-start desktop:gap-10">
+        <div className="flex flex-col gap-8">
+          {provider && <Aspects provider={provider} language={language} />}
 
-      <div className="flex flex-col items-start gap-2 rounded-md border border-dashed px-4 py-3">
-        <p className="text-sm text-muted-foreground">{t("testimonyForm.entryHint")}</p>
-        <Button asChild size="sm">
-          <Link to={`/ceritakan?placeId=${encodeURIComponent(placeId)}`}>{t("testimonyForm.entryCta")}</Link>
-        </Button>
-      </div>
-
-      {provider && provider.priceSignals.length > 0 && <Prices signals={provider.priceSignals} language={language} />}
-
-      {provider?.priceList && <OwnerPriceList list={provider.priceList} language={language} />}
-
-      {provider?.owner && (
-        <section className="flex flex-col gap-1 text-sm">
-          <h2 className="text-lg font-semibold">{t("provider.ownerTitle")}</h2>
-          {provider.owner.address && <p>{provider.owner.address}</p>}
-          {provider.owner.openingHours && <p className="whitespace-pre-line">{provider.owner.openingHours}</p>}
-          {provider.owner.services && (
-            <p>
-              {t("provider.services", {
-                services: provider.owner.services.map((code) => procedureLabel(code, language)).join(", "),
-              })}
-            </p>
+          {provider && hasPrices && (
+            <Prices signals={provider.priceSignals} list={provider.priceList} language={language} />
           )}
-          {provider.owner.website && (
-            <a href={provider.owner.website} target="_blank" rel="noreferrer nofollow" className="underline">
-              {provider.owner.website}
-            </a>
-          )}
-        </section>
-      )}
 
-      {provider && (
-        <section aria-labelledby="testimonies-title" className="flex flex-col gap-3">
-          <h2 id="testimonies-title" className="text-lg font-semibold">
-            {t("provider.testimoniesTitle")}
-          </h2>
-          {testimonies.length === 0 ? (
-            <p className="text-muted-foreground">{t("provider.noTestimonies")}</p>
-          ) : (
-            <ol className="flex flex-col gap-3">
-              {testimonies.map((testimony) => (
-                <li key={testimony.id} id={`testimoni-${testimony.id}`} className="scroll-mt-4">
-                  <TestimonyItem testimony={testimony} language={language} />
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-      )}
-
-      <p className="text-sm text-muted-foreground">
-        {provider?.claimed ? t("provider.ownerHint") : t("provider.claimHint")}{" "}
-        <Link to={`${providerPath(placeId)}/klaim`} className="font-medium text-foreground underline">
-          {provider?.claimed ? t("provider.manageCta") : t("provider.claimCta")}
-        </Link>
-      </p>
-
-      <section
-        aria-labelledby="google-title"
-        className="flex flex-col gap-3 rounded-md border px-4 py-4"
-        aria-busy={block.phase === "loading"}
-      >
-        <h2 id="google-title" className="text-lg font-semibold">
-          {t("provider.googleTitle")}
-        </h2>
-        <div aria-live="polite">
-          {block.phase === "loading" && <p className="text-sm text-muted-foreground">{t("provider.googleLoading")}</p>}
-          {(block.phase === "error" || (block.phase === "done" && !block.result.available)) && (
-            <p className="text-sm">{t("provider.googleUnavailable")}</p>
-          )}
-          {google && <GoogleFacts block={google} language={language} />}
+          <section aria-labelledby="testimonies-title" className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="testimonies-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+                {t("provider.testimoniesTitle")}
+              </h2>
+              <Button asChild variant="secondary" size="sm">
+                <Link to={`/ceritakan?placeId=${encodeURIComponent(placeId)}`}>{t("testimonyForm.entryCta")}</Link>
+              </Button>
+            </div>
+            {!provider ? (
+              <p className="text-muted-foreground">{t("provider.notListed")}</p>
+            ) : testimonies.length === 0 ? (
+              <p className="text-muted-foreground">{t("provider.noTestimonies")}</p>
+            ) : (
+              <ol className="flex flex-col gap-3">
+                {testimonies.map((testimony) => (
+                  <li key={testimony.id} id={`testimoni-${testimony.id}`} className="scroll-mt-4">
+                    <TestimonyItem testimony={testimony} language={language} />
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
         </div>
-        <GoogleReviews placeId={placeId} />
-        <p className="text-xs text-muted-foreground">{t("provider.attribution")}</p>
-      </section>
+
+        <aside className="flex flex-col gap-4">
+          {provider?.owner && <OwnerInfo owner={provider.owner} language={language} />}
+
+          <Card labelledBy="google-title" aria-busy={block.phase === "loading"}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="google-title" className="text-lg leading-6 font-[650]">
+                {t("provider.googleTitle")}
+              </h2>
+              {google?.openNow !== undefined &&
+                (google.openNow ? (
+                  <Badge variant="success">{t("provider.openNow")}</Badge>
+                ) : (
+                  <Badge variant="neutral" icon={Clock}>
+                    {t("provider.closedNow")}
+                  </Badge>
+                ))}
+            </div>
+            <div aria-live="polite">
+              {block.phase === "loading" && (
+                <p className="text-sm text-muted-foreground">{t("provider.googleLoading")}</p>
+              )}
+              {(block.phase === "error" || (block.phase === "done" && !block.result.available)) && (
+                <p className="flex items-start gap-1.5 text-sm">
+                  <Info aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-4 shrink-0 text-info" />
+                  {t("provider.googleUnavailable")}
+                </p>
+              )}
+              {google && <GoogleFacts block={google} language={language} />}
+            </div>
+            <GoogleReviews placeId={placeId} />
+            <p className="text-xs font-medium text-muted-foreground">{t("provider.attribution")}</p>
+          </Card>
+
+          <Card variant="flat" className="gap-2 border-transparent bg-muted">
+            <p className="text-sm">{provider?.claimed ? t("provider.ownerHint") : t("provider.claimHint")}</p>
+            <Button asChild variant="ghost" size="sm" className="self-start">
+              <Link to={`${providerPath(placeId)}/klaim`}>
+                {provider?.claimed ? t("provider.manageCta") : t("provider.claimCta")}
+              </Link>
+            </Button>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
 
 function Aspects({ provider, language }: { provider: ProviderSummary; language: Language }) {
   const { t } = useTranslation();
+  const { averages } = provider;
   return (
-    <section aria-labelledby="aspects-title" className="flex flex-col gap-2">
-      <h2 id="aspects-title" className="text-lg font-semibold">
-        {t("provider.aspectsTitle")}
-      </h2>
-      {provider.averages ? (
-        <dl className="grid grid-cols-3 gap-3">
-          {ASPECTS.map((aspect) => (
-            <div key={aspect} className="rounded-md border bg-card p-3">
-              <dt className="text-xs text-muted-foreground">{t(`provider.aspects.${aspect}`)}</dt>
-              <dd className="text-xl font-bold">{formatScore(provider.averages?.[aspect] ?? 0, language)}</dd>
-            </div>
-          ))}
-        </dl>
+    <Card labelledBy="aspects-title" className="desktop:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="aspects-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+          {t("provider.aspectsTitle")}
+        </h2>
+        <span className="text-sm text-muted-foreground">
+          {t("provider.testimonyCount", { count: provider.testimonyCount })} ·{" "}
+          {t("provider.verifiedVisitCount", { count: provider.verifiedVisitCount })}
+        </span>
+      </div>
+      {averages ? (
+        <>
+          <dl className="flex flex-col gap-3">
+            {ASPECTS.map((aspect) => (
+              <div key={aspect} className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-3">
+                <dt className="text-sm font-semibold">{t(`provider.aspects.${aspect}`)}</dt>
+                <dd className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-3">
+                  <span aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-muted">
+                    <span
+                      className="block h-full rounded-full bg-primary"
+                      style={{ width: `${(averages[aspect] / 5) * 100}%` }}
+                    />
+                  </span>
+                  <span className="text-right font-semibold tabular-nums">
+                    {formatScore(averages[aspect], language)}
+                  </span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs font-medium text-muted-foreground">{t("provider.scoreScale")}</p>
+        </>
       ) : (
         <p className="text-muted-foreground">{t("provider.noScores")}</p>
       )}
-      <p className="text-sm text-muted-foreground">
-        {t("provider.testimonyCount", { count: provider.testimonyCount })} ·{" "}
-        {t("provider.verifiedVisitCount", { count: provider.verifiedVisitCount })}
-      </p>
-    </section>
+    </Card>
   );
 }
 
-function Prices({ signals, language }: { signals: PriceSignal[]; language: Language }) {
-  const { t } = useTranslation();
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-lg font-semibold">{t("provider.pricesTitle")}</h2>
-      <ul className="flex flex-col gap-1 text-sm">
-        {signals.map((signal) => (
-          <li key={`${signal.procedureCode}-${signal.source}`}>
-            <span className="font-medium">{procedureLabel(signal.procedureCode, language)}: </span>
-            {signal.minRupiah === signal.maxRupiah
-              ? formatRupiah(signal.minRupiah, language)
-              : t("card.guidance.costRange", {
-                  min: formatRupiah(signal.minRupiah, language),
-                  max: formatRupiah(signal.maxRupiah, language),
-                })}{" "}
-            <span className="text-muted-foreground">
-              ({t(`shortlist.priceSource.${signal.source}`)}
-              {signal.asOf ? `, ${t("shortlist.asOf", { date: signal.asOf })}` : ""})
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+function rangeText(min: number, max: number, language: Language, t: TFunction) {
+  return min === max
+    ? formatRupiah(min, language)
+    : t("card.guidance.costRange", { min: formatRupiah(min, language), max: formatRupiah(max, language) });
 }
 
-function OwnerPriceList({ list, language }: { list: PublicPriceList; language: Language }) {
+function Prices({
+  signals,
+  list,
+  language,
+}: {
+  signals: PriceSignal[];
+  list: PublicPriceList | undefined | null;
+  language: Language;
+}) {
   const { t } = useTranslation();
   return (
-    <section className="flex flex-col gap-2" data-testid="owner-price-list">
-      <h2 className="text-lg font-semibold">{t("provider.priceListTitle")}</h2>
-      <p className="text-sm text-muted-foreground">
-        {t("provider.priceListConfirmed", { date: list.confirmedAt })}
-        {list.possiblyOutdated && (
-          <>
-            {" · "}
-            <span className="font-medium text-foreground">{t("provider.possiblyOutdated")}</span>
-          </>
+    <Card labelledBy="prices-title" className="desktop:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="prices-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+          {t("provider.pricesTitle")}
+        </h2>
+        {list && (
+          <Badge variant="success">
+            {t("provider.priceListConfirmed", { date: formatDate(list.confirmedAt, language) })}
+          </Badge>
         )}
-      </p>
-      <ul className="flex flex-col gap-2 text-sm">
-        {list.rows.map((row, index) => (
-          // Rows have no id; the list is replaced as a whole, never reordered in place.
-          // biome-ignore lint/suspicious/noArrayIndexKey: see above
-          <li key={index}>
-            <span className="font-medium">{row.procedureText}: </span>
-            {row.minRupiah === row.maxRupiah
-              ? formatRupiah(row.minRupiah, language)
-              : t("card.guidance.costRange", {
-                  min: formatRupiah(row.minRupiah, language),
-                  max: formatRupiah(row.maxRupiah, language),
-                })}{" "}
-            <span className="text-muted-foreground">{t(`priceList.units.${row.unit}`)}</span>
-            {row.notes && <p className="text-muted-foreground">{row.notes}</p>}
-          </li>
-        ))}
-      </ul>
-    </section>
+      </div>
+      {list && (
+        <div className="flex flex-col gap-2" data-testid="owner-price-list">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold">{t("provider.priceListTitle")}</h3>
+            {list.possiblyOutdated && <Badge variant="warning">{t("provider.possiblyOutdated")}</Badge>}
+          </div>
+          <ul className="divide-y rounded-lg border bg-card">
+            {list.rows.map((row, index) => (
+              // Rows have no id; the list is replaced as a whole, never reordered in place.
+              // biome-ignore lint/suspicious/noArrayIndexKey: see above
+              <li key={index} className="flex flex-col gap-1 px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                  <span>{row.procedureText}</span>
+                  <span className="font-semibold tabular-nums">
+                    {rangeText(row.minRupiah, row.maxRupiah, language, t)}{" "}
+                    <span className="font-normal text-muted-foreground">{t(`priceList.units.${row.unit}`)}</span>
+                  </span>
+                </div>
+                {row.notes && <p className="text-sm text-muted-foreground">{row.notes}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {signals.length > 0 && (
+        <ul className="flex flex-col gap-1 text-sm">
+          {signals.map((signal) => (
+            <li key={`${signal.procedureCode}-${signal.source}`}>
+              <span className="text-muted-foreground">
+                {t(`shortlist.priceSource.${signal.source}`)}, {procedureLabel(signal.procedureCode, language)}:
+              </span>{" "}
+              <b className="tabular-nums">{rangeText(signal.minRupiah, signal.maxRupiah, language, t)}</b>
+              {signal.asOf && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  ({t("shortlist.asOf", { date: formatDate(signal.asOf, language) })})
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function OwnerInfo({ owner, language }: { owner: NonNullable<ProviderSummary["owner"]>; language: Language }) {
+  const { t } = useTranslation();
+  const facts: { label: string; value: ReactNode }[] = [];
+  if (owner.address) facts.push({ label: t("provider.address"), value: owner.address });
+  if (owner.openingHours) facts.push({ label: t("provider.hours"), value: owner.openingHours });
+  if (owner.services) {
+    facts.push({
+      label: t("provider.services"),
+      value: owner.services.map((code) => procedureLabel(code, language)).join(", "),
+    });
+  }
+  if (owner.website) {
+    facts.push({
+      label: t("provider.website"),
+      value: (
+        <a href={owner.website} target="_blank" rel="noreferrer nofollow" className="break-all underline">
+          {owner.website}
+        </a>
+      ),
+    });
+  }
+  return (
+    <Card labelledBy="owner-title">
+      <h2 id="owner-title" className="text-lg leading-6 font-[650]">
+        {t("provider.ownerTitle")}
+      </h2>
+      {facts.length > 0 && (
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-[15px] leading-[22px]">
+          {facts.map((fact) => (
+            <Fragment key={fact.label}>
+              <dt className="text-muted-foreground">{fact.label}</dt>
+              <dd className="whitespace-pre-line">{fact.value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+    </Card>
   );
 }
 
@@ -313,30 +405,23 @@ function GoogleFacts({ block, language }: { block: ProviderGoogleBlock; language
     <div className="flex flex-col gap-2 text-sm">
       {block.formattedAddress && <p>{block.formattedAddress}</p>}
       {block.rating !== undefined && (
-        <p>
+        <p className="flex items-center gap-1.5">
+          <Star aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0 fill-star text-star" />
           {t("provider.rating", {
             rating: formatScore(block.rating, language),
             count: block.userRatingCount ?? 0,
           })}
         </p>
       )}
-      {(block.openNow !== undefined || block.weekdayHours) && (
+      {block.weekdayHours && (
         <div className="flex flex-col gap-0.5">
-          <p className="font-medium">
-            {t("provider.hours")}
-            {block.openNow !== undefined && (
-              <span className="font-normal text-muted-foreground">
-                {" "}
-                · {block.openNow ? t("provider.openNow") : t("provider.closedNow")}
-              </span>
-            )}
-          </p>
-          {block.weekdayHours?.map((line) => (
+          <p className="font-semibold">{t("provider.hours")}</p>
+          {block.weekdayHours.map((line) => (
             <p key={line}>{line}</p>
           ))}
         </div>
       )}
-      {block.nationalPhoneNumber && <p>{block.nationalPhoneNumber}</p>}
+      {block.nationalPhoneNumber && <p className="tabular-nums">{block.nationalPhoneNumber}</p>}
       {block.websiteUri && (
         <p>
           <a href={block.websiteUri} target="_blank" rel="noreferrer nofollow" className="underline">
@@ -352,47 +437,46 @@ type PublicTestimony = Route.ComponentProps["loaderData"]["testimonies"][number]
 
 function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; language: Language }) {
   const { t } = useTranslation();
+  const facts = [];
+  if (testimony.procedureCode) {
+    facts.push({ label: t("feed.card.procedure"), value: procedureLabel(testimony.procedureCode, language) });
+  }
+  if (testimony.pricePaidRupiah !== undefined) {
+    facts.push({ label: t("feed.card.price"), value: formatRupiah(testimony.pricePaidRupiah, language) });
+  }
   return (
-    <Card>
-      <CardHeader className="gap-1">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-          {testimony.displayName}
+    <article
+      aria-label={testimony.displayName}
+      className="flex flex-col gap-3 rounded-lg border bg-card p-5 text-card-foreground shadow-sm"
+    >
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-semibold">{testimony.displayName}</span>
           {testimony.verifiedVisit && <Badge variant="success">{t("provider.verifiedVisit")}</Badge>}
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        </div>
+        <p className="text-sm text-muted-foreground">
           {t("provider.visitMonth", { month: formatVisitMonth(testimony.visitMonth, language) })}
         </p>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <dl
-          className="flex flex-wrap gap-x-4 gap-y-1 text-sm"
-          aria-label={t("provider.ratingsLabel", { name: testimony.displayName })}
-        >
-          {ASPECTS.map((aspect) => (
-            <div key={aspect} className="flex gap-1">
-              <dt className="text-muted-foreground">{t(`provider.aspects.${aspect}`)}</dt>
-              <dd className="font-medium">{testimony.ratings[aspect]}/5</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="whitespace-pre-line">{testimony.text}</p>
-        {(testimony.procedureCode || testimony.pricePaidRupiah !== undefined) && (
-          <p className="text-sm text-muted-foreground">
-            {testimony.procedureCode &&
-              t("provider.procedure", { procedure: procedureLabel(testimony.procedureCode, language) })}
-            {testimony.procedureCode && testimony.pricePaidRupiah !== undefined && " · "}
-            {testimony.pricePaidRupiah !== undefined &&
-              t("provider.pricePaid", { price: formatRupiah(testimony.pricePaidRupiah, language) })}
-          </p>
-        )}
-        {testimony.reply && (
-          <div className="border-l-2 pl-3 text-sm">
-            <p className="font-medium">{t("provider.reply")}</p>
-            <p className="whitespace-pre-line break-words">{testimony.reply}</p>
-          </div>
-        )}
+      </div>
+      <AspectRatings
+        label={t("provider.ratingsLabel", { name: testimony.displayName })}
+        ratings={ASPECTS.map((aspect) => ({
+          label: t(`provider.aspects.${aspect}`),
+          score: testimony.ratings[aspect],
+          spokenScore: t("feed.card.score", { score: testimony.ratings[aspect] }),
+        }))}
+      />
+      <p className="whitespace-pre-line">{testimony.text}</p>
+      <FactList facts={facts} />
+      {testimony.reply && (
+        <div className="ml-3 flex flex-col gap-1 rounded-md border bg-background px-3.5 py-3 text-sm">
+          <p className="font-semibold">{t("provider.reply")}</p>
+          <p className="whitespace-pre-line break-words">{testimony.reply}</p>
+        </div>
+      )}
+      <div className="flex justify-end">
         <ReportButton testimonyId={testimony.id} />
-      </CardContent>
-    </Card>
+      </div>
+    </article>
   );
 }

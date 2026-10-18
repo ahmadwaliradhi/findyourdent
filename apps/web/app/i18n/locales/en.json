@@ -369,7 +369,7 @@
     "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} testimonies.",
     "metaDescriptionNoScores": "{{name}} in {{area}}. Read patient testimonies and share your own on FindYourDent.",
     "type": {
-      "klinik": "Clinic",
+      "klinik": "Dental clinic",
       "privateDentist": "Private dentist",
       "hospital": "Hospital"
     },
@@ -388,8 +388,6 @@
     "noTestimonies": "No published testimonies for this place yet.",
     "verifiedVisit": "Verified visit",
     "visitMonth": "Visited {{month}}",
-    "procedure": "Procedure: {{procedure}}",
-    "pricePaid": "Paid: {{price}}",
     "ratingsLabel": "Ratings for {{name}}",
     "metaDescriptionUnlisted": "Dental practice information on FindYourDent.",
     "unnamed": "Dental practice",
@@ -421,10 +419,12 @@
     "claimCta": "Claim this page",
     "ownerHint": "Own this practice?",
     "manageCta": "Manage page",
-    "services": "Services: {{services}}",
+    "services": "Services",
     "priceListTitle": "Owner's price list",
     "priceListConfirmed": "Confirmed by the owner on {{date}}",
-    "possiblyOutdated": "may have changed"
+    "possiblyOutdated": "may have changed",
+    "address": "Address",
+    "scoreScale": "Scale of 1 to 5, from published Testimonies."
   },
   "shortlist": {
     "reason": {
@@ -477,7 +477,6 @@
     "metaTitle": "Share your experience",
     "metaDescription": "Write a Testimony about a dentist you visited.",
     "entryCta": "Share your experience",
-    "entryHint": "Been to a dentist? Share your experience so other patients can choose with confidence.",
     "title": "Share your experience",
     "editTitle": "Edit Testimony",
     "intro": "Write honestly about a dental practice you visited. You only sign in with Google when you press Send.",
