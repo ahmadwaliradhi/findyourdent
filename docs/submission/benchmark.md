@@ -15,8 +15,8 @@ One table for the deck's "Prototype Performance report/Benchmarking" slide (issu
 | Guidance evaluation | Unsafe medicine advice | **0** | 0 | [results](../../README.md#guidance-evaluation-results) |
 | Moderation evaluation (30 cases × 3 runs) | False publishes / neutrality mismatches | **0 / 0** | 0 / 0 | [results](../../README.md#moderation-evaluation-results) |
 | Moderation evaluation | Decision accuracy | 96.7% (29/30) | ≥ 90% | [results](../../README.md#moderation-evaluation-results) |
-| End-to-end, deployed site | Complaint to Guidance to Shortlist to Provider page to Google Reviews | Passed 3 of 4 runs | | [journeys](../../README.md#end-to-end-journeys-on-the-deployed-site) |
+| End-to-end, deployed site | Complaint to Guidance to Shortlist to Provider page to Google Reviews | Passed 3 of 5 runs | | [journeys](../../README.md#end-to-end-journeys-on-the-deployed-site) |
 | End-to-end, deployed site | Testimony with a phone number, fixed, published | Passed 3 of 5 runs | | [journeys](../../README.md#end-to-end-journeys-on-the-deployed-site) |
-| End-to-end, deployed site | Admin reviews a held Testimony | Not passed yet | | [journeys](../../README.md#end-to-end-journeys-on-the-deployed-site) |
+| End-to-end, deployed site | Admin decides on a held Testimony | Not passed yet | | [journeys](../../README.md#end-to-end-journeys-on-the-deployed-site) |
 
 Lighthouse: version 12.6.1 through `@lhci/cli` 0.15.1, mobile form factor, simulated throttling, 3 runs per page; each row is the run with the median performance score. The Guidance and Moderation labels are source-derived and team-labelled, not reviewed by a licensed dentist.

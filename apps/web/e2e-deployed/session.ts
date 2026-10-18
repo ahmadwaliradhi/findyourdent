@@ -33,7 +33,7 @@ async function fetchWithSession(role: Role, path: string): Promise<Response> {
 const expired = (role: Role) => `The saved ${role} session has expired. Run \`${SESSIONS[role].login}\` again.`;
 
 /** A saved, live author session and a place to write about. */
-export async function checkSignedIn() {
+export async function checkAuthorAndPlace() {
   if (!process.env[PLACE_ID_ENV]) {
     throw new Error(`Set ${PLACE_ID_ENV} to the place id of a Listed Provider the signed-in account has visited.`);
   }

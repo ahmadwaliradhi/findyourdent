@@ -109,7 +109,7 @@ The project runs on a personal billing account with no credits, so every paid ca
 
 - **Budget:** `findyourdent-usd100`, IDR 1,650,000 (about USD 100) on the billing account, with email alerts at 50% and 90%.
 - **Daily quota caps set in Cloud Quotas:** Places Text Search 160, Get Place 83, Autocomplete 300, and 0 for every Places method the product never calls (Nearby, photos, media, review posts). Gemini 3.8 Flash 2,000,000 input tokens a day and Gemini 3.5 Flash-Lite 1,000,000 (Vertex AI has no requests-per-day quota, so input tokens are the cap).
-- **Caps enforced in code before Google refuses:** the web service keeps one Firestore counter per Places method per Jakarta day ([`apps/web/server/quota.ts`](apps/web/server/quota.ts)) and splits the 83 Get Place calls between the Google block (50), Google Reviews (33), coordinates lookups (10) and Moderation's name check (15). Past a cap, the page shows its fallback instead of an error.
+- **Caps enforced in code before Google refuses:** the web service keeps one Firestore counter per Places method per Jakarta day ([`apps/web/server/quota.ts`](apps/web/server/quota.ts)) and splits the 83 Get Place calls between the Google block (50) and Google Reviews (33). Coordinates lookups (10 a day) and Moderation's name check (15 a day) come out of the same 83, so on a busy day Google can refuse the last few calls before every code cap is reached. Past a cap, the page shows its fallback instead of an error.
 - **Output tokens:** Gemini has no daily output quota, so every call sets `max_output_tokens` (table above) and Guidance and Shortlist reasons use LOW thinking.
 - **Rate limits** ([`apps/web/server/context.ts`](apps/web/server/context.ts), counters in Firestore with salted key hashes): 10 Guidance sessions and 30 Places-backed requests an hour per App Check token and per session, 5 Testimonies a day per account, 10 reports an hour, 30 owner writes a day, and 300 requests an hour per IP (high because Indonesian mobile carriers put many people behind one IP).
 - **Instances:** both Cloud Run services have at most 4 instances and scale to zero, except the agent's one warm instance during judging (19 October to 7 November 2026).
@@ -184,9 +184,9 @@ The three journeys of spec 02 and spec 03 also run against the deployed site, wi
 
 1. A Patient without an account: complaint, Guidance (answering Gemini's follow-up question if it asks one), Shortlist for "Gubeng, Surabaya", the first Provider page, then "Lihat ulasan Google".
 2. A signed-in Patient posts a Testimony with a phone number in it, gets the fix-before-submit panel with the number marked, fixes it, sees it published on the Provider page, then deletes it.
-3. The Patient posts a Testimony with a photo of a receipt (held in every run of the Moderation evaluation); an admin, in a second browser, finds it in the queue and rejects it with a reason; the Patient sees the reason and deletes it.
+3. The Patient posts a Testimony with a photo of a receipt (held in every run of the Moderation evaluation); an admin, in a second browser, finds it in the queue and turns it down ("Tolak") with a reason; the Patient sees the reason and deletes it.
 
-Deployed sign-in accepts only real Google accounts, so the tests cannot sign themselves in. Save two sessions once by signing in by hand in the Chrome window each command opens (they last 5 days and are gitignored): an author, and an account on the admin allowlist. They must be different accounts, because each account may post 5 Testimonies a day and a full run posts 3.
+Deployed sign-in accepts only real Google accounts, so the tests cannot sign themselves in. Save two sessions once by signing in by hand in the Chrome window each command opens (they last 5 days and are gitignored): an author, and an account on the admin allowlist. Use two different accounts, as in real use: the author is a Patient, not the team. Each account may send 5 Testimonies a day and every Kirim counts, the one sent back for a fix included, so a full run uses 3 of the author's 5 and a second run the same day fails with `429 rate_limited`.
 
 ```sh
 pnpm --filter web e2e:deployed:login
@@ -200,9 +200,9 @@ Results on 18 October 2026 against https://findyourdent.com (`fyd-web-00008-9v6`
 
 | Journey | Result | Failures |
 | --- | --- | --- |
-| Complaint to "Lihat ulasan Google" | Passed 3 of 4 runs (19 to 28 s) | One failure whose trace was overwritten by the next run before it was read. |
+| Complaint to "Lihat ulasan Google" | Passed 3 of 5 runs (19 to 28 s) | Both failures were the Guidance Gemini call failing on the agent (`model_unavailable` in the `fyd-agent` log at 15:19 and 15:42 UTC), so the page showed "Layanan panduan sedang tidak tersedia". |
 | Testimony with a phone number, fixed, published | Passed 3 of 5 runs (10 to 12 s) | Once the Moderation call hit its 20 s timeout on the agent (`model_timeout`) and the Testimony was held instead, which is the safe fallback. Once the account had used its 5 Testimonies for the day (`429 rate_limited`). |
-| Admin reviews a held Testimony | **Not passed yet** | The first attempt used a blank photo, which Moderation published: only flagged photos are held. It now uses the receipt photo. The later attempts hit the 5-a-day limit on both test accounts, which resets at 07:00 Jakarta time. |
+| Admin decides on a held Testimony | **Not passed yet** | The first attempt used a blank photo, which Moderation published: only flagged photos are held. It now uses the receipt photo. The later attempts hit the 5-a-day limit on both test accounts, which resets at 07:00 Jakarta time. |
 
 ## Lighthouse
 

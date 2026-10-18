@@ -3,9 +3,9 @@
 // the registered debug token). The Testimony journeys publish or hold on the place
 // in E2E_PLACE_ID and delete what they wrote before they finish.
 import { fileURLToPath } from "node:url";
-import { type BrowserContext, test as base, expect, type Page } from "@playwright/test";
+import { type BrowserContext, test as base, devices, expect, type Locator, type Page } from "@playwright/test";
 import { ADMIN_SESSION_PATH, APP_CHECK_DEBUG_TOKEN_ENV, PLACE_ID_ENV } from "./env.ts";
-import { checkAdmin, checkSignedIn } from "./session.ts";
+import { checkAdmin, checkAuthorAndPlace } from "./session.ts";
 
 /** The Firebase App Check SDK swaps a debug token for reCAPTCHA when this global is set before it loads. */
 async function addDebugToken(context: BrowserContext) {
@@ -31,6 +31,7 @@ const HELD_PHOTO = fileURLToPath(
 
 const PHONE_TEXT = "Dokternya sabar dan ruang tunggunya bersih. Kalau mau janji, hubungi saya di 0812-3456-7890.";
 const CLEAN_TEXT = "Dokternya sabar menjelaskan sebelum menambal, dan ruang tunggunya bersih.";
+const TEST_TEXTS = [PHONE_TEXT, CLEAN_TEXT];
 
 async function noHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -45,26 +46,35 @@ async function rate(page: Page, aspect: string, score: number) {
 }
 
 /** The Listed Provider's name, as its page shows it. */
-async function placeName(page: Page): Promise<string> {
+async function listedProviderName(page: Page): Promise<string> {
   await page.goto(`/tempat/${placeId()}`);
   const name = (await page.getByRole("heading", { level: 1 }).textContent())?.trim();
   if (!name) throw new Error(`no Provider page for ${placeId()}`);
   return name;
 }
 
-/** Deletes this account's Testimonies at the place, left over from a run that stopped midway. */
-async function deleteMyTestimoniesAt(page: Page, name: string) {
+const testimonyCard = (page: Page, testimonyId: string) =>
+  page.locator(`section[aria-labelledby="testimony-${testimonyId}"]`);
+
+/**
+ * Deletes the author's test Testimonies at the place (only those with this file's texts,
+ * never one the account wrote for real), including any left by a run that stopped midway.
+ */
+async function deleteTestTestimonies(page: Page, providerName: string) {
   await page.goto("/testimoni-saya");
   await expect(page.getByRole("heading", { level: 1, name: "Testimoni saya" })).toBeVisible();
-  const cards = page.locator("section[aria-labelledby^='testimony-']", {
-    has: page.getByRole("heading", { level: 2, name, exact: true }),
-  });
+  const cards = page
+    .locator("section[aria-labelledby^='testimony-']")
+    .filter({ has: page.getByRole("heading", { level: 2, name: providerName, exact: true }) })
+    .filter({ hasText: new RegExp(TEST_TEXTS.map(escapeRegExp).join("|")) });
   while ((await cards.count()) > 0) {
     await deleteCard(page, cards.first());
   }
 }
 
-async function deleteCard(page: Page, card: ReturnType<Page["locator"]>) {
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+async function deleteCard(page: Page, card: Locator) {
   await card.getByRole("button", { name: "Hapus", exact: true }).click();
   await card.getByRole("alertdialog").getByRole("button", { name: "Ya, hapus" }).click();
   await expect(page.getByText("Testimoni sudah dihapus.")).toBeVisible();
@@ -73,7 +83,7 @@ async function deleteCard(page: Page, card: ReturnType<Page["locator"]>) {
 
 async function deleteMyTestimony(page: Page, testimonyId: string) {
   await page.goto("/testimoni-saya");
-  await deleteCard(page, page.locator(`section[aria-labelledby="testimony-${testimonyId}"]`));
+  await deleteCard(page, testimonyCard(page, testimonyId));
 }
 
 /** Fills the posting form for the place in E2E_PLACE_ID, up to Kirim. */
@@ -111,12 +121,13 @@ test.describe("Patient without an account", () => {
     await page.getByLabel("Ceritakan keluhan gigi Anda").fill("Gigi geraham kiri bawah nyut-nyutan sejak tiga hari");
     await page.getByRole("button", { name: "Lihat panduan" }).click();
 
-    // Gemini may ask one follow-up question first; any quick reply leads to the card.
+    // Gemini may ask one follow-up question first, with or without quick replies; a written answer always works.
     const guidance = page.getByText("Panduan untuk keluhan Anda");
     const followUp = page.getByRole("region", { name: "Satu pertanyaan lagi" });
     await expect(guidance.or(followUp)).toBeVisible();
     if (await followUp.isVisible()) {
-      await followUp.getByRole("group", { name: "Pilihan jawaban cepat" }).getByRole("button").first().click();
+      await followUp.getByLabel("Jawaban Anda").fill("Saya kurang tahu");
+      await followUp.getByRole("button", { name: "Kirim jawaban" }).click();
     }
     await expect(guidance).toBeVisible();
     await noHorizontalScroll(page);
@@ -140,18 +151,18 @@ test.describe("Patient without an account", () => {
 });
 
 test.describe("signed-in Patient and admin", () => {
-  let name = "";
+  let providerName = "";
 
-  test.beforeAll(checkSignedIn);
+  test.beforeAll(checkAuthorAndPlace);
 
   test.beforeEach(async ({ page }) => {
-    name = await placeName(page);
-    await deleteMyTestimoniesAt(page, name);
+    providerName = await listedProviderName(page);
+    await deleteTestTestimonies(page, providerName);
   });
 
   // Whatever happened, nothing this run wrote stays on a real Provider's page.
   test.afterEach(async ({ page }) => {
-    if (name) await deleteMyTestimoniesAt(page, name);
+    if (providerName) await deleteTestTestimonies(page, providerName);
   });
 
   test("posting a Testimony with a phone number, fixing it, publishing", async ({ page }) => {
@@ -177,7 +188,7 @@ test.describe("signed-in Patient and admin", () => {
     await deleteMyTestimony(page, second.testimonyId);
   });
 
-  test("an admin reviewing a held Testimony", async ({ page, browser, baseURL }) => {
+  test("an admin decides on a held Testimony", async ({ page, browser, baseURL }) => {
     await checkAdmin();
     await fillTestimony(page, CLEAN_TEXT);
     await page.getByLabel("Tambah foto").setInputFiles(HELD_PHOTO);
@@ -187,19 +198,20 @@ test.describe("signed-in Patient and admin", () => {
     const { testimonyId } = posted;
     if (!testimonyId) throw new Error("no testimonyId in the hold answer");
 
-    // The admin, in their own browser, finds it in the queue and rejects it with a reason.
+    // The admin, on their own phone, finds it in the queue and turns it down ("Tolak") with a reason.
     const adminContext = await browser.newContext({
+      ...devices["Pixel 5"],
+      viewport: { width: 360, height: 780 },
       baseURL,
       storageState: ADMIN_SESSION_PATH,
       locale: "id-ID",
-      viewport: { width: 360, height: 780 },
     });
     try {
       await addDebugToken(adminContext);
       const admin = await adminContext.newPage();
       await admin.goto("/admin");
       const item = admin.locator(`article[aria-labelledby="queue-held-${testimonyId}"]`);
-      await expect(item.getByRole("heading", { name: `Testimoni ditahan · ${name}` })).toBeVisible();
+      await expect(item.getByRole("heading", { name: `Testimoni ditahan · ${providerName}` })).toBeVisible();
       await expect(item.getByText(CLEAN_TEXT)).toBeVisible();
       await expect(item.getByRole("img", { name: "Foto 1" })).toBeVisible();
       await noHorizontalScroll(admin);
@@ -214,7 +226,7 @@ test.describe("signed-in Patient and admin", () => {
 
     // The author sees the decision and its reason, then deletes the test Testimony.
     await page.goto("/testimoni-saya");
-    const card = page.locator(`section[aria-labelledby="testimony-${testimonyId}"]`);
+    const card = testimonyCard(page, testimonyId);
     await expect(card.getByText("Tidak ditayangkan")).toBeVisible();
     await expect(card.getByText("Uji end-to-end otomatis, bukan Testimoni sungguhan.")).toBeVisible();
     await deleteCard(page, card);
