@@ -12,5 +12,6 @@ if (!firebase) {
 const summary = await expireProofs({ firestore: firebase.firestore, uploads: firebase.uploads, logger });
 // Open Firestore channels would otherwise keep the job running until its timeout.
 await firebase.firestore.terminate();
-// Only a failed expiry is worth a retry; a file left behind is the lifecycle rule's (logged above).
-process.exit(summary.failed > 0 ? 1 : 0);
+// A failed write or file delete fails the run, so it shows; a file left behind is the
+// lifecycle rule's to delete.
+process.exit(summary.failed + summary.expiredFileLeft > 0 ? 1 : 0);
