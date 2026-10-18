@@ -5,8 +5,8 @@ import type {
   GuidanceResponse,
   UrgencyTier,
 } from "@findyourdent/contracts";
-import { Info, MapPin, TriangleAlert } from "lucide-react";
-import { type MouseEvent, type ReactNode, useState } from "react";
+import { Info, MapPin, MessageCircleQuestion, TriangleAlert } from "lucide-react";
+import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShortlistPanel } from "~/components/shortlist-panel";
 import { Badge } from "~/components/ui/badge";
@@ -52,7 +52,8 @@ export function GuidanceResult({
   }
   if (response.kind === "followUp") {
     return (
-      <div className="flex max-w-2xl flex-col gap-4">
+      // On desktop, edge to edge with the hero columns above, so the question cannot pass for a footnote.
+      <div className="flex max-w-2xl flex-col gap-4 desktop:max-w-none">
         {transcript}
         <FollowUpCard response={response} pending={pending} />
       </div>
@@ -197,25 +198,55 @@ function EmergencyCard({ response }: { response: EmergencyResponse }) {
 
 function FollowUpCard({ response, pending }: { response: FollowUpResponse; pending: boolean }) {
   const { t } = useTranslation();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const hasQuickReplies = Boolean(response.quickReplies?.length);
+  // The question lands below the complaint box, often under the fold: bring it into view and
+  // move focus to it, so neither sighted nor screen reader users miss that an answer is wanted.
+  useEffect(() => {
+    const title = titleRef.current;
+    if (!title) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    title.closest("section")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    title.focus({ preventScroll: true });
+  }, []);
   return (
-    <Card data-kind="followUp" labelledBy="follow-up-title" className="p-6">
-      <CardHeader>
-        <CardTitle id="follow-up-title">{t("card.followUp.title")}</CardTitle>
-        <CardDescription className="text-base text-foreground">{response.question}</CardDescription>
+    <Card variant="attention" data-kind="followUp" labelledBy="follow-up-title" className="gap-5 p-6 desktop:p-8">
+      <CardHeader className="gap-3">
+        <Badge variant="brand">{t("card.followUp.badge")}</Badge>
+        <div className="flex items-start gap-3">
+          <MessageCircleQuestion
+            aria-hidden="true"
+            strokeWidth={1.75}
+            className="mt-0.5 size-7 shrink-0 text-primary"
+          />
+          <div className="flex flex-col gap-1.5">
+            <CardTitle id="follow-up-title" ref={titleRef} tabIndex={-1} className="outline-none">
+              {t("card.followUp.title")}
+            </CardTitle>
+            <CardDescription className="text-lg leading-7 font-semibold text-foreground desktop:text-xl desktop:leading-8">
+              {response.question}
+            </CardDescription>
+            <p className="text-sm text-muted-foreground">{t("card.followUp.hint")}</p>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+      {/* On desktop the quick replies lead as wide tiles; writing an answer is the fallback below them. */}
+      <CardContent className="flex flex-col gap-5 border-t pt-5 desktop:gap-6">
         {/* Sent back with the answer so the agent knows what "Ya" or "Tidak" replies to. */}
         <input type="hidden" name="followUpQuestion" value={response.question} />
-        {response.quickReplies && response.quickReplies.length > 0 && (
-          <fieldset className="flex flex-wrap gap-2">
-            <legend className="sr-only">{t("home.quickRepliesLabel")}</legend>
-            {response.quickReplies.map((reply) => (
+        {hasQuickReplies && (
+          <fieldset className="flex flex-wrap gap-2 desktop:grid desktop:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] desktop:gap-3">
+            <legend className="mb-2 text-sm font-semibold desktop:mb-3 desktop:text-base">
+              {t("card.followUp.quickRepliesLabel")}
+            </legend>
+            {response.quickReplies?.map((reply) => (
               <Button
                 key={reply}
                 type="submit"
                 name="followUpAnswer"
                 value={reply}
                 variant="secondary"
+                size="lg"
                 disabled={pending}
               >
                 {reply}
@@ -223,17 +254,30 @@ function FollowUpCard({ response, pending }: { response: FollowUpResponse; pendi
             ))}
           </fieldset>
         )}
-        <Field
-          id="followUpAnswer"
-          name="followUpAnswer"
-          label={t("home.followUpAnswerLabel")}
-          rows={2}
-          maxLength={1000}
-          className="[&_textarea]:min-h-16"
-        />
-        <Button type="submit" disabled={pending} className="self-start">
-          {t("home.followUpSubmit")}
-        </Button>
+        {hasQuickReplies && (
+          <p className="hidden items-center gap-3 text-sm text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border desktop:flex">
+            {t("card.followUp.orWrite")}
+          </p>
+        )}
+        <div className="flex flex-col gap-3 desktop:grid desktop:grid-cols-[minmax(0,1fr)_auto] desktop:items-end">
+          <Field
+            id="followUpAnswer"
+            name="followUpAnswer"
+            label={t("card.followUp.answerLabel")}
+            rows={2}
+            maxLength={1000}
+            className="[&_textarea]:min-h-16 desktop:[&_textarea]:min-h-12"
+          />
+          {/* Beside the quick replies the written answer is the alternative, so its button steps back. */}
+          <Button
+            type="submit"
+            variant={hasQuickReplies ? "outline" : "primary"}
+            disabled={pending}
+            className="self-end"
+          >
+            {t("card.followUp.submit")}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

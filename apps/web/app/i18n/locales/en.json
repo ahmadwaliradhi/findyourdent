@@ -28,9 +28,6 @@
     "complaintHint": "Write in Indonesian, a regional language, or English.",
     "submit": "Get guidance",
     "submitting": "Working on it…",
-    "followUpAnswerLabel": "Your answer",
-    "followUpSubmit": "Send answer",
-    "quickRepliesLabel": "Quick replies",
     "voiceOr": "or",
     "voiceRecord": "Record a voice note",
     "voiceStop": "Stop and send",
@@ -71,7 +68,13 @@
       "action": "Go to the nearest hospital emergency department (IGD) now. Do not wait for a dentist appointment."
     },
     "followUp": {
-      "title": "One more question"
+      "title": "One more question",
+      "badge": "Your answer needed",
+      "hint": "Answer first so the guidance fits your situation.",
+      "orWrite": "or write your own answer",
+      "answerLabel": "Your answer",
+      "submit": "Send answer",
+      "quickRepliesLabel": "Quick replies"
     },
     "guidance": {
       "title": "Guidance for your problem",

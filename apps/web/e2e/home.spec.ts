@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { FAKE_FOLLOW_UP_TRIGGER, STUB_FOLLOW_UP_RESPONSE } from "../server/adapters/fakes.ts";
 import { filterSection } from "./support";
 
 test("home shows the consent line in Indonesian before the complaint box, and the toggle switches to English", async ({
@@ -63,6 +64,48 @@ test("on desktop the Summary panel sits beside the Guidance and links to the Sho
   await expect(page.getByRole("region", { name: "Dokter gigi terdekat untuk keluhan Anda" })).toBeInViewport();
   await expect(page.getByText("Klinik Gigi Senyum Contoh")).toBeVisible();
   await expect(page.getByRole("button", { name: "Lihat dokter gigi terdekat" })).toHaveCount(0);
+});
+
+test("a follow-up question takes focus, spans the page on desktop, keeps its send button on the right, and is answered with one tap", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/");
+  await page
+    .getByLabel("Ceritakan keluhan gigi Anda")
+    .fill(`Gigi geraham saya sudah bolong cukup dalam dan ${FAKE_FOLLOW_UP_TRIGGER}`);
+  await page.getByRole("button", { name: "Lihat panduan" }).click();
+
+  const card = page.getByRole("region", { name: "Satu pertanyaan lagi" });
+  await expect(card).toBeVisible();
+  await expect(card.getByText("Perlu jawaban Anda")).toBeVisible();
+  // Focus moves to the question, so it is announced and on screen.
+  await expect(page.getByRole("heading", { name: "Satu pertanyaan lagi" })).toBeFocused();
+  await expect(card).toBeInViewport();
+
+  // On desktop, edge to edge with the hero above: from where the headline starts to where the complaint box ends.
+  if (testInfo.project.name === "desktop") {
+    const [cardBox, headlineBox, complaintBox] = await Promise.all([
+      card.boundingBox(),
+      page.getByRole("heading", { level: 1 }).boundingBox(),
+      page.getByTestId("complaint-panel").boundingBox(),
+    ]);
+    if (!cardBox || !headlineBox || !complaintBox) throw new Error("missing layout boxes");
+    expect(Math.abs(cardBox.x - headlineBox.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(cardBox.x + cardBox.width - (complaintBox.x + complaintBox.width))).toBeLessThanOrEqual(1);
+  }
+  // "Kirim jawaban" sits on the right edge of the card's content, as wide as the quick replies.
+  const [repliesBox, submitBox] = await Promise.all([
+    card.getByRole("group", { name: "Pilihan jawaban cepat" }).boundingBox(),
+    card.getByRole("button", { name: "Kirim jawaban" }).boundingBox(),
+  ]);
+  if (!repliesBox || !submitBox) throw new Error("missing answer boxes");
+  expect(Math.abs(submitBox.x + submitBox.width - (repliesBox.x + repliesBox.width))).toBeLessThanOrEqual(1);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  const [, , noPain] = STUB_FOLLOW_UP_RESPONSE.quickReplies;
+  await card.getByRole("button", { name: noPain }).click();
+  await expect(page.getByText("Panduan untuk keluhan Anda")).toBeVisible();
 });
 
 test("the feed's Filter section starts folded, opens on a click, and starts open once a filter is applied", async ({

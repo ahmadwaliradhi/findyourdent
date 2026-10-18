@@ -11,10 +11,10 @@ import {
   createFirebaseAppCheckVerifier,
 } from "./adapters/app-check.ts";
 import {
-  createFakeAgentAdapter,
   createFakeGeminiAdapter,
   createFakePlacesAdapter,
   createFakeSamplePlacesAdapter,
+  createScriptedFakeAgentAdapter,
 } from "./adapters/fakes.ts";
 import type { GeminiAdapter } from "./adapters/gemini.ts";
 import { createGooglePlacesAdapter, type PlacesAdapter } from "./adapters/places.ts";
@@ -110,7 +110,9 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
   // On Cloud Run (AGENT_AUTH=id_token) every call carries a fyd-web identity token.
   const idToken = env.AGENT_AUTH === "id_token" ? createMetadataIdTokenSource({ audience: agentUrl }) : undefined;
   const agent =
-    env.AGENT_ADAPTER === "fake" ? createFakeAgentAdapter() : createHttpAgentAdapter({ baseUrl: agentUrl, idToken });
+    env.AGENT_ADAPTER === "fake"
+      ? createScriptedFakeAgentAdapter()
+      : createHttpAgentAdapter({ baseUrl: agentUrl, idToken });
   let shareLinkSecret = env.SHARE_LINK_SECRET;
   if (!shareLinkSecret) {
     // A per-process secret works locally; on Cloud Run, links would break across

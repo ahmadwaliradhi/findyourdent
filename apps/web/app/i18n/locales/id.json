@@ -28,9 +28,6 @@
     "complaintHint": "Boleh dalam Bahasa Indonesia, bahasa daerah, atau English.",
     "submit": "Lihat panduan",
     "submitting": "Sedang memproses…",
-    "followUpAnswerLabel": "Jawaban Anda",
-    "followUpSubmit": "Kirim jawaban",
-    "quickRepliesLabel": "Pilihan jawaban cepat",
     "voiceOr": "atau",
     "voiceRecord": "Rekam pesan suara",
     "voiceStop": "Berhenti dan kirim",
@@ -71,7 +68,13 @@
       "action": "Segera pergi ke Instalasi Gawat Darurat (IGD) rumah sakit terdekat. Jangan menunggu jadwal dokter gigi."
     },
     "followUp": {
-      "title": "Satu pertanyaan lagi"
+      "title": "Satu pertanyaan lagi",
+      "badge": "Perlu jawaban Anda",
+      "hint": "Jawab dulu agar panduannya sesuai dengan kondisi Anda.",
+      "orWrite": "atau tulis jawaban sendiri",
+      "answerLabel": "Jawaban Anda",
+      "submit": "Kirim jawaban",
+      "quickRepliesLabel": "Pilihan jawaban cepat"
     },
     "guidance": {
       "title": "Panduan untuk keluhan Anda",
