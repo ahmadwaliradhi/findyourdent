@@ -9,6 +9,8 @@ export type * from "./moderation-request.js";
 export type * from "./price-list-extraction-request.js";
 export type * from "./price-list-extraction-response.js";
 export type * from "./procedures.js";
+export type * from "./proof-check-request.js";
+export type * from "./proof-check-response.js";
 export type * from "./regions.js";
 export type * from "./shortlist-reasons-request.js";
 export type * from "./shortlist-reasons-response.js";

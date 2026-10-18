@@ -1,6 +1,7 @@
 // The Moderation step of posting (spec 03): the agent service's Moderation endpoint,
 // called with the Testimony, Google's live name (in memory only, for R6 and the Proof
-// of Visit match), the stored EXIF-stripped photos and the private Proof of Visit.
+// of Visit match), the stored EXIF-stripped photos and the private Proof of Visit, whose
+// printed facts come back for the web service's own proof decision (spec 09).
 // Whatever goes wrong (agent error, a 422 for a broken attachment, a timeout, an
 // answer that does not validate) becomes `hold` with `model_error`: never publish on
 // an answer we could not trust.
@@ -9,8 +10,12 @@ import {
   type ModerationDecision,
   type ModerationRequest,
   type ModerationRuleCode,
+  type ProofCheckRequest,
+  type ProofExtraction,
   validateModerationDecision,
   validateModerationRequest,
+  validateProofCheckRequest,
+  validateProofCheckResponse,
 } from "@findyourdent/contracts";
 import type { ModerationDecisionDoc } from "@findyourdent/contracts/firestore";
 import { Timestamp } from "firebase-admin/firestore";
@@ -18,7 +23,9 @@ import type { TFunction } from "i18next";
 import type { AppLoadContext } from "react-router";
 import { getI18n, type Language } from "~/i18n/config";
 import { AUTHOR_FIXABLE_RULES, MAX_AUTHOR_FIX_ROUNDS } from "~/lib/testimony";
+import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import type { Bucket } from "../../server/firebase.ts";
+import { isPdfProof } from "../../server/proof-files.ts";
 
 /**
  * Model recorded on decisions the agent made: its configured default
@@ -40,7 +47,7 @@ export interface ModerationInput {
   authorFixRound: number;
   /** Stored, EXIF-stripped photo object paths (the uploads bucket), for the photo rules. */
   photoPaths: readonly string[];
-  /** Stored private Proof of Visit, deleted by the caller right after this call. */
+  /** Stored private Proof of Visit; the caller deletes it once the proof is decided (spec 09). */
   proofPath?: string;
 }
 
@@ -51,7 +58,10 @@ export interface ModerationOutcome {
 }
 
 /** Google's live name, in memory only. Without it Moderation runs on the typed name alone. */
-async function googleDisplayName(context: AppLoadContext, input: ModerationInput): Promise<string | undefined> {
+async function googleDisplayName(
+  context: AppLoadContext,
+  input: Pick<ModerationInput, "placeId" | "language">,
+): Promise<string | undefined> {
   const result = await context.adapters.places.getDisplayName({ placeId: input.placeId, language: input.language });
   if (result.ok) return result.displayName;
   context.logger.warn("moderation", { outcome: "google_name_unavailable", reason: result.reason });
@@ -61,6 +71,14 @@ async function googleDisplayName(context: AppLoadContext, input: ModerationInput
 async function base64Of(uploads: Bucket, path: string): Promise<string> {
   const [bytes] = await uploads.file(path).download();
   return bytes.toString("base64");
+}
+
+/** A stored Proof of Visit as the agent takes it: JPEG (images, EXIF stripped) or PDF as sent (testimony-media.server.ts). */
+async function proofOfVisitFile(uploads: Bucket, proofPath: string): Promise<ProofCheckRequest["proofOfVisit"]> {
+  return {
+    mimeType: isPdfProof(proofPath) ? "application/pdf" : "image/jpeg",
+    dataBase64: await base64Of(uploads, proofPath),
+  };
 }
 
 /** The request the agent's Moderation endpoint takes; star ratings deliberately left out. */
@@ -75,7 +93,7 @@ async function buildRequest(context: AppLoadContext, input: ModerationInput): Pr
         dataBase64: await base64Of(uploads, path),
       })),
     ),
-    input.proofPath ? base64Of(uploads, input.proofPath) : undefined,
+    input.proofPath ? proofOfVisitFile(uploads, input.proofPath) : undefined,
   ]);
   const request: ModerationRequest = {
     subjectType: "testimony",
@@ -87,15 +105,7 @@ async function buildRequest(context: AppLoadContext, input: ModerationInput): Pr
     ...(googleName ? { googleDisplayName: googleName } : {}),
     ...(input.procedureCode ? { procedureCode: input.procedureCode } : {}),
     ...(photos.length > 0 ? { photos } : {}),
-    ...(input.proofPath && proof
-      ? {
-          // Stored as JPEG (images, EXIF stripped) or as sent (PDF): testimony-media.server.ts.
-          proofOfVisit: {
-            mimeType: input.proofPath.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
-            dataBase64: proof,
-          },
-        }
-      : {}),
+    ...(proof ? { proofOfVisit: proof } : {}),
   };
   if (!validateModerationRequest(request)) {
     throw new Error(`invalid moderation request: ${formatValidationErrors(validateModerationRequest.errors)}`);
@@ -117,10 +127,10 @@ function modelErrorHold(t: TFunction): ModerationOutcome {
 }
 
 /**
- * Screens one Testimony (or an edit of one). Never throws: anything that fails or
- * does not validate becomes `hold` with `model_error`, and then `proofOfVisit` is
- * absent: not verified. An authorFix past the third round is held here even if the
- * agent did not hold it.
+ * Screens one Testimony (or an edit of one) and reads its Proof of Visit. Never throws:
+ * anything that fails or does not validate becomes `hold` with `model_error`, and then
+ * `proofExtraction` is absent: the proof was not checked. An authorFix past the third
+ * round is held here even if the agent did not hold it.
  */
 export async function moderateTestimony(context: AppLoadContext, input: ModerationInput): Promise<ModerationOutcome> {
   const t = getI18n(input.language).getFixedT(input.language);
@@ -153,6 +163,60 @@ export async function moderateTestimony(context: AppLoadContext, input: Moderati
     };
   }
   return { decision, model: MODERATION_MODEL };
+}
+
+export interface ProofCheckInput {
+  placeId: string;
+  /** Google's place name lookup uses this language. */
+  language: Language;
+  /** The Listed Provider's name, which the proof is matched against with Google's. */
+  typedProviderName?: string;
+  /** The stored Proof of Visit; the caller deletes it once decided (spec 09). */
+  proofPath: string;
+}
+
+/**
+ * Moderation in proof-only mode (spec 09): reads the facts printed on a Proof of Visit
+ * attached to a published Testimony. Only the proof and the Provider's names go to the
+ * agent: no text, no photos, so nothing is screened again and there is no decision.
+ * Never throws: null when the agent failed or its answer does not validate, and then
+ * the proof was not checked.
+ */
+export async function checkProofOnly(context: AppLoadContext, input: ProofCheckInput): Promise<ProofExtraction | null> {
+  let body: unknown;
+  try {
+    const { uploads } = context;
+    if (!uploads) throw new Error("uploads bucket not configured");
+    const [googleName, proofOfVisit] = await Promise.all([
+      googleDisplayName(context, input),
+      proofOfVisitFile(uploads, input.proofPath),
+    ]);
+    const request: ProofCheckRequest = {
+      ...(input.typedProviderName ? { typedProviderName: input.typedProviderName } : {}),
+      ...(googleName ? { googleDisplayName: googleName } : {}),
+      proofOfVisit,
+    };
+    if (!validateProofCheckRequest(request)) {
+      throw new Error(`invalid proof check request: ${formatValidationErrors(validateProofCheckRequest.errors)}`);
+    }
+    body = await context.adapters.agent.requestProofCheck(request, { requestId: context.requestId });
+  } catch (error) {
+    context.logger.error("proof_check", {
+      outcome: "agent_failed",
+      error: error instanceof Error ? error.name : "unknown",
+      ...(error instanceof AgentUnavailableError && error.status ? { status: error.status } : {}),
+      ...(error instanceof AgentUnavailableError && error.code ? { code: error.code } : {}),
+    });
+    return null;
+  }
+  if (!validateProofCheckResponse(body)) {
+    context.logger.error("proof_check", {
+      outcome: "invalid_response",
+      errors: formatValidationErrors(validateProofCheckResponse.errors),
+    });
+    return null;
+  }
+  return body.proofExtraction;
 }
 
 /** The status a stored decision leads to; an authorFix is never stored. */
@@ -234,7 +298,8 @@ export function moderationDecisionDoc(
     flaggedSpans: decision.flaggedSpans,
     ...(decision.flaggedPhotos ? { flaggedPhotos: decision.flaggedPhotos } : {}),
     confidence: decision.confidence,
-    ...(decision.proofOfVisit ? { proofOfVisit: decision.proofOfVisit } : {}),
+    // The Proof of Visit facts are not a Moderation result: they are kept on the
+    // Testimony with its proof decision (spec 09), never here.
     model: outcome.model,
     spotCheck,
     // Written only on sampled decisions, so the queue finds open ones with two equality filters.

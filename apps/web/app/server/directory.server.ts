@@ -5,7 +5,7 @@ import type { Firestore, Query } from "firebase-admin/firestore";
 import { DIRECTORY_ROW_LIMIT, type DirectoryRow, type DirectorySort } from "~/lib/directory";
 import type { ListingFilters } from "~/lib/listing-filters";
 import { normalizeName } from "~/lib/normalize-name";
-import { aspectPrior, shrunkAspectScore } from "~/lib/scores";
+import { aspectPrior, rankingScore, shrunkAspectScore } from "~/lib/scores";
 
 /**
  * Providers read from Firestore per request. Filters Firestore cannot express
@@ -45,15 +45,26 @@ function toRow(provider: ProviderDoc, score: number | null): DirectoryRow {
 }
 
 const byName = (a: DirectoryRow, b: DirectoryRow) => a.name.localeCompare(b.name, "id");
-const byTestimonies = (a: DirectoryRow, b: DirectoryRow) => b.testimonyCount - a.testimonyCount || byName(a, b);
-const byScore = (a: DirectoryRow, b: DirectoryRow) =>
-  (b.score ?? Number.NEGATIVE_INFINITY) - (a.score ?? Number.NEGATIVE_INFINITY) || byTestimonies(a, b);
+/**
+ * "Most Testimonies" counts Proven ones only, and ties go to the name, never to the
+ * count of all Testimonies: unproven Testimonies cannot move a row (spec 09).
+ */
+const byProvenTestimonies = (a: DirectoryRow, b: DirectoryRow) =>
+  b.verifiedVisitCount - a.verifiedVisitCount || byName(a, b);
+
+/** A row with what the score sort ranks it by (lib/scores.ts `rankingScore`, as the Shortlist). */
+interface RankedRow {
+  row: DirectoryRow;
+  rank: number;
+}
+const byScore = (a: RankedRow, b: RankedRow) => b.rank - a.rank || byProvenTestimonies(a.row, b.row);
 
 /**
  * Listed Providers matching the filters and name prefix, sorted. Region and
  * Provider type are Firestore equality filters; the name search is a range on
- * `nameNormalized`. The score prior is the Testimony-weighted mean over the
- * Providers read for this request (so it follows the region filter).
+ * `nameNormalized`. The score prior is the Proven-Testimony-weighted mean over the
+ * Providers read for this request (so it follows the region filter); a Provider with no
+ * average sorts at that mean, as on the Shortlist (spec 09).
  */
 export async function loadDirectory(
   firestore: Firestore,
@@ -68,17 +79,17 @@ export async function loadDirectory(
   const prefix = normalizeName(q);
   query = prefix
     ? query.where("nameNormalized", ">=", prefix).where("nameNormalized", "<", `${prefix}`).orderBy("nameNormalized")
-    : query.orderBy("aggregates.testimonyCount", "desc");
+    : query.orderBy("aggregates.verifiedVisitCount", "desc");
 
   const snapshot = await query.limit(DIRECTORY_SCAN_LIMIT).get();
   const providers = snapshot.docs.map((doc) => doc.data() as ProviderDoc);
   const prior = aspectPrior(providers.map((p) => p.aggregates));
 
-  const rows = providers
+  const ranked: RankedRow[] = providers
     .filter((p) => !filters.verifiedOnly || p.aggregates.verifiedVisitCount > 0)
     .filter((p) => !filters.procedureCode || offersProcedure(p, filters.procedureCode))
-    .map((p) => toRow(p, shrunkAspectScore(p.aggregates, prior)));
+    .map((p) => ({ row: toRow(p, shrunkAspectScore(p.aggregates, prior)), rank: rankingScore(p.aggregates, prior) }));
 
-  rows.sort(sort === "skor" ? byScore : byTestimonies);
-  return rows.slice(0, DIRECTORY_ROW_LIMIT);
+  ranked.sort(sort === "skor" ? byScore : (a, b) => byProvenTestimonies(a.row, b.row));
+  return ranked.slice(0, DIRECTORY_ROW_LIMIT).map(({ row }) => row);
 }

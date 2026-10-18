@@ -11,7 +11,8 @@
     "directory": "Direktori",
     "myTestimonies": "Testimoni saya",
     "share": "Ceritakan pengalamanmu",
-    "about": "Tentang kami"
+    "about": "Tentang kami",
+    "verification": "Cara kami memverifikasi testimoni"
   },
   "language": {
     "switchToLabel": "Ganti bahasa ke English",
@@ -172,7 +173,7 @@
     "signOut": "Keluar",
     "queue": {
       "summary": "{{count}} item menunggu keputusan.",
-      "overdueCount": "{{count}} melewati target 24 jam.",
+      "overdueCount": "{{count}} melewati target.",
       "empty": "Antrean kosong. Tidak ada yang perlu diputuskan.",
       "kind": {
         "held": "Testimoni ditahan",
@@ -183,7 +184,8 @@
         "hidden": "Testimoni disembunyikan",
         "claim": "Klaim halaman",
         "ownerFacts": "Data pemilik ditahan",
-        "reply": "Balasan ditahan"
+        "reply": "Balasan ditahan",
+        "proof": "Periksa bukti kunjungan"
       },
       "status": {
         "submitted": "Diperiksa",
@@ -231,7 +233,9 @@
         "publishOwnerFacts": "Tayangkan data",
         "rejectOwnerFacts": "Tolak data",
         "publishReply": "Tayangkan balasan",
-        "rejectReply": "Tolak balasan"
+        "rejectReply": "Tolak balasan",
+        "acceptProof": "Terima bukti",
+        "rejectProof": "Tolak bukti"
       },
       "reasonFor": "Alasan untuk \"{{action}}\" (dicatat; penulis melihatnya kecuali saat disembunyikan)",
       "logged": "Setiap tindakan dicatat dengan nama admin, waktu dan alasan.",
@@ -248,6 +252,25 @@
         "permit": "Dokumen",
         "openPermit": "Buka SIP atau izin praktik",
         "callHint": "Telepon nomor di Google (bukan nomor pengklaim) untuk memastikan pemiliknya. Dokumen dihapus begitu klaim diputuskan."
+      },
+      "proof": {
+        "reasons": "Alasan menunggu tim",
+        "reason": {
+          "nameMismatch": "Nama klinik tidak cocok dengan tempat ini",
+          "dateMismatch": "Tanggal tidak cocok dengan bulan kunjungan, atau tidak tertulis",
+          "possibleReuse": "Mirip bukti Testimoni lain di tempat ini"
+        },
+        "visitMonth": "Bulan kunjungan menurut penulis",
+        "clinicName": "Nama klinik di bukti",
+        "proofDate": "Tanggal di bukti",
+        "total": "Total di bukti",
+        "notPrinted": "tidak terbaca",
+        "attempts": "Bukti ke-{{number}} untuk Testimoni ini",
+        "file": "Bukti kunjungan dari {{name}}",
+        "openFile": "Buka file bukti (PDF)",
+        "fileGone": "File bukti sudah terhapus. Tolak dengan alasan agar penulis bisa mengirim bukti lain.",
+        "matching": "Testimoni dengan bukti yang mirip",
+        "hint": "Terima hanya jika bukti ini jelas dari kunjungan ke tempat ini sekitar bulan itu. Alasan penolakan dibaca penulis. File dihapus begitu diputuskan, atau otomatis setelah 7 hari."
       }
     }
   },
@@ -283,7 +306,6 @@
         "hygiene": "Kebersihan",
         "materialsEquipment": "Bahan dan peralatan"
       },
-      "verified": "Kunjungan terbukti",
       "visitMonth": "Kunjungan {{month}}",
       "procedure": "Tindakan",
       "price": "Biaya dibayar",
@@ -334,7 +356,7 @@
     "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
     "sortLabel": "Urutkan",
     "sort": {
-      "testimoni": "Testimoni terbanyak",
+      "testimoni": "Testimoni terbukti terbanyak",
       "skor": "Skor tertinggi",
       "jarak": "Jarak terdekat"
     },
@@ -351,7 +373,6 @@
       "materialsEquipment": "Bahan dan alat"
     },
     "score": "Skor {{score}}",
-    "noRatings": "Belum ada skor",
     "testimonies_one": "{{count}} testimoni",
     "testimonies": "{{count}} testimoni",
     "verifiedVisits": "{{count}} Kunjungan terbukti",
@@ -373,9 +394,16 @@
     "listedProviders": "Tempat terdaftar",
     "guidanceSessionsCompleted": "Sesi panduan"
   },
+  "proof": {
+    "proven": "Kunjungan terbukti",
+    "unproven": "Belum terbukti",
+    "notEnough": "Belum cukup testimoni terbukti",
+    "provenCount_one": "{{count}} testimoni terbukti",
+    "provenCount": "{{count}} testimoni terbukti"
+  },
   "provider": {
     "title": "{{name}}, {{area}}",
-    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni.",
+    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni terbukti.",
     "metaDescriptionNoScores": "{{name}} di {{area}}. Baca testimoni pasien dan ceritakan pengalamanmu di FindYourDent.",
     "type": {
       "klinik": "Klinik Gigi",
@@ -390,12 +418,10 @@
       "hygiene": "Kebersihan",
       "materialsEquipment": "Bahan dan alat"
     },
-    "noScores": "Belum ada penilaian.",
     "testimonyCount": "{{count}} testimoni",
     "verifiedVisitCount": "{{count}} kunjungan terbukti",
     "testimoniesTitle": "Testimoni pasien",
     "noTestimonies": "Belum ada testimoni yang terbit untuk tempat ini.",
-    "verifiedVisit": "Kunjungan terbukti",
     "visitMonth": "Berkunjung {{month}}",
     "ratingsLabel": "Penilaian {{name}}",
     "metaDescriptionUnlisted": "Info tempat praktik dokter gigi di FindYourDent.",
@@ -433,7 +459,7 @@
     "priceListConfirmed": "Dikonfirmasi pemilik {{date}}",
     "possiblyOutdated": "mungkin sudah berubah",
     "address": "Alamat",
-    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit."
+    "scoreScale": "Skala 1 sampai 5, hanya dari Testimoni terbukti."
   },
   "shortlist": {
     "reason": {
@@ -441,7 +467,7 @@
       "emergencyNoDistance": "Rumah sakit dengan IGD di area yang Anda tulis",
       "hospitalFit": "Rumah sakit, sesuai untuk {{procedure}}",
       "listedService": "Mencantumkan layanan {{procedure}}",
-      "testimonies": "Nilai Testimoni {{score}} dari {{count}} pasien",
+      "testimonies": "Nilai Testimoni {{score}} dari {{count}} Testimoni terbukti",
       "distance": "Sekitar {{distance}} dari lokasi Anda",
       "procedure": "Dapat menangani {{procedure}}",
       "generic": "Dokter gigi di dekat Anda"
@@ -458,7 +484,7 @@
     "search": "Cari",
     "searching": "Mencari…",
     "privacy": "Lokasi atau area Anda hanya dipakai untuk pencarian ini dan tidak disimpan.",
-    "rankingNote": "Diurutkan menurut kecocokan dengan keluhan, Testimoni, harga, dan jarak. Tidak pernah berdasarkan bayaran.",
+    "rankingNote": "Diurutkan menurut kecocokan dengan keluhan, Testimoni terbukti, harga, dan jarak. Tidak pernah berdasarkan bayaran.",
     "fallbackNote": "Batas pencarian Google hari ini sudah tercapai. Berikut dokter gigi yang terdaftar di FindYourDent di sekitar Anda.",
     "empty": "Belum ada dokter gigi yang cocok di sekitar Anda.",
     "mapsSearch": "Cari di Google Maps",
@@ -471,6 +497,8 @@
     "estimated": "perkiraan",
     "claimed": "Diklaim pemilik",
     "testimoniesNone": "Belum ada Testimoni",
+    "testimoniesTotal_one": "{{count}} Testimoni",
+    "testimoniesTotal": "{{count}} Testimoni",
     "testimoniesCount": "{{count}} Testimoni, {{verified}} Kunjungan terbukti",
     "aspects": "Pelayanan {{service}} · Kebersihan {{hygiene}} · Bahan dan alat {{materials}}",
     "priceSource": {
@@ -515,7 +543,7 @@
     "photosReattach": "Foto dan bukti kunjungan tidak ikut tersimpan di draf. Pilih lagi sebelum mengirim.",
     "filesTitle": "Foto dan bukti kunjungan",
     "proofLabel": "Bukti kunjungan (opsional, pribadi)",
-    "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan: hanya diperiksa lalu langsung dihapus. Jika cocok, Testimoni Anda diberi tanda Kunjungan terbukti.",
+    "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan. Hanya Testimoni dengan bukti kunjungan yang diterima yang dihitung dalam nilai dan ditandai Kunjungan terbukti. File bukti dihapus setelah diperiksa, atau paling lama 7 hari jika tim kami perlu melihatnya.",
     "proofAdd": "Pilih file bukti",
     "proofRemove": "Hapus bukti kunjungan",
     "displayNameLabel": "Nama yang ditampilkan",
@@ -568,8 +596,6 @@
       "publishedBody": "Terima kasih. Testimoni Anda sekarang membantu pasien lain memilih.",
       "viewProvider": "Lihat di halaman tempat",
       "reviewTitle": "Testimoni Anda sedang ditinjau",
-      "verifiedVisit": "Bukti kunjungan Anda cocok, jadi Testimoni ini ditandai Kunjungan terbukti. File buktinya sudah kami hapus.",
-      "proofNotVerified": "Bukti kunjungan Anda belum bisa kami cocokkan, jadi Testimoni ini tampil tanpa tanda Kunjungan terbukti. File buktinya sudah kami hapus.",
       "editReviewNote": "Versi sebelumnya tetap tampil sampai selesai.",
       "ownHealthDataNote": "Anda menulis detail kesehatan Anda sendiri. Detail itu ikut tampil di Testimoni, dan bisa Anda ubah kapan saja lewat Testimoni saya."
     },
@@ -650,6 +676,10 @@
       "not_found": "Testimoni ini tidak ditemukan atau sudah dihapus.",
       "forbidden": "Hanya penulis yang bisa mengubah atau menghapus Testimoni ini.",
       "not_editable": "Testimoni ini sedang ditinjau tim atau sudah diturunkan, jadi tidak bisa diubah. Anda tetap bisa menghapusnya.",
+      "proof_not_attachable": "Bukti kunjungan hanya bisa dilampirkan ke Testimoni yang sudah tayang.",
+      "proof_already_accepted": "Bukti kunjungan untuk Testimoni ini sudah diterima.",
+      "proof_attempts_used": "Bukti kunjungan untuk Testimoni ini sudah 3 kali dikirim, jadi tidak bisa dikirim lagi. Tunggu keputusan tim jika bukti terakhir sedang diperiksa, atau hapus Testimoni ini lalu tulis yang baru.",
+      "proof_check_unavailable": "Bukti kunjungan belum bisa kami periksa sekarang. Filenya sudah kami hapus dan tidak dihitung sebagai percobaan. Silakan coba lagi nanti.",
       "unavailable": "Layanan Testimoni sedang tidak tersedia. Silakan coba lagi sebentar lagi."
     },
     "fields": {
@@ -667,7 +697,9 @@
       "pricePaidRupiah": "Tulis biaya dalam rupiah tanpa titik atau koma, atau kosongkan.",
       "displayName": "Tulis nama yang ditampilkan (maksimal {{max}} karakter).",
       "consent": "Centang kedua pernyataan sebelum mengirim.",
-      "keepPhotoPaths": "Ada foto yang tidak lagi tersimpan. Muat ulang halaman lalu coba lagi."
+      "keepPhotoPaths": "Ada foto yang tidak lagi tersimpan. Muat ulang halaman lalu coba lagi.",
+      "proofMissing": "Pilih foto atau PDF bukti kunjungan.",
+      "proofAttemptsUsed": "Bukti kunjungan sudah 3 kali dikirim. Hapus file ini untuk menyimpan perubahan lainnya."
     },
     "moderation": {
       "published": "Terima kasih! Testimoni Anda sudah tayang.",
@@ -727,12 +759,39 @@
     "deleting": "Menghapus…",
     "deleteFailed": "Testimoni belum terhapus. Silakan coba lagi.",
     "deleted": "Testimoni sudah dihapus.",
+    "attachProof": {
+      "title": "Lampirkan bukti kunjungan",
+      "hint": "Foto atau PDF struk, kuitansi, atau kartu janji temu. Hanya Testimoni dengan bukti yang diterima yang dihitung dalam skor. Testimoni Anda tetap tayang dan tidak diperiksa ulang.",
+      "attemptsLeft_one": "Sisa {{count}} kali kesempatan.",
+      "attemptsLeft": "Sisa {{count}} kali kesempatan.",
+      "choose": "Pilih file",
+      "send": "Kirim bukti",
+      "sending": "Memeriksa bukti…",
+      "failed": "Bukti belum terkirim. Silakan coba lagi."
+    },
     "legend": {
       "title": "Arti status",
       "published": "Tampil di halaman tempat dan di beranda.",
       "needsAuthorFix": "Ubah bagian yang ditandai, lalu kirim lagi.",
       "held": "Tim FindYourDent memutuskan, biasanya dalam 24 jam."
     }
+  },
+  "proofStatus": {
+    "title": "Bukti kunjungan",
+    "accepted": "Bukti kunjungan diterima, jadi Testimoni ini ditandai Kunjungan terbukti. File buktinya sudah kami hapus.",
+    "pending": "Bukti kunjungan Anda menunggu pemeriksaan tim FindYourDent. Sampai selesai, Testimoni ini belum ditandai Kunjungan terbukti.",
+    "notChecked": "Bukti kunjungan belum bisa kami periksa kali ini, jadi filenya sudah kami hapus. Silakan kirim lagi nanti.",
+    "rejected": {
+      "unreadable": "Bukti kunjungan tidak diterima karena tulisannya tidak terbaca.",
+      "notAProof": "Bukti kunjungan tidak diterima karena dokumennya bukan struk, kuitansi, atau bukti janji temu dari tempat praktik gigi.",
+      "tooOld": "Bukti kunjungan tidak diterima karena tanggalnya lebih dari 12 bulan yang lalu.",
+      "adminRejected": "Bukti kunjungan tidak diterima setelah diperiksa tim FindYourDent.",
+      "expired": "Bukti kunjungan tidak sempat diperiksa tim dalam 7 hari.",
+      "other": "Bukti kunjungan tidak diterima."
+    },
+    "tryAnother": "File buktinya sudah kami hapus. Anda bisa mencoba dokumen lain.",
+    "noAttemptsLeft": "File buktinya sudah kami hapus. Bukti untuk Testimoni ini sudah 3 kali dikirim, jadi tidak bisa dikirim lagi.",
+    "adminNote": "Catatan tim FindYourDent: {{note}}"
   },
   "reportApi": {
     "errors": {
@@ -749,7 +808,8 @@
       "reason_required": "Tulis alasan untuk tindakan ini.",
       "not_found": "Item ini tidak ditemukan atau sudah diputuskan.",
       "not_allowed": "Tindakan ini tidak bisa dilakukan pada status sekarang.",
-      "unavailable": "Layanan admin sedang tidak tersedia."
+      "unavailable": "Layanan admin sedang tidak tersedia.",
+      "proof_changed": "Penulis sudah mengganti bukti ini. Muat ulang halaman untuk melihat bukti yang baru."
     }
   },
   "report": {
@@ -994,6 +1054,70 @@
     "sendEmail": "Kirim email",
     "start": "Mulai dari keluhan Anda"
   },
+  "verification": {
+    "metaTitle": "Cara kami memverifikasi testimoni",
+    "metaDescription": "Hanya Testimoni dengan bukti kunjungan yang diterima yang menentukan nilai, urutan, dan harga di FindYourDent. Baca cara kami memeriksa bukti dan aturan Testimoni kami.",
+    "eyebrow": "Testimoni",
+    "title": "Cara kami memverifikasi testimoni",
+    "lead": "Nilai di FindYourDent hanya berguna jika berasal dari kunjungan yang benar-benar terjadi. Karena itu, hanya Testimoni dengan bukti kunjungan yang diterima yang dihitung. Testimoni lainnya tetap bisa Anda baca.",
+    "countTitle": "Hanya Testimoni terbukti yang dihitung",
+    "count": [
+      {
+        "title": "Kunjungan terbukti",
+        "body": "Testimoni yang bukti kunjungannya diterima. Hanya Testimoni ini yang dihitung dalam nilai pelayanan, kebersihan, serta bahan dan alat, dalam urutan Direktori dan daftar dokter gigi terdekat, dan dalam statistik harga."
+      },
+      {
+        "title": "Belum terbukti",
+        "body": "Testimoni tanpa bukti kunjungan yang diterima tetap terbit dan bisa dibaca, dengan tanda Belum terbukti. Testimoni ini tidak mengubah nilai, urutan, maupun harga."
+      },
+      {
+        "title": "Minimal {{min}} Testimoni terbukti",
+        "body": "Rata-rata bintang baru tampil setelah tempat praktik punya {{min}} Testimoni terbukti. Sebelum itu, yang tampil adalah Belum cukup testimoni terbukti beserta jumlahnya."
+      },
+      {
+        "title": "Aturan yang sama untuk semua",
+        "body": "Setiap tempat praktik dinilai dengan aturan ini, termasuk Testimoni yang terbit sebelum aturan ini berlaku. Tidak ada urutan berbayar."
+      }
+    ],
+    "checkTitle": "Cara bukti kunjungan diperiksa",
+    "checkLead": "Bukti kunjungan adalah struk, kuitansi, atau kartu janji temu, berupa gambar atau PDF. Lampirkan saat menulis Testimoni, atau nanti dari halaman Testimoni saya.",
+    "checkSteps": [
+      "AI membaca dokumen Anda: apakah terbaca, dan apakah benar bukti kunjungan ke tempat praktik dokter gigi.",
+      "Kami mencocokkan nama klinik di dokumen dengan tempat yang Anda ceritakan, dan tanggalnya dengan bulan kunjungan yang Anda isi. Dokumen harus berumur kurang dari 12 bulan.",
+      "Jika semuanya cocok, Testimoni Anda ditandai Kunjungan terbukti. Jika ada yang meragukan, tim FindYourDent memeriksanya, dan Testimoni Anda tetap terbit sebagai Belum terbukti selama menunggu.",
+      "Jika dokumen tidak terbaca, bukan bukti kunjungan, atau sudah terlalu lama, Anda melihat alasannya dan bisa mencoba dokumen lain.",
+      "Satu bukti hanya untuk satu Testimoni. Kami menyimpan sidik digital bukti, bukan dokumennya, supaya satu struk tidak bisa dipakai berulang kali."
+    ],
+    "keepTitle": "Berapa lama file bukti disimpan",
+    "keep": [
+      {
+        "title": "Tidak pernah ditampilkan",
+        "body": "Bukti kunjungan bersifat pribadi. Yang tampil di Testimoni hanya tandanya: Kunjungan terbukti atau Belum terbukti."
+      },
+      {
+        "title": "Dihapus setelah diperiksa",
+        "body": "File bukti langsung dihapus setelah diterima atau ditolak. Jika tim kami perlu melihatnya, file disimpan secara privat paling lama 7 hari, lalu dihapus."
+      },
+      {
+        "title": "Nama Anda tidak dicatat",
+        "body": "Dari dokumen, kami hanya mencatat nama klinik, tanggal, dan total biaya, beserta sidik digitalnya. Nama Anda di dokumen tidak pernah dicatat."
+      },
+      {
+        "title": "Ikut terhapus bersama Testimoni",
+        "body": "Jika Anda menghapus Testimoni, catatan dan sidik digital buktinya ikut dihapus."
+      }
+    ],
+    "policyTitle": "Kebijakan Testimoni",
+    "policyLead": "Testimoni hanya bisa dipercaya jika ditulis dengan bebas. Aturan ini berlaku untuk FindYourDent dan setiap tempat praktik.",
+    "policy": [
+      "FindYourDent tidak pernah membayar atau memberi imbalan untuk Testimoni.",
+      "Tempat praktik tidak boleh menawarkan apa pun sebagai imbalan Testimoni, seperti uang, diskon, hadiah, atau perawatan gratis.",
+      "Tempat praktik tidak boleh meminta hanya Pasien tertentu, misalnya yang puas saja, untuk menulis Testimoni.",
+      "Jika tim FindYourDent memastikan ada pelanggaran, pelanggaran itu ditampilkan secara publik di halaman tempat praktik tersebut dengan tanda Pelanggaran kebijakan testimoni, dan Testimoni dari periode itu tidak dihitung. Sebelum memutuskan, tim memberi tahu tempat praktik, yang bisa memberi penjelasan."
+    ],
+    "reportTitle": "Ditawari imbalan untuk menulis Testimoni?",
+    "reportBody": "Beri tahu tim FindYourDent lewat email. Sertakan nama tempat praktik dan apa yang ditawarkan."
+  },
   "legal": {
     "effective": "Berlaku sejak: [tanggal berlaku]",
     "updated": "Terakhir diperbarui: [tanggal]",
@@ -1023,7 +1147,7 @@
             "<b>Lokasi atau area</b> yang Anda berikan hanya dipakai untuk mencari dokter gigi terdekat dan tidak disimpan. Di Direktori, jarak dihitung di perangkat Anda dan lokasi tidak dikirim ke kami.",
             "<b>Akun Google</b> dipakai saat Anda menulis Testimoni atau mengklaim halaman. Akun Anda tidak pernah ditampilkan.",
             "<b>Testimoni</b>: nilai, cerita, bulan dan tahun kunjungan, nama yang Anda pilih, serta tindakan, biaya dan foto jika Anda mengisinya. Bagian ini tampil untuk publik. Data lokasi di dalam foto dihapus otomatis.",
-            "<b>Bukti kunjungan</b> diperiksa lalu langsung dihapus. Bukti tidak pernah ditampilkan; yang tampil hanya tanda Kunjungan terbukti jika cocok.",
+            "<b>Bukti kunjungan</b> dihapus setelah diperiksa, atau paling lama 7 hari jika tim kami perlu melihatnya. Bukti tidak pernah ditampilkan; yang tampil hanya tanda Kunjungan terbukti jika diterima. Dari bukti itu kami hanya menyimpan nama klinik, tanggal dan total yang tertulis, tidak pernah nama Anda.",
             "<b>Data klaim pemilik</b>: dokumen SIP atau izin praktik disimpan privat dan dihapus setelah keputusan. Nomor telepon hanya untuk tim FindYourDent dan tidak ditampilkan.",
             "<b>Daftar harga dari pemilik</b>: berkas asli disimpan privat selama 30 hari untuk keperluan sengketa, lalu dihapus. Hanya baris yang dikonfirmasi pemilik yang tampil.",
             "<b>Laporan</b> atas Testimoni: kategori dan keterangan yang Anda tulis, untuk ditinjau tim."
@@ -1060,7 +1184,7 @@
         "blocks": [
           [
             "Keluhan dan lokasi: tidak disimpan.",
-            "Bukti kunjungan: dihapus segera setelah diperiksa.",
+            "Bukti kunjungan: dihapus setelah diperiksa, atau paling lama 7 hari jika tim perlu melihatnya.",
             "Dokumen klaim: dihapus setelah keputusan.",
             "Berkas asli daftar harga: 30 hari.",
             "Testimoni: selama tayang, sampai Anda atau tim menghapusnya.",

@@ -67,7 +67,6 @@ const HOLD: ModerationDecision = {
   flaggedSpans: [],
   confidence: 0.5,
   authorMessage: "Testimoni Anda ditinjau tim.",
-  proofOfVisit: "notProvided",
 };
 const PUBLISH: ModerationDecision = { ...HOLD, decision: "publish", ruleCodes: [], confidence: 0.95 };
 const moderateWith = (decision: ModerationDecision) => server.fakes.agent.respondToModerationWith(decision);

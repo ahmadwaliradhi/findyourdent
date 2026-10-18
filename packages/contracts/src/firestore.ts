@@ -27,6 +27,7 @@ export const COLLECTIONS = {
   claims: "claims",
   priceLists: "priceLists",
   moderationDecisions: "moderationDecisions",
+  proofFingerprints: "proofFingerprints",
   nameCorrections: "nameCorrections",
   adminActions: "adminActions",
   counters: "counters",
@@ -92,20 +93,26 @@ export interface ProviderOwnerFacts {
 }
 
 export interface ProcedurePriceAggregate {
-  /** Number of published Testimonies with a price for this procedure. */
+  /** Number of Proven Testimonies with a price for this procedure. */
   count: number;
   medianRupiah: number;
   minRupiah: number;
   maxRupiah: number;
 }
 
-/** Recomputed whenever a Testimony enters or leaves `published`. */
+/**
+ * Recomputed whenever a Testimony enters or leaves `published` or its proof result
+ * changes. Only Proven Testimonies (published, `verifiedVisit`) move the averages and
+ * price stats (spec 09, ADR-0011).
+ */
 export interface ProviderAggregates {
+  /** Every published Testimony, Proven or not; shown as a count only. */
   testimonyCount: number;
+  /** Proven Testimonies: the count every score uses. */
   verifiedVisitCount: number;
-  /** Aspect averages over published Testimonies; null when there are none. */
+  /** Aspect averages over Proven Testimonies; null below MIN_PROVEN_TESTIMONIES (3). */
   averages: AspectRatings | null;
-  /** Keyed by procedure code; the median is shown only when count >= 2. */
+  /** From Proven Testimonies, keyed by procedure code; the median is shown only when count >= 2. */
   procedurePrices: Record<ProcedureCode, ProcedurePriceAggregate>;
 }
 
@@ -172,6 +179,69 @@ export interface TestimonyReply {
   updatedAt: Timestamp;
 }
 
+/** Why a Proof of Visit waits for an admin (spec 09); they accumulate. */
+export type ProofPendingReason = "nameMismatch" | "dateMismatch" | "possibleReuse";
+/** Why a Proof of Visit was not accepted (spec 09). */
+export type ProofRejectedReason = "unreadable" | "notAProof" | "tooOld" | "adminRejected" | "expired";
+
+/** The facts the agent read from a Proof of Visit, as printed (spec 09). Never the patient's name. */
+export interface ProofFacts {
+  clinicNameOnProof?: string;
+  /** YYYY-MM-DD when a day was printed, else YYYY-MM. */
+  proofDate?: string;
+  totalRupiah?: number;
+}
+
+/**
+ * The Proof of Visit check on a Testimony (spec 09), with the facts read from it. The
+ * file is deleted right after an `accepted` or `rejected` result; a `pending` one stays
+ * in the private uploads bucket (`proof-of-visit/{testimonyId}/`) for an admin. Never
+ * the patient's name. Proofs checked before spec 09 carry only `result` (accepted or
+ * rejected) and `checkedAt`.
+ */
+export interface ProofOfVisitRecord extends ProofFacts {
+  result: "accepted" | "pending" | "rejected";
+  /** `pending` only: every reason it waits for an admin. */
+  reasons?: ProofPendingReason[];
+  /** `rejected` only. */
+  reason?: ProofRejectedReason;
+  /** `adminRejected` only: the admin's note, which the author reads on "Testimoni saya". */
+  adminReason?: string;
+  /** When the agent read it and `decideProof` decided; a pending proof entered the admin queue then. */
+  checkedAt: Timestamp;
+  /** Proofs checked for this Testimony, the one sent with it included; at most 3. */
+  attempts?: number;
+  /**
+   * `pending` only: its private file, `proof-of-visit/{testimonyId}/…`. Whatever decides
+   * the proof deletes exactly this file, never a newer proof's; the field goes with it.
+   */
+  filePath?: string;
+}
+
+// proofFingerprints/{testimonyId} ----------------------------------------------
+
+/**
+ * Proof Fingerprint (spec 09): what is kept of an `accepted` or `pending` Proof of Visit
+ * so one receipt cannot unlock several Testimonies. Document id = the Testimony id; one
+ * per Testimony, replaced by a newer proof, deleted when the proof is rejected or the
+ * Testimony deleted. Never the file, never the patient's name. Queried by `placeId`
+ * alone (the reuse check compares in the web service).
+ */
+export interface ProofFingerprintDoc {
+  testimonyId: string;
+  placeId: PlaceId;
+  /** Images: 64-bit DCT perceptual hash (pHash) of the stored file, 16 hex digits. */
+  perceptualHash?: string;
+  /** PDFs: SHA-256 of the file's bytes, 64 hex digits. */
+  fileSha256?: string;
+  /**
+   * `normalisedClinicName|proofDate|totalRupiah` (an absent part empty). Absent when too
+   * weak to tell two visits apart: no date, or a month without a total.
+   */
+  fieldsKey?: string;
+  createdAt: Timestamp;
+}
+
 /**
  * One per author per Provider (enforced in a transaction querying
  * authorUid + placeId). Random document id, so the uid never appears in URLs.
@@ -194,10 +264,13 @@ export interface TestimonyDoc extends TestimonyContent {
   /** Public name chosen by the author (default: first name plus initial). */
   displayName: string;
   status: TestimonyStatus;
-  /** Kunjungan terbukti. */
+  /** Kunjungan terbukti: true only when `proofOfVisit.result` is `accepted` (spec 09). */
   verifiedVisit: boolean;
-  /** Result only; the Proof of Visit file is deleted right after the check. */
-  proofOfVisit?: { result: "accepted" | "rejected"; checkedAt: Timestamp };
+  /**
+   * The Proof of Visit check, kept after its file is deleted. Absent when no proof was
+   * sent (`notProvided`) or the proof could not be checked (the agent failed).
+   */
+  proofOfVisit?: ProofOfVisitRecord;
   consent: { termsVersion: string; acceptedAt: Timestamp };
   /** authorFix rounds so far; after three the Testimony is held. */
   authorFixRounds: number;
@@ -322,7 +395,6 @@ export interface ModerationDecisionDoc {
   flaggedSpans: ModerationDecision["flaggedSpans"];
   flaggedPhotos?: ModerationDecision["flaggedPhotos"];
   confidence: number;
-  proofOfVisit?: ModerationDecision["proofOfVisit"];
   /** Model id from configuration, or "fallback" when the call failed. */
   model: string;
   /** Part of the 10% admin spot-check sample. */
@@ -367,7 +439,9 @@ export type AdminActionType =
   | "revokeClaim"
   | "applyNameCorrection"
   | "dismissNameCorrection"
-  | "spotCheckConfirm";
+  | "spotCheckConfirm"
+  | "acceptProof"
+  | "rejectProof";
 
 /** Append-only audit log of every admin decision. */
 export interface AdminActionDoc {
@@ -380,7 +454,9 @@ export interface AdminActionDoc {
     | "provider"
     | "providerFacts"
     | "nameCorrection"
-    | "moderationDecision";
+    | "moderationDecision"
+    /** A Testimony's Proof of Visit (spec 09): `subjectId` is the Testimony id. */
+    | "proofOfVisit";
   subjectId: string;
   placeId?: PlaceId;
   /** Allowlisted admin email. */

@@ -109,7 +109,46 @@ class ModerationDecision(BaseModel):
     """
     The author shared their own health details: a gentle warning only, never a hold (R8 note).
     """
-    proofOfVisit: Literal["accepted", "rejected", "notProvided"] | None = None
+    proofExtraction: Annotated[
+        ProofExtraction | None, Field(title="ProofExtraction")
+    ] = None
     """
-    Plausible match with the Provider name and a date within 24 months of the visit month. A rejection never holds the Testimony; it only withholds Kunjungan terbukti. Absent when the check did not run (model error, timeout or invalid output): treat it as not verified, and delete the file anyway.
+    Facts read from the Proof of Visit (spec 09), returned on every decision when a proof was sent and could be read by the model. The agent applies no date window and the proof never changes `decision`: the web service decides accepted, pending or rejected. Absent when no proof was sent or the extraction failed (model error, timeout or invalid output): the proof was not checked. Never carries the patient's name.
+    """
+
+
+class ProofExtraction(BaseModel):
+    """
+    Facts read from the Proof of Visit (spec 09), returned on every decision when a proof was sent and could be read by the model. The agent applies no date window and the proof never changes `decision`: the web service decides accepted, pending or rejected. Absent when no proof was sent or the extraction failed (model error, timeout or invalid output): the proof was not checked. Never carries the patient's name.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    readable: bool
+    """
+    The document could be read at all.
+    """
+    isProofOfVisit: bool
+    """
+    A receipt, invoice, kuitansi or appointment record of a dental visit.
+    """
+    clinicNameOnProof: Annotated[str | None, Field(max_length=200, min_length=1)] = None
+    """
+    The clinic or dentist name printed on it.
+    """
+    proofDate: Annotated[
+        str | None,
+        Field(pattern="^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$"),
+    ] = None
+    """
+    The visit or payment date: YYYY-MM-DD when a day is printed, else YYYY-MM.
+    """
+    totalRupiah: Annotated[int | None, Field(ge=0)] = None
+    """
+    The total paid, when printed.
+    """
+    clinicNameMatches: bool
+    """
+    The model's fuzzy judgment that the name on the proof is the Provider (typed or live Google name).
     """

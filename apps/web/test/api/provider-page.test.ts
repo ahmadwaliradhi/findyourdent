@@ -26,6 +26,13 @@ function metaContent(html: string, attribute: "name" | "property", key: string):
   return tag?.[1];
 }
 
+/** One Testimony's item on the page, from its anchor to the end of its list item. */
+function testimonyItem(html: string, testimonyId: string): string {
+  const start = html.indexOf(`id="testimoni-${testimonyId}"`);
+  expect(start).toBeGreaterThan(-1);
+  return html.slice(start, html.indexOf("</li>", start));
+}
+
 async function seedSurabayaClinic() {
   return seedProvider(server.firestore, {
     placeId: "ChIJ-surabaya-senyum",
@@ -35,8 +42,8 @@ async function seedSurabayaClinic() {
     providerTypeSource: "inferred",
     claimStatus: "claimed",
     aggregates: {
-      testimonyCount: 2,
-      verifiedVisitCount: 1,
+      testimonyCount: 4,
+      verifiedVisitCount: 3,
       averages: { service: 4.5, hygiene: 5, materialsEquipment: 4 },
       procedurePrices: {} as never,
     },
@@ -107,6 +114,36 @@ describe("Listed Provider page", () => {
     expect(html).toMatch(/<title>[^<]*Klinik Gigi Senyum Sehat[^<]*<\/title>/);
     expect(html).not.toMatch(/googleusercontent|maps\.googleapis|places\.googleapis/);
     expect(html).not.toMatch(/<meta name="robots" content="noindex"/);
+  });
+
+  it("labels each Testimony Kunjungan terbukti or Belum terbukti, linking Belum terbukti to the verification page", async () => {
+    const provider = await seedSurabayaClinic();
+    const proven = await seedTestimony(server.firestore, provider, { verifiedVisit: true });
+    const unproven = await seedTestimony(server.firestore, provider);
+
+    const { html } = await page(provider.placeId);
+
+    const provenItem = testimonyItem(html, proven.id);
+    expect(provenItem).toContain("Kunjungan terbukti");
+    expect(provenItem).not.toContain("Belum terbukti");
+    const unprovenItem = testimonyItem(html, unproven.id);
+    expect(unprovenItem).not.toContain("Kunjungan terbukti");
+    expect(unprovenItem).toMatch(/<a [^>]*href="\/verifikasi-testimoni"[^>]*>(?:(?!<\/a>).)*Belum terbukti/s);
+  });
+
+  it("shows Belum cukup testimoni terbukti and the Proven count, with no star average, below three", async () => {
+    const provider = await seedProvider(server.firestore, {
+      name: "Klinik Gigi Baru Buka",
+      aggregates: { testimonyCount: 5, verifiedVisitCount: 2, averages: null, procedurePrices: {} as never },
+    });
+    await seedTestimony(server.firestore, provider, { verifiedVisit: true });
+
+    const { html } = await page(provider.placeId);
+
+    expect(html).toContain("Belum cukup testimoni terbukti");
+    expect(html).toContain("2 testimoni terbukti");
+    expect(html).not.toContain("Skala 1 sampai 5");
+    expect(metaContent(html, "name", "description")).not.toMatch(/Pelayanan/);
   });
 
   it("serves a place that is not a Listed Provider as noindex, without calling Places", async () => {

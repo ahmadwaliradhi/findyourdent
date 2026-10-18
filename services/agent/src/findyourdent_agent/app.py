@@ -16,16 +16,18 @@ from .config import Settings
 from .contracts.guidance_request import GuidanceRequest
 from .contracts.guidance_response import GuidanceResponse
 from .contracts.moderation_decision import ModerationDecision
-from .contracts.moderation_request import ModerationRequest
+from .contracts.moderation_request import ModerationProofOfVisit, ModerationRequest
 from .contracts.price_list_extraction_request import PriceListExtractionRequest
 from .contracts.price_list_extraction_response import PriceListExtractionResponse
+from .contracts.proof_check_request import ProofCheckRequest
+from .contracts.proof_check_response import ProofCheckResponse
 from .contracts.shortlist_reasons_request import ShortlistReasonsRequest
 from .contracts.shortlist_reasons_response import ShortlistReasonsResponse
 from .data import procedure_codes
 from .escalation import default_matcher
 from .guidance import InvalidAudioError, NoSpeechError, answer_turn
 from .knowledge import bpjs_coverage, cost_estimates, guidance_safety
-from .moderation import InvalidAttachmentError, moderate
+from .moderation import InvalidAttachmentError, extract_proof, moderate
 from .price_list import InvalidDocumentError, extract_price_list
 from .shortlist import write_reasons
 
@@ -93,6 +95,9 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             # Guidance only: whether Agent Search or the curated files grounded it.
             if grounding := getattr(request.state, "grounding", None):
                 extra["grounding"] = grounding
+            # Moderation with a Proof of Visit: whether its facts were read (never the facts).
+            if proof := getattr(request.state, "proof", None):
+                extra["proof"] = proof
             log.info("request", extra=extra)
 
     @app.exception_handler(RequestValidationError)
@@ -161,7 +166,39 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             detail = {"type": "invalid_base64", "loc": ["body"], "msg": "attachment is not base64"}
             return JSONResponse(status_code=422, content={"detail": [detail]})
         request.state.outcome = result.outcome
+        if result.proof_outcome:
+            request.state.proof = result.proof_outcome
         return result.decision
+
+    @app.post(
+        "/v1/moderation/proof-check",
+        response_model=ProofCheckResponse,
+        response_model_exclude_none=True,
+    )
+    async def proof_check(
+        body: ProofCheckRequest, request: Request
+    ) -> ProofCheckResponse | JSONResponse:
+        """Moderation in proof-only mode (spec 09): a Proof of Visit attached later is read
+        on its own. No text or photos come in, so nothing else is screened, and there is no
+        decision. When the model gives no usable answer the proof is not checked: 503."""
+        try:
+            checked = await extract_proof(
+                ModerationProofOfVisit.model_validate(body.proofOfVisit.model_dump()),
+                typed_provider_name=body.typedProviderName,
+                google_display_name=body.googleDisplayName,
+                gemini=adapters.gemini,
+                settings=settings,
+            )
+        except InvalidAttachmentError:
+            request.state.outcome = "invalid_request"
+            detail = {"type": "invalid_base64", "loc": ["body"], "msg": "attachment is not base64"}
+            return JSONResponse(status_code=422, content={"detail": [detail]})
+        if checked.extraction is None:
+            return _error(request, 503, checked.outcome)
+        request.state.outcome = checked.outcome
+        return ProofCheckResponse.model_validate(
+            {"proofExtraction": checked.extraction.model_dump(exclude_none=True)}
+        )
 
     @app.post(
         "/v1/price-list-extraction",

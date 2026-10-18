@@ -14,6 +14,8 @@ REGION="${REGION:-asia-southeast2}"
 REPOSITORY="${REPOSITORY:-findyourdent}"
 WEB_SERVICE=fyd-web
 COORDINATES_JOB=coordinates-refresh
+RECOMPUTE_JOB=aggregates-recompute
+PROOF_EXPIRY_JOB=proof-expiry
 AGENT_SERVICE=fyd-agent
 WEB_SA="fyd-web@${PROJECT_ID}.iam.gserviceaccount.com"
 AGENT_SA="fyd-agent@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -290,6 +292,45 @@ gcloud scheduler jobs "$verb" http "$COORDINATES_JOB" --project "$PROJECT_ID" --
   --oauth-service-account-email="$SCHEDULER_SA" \
   --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
 echo "    ${COORDINATES_JOB}: 0 3 * * * (Asia/Jakarta)"
+
+# Proof expiry (spec 09, ADR-0011): a Proof of Visit waiting for the team is kept at
+# most 7 days. A Cloud Run Job on the web image, run hourly by Cloud Scheduler; each
+# run turns every pending proof that would be 7 days old by the next run into
+# `rejected` (`expired`) and deletes its file (apps/web/server/proof-expiry.ts, which
+# assumes this hourly schedule). No secret: Firestore and the uploads bucket only, as
+# fyd-web (datastore.user, storage.objectAdmin on the bucket).
+log "Proof expiry job"
+gcloud run jobs deploy "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --image "$IMAGE" --service-account "$WEB_SA" \
+  --command=node --args=expire-proofs.ts \
+  --tasks=1 --max-retries=1 --task-timeout=5m --cpu=1 --memory=512Mi \
+  --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
+  --quiet >/dev/null
+gcloud run jobs add-iam-policy-binding "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
+verb=create
+if gcloud scheduler jobs describe "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+  verb=update
+fi
+gcloud scheduler jobs "$verb" http "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" \
+  --schedule="0 * * * *" --time-zone=Asia/Jakarta --http-method=POST \
+  --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${PROOF_EXPIRY_JOB}:run" \
+  --oauth-service-account-email="$SCHEDULER_SA" \
+  --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+echo "    ${PROOF_EXPIRY_JOB}: 0 * * * * (Asia/Jakarta)"
+
+# Release recompute (spec 09, ADR-0011): every Listed Provider's aggregates rebuilt
+# under "only Proven Testimonies count" (apps/web/server/aggregates-recompute.ts).
+# One-off, so no Scheduler job: run it by hand once this deploy is live (README,
+# "Spec 09 release"). Redeployed with every web image so a rerun uses current code.
+log "Aggregates recompute job"
+gcloud run jobs deploy "$RECOMPUTE_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --image "$IMAGE" --service-account "$WEB_SA" \
+  --command=node --args=recompute-aggregates.ts \
+  --tasks=1 --max-retries=1 --task-timeout=30m --cpu=1 --memory=512Mi \
+  --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
+  --quiet >/dev/null
+echo "    ${RECOMPUTE_JOB}: run once by hand: gcloud run jobs execute ${RECOMPUTE_JOB} --region ${REGION} --wait"
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).
 log "Firebase Hosting"

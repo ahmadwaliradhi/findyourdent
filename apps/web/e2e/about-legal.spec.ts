@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
 // About, Privacy and Terms (spec 08): reached from the footer; Privacy and Terms are drafts, kept out of search.
+// The Testimony verification page (spec 09) sits beside them in the footer and is indexable.
 
 async function robots(page: Page) {
   return page.locator('meta[name="robots"]').getAttribute("content");
@@ -60,7 +61,26 @@ test("the legal pages switch to English and keep their contents list", async ({ 
   );
 });
 
-for (const path of ["/tentang", "/privasi", "/syarat"]) {
+test("the footer and the Testimony form reach the verification page, which switches to English", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("contentinfo").getByRole("link", { name: "Cara kami memverifikasi testimoni" }).click();
+  await expect(page).toHaveURL(/\/verifikasi-testimoni$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Cara kami memverifikasi testimoni" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Minimal 3 Testimoni terbukti" })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Ganti bahasa ke English" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "How we verify Testimonies" })).toBeVisible();
+  await expect(page).toHaveURL(/\/verifikasi-testimoni$/);
+
+  await page.goto("/ceritakan");
+  await expect(page.getByRole("main").getByRole("link", { name: "How we verify Testimonies" })).toHaveAttribute(
+    "href",
+    "/verifikasi-testimoni",
+  );
+});
+
+for (const path of ["/tentang", "/privasi", "/syarat", "/verifikasi-testimoni"]) {
   test(`${path} does not scroll sideways`, async ({ page }) => {
     await page.goto(path);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

@@ -258,6 +258,24 @@ describe("landing page", () => {
     expect(html).toContain('name="complaintText"');
   });
 
+  it("labels each card Kunjungan terbukti or Belum terbukti, linking Belum terbukti to the verification page", async () => {
+    const provider = await seedProvider(server.firestore, { region: JAKARTA_PUSAT });
+    const proven = await seedTestimony(server.firestore, provider, { verifiedVisit: true });
+    const unproven = await seedTestimony(server.firestore, provider);
+
+    const html = await getLanding();
+
+    const card = (id: string) => {
+      const start = html.indexOf(`id="feed-${id}"`);
+      expect(start).toBeGreaterThan(-1);
+      return html.slice(start, html.indexOf("</article>", start));
+    };
+    expect(card(proven.id)).toContain("Kunjungan terbukti");
+    expect(card(proven.id)).not.toContain("Belum terbukti");
+    expect(card(unproven.id)).not.toContain("Kunjungan terbukti");
+    expect(card(unproven.id)).toMatch(/<a [^>]*href="\/verifikasi-testimoni"[^>]*>(?:(?!<\/a>).)*Belum terbukti/s);
+  });
+
   it("offers more when there is another page", async () => {
     const provider = await seedProvider(server.firestore);
     for (let i = 0; i < 11; i++) await seedTestimony(server.firestore, provider);

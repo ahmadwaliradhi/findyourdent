@@ -205,7 +205,7 @@ describe("POST /api/shortlist", () => {
         name: "Klinik Senyum Gubeng",
         aggregates: {
           testimonyCount: 6,
-          verifiedVisitCount: 2,
+          verifiedVisitCount: 3,
           averages: { service: 4.6, hygiene: 4.8, materialsEquipment: 4.5 },
           procedurePrices: {
             root_canal_treatment: { count: 3, medianRupiah: 1_200_000, minRupiah: 900_000, maxRupiah: 1_500_000 },
@@ -233,7 +233,7 @@ describe("POST /api/shortlist", () => {
       claimed: false,
       providerType: "klinik",
       providerTypeSource: "inferred",
-      testimonies: { count: 6, verifiedVisitCount: 2 },
+      testimonies: { count: 6, verifiedVisitCount: 3 },
       googleMapsUri: GOOGLE_CLINIC.googleMapsUri,
     });
     expect(clinic?.distanceMeters).toBeGreaterThan(400);
@@ -267,7 +267,7 @@ describe("POST /api/shortlist", () => {
       listedProvider(GOOGLE_CLINIC.placeId, {
         claimStatus: "claimed",
         claimId: "claim-current",
-        aggregates: { testimonyCount: 2, verifiedVisitCount: 0, averages: null, procedurePrices: paid },
+        aggregates: { testimonyCount: 2, verifiedVisitCount: 2, averages: null, procedurePrices: paid },
       }),
       listedProvider(GOOGLE_DRG.placeId, { claimStatus: "claimed", claimId: "claim-current-drg" }),
     );
@@ -334,7 +334,7 @@ describe("POST /api/shortlist", () => {
     server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG]);
     const ratings = (average: number) => ({
       testimonyCount: 5,
-      verifiedVisitCount: 0,
+      verifiedVisitCount: 5,
       averages: { service: average, hygiene: average, materialsEquipment: average },
       procedurePrices: {},
     });
@@ -358,7 +358,7 @@ describe("POST /api/shortlist", () => {
   it("ranks a claimed Provider exactly as the same Provider unclaimed", async () => {
     const ratings = {
       testimonyCount: 4,
-      verifiedVisitCount: 1,
+      verifiedVisitCount: 3,
       averages: { service: 4.2, hygiene: 4.4, materialsEquipment: 4 },
       procedurePrices: {},
     };
@@ -477,7 +477,7 @@ describe("POST /api/shortlist reasons (T09)", () => {
         name: "Klinik Senyum Gubeng",
         aggregates: {
           testimonyCount: 6,
-          verifiedVisitCount: 2,
+          verifiedVisitCount: 3,
           averages: { service: 4.6, hygiene: 4.8, materialsEquipment: 4.5 },
           procedurePrices: {
             root_canal_treatment: { count: 3, medianRupiah: 1_200_000, minRupiah: 900_000, maxRupiah: 1_500_000 },
@@ -520,7 +520,7 @@ describe("POST /api/shortlist reasons (T09)", () => {
       procedureFit: expect.arrayContaining(["root_canal_treatment"]),
       testimonies: {
         count: 6,
-        verifiedVisitCount: 2,
+        verifiedVisitCount: 3,
         averageService: 4.6,
         averageHygiene: 4.8,
         averageMaterialsEquipment: 4.5,
@@ -541,7 +541,7 @@ describe("POST /api/shortlist reasons (T09)", () => {
 
     expect(response.status).toBe(200);
     expect(body.providers.map((p) => p.placeId)).toEqual(RANKED);
-    expect(body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 6 pasien");
+    expect(body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 3 Testimoni terbukti");
     for (const provider of body.providers) expect(provider.reason).not.toMatch(/^Gemini/);
   });
 
@@ -551,7 +551,7 @@ describe("POST /api/shortlist reasons (T09)", () => {
 
     const { body } = await shortlist(request());
 
-    expect(body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 6 pasien");
+    expect(body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 3 Testimoni terbukti");
   });
 
   it("never lets the agent reorder, add or drop a Provider", async () => {
@@ -636,8 +636,8 @@ describe("POST /api/shortlist reasons (T09)", () => {
       { headers: { cookie: await toggleCookie("en") } },
     );
 
-    expect(english.body.providers[0]?.reason).toBe("Testimony score 4.6 from 6 patients");
-    expect(indonesian.body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 6 pasien");
+    expect(english.body.providers[0]?.reason).toBe("Testimony score 4.6 from 3 Proven Testimonies");
+    expect(indonesian.body.providers[0]?.reason).toBe("Nilai Testimoni 4,6 dari 3 Testimoni terbukti");
   });
 
   it("follows the toggle when the Guidance does not say which language the complaint was in", async () => {

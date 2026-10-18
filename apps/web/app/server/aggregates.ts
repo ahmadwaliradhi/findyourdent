@@ -1,12 +1,15 @@
-// Listed Provider aggregates (spec 03): recomputed from the published Testimonies
-// whenever one enters or leaves `published`. Pure; the Firestore side is in
-// testimonies.server.ts.
+// Listed Provider aggregates (spec 03, spec 09): recomputed from the published
+// Testimonies whenever one enters or leaves `published` or its proof result changes.
+// Only Proven Testimonies move the averages and price stats (ADR-0011). Pure; the
+// Firestore side is in testimonies.server.ts and server/aggregates-recompute.ts.
+// Imports stay relative with `.ts`: the release recompute job runs this file unbundled.
 import type {
   ProcedurePriceAggregate,
   ProviderAggregates,
   TestimonyContent,
   TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
+import { MIN_PROVEN_TESTIMONIES } from "../lib/scores.ts";
 
 export type AggregateInput = Pick<TestimonyContent, "ratings" | "procedureCode" | "pricePaidRupiah"> &
   Pick<TestimonyDoc, "verifiedVisit">;
@@ -21,15 +24,15 @@ function median(sorted: readonly number[]): number {
 
 /** Aggregates over the published Testimonies of one Provider. */
 export function computeAggregates(published: readonly AggregateInput[]): ProviderAggregates {
-  const count = published.length;
+  // A document written before `verifiedVisit` existed counts as not proven.
+  const proven = published.filter((testimony) => testimony.verifiedVisit === true);
+  const provenCount = proven.length;
   const sum = { service: 0, hygiene: 0, materialsEquipment: 0 };
   const prices = new Map<string, number[]>();
-  let verifiedVisitCount = 0;
-  for (const testimony of published) {
+  for (const testimony of proven) {
     sum.service += testimony.ratings.service;
     sum.hygiene += testimony.ratings.hygiene;
     sum.materialsEquipment += testimony.ratings.materialsEquipment;
-    if (testimony.verifiedVisit) verifiedVisitCount += 1;
     if (testimony.procedureCode && typeof testimony.pricePaidRupiah === "number") {
       const list = prices.get(testimony.procedureCode) ?? [];
       list.push(testimony.pricePaidRupiah);
@@ -49,15 +52,15 @@ export function computeAggregates(published: readonly AggregateInput[]): Provide
   }
 
   return {
-    testimonyCount: count,
-    verifiedVisitCount,
+    testimonyCount: published.length,
+    verifiedVisitCount: provenCount,
     averages:
-      count === 0
+      provenCount < MIN_PROVEN_TESTIMONIES
         ? null
         : {
-            service: twoDecimals(sum.service / count),
-            hygiene: twoDecimals(sum.hygiene / count),
-            materialsEquipment: twoDecimals(sum.materialsEquipment / count),
+            service: twoDecimals(sum.service / provenCount),
+            hygiene: twoDecimals(sum.hygiene / provenCount),
+            materialsEquipment: twoDecimals(sum.materialsEquipment / provenCount),
           },
     procedurePrices,
   };

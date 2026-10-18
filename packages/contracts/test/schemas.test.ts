@@ -7,6 +7,8 @@ import {
   validateModerationRequest,
   validatePriceListExtractionRequest,
   validatePriceListExtractionResponse,
+  validateProofCheckRequest,
+  validateProofCheckResponse,
   validateShortlistReasonsRequest,
   validateShortlistReasonsResponse,
 } from "../src/index.js";
@@ -112,6 +114,60 @@ describe("Moderation", () => {
     const base = { ruleCodes: [], flaggedSpans: [], confidence: 1, authorMessage: "ok" };
     expect(validateModerationDecision({ ...base, decision: "delete" })).toBe(false);
     expect(validateModerationDecision({ ...base, decision: "hold", ruleCodes: ["r99"] })).toBe(false);
+  });
+
+  describe("Proof of Visit extraction", () => {
+    const base = { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.9, authorMessage: "ok" };
+    const facts = {
+      readable: true,
+      isProofOfVisit: true,
+      clinicNameOnProof: "Klinik Gigi Senyum",
+      proofDate: "2026-08-14",
+      totalRupiah: 350_000,
+      clinicNameMatches: true,
+    };
+
+    it("accepts the facts with a day or a month, and without the optional ones", () => {
+      expect(validateModerationDecision({ ...base, proofExtraction: facts })).toBe(true);
+      expect(validateModerationDecision({ ...base, proofExtraction: { ...facts, proofDate: "2026-08" } })).toBe(true);
+      const unreadable = { readable: false, isProofOfVisit: false, clinicNameMatches: false };
+      expect(validateModerationDecision({ ...base, proofExtraction: unreadable })).toBe(true);
+    });
+
+    it("has no place for the patient's name, an accept/reject verdict or a malformed date", () => {
+      for (const extra of [{ patientName: "Budi" }, { result: "accepted" }, { proofDate: "14/08/2026" }]) {
+        expect(validateModerationDecision({ ...base, proofExtraction: { ...facts, ...extra } })).toBe(false);
+      }
+      expect(validateModerationDecision({ ...base, proofOfVisit: "accepted" })).toBe(false);
+    });
+  });
+
+  describe("proof-only mode (a Proof of Visit attached later)", () => {
+    const proofOfVisit = { mimeType: "application/pdf", dataBase64: "JVBERi0x" };
+    const facts = { readable: true, isProofOfVisit: true, proofDate: "2026-08", clinicNameMatches: true };
+
+    it("takes the proof and the names to match it against, and nothing to screen", () => {
+      expect(validateProofCheckRequest({ proofOfVisit })).toBe(true);
+      expect(
+        validateProofCheckRequest({
+          typedProviderName: "Klinik Gigi Senyum",
+          googleDisplayName: "Senyum",
+          proofOfVisit,
+        }),
+      ).toBe(true);
+      expect(validateProofCheckRequest({})).toBe(false);
+      for (const extra of [{ text: "Kliniknya bersih." }, { photos: [] }, { visitMonth: "2026-08" }]) {
+        expect(validateProofCheckRequest({ proofOfVisit, ...extra })).toBe(false);
+      }
+      expect(validateProofCheckRequest({ proofOfVisit: { mimeType: "text/plain", dataBase64: "eA==" } })).toBe(false);
+    });
+
+    it("answers the Moderation decision's facts and no decision", () => {
+      expect(validateProofCheckResponse({ proofExtraction: facts })).toBe(true);
+      expect(validateProofCheckResponse({})).toBe(false);
+      expect(validateProofCheckResponse({ proofExtraction: facts, decision: "publish" })).toBe(false);
+      expect(validateProofCheckResponse({ proofExtraction: { ...facts, patientName: "Budi" } })).toBe(false);
+    });
   });
 });
 
