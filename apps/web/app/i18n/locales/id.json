@@ -280,7 +280,7 @@
   },
   "regionFields": {
     "province": "Provinsi",
-    "regency": "Kota/Kabupaten",
+    "regency": "Kota/kabupaten",
     "allProvinces": "Semua provinsi",
     "allRegencies": "Semua kota/kabupaten",
     "chooseProvince": "Pilih provinsi",

@@ -280,7 +280,7 @@
   },
   "regionFields": {
     "province": "Province",
-    "regency": "City/Regency",
+    "regency": "City/regency",
     "allProvinces": "All provinces",
     "allRegencies": "All cities/regencies",
     "chooseProvince": "Choose a province",

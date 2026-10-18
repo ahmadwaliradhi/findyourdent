@@ -2,15 +2,14 @@
 // chosen by name; codes stay underneath. Shared by the listing filters, the Testimony
 // form's provider fields, its "Sarankan koreksi", and the Claim form. Each level is
 // disabled until the level above is chosen. Kecamatan joins as a third level later.
+import type { RegionRef } from "@findyourdent/contracts/firestore";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { FieldError, fieldClassName } from "~/components/ui/field";
 import { PROVINCES, regenciesOf } from "~/lib/regions";
 
-export interface RegionFieldsValue {
-  provinceCode: string;
-  regencyCode: string;
-}
+/** The levels these fields offer today; `districtCode` joins with the Kecamatan level. */
+export type RegionFieldsValue = Pick<RegionRef, "provinceCode" | "regencyCode">;
 
 export interface RegionFieldsProps {
   value: RegionFieldsValue;
