@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FindYourDent pitch deck</title>
+<!--
+  Investor and accelerator pitch deck. Build the PDF with ./build.sh (headless Chrome).
+  Figures come from README.md and docs/submission/deck/build_deck.py; update them there first.
+-->
+<style>
+  @font-face {
+    font-family: "Figtree";
+    src: url("../design/design-system/fonts/Figtree-Variable.woff2") format("woff2");
+    font-weight: 300 900;
+  }
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --paper: #f7f5f0; --card: #ffffff; --sand: #ece8df;
+    --ink: #12262b; --muted: #4b5c60; --line: #d9d4c8;
+    --brand: #0b6e6a; --brand-deep: #084a47; --tint: #dcefec;
+    --red: #b42318; --red-tint: #fdecea; --amber-tint: #fdf3d8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #777; }
+  body {
+    font-family: "Figtree", system-ui, sans-serif; color: var(--ink);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .slide {
+    width: 1280px; height: 720px; background: var(--paper); position: relative; overflow: hidden;
+    padding: 56px 72px 88px; display: flex; flex-direction: column; page-break-after: always; break-after: page; margin: 0 auto 24px;
+  }
+  @media print { html, body { background: none; } .slide { margin: 0; } }
+  h1 { font-size: 40px; line-height: 1.12; font-weight: 700; letter-spacing: -.015em; max-width: 1040px; text-wrap: balance; }
+  .foot {
+    position: absolute; left: 72px; right: 72px; bottom: 26px; display: flex; justify-content: space-between;
+    align-items: flex-end; gap: 32px; font-size: 13px; color: var(--muted); line-height: 1.35;
+  }
+  .foot .src { max-width: 940px; }
+  .foot .pg { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .body { margin-top: 32px; flex: 1; min-height: 0; }
+  .slide > img { align-self: flex-start; }
+  .grid { display: grid; gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  .card.tint { background: var(--tint); border-color: transparent; }
+  .card.sand { background: var(--sand); border-color: transparent; }
+  .card h2 { font-size: 23px; font-weight: 700; line-height: 1.2; }
+  .card p, .card li { font-size: 19px; line-height: 1.42; color: var(--muted); }
+  .card p { margin-top: 8px; }
+  ul.dots { list-style: none; margin-top: 12px; }
+  ul.dots li { position: relative; padding-left: 20px; margin-top: 9px; }
+  ul.dots li::before { content: ""; position: absolute; left: 0; top: .52em; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  .num { font-size: 96px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--brand); font-variant-numeric: tabular-nums; }
+  .num.red { color: var(--red); }
+  .pill { display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 5px 11px; border-radius: 999px; background: var(--tint); color: var(--brand-deep); }
+  .pill.ink { background: var(--ink); color: #fff; }
+  .pill.line { background: none; border: 1.5px solid var(--brand); color: var(--brand); }
+  .takeaway { margin-top: 20px; background: var(--ink); color: #fff; border-radius: 12px; padding: 18px 26px; font-size: 21px; font-weight: 600; line-height: 1.35; }
+  b, strong { font-weight: 700; color: var(--ink); }
+
+  /* cover and close */
+  .dark { background: var(--brand-deep); color: #fff; }
+  .dark .foot { color: #a9d6d1; }
+  .cover img.wm { height: 34px; }
+  .cover h1 { font-size: 80px; line-height: 1.02; letter-spacing: -.03em; margin-top: 170px; max-width: 900px; color: #fff; }
+  .cover p.sub { font-size: 24px; line-height: 1.4; margin-top: 26px; max-width: 760px; color: #cfe9e5; }
+  .cover .ring { position: absolute; right: -180px; top: -140px; width: 640px; height: 640px; border-radius: 50%; border: 90px solid rgba(255,255,255,.06); }
+  .cover .ring.two { right: 60px; top: 330px; width: 300px; height: 300px; border-width: 50px; }
+
+  /* problem */
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .stats .card { padding: 40px 32px; display: flex; flex-direction: column; justify-content: center; }
+  .stats p { font-size: 22px; color: var(--ink); margin-top: 16px; line-height: 1.38; }
+
+  /* steps */
+  .steps { grid-template-columns: repeat(4, 1fr); }
+  .steps .card { padding: 30px 26px; }
+  .steps .n { width: 44px; height: 44px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: 20px; display: grid; place-items: center; margin-bottom: 20px; }
+  .steps h2 { font-size: 27px; }
+  .steps p { font-size: 19px; margin-top: 12px; }
+
+  .steps, .compare, .road { margin-bottom: 64px; }
+  /* screenshots */
+  .shots { display: flex; justify-content: space-between; margin-top: 26px; }
+  .shots figure { width: 196px; }
+  .shots img { width: 196px; height: 424px; object-fit: cover; object-position: top; border-radius: 22px; border: 5px solid var(--ink); display: block; background: #fff; }
+  .shots figcaption { font-size: 15px; line-height: 1.3; margin-top: 12px; text-align: center; color: var(--muted); }
+  .shots figcaption b { display: block; }
+
+  /* compare */
+  .compare { grid-template-columns: 1fr 1fr 1fr 1.25fr; align-items: stretch; }
+  .compare .card { padding: 26px 22px; }
+
+  /* evidence */
+  .ev { grid-template-columns: 1.15fr 1fr; gap: 28px; }
+  .tiles { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .tiles .card { padding: 20px 22px; }
+  .tiles .num { font-size: 56px; }
+  .tiles p { font-size: 16px; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th { text-align: left; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 0 0 10px; }
+  td { padding: 11px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; padding-left: 16px; }
+  .ok { color: var(--brand); } .bad { color: var(--red); }
+
+  /* model ladder */
+  .ladder { grid-template-columns: repeat(3, 1fr); align-items: end; }
+  .ladder .card { padding: 24px; }
+  .ladder .s1 { min-height: 280px; } .ladder .s2 { min-height: 335px; } .ladder .s3 { min-height: 390px; }
+  .ladder h2 { font-size: 25px; }
+  .rules { margin-top: 20px; display: flex; gap: 14px; align-items: center; font-size: 17px; color: var(--muted); line-height: 1.4; }
+  .rules .pill { white-space: nowrap; }
+
+  /* scale */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+  .flow .st { position: relative; padding: 30px 26px; background: var(--card); border: 1px solid var(--line); border-right: none; }
+  .flow .st:first-child { border-radius: 14px 0 0 14px; }
+  .flow .st:last-child { border-radius: 0 14px 14px 0; border-right: 1px solid var(--line); background: var(--tint); }
+  .flow .st .k { font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--brand); text-transform: uppercase; }
+  .flow .st h2 { font-size: 25px; margin-top: 8px; line-height: 1.2; }
+  .flow .st p { font-size: 18.5px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+  .facts { grid-template-columns: repeat(3, 1fr); margin-top: 20px; }
+  .facts .card { padding: 18px 22px; display: flex; gap: 18px; align-items: center; }
+  .facts .num { font-size: 44px; }
+  .facts p { margin: 0; font-size: 16.5px; }
+
+  /* roadmap */
+  .road { grid-template-columns: repeat(3, 1fr); }
+  .road .card { padding: 30px 28px; }
+  .road h2 { font-size: 26px; }
+  .road li { font-size: 20px; margin-top: 14px; }
+
+  /* close */
+  .close { flex: 1; align-items: center; display: grid; grid-template-columns: 1.2fr 1fr; gap: 56px; }
+  .close h1 { font-size: 60px; color: #fff; line-height: 1.05; }
+  .close p.lead { font-size: 21px; color: #cfe9e5; margin-top: 22px; line-height: 1.45; max-width: 560px; }
+  .close .panel { background: rgba(255,255,255,.08); border-radius: 16px; padding: 28px 30px; }
+  .close .panel .lbl { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #8fd3cb; font-weight: 700; }
+  .close .panel .row { margin-top: 8px; font-size: 21px; font-weight: 600; color: #fff; }
+  .close .panel .row small { display: block; font-size: 15.5px; font-weight: 400; color: #cfe9e5; margin-top: 3px; line-height: 1.4; }
+  .close .panel hr { border: none; border-top: 1px solid rgba(255,255,255,.16); margin: 20px 0; }
+</style>
+</head>
+<body>
+
+<!-- 1 cover -->
+<section class="slide dark cover">
+  <div class="ring"></div><div class="ring two"></div>
+  <img class="wm" src="../design/design-system/assets/Brand/wordmark-on-dark.svg" alt="FindYourDent">
+  <h1>A toothache, turned into a decision.</h1>
+  <p class="sub">AI guidance on urgency, cost and BPJS cover, then a shortlist of dental providers Indonesians can trust.</p>
+  <div class="foot"><span>findyourdent.com · SabiqLab · Pitch deck, November 2026</span><span class="pg">01</span></div>
+</section>
+
+<!-- 2 problem -->
+<section class="slide">
+  <h1>Most Indonesians with a dental problem never reach a dental professional</h1>
+  <div class="body grid stats">
+    <div class="card"><div class="num">56.9%</div><p>of Indonesians aged 3 and over had a dental or oral problem in the past year.</p></div>
+    <div class="card"><div class="num red">11.2%</div><p>of them were treated by a dental health worker.</p></div>
+    <div class="card"><div class="num">57.0%</div><p>of people not treated by a dental health worker said they felt no need to go.</p></div>
+  </div>
+  <div class="takeaway">A patient cannot tell how urgent it is, what it will cost, whether BPJS pays, or where to go. So care waits.</div>
+  <div class="foot"><span class="src">Survei Kesehatan Indonesia 2023 Dalam Angka, BKPK Kemenkes, Tabel 9.5 p. 324 and Tabel 9.7 p. 327; BKPK SKI 2023 oral health factsheet, Gambar 3 p. 2. The 57.0% counts everyone aged 3+ not treated by a dental health worker, including people with no dental problem.</span><span class="pg">The problem · 02</span></div>
+</section>
+
+<!-- 3 gap -->
+<section class="slide">
+  <h1>Today's options each answer one part of the question</h1>
+  <div class="body grid compare">
+    <div class="card"><h2>Alodokter</h2><p>Health articles, doctor chat and booking. No structured dental decision with cost and BPJS for this complaint.</p></div>
+    <div class="card"><h2>Halodoc</h2><p>Paid chat with a doctor and medicine delivery. Does not route the complaint to the right kind of dental provider.</p></div>
+    <div class="card"><h2>Google Maps</h2><p>Finds places with open star ratings. No urgency or cost, and reviews are not checked against a visit.</p></div>
+    <div class="card tint"><h2>FindYourDent: one flow, complaint to clinic door</h2>
+      <ul class="dots"><li>How urgent is it?</li><li>What will it cost, and does BPJS pay?</li><li>Which kind of provider treats it?</li><li>Who nearby do other patients vouch for?</li></ul></div>
+  </div>
+  <div class="foot"><span class="src">Competitor scope read from each product's public pages. Differentiator in docs/specs/README.md.</span><span class="pg">Why it stays unsolved · 03</span></div>
+</section>
+
+<!-- 4 solution -->
+<section class="slide">
+  <h1>Describe the pain in your own words, leave knowing what to do and where to go</h1>
+  <div class="body grid steps">
+    <div class="card"><div class="n">1</div><h2>Describe</h2><p>Type or speak the complaint in Indonesian, a regional language or English. The complaint text is never stored.</p></div>
+    <div class="card"><div class="n">2</div><h2>Guidance</h2><p>Urgency tier, likely category, visit journey, a cost estimate with why prices vary, and BPJS coverage. Red flags go straight to the emergency room.</p></div>
+    <div class="card"><div class="n">3</div><h2>Shortlist</h2><p>Nearby providers that can treat this complaint, with testimonies from other patients and price signals.</p></div>
+    <div class="card tint"><div class="n">4</div><h2>Testimony</h2><p>After the visit the patient tells others. AI screens it against fixed rules, and a proof of visit earns a "proven visit" mark.</p></div>
+  </div>
+  <div class="foot"><span class="src">Product specs 01 to 05 and 09 in docs/specs/. Every step is in the deployed build.</span><span class="pg">The solution · 04</span></div>
+</section>
+
+<!-- 5 product -->
+<section class="slide">
+  <h1>Live today at findyourdent.com, built mobile-first</h1>
+  <div class="shots">
+    <figure><img src="../submission/deck/snapshots/home.png" alt=""><figcaption><b>Home</b>Describe the complaint</figcaption></figure>
+    <figure><img src="../submission/deck/snapshots/guidance.png" alt=""><figcaption><b>Guidance</b>Urgency, problem, visits</figcaption></figure>
+    <figure><img src="../submission/deck/snapshots/emergency.png" alt=""><figcaption><b>Emergency</b>"Ke IGD sekarang"</figcaption></figure>
+    <figure><img src="../submission/deck/snapshots/shortlist.png" alt=""><figcaption><b>Shortlist</b>Who can treat it nearby</figcaption></figure>
+    <figure><img src="../submission/deck/snapshots/provider.png" alt=""><figcaption><b>Provider page</b>Testimonies and ratings</figcaption></figure>
+  </div>
+  <div class="foot"><span class="src">Screenshots of findyourdent.com at 390 px with synthetic complaints. Testimonies shown are real patient posts published through moderation.</span><span class="pg">The product · 05</span></div>
+</section>
+
+<!-- 6 advantage -->
+<section class="slide">
+  <h1>Trust is the product: testimonies we own, safety before AI, and a ranking nobody can buy</h1>
+  <div class="body grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><h2>Testimonies FindYourDent owns</h2><p>First-hand, moderated before publishing, and tied to a proof of visit. Providers can reply or report, never delete.</p></div>
+    <div class="card"><h2>A deterministic check runs first</h2><p>Red-flag phrases trigger emergency escalation before any AI call. The model can raise urgency, never lower it below a red flag.</p></div>
+    <div class="card"><h2>Ranking is never paid</h2><p>A claimed page does not change shortlist order. No ads or per-lead fees, in line with Indonesia's dental ethics code.</p></div>
+  </div>
+  <div class="takeaway">If rank could be bought, the testimonies would stop meaning anything. That rule is what a generic health app or a map cannot copy cheaply.</div>
+  <div class="foot"><span class="src">Specs 01, 03 and 09; ADR-0004 (AI publishes, humans remove). Ethics: KODEKGI and MKEK Fatwa 29/2021 on advertising by doctors and dentists.</span><span class="pg">Our advantage · 06</span></div>
+</section>
+
+<!-- 7 evidence -->
+<section class="slide">
+  <h1>Every safety gate passes on the live build, and it runs for cents per session</h1>
+  <div class="body grid ev">
+    <div class="grid tiles">
+      <div class="card"><div class="num">48/48</div><p>must-escalate phrases sent to the emergency room without calling the model</p></div>
+      <div class="card"><div class="num">28/28</div><p>ordinary complaints not escalated, including negations, slang and regional languages</p></div>
+      <div class="card"><div class="num">0</div><p>unsafe medicine advice across the 40-case guidance evaluation</p></div>
+      <div class="card"><div class="num">96.7%</div><p>moderation decision accuracy, with zero rule-breaking testimonies published</p></div>
+    </div>
+    <div class="card" style="padding:26px 28px">
+      <table>
+        <tr><th>Measured on live models</th><th>Result</th></tr>
+        <tr><td>Emergency recall in guidance</td><td class="ok">100% (8/8)</td></tr>
+        <tr><td>Category and visit-journey accuracy</td><td class="ok">100%</td></tr>
+        <tr><td>BPJS accuracy</td><td>87% (20/23)</td></tr>
+        <tr><td>Urgency-tier accuracy, gate 85%</td><td class="bad">76% (28/37)</td></tr>
+        <tr><td>Lighthouse a11y / practices / SEO</td><td class="ok">100 / 100 / 100</td></tr>
+        <tr><td>Cloud cost, 300 sessions over 23 days</td><td>USD 16.75</td></tr>
+      </table>
+      <p style="font-size:14.5px;line-height:1.4;color:var(--muted);margin-top:14px"><b>Honest limits.</b> 8 of the 9 urgency misses rate the case as more urgent than the label, the safe direction. Labels are not yet reviewed by a licensed dentist.</p>
+    </div>
+  </div>
+  <div class="foot"><span class="src">README.md evaluation sections, live models, 18 October 2026 (guidance evalset 2026-10-17.1; moderation 30 cases × 3 runs). Cost at list prices with 11% PPN, docs/research/cost-comparison-2026-10-17.md.</span><span class="pg">Evidence so far · 07</span></div>
+</section>
+
+<!-- 8 business model -->
+<section class="slide">
+  <h1>Clinics pay for tools, never for rank</h1>
+  <div class="body grid ladder">
+    <div class="card s1"><h2>First revenue: verified profile subscription</h2>
+      <ul class="dots"><li>Claimed, verified provider page</li><li>Price-list hosting: AI reads the list, the owner confirms each row</li></ul></div>
+    <div class="card s2"><h2>Next: clinic intake tools</h2>
+      <ul class="dots"><li>The patient's shared guidance link becomes the clinic's pre-visit note</li><li>Payment method on testimonies for sharper price signals</li></ul></div>
+    <div class="card tint s3"><h2>Vision: agentic dental clinic management</h2>
+      <ul class="dots"><li>Patient management</li><li>Tools for dentists</li><li>CRM with recall and follow-up</li><li>AI agentic marketing inside the ethics code</li></ul></div>
+  </div>
+  <div class="rules"><span class="pill">Rules that do not bend</span><span>No paid ranking, ads or per-lead fees. Pre-revenue today: claim and price list are live, paid plans are not yet built.</span></div>
+  <div class="foot"><span class="src">Specs 05 and 07; monetisation and ethics constraints in docs/hackathon-plan.md 1.2 (KODEKGI, MKEK Fatwa 29/2021). The vision column is roadmap, not built.</span><span class="pg">Business model · 08</span></div>
+</section>
+
+<!-- 9 scale -->
+<section class="slide">
+  <h1>City by city: patients bring the testimonies, testimonies bring the clinics</h1>
+  <div class="body flow">
+    <div class="st"><div class="k">Step 1</div><h2>Patients ask</h2><p>Free guidance answers a search moment: "my tooth hurts, what now?"</p></div>
+    <div class="st"><div class="k">Step 2</div><h2>Testimonies build</h2><p>Each visit adds a moderated, proven testimony to that city's directory.</p></div>
+    <div class="st"><div class="k">Step 3</div><h2>Clinics claim</h2><p>Providers verify their page and publish a dated price list.</p></div>
+    <div class="st"><div class="k">Step 4</div><h2>Clinics subscribe</h2><p>Verified profile first, then intake and management tools.</p></div>
+  </div>
+  <div class="grid facts">
+    <div class="card"><div class="num">514</div><p>kabupaten and kota already in the product's region data, across all 38 provinces</p></div>
+    <div class="card"><div class="num">Free</div><p>for patients, so demand comes from search: city and provider pages are indexable</p></div>
+    <div class="card"><div class="num">1</div><p>city to prove the loop first, Surabaya, before repeating it in the next</p></div>
+  </div>
+  <div class="foot"><span class="src">Spec 04 (landing, feed and directory); README.md region data from Kepmendagri No. 300.2.2-2138 Tahun 2025. Launch-city order is a plan, not a result.</span><span class="pg">How we scale · 09</span></div>
+</section>
+
+<!-- 10 roadmap -->
+<section class="slide">
+  <h1>From a working product to the first paying clinics</h1>
+  <div class="body grid road">
+    <div class="card"><h2>Earn clinical trust</h2>
+      <ul class="dots"><li>Lift urgency-tier accuracy past the 85% gate</li><li>A licensed dentist reviews the 40-case evaluation set</li></ul></div>
+    <div class="card"><h2>Harden the testimony moat</h2>
+      <ul class="dots"><li>Proven testimonies, part 2</li><li>Defence against paid "buzzer" reviews</li><li>Kecamatan-level coverage</li></ul></div>
+    <div class="card tint"><h2>Prove clinics will pay</h2>
+      <ul class="dots"><li>Design-partner clinics in the first city</li><li>Price test for the verified profile subscription</li><li>First clinic intake pilot</li></ul></div>
+  </div>
+  <div class="foot"><span class="src">"Next build" list in docs/submission/deck and spec 09. Revenue milestones are targets.</span><span class="pg">What comes next · 10</span></div>
+</section>
+
+<!-- 11 close -->
+<section class="slide dark">
+  <img src="../design/design-system/assets/Brand/wordmark-on-dark.svg" alt="FindYourDent" style="height:30px">
+  <div class="close">
+    <div>
+      <h1>Know first, then choose.</h1>
+      <p class="lead">"Tahu dulu, baru pilih." FindYourDent is live, safety-tested and cheap to run. We are looking for mentors, dental clinic partners and investors to turn it into the operating layer for Indonesian dental care.</p>
+    </div>
+    <div class="panel">
+      <div class="lbl">Team</div>
+      <div class="row">Ahmad Wali Radhi<small>Founder, SabiqLab</small></div>
+      <hr>
+      <div class="lbl">See it</div>
+      <div class="row">findyourdent.com<small>Live product</small></div>
+      <div class="row" style="margin-top:14px">github.com/ahmadwaliradhi/findyourdent<small>Public code, specs and evaluations</small></div>
+      <div class="row" style="margin-top:14px">youtu.be/KsSCkUG_M00<small>3-minute demo</small></div>
+    </div>
+  </div>
+  <div class="foot"><span>findyourdent.com</span><span class="pg">11</span></div>
+</section>
+
+</body>
+</html>
