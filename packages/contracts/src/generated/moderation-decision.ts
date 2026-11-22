@@ -45,10 +45,7 @@ export interface ModerationDecision {
    * The author shared their own health details: a gentle warning only, never a hold (R8 note).
    */
   ownHealthDataWarning?: boolean;
-  /**
-   * Plausible match with the Provider name and a date within 24 months of the visit month. A rejection never holds the Testimony; it only withholds Kunjungan terbukti. Absent when the check did not run (model error, timeout or invalid output): treat it as not verified, and delete the file anyway.
-   */
-  proofOfVisit?: "accepted" | "rejected" | "notProvided";
+  proofOfVisit?: ProofOfVisitExtraction;
 }
 /**
  * This interface was referenced by `ModerationDecision`'s JSON-Schema
@@ -69,4 +66,33 @@ export interface FlaggedSpan {
 export interface FlaggedPhoto {
   photoIndex: number;
   ruleCode: ModerationRuleCode;
+}
+/**
+ * What the model read off the Proof of Visit (spec 09): facts only, never a judgment and never the patient's name. Present only when a Proof of Visit was sent and the model read it; absent when none was sent, or when the check did not run (model error, timeout or invalid output). The web service decides accepted, pending or rejected from these facts; the proof never changes decision.
+ */
+export interface ProofOfVisitExtraction {
+  /**
+   * The document could be read.
+   */
+  readable: boolean;
+  /**
+   * A receipt, invoice or appointment card from a dental Provider.
+   */
+  isProofOfVisit: boolean;
+  /**
+   * The clinic name as printed.
+   */
+  clinicNameOnProof?: string;
+  /**
+   * The date printed: YYYY-MM-DD, or YYYY-MM when only the month is printed.
+   */
+  proofDate?: string;
+  /**
+   * The total, when printed.
+   */
+  totalRupiah?: number;
+  /**
+   * The model's fuzzy judgment that the clinic name on the proof is the typed name or Google's live name.
+   */
+  clinicNameMatches: boolean;
 }

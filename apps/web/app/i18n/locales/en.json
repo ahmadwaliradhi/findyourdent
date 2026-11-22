@@ -1188,5 +1188,17 @@
         ]
       }
     ]
+  },
+  "proofStatus": {
+    "accepted": "Your proof of visit matched, so this Testimony shows Verified visit. We have deleted the file.",
+    "pending": "The FindYourDent team is checking your proof of visit, usually within 72 hours. Until then this Testimony shows Not yet verified.",
+    "rejected": {
+      "unreadable": "Proof of visit not accepted: we could not read the file. Try a sharper photo or another document.",
+      "notAProof": "Proof of visit not accepted: this file is not a receipt, invoice or appointment card from a dental clinic.",
+      "tooOld": "Proof of visit not accepted: it is dated more than 12 months ago.",
+      "adminRejected": "Proof of visit not accepted after the FindYourDent team checked it.",
+      "expired": "Proof of visit not accepted because it could not be checked within 7 days. We have deleted the file.",
+      "other": "Proof of visit not accepted, so this Testimony shows Not yet verified."
+    }
   }
 }

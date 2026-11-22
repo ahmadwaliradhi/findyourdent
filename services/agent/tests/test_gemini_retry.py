@@ -45,7 +45,6 @@ PUBLISH = {
     "confidence": 0.95,
     "authorMessage": "Terima kasih, testimoni Anda sudah tayang.",
     "ownHealthDataWarning": False,
-    "proofOfVisit": "notProvided",
 }
 
 

@@ -118,8 +118,8 @@ function modelErrorHold(t: TFunction): ModerationOutcome {
 
 /**
  * Screens one Testimony (or an edit of one). Never throws: anything that fails or
- * does not validate becomes `hold` with `model_error`, and then `proofOfVisit` is
- * absent: not verified. An authorFix past the third round is held here even if the
+ * does not validate becomes `hold` with `model_error`, and then `proofOfVisit` (what
+ * was read off the proof) is absent, which the proof decision treats as unreadable. An authorFix past the third round is held here even if the
  * agent did not hold it.
  */
 export async function moderateTestimony(context: AppLoadContext, input: ModerationInput): Promise<ModerationOutcome> {
@@ -234,7 +234,6 @@ export function moderationDecisionDoc(
     flaggedSpans: decision.flaggedSpans,
     ...(decision.flaggedPhotos ? { flaggedPhotos: decision.flaggedPhotos } : {}),
     confidence: decision.confidence,
-    ...(decision.proofOfVisit ? { proofOfVisit: decision.proofOfVisit } : {}),
     model: outcome.model,
     spotCheck,
     // Written only on sampled decisions, so the queue finds open ones with two equality filters.

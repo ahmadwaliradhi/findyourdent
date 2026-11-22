@@ -61,7 +61,6 @@ def model_output(**overrides: Any) -> dict[str, Any]:
         "confidence": 0.95,
         "authorMessage": "Terima kasih, testimoni Anda sudah tayang.",
         "ownHealthDataWarning": False,
-        "proofOfVisit": "notProvided",
     }
     output.update(overrides)
     return output
@@ -83,7 +82,7 @@ def test_clean_testimony_is_published(client: TestClient, fake_gemini: FakeGemin
     assert decision["decision"] == "publish"
     assert decision["ruleCodes"] == []
     assert decision["flaggedSpans"] == []
-    assert decision["proofOfVisit"] == "notProvided"
+    assert "proofOfVisit" not in decision
 
 
 def test_uses_moderation_model_with_the_testimony_output_schema(
@@ -103,7 +102,6 @@ def test_uses_moderation_model_with_the_testimony_output_schema(
         "authorMessage",
         "flaggedPhotos",
         "ownHealthDataWarning",
-        "proofOfVisit",
     ]
     assert "r2_accusation_as_fact" in schema["properties"]["ruleCodes"]["items"]["enum"]
 
@@ -313,7 +311,7 @@ def photo(data: str = PNG) -> dict[str, str]:
 def test_photos_and_proof_of_visit_reach_the_model_as_inline_data(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    fake_gemini.outputs.append(model_output(proofOfVisit="accepted"))
+    fake_gemini.outputs.append(model_output(proofOfVisit=extraction()))
 
     screen(
         client,
@@ -345,15 +343,15 @@ def test_a_photo_flagged_under_any_rule_is_held(
     assert decision["decision"] == "hold"
 
 
-def test_low_confidence_hold_keeps_the_proof_of_visit_result(
+def test_low_confidence_hold_keeps_the_proof_of_visit_extraction(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    fake_gemini.outputs.append(model_output(confidence=0.4, proofOfVisit="accepted"))
+    fake_gemini.outputs.append(model_output(confidence=0.4, proofOfVisit=extraction()))
 
     decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
 
     assert decision["decision"] == "hold"
-    assert decision["proofOfVisit"] == "accepted"
+    assert decision["proofOfVisit"] == extraction()
 
 
 def test_a_flagged_photo_is_held(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:
@@ -373,26 +371,178 @@ def test_a_flagged_photo_is_held(client: TestClient, fake_gemini: FakeGeminiAdap
     assert decision["flaggedPhotos"] == [{"photoIndex": 1, "ruleCode": "photo_not_clinic_setting"}]
 
 
-@pytest.mark.parametrize("result", ["accepted", "rejected"])
-def test_proof_of_visit_result_never_holds(
-    client: TestClient, fake_gemini: FakeGeminiAdapter, result: str
+def extraction(**overrides: Any) -> dict[str, Any]:
+    """A readable receipt from the right clinic: the facts the model reads off a proof."""
+    return {
+        "readable": True,
+        "isProofOfVisit": True,
+        "clinicNameOnProof": "Klinik Gigi Senyum Sehat",
+        "proofDate": "2026-08-14",
+        "totalRupiah": 350000,
+        "clinicNameMatches": True,
+        **overrides,
+    }
+
+
+def test_a_proof_of_visit_comes_back_as_the_facts_read_off_it(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    fake_gemini.outputs.append(model_output(proofOfVisit=result))
+    fake_gemini.outputs.append(model_output(proofOfVisit=extraction()))
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["proofOfVisit"] == {
+        "readable": True,
+        "isProofOfVisit": True,
+        "clinicNameOnProof": "Klinik Gigi Senyum Sehat",
+        "proofDate": "2026-08-14",
+        "totalRupiah": 350000,
+        "clinicNameMatches": True,
+    }
+
+
+def test_the_model_is_asked_for_the_proof_facts_and_never_for_a_patient_name(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(model_output(proofOfVisit=extraction()))
+
+    screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    (call,) = fake_gemini.calls
+    proof = call["response_schema"]["properties"]["proofOfVisit"]
+    assert set(proof["properties"]) == {
+        "readable",
+        "isProofOfVisit",
+        "clinicNameOnProof",
+        "proofDate",
+        "totalRupiah",
+        "clinicNameMatches",
+    }
+    assert proof["required"] == ["readable", "isProofOfVisit", "clinicNameMatches"]
+
+
+def test_a_patient_name_the_model_reads_off_the_proof_never_leaves_the_agent(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(
+        model_output(proofOfVisit=extraction(patientName="Budi Santoso", namaPasien="Budi"))
+    )
 
     decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
 
     assert decision["decision"] == "publish"
-    assert decision["proofOfVisit"] == result
+    assert decision["proofOfVisit"] == extraction()
+    assert "Budi" not in json.dumps(decision)
 
 
-def test_proof_of_visit_is_not_provided_when_none_was_sent(
+def test_a_month_only_date_and_no_total_are_passed_on_as_printed(
     client: TestClient, fake_gemini: FakeGeminiAdapter
 ) -> None:
-    fake_gemini.outputs.append(model_output(proofOfVisit="accepted"))
+    month_only = extraction(proofDate="2026-08")
+    del month_only["totalRupiah"]
+    fake_gemini.outputs.append(model_output(proofOfVisit=month_only))
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["proofOfVisit"] == month_only
+
+
+def test_the_agent_applies_no_date_window(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    # Three years before the visit: deciding what is too old is the web service's job.
+    fake_gemini.outputs.append(model_output(proofOfVisit=extraction(proofDate="2023-02-01")))
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["decision"] == "publish"
+    assert decision["proofOfVisit"]["proofDate"] == "2023-02-01"
+
+
+@pytest.mark.parametrize(
+    "proof",
+    [
+        extraction(),
+        extraction(readable=False, clinicNameOnProof=None, proofDate=None, totalRupiah=None),
+        extraction(isProofOfVisit=False),
+        extraction(clinicNameMatches=False, clinicNameOnProof="Klinik Lain"),
+    ],
+)
+def test_a_proof_of_visit_never_changes_the_decision(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, proof: dict[str, Any]
+) -> None:
+    fake_gemini.outputs.append(model_output(proofOfVisit=proof))
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["decision"] == "publish"
+    assert decision["ruleCodes"] == []
+
+
+def test_facts_the_model_did_not_read_are_left_out(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(
+        model_output(
+            proofOfVisit=extraction(
+                readable=False, clinicNameOnProof=None, proofDate=None, totalRupiah=None
+            )
+        )
+    )
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["proofOfVisit"] == {
+        "readable": False,
+        "isProofOfVisit": True,
+        "clinicNameMatches": True,
+    }
+
+
+@pytest.mark.parametrize("bad", [{"proofDate": "14 Agustus 2026"}, {"totalRupiah": -5}])
+def test_a_malformed_fact_is_dropped_without_holding(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, bad: dict[str, Any]
+) -> None:
+    fake_gemini.outputs.append(model_output(proofOfVisit=extraction(**bad)))
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["decision"] == "publish"
+    (field,) = bad
+    assert field not in decision["proofOfVisit"]
+
+
+@pytest.mark.parametrize("proof", ["accepted", {"readable": True}])
+def test_proof_facts_the_model_got_wrong_are_dropped_without_holding(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, proof: Any
+) -> None:
+    fake_gemini.outputs.append(model_output(proofOfVisit=proof))
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["decision"] == "publish"
+    assert "proofOfVisit" not in decision
+
+
+def test_no_proof_facts_come_back_when_no_proof_was_sent(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(model_output(proofOfVisit=extraction()))
 
     decision = screen(client, a_testimony())
 
-    assert decision["proofOfVisit"] == "notProvided"
+    assert "proofOfVisit" not in decision
+
+
+def test_no_proof_facts_come_back_when_the_model_read_none(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(model_output())
+
+    decision = screen(client, a_testimony(proofOfVisit=photo(), visitMonth="2026-08"))
+
+    assert decision["decision"] == "publish"
+    assert "proofOfVisit" not in decision
 
 
 def test_own_health_details_only_warn(client: TestClient, fake_gemini: FakeGeminiAdapter) -> None:

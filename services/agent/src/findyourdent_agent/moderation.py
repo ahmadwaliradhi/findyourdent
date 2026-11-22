@@ -12,14 +12,20 @@ import asyncio
 import base64
 import binascii
 import json
+import re
 from typing import Annotated, Any, Literal, NamedTuple, get_args
 
 from google.genai import types
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .adapters import GeminiAdapter
 from .config import Settings
-from .contracts.moderation_decision import FlaggedPhoto, FlaggedSpan, ModerationDecision
+from .contracts.moderation_decision import (
+    FlaggedPhoto,
+    FlaggedSpan,
+    ModerationDecision,
+    ProofOfVisitExtraction,
+)
 from .contracts.moderation_request import ModerationRequest
 
 TestimonyRule = Literal[
@@ -106,10 +112,19 @@ the order given) for faces or people, intraoral or clinical images, documents, r
 screenshots, explicit or violent images, or images that look copied (another site's
 watermark).
 
-Proof of Visit. If one is given, set proofOfVisit to accepted when it plausibly matches the
-Provider (typed or Google name) and carries a date within 24 months of the stated visit
-month, otherwise rejected. If none is given, set notProvided. Proof of Visit never triggers
-a rule; it is private and is not a photo.
+Proof of Visit. If one is given, report only what is printed on it in proofOfVisit; do not
+judge whether it is acceptable and do not compare its date with the visit month:
+- readable: false when the document cannot be read (too blurry, cropped, empty).
+- isProofOfVisit: true only for a receipt, invoice, payment slip or appointment card from a
+  dental Provider.
+- clinicNameOnProof: the clinic name as printed, when there is one.
+- proofDate: the date printed, YYYY-MM-DD, or YYYY-MM when only the month is printed.
+- totalRupiah: the total amount in rupiah as a whole number, only when printed.
+- clinicNameMatches: true when clinicNameOnProof is plausibly the same place as the typed
+  name or the live Google name (allow abbreviations, "drg." prefixes, branch suffixes).
+Never read out, quote or report the patient's name or any other personal data on it. If no
+Proof of Visit is given, leave proofOfVisit out. Proof of Visit never triggers a rule; it
+is private and is not a photo.
 
 confidence is how sure you are that your rule list is complete and correct.
 authorMessage is one or two short, kind sentences in the author's language (id or en): what
@@ -170,13 +185,82 @@ class FactsOutput(_Strict):
     authorMessage: Annotated[str, Field(min_length=1)]  # noqa: N815
 
 
+_PROOF_DATE = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$")
+
+
+class ModelProof(BaseModel):
+    """What Gemini read off a Proof of Visit. Unlike the rest of the output, extra fields
+    are dropped rather than refused: anything else the model reads off the receipt (a
+    patient's name above all) is simply never passed on, and a malformed optional fact is
+    left out instead of holding the Testimony over a receipt."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    readable: bool
+    isProofOfVisit: bool  # noqa: N815
+    clinicNameOnProof: str | None = None  # noqa: N815
+    proofDate: str | None = None  # noqa: N815
+    totalRupiah: int | None = None  # noqa: N815
+    clinicNameMatches: bool  # noqa: N815
+
+    @field_validator("clinicNameOnProof", mode="before")
+    @classmethod
+    def _blank_name(cls, value: object) -> object:
+        return value.strip() or None if isinstance(value, str) else value
+
+    @field_validator("proofDate", mode="before")
+    @classmethod
+    def _malformed_date(cls, value: object) -> object:
+        return value if isinstance(value, str) and _PROOF_DATE.match(value) else None
+
+    @field_validator("totalRupiah", mode="before")
+    @classmethod
+    def _malformed_total(cls, value: object) -> object:
+        return value if isinstance(value, int) and value >= 0 else None
+
+    def extraction(self) -> ProofOfVisitExtraction:
+        return ProofOfVisitExtraction(
+            readable=self.readable,
+            isProofOfVisit=self.isProofOfVisit,
+            clinicNameOnProof=self.clinicNameOnProof,
+            proofDate=self.proofDate,
+            totalRupiah=self.totalRupiah,
+            clinicNameMatches=self.clinicNameMatches,
+        )
+
+
 class ModelOutput(FactsOutput):
     """What Gemini returns for a Testimony or reply: the facts output plus photos, the
-    own-health warning and the Proof of Visit check."""
+    own-health warning and, when a Proof of Visit was given, what it read off it."""
 
     flaggedPhotos: list[ModelPhoto]  # noqa: N815
     ownHealthDataWarning: bool  # noqa: N815
-    proofOfVisit: Literal["accepted", "rejected", "notProvided"]  # noqa: N815
+    proofOfVisit: ModelProof | None = None  # noqa: N815
+
+    @field_validator("proofOfVisit", mode="before")
+    @classmethod
+    def _unusable_proof(cls, value: object) -> object:
+        # A Proof of Visit never changes the decision, so facts the model got wrong are
+        # dropped (and the proof decided as unread) rather than holding the Testimony.
+        try:
+            return ModelProof.model_validate(value) if value is not None else None
+        except ValidationError:
+            return None
+
+
+# Never a patient name: the model is only offered these fields (spec 09).
+_PROOF_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "readable": {"type": "boolean"},
+        "isProofOfVisit": {"type": "boolean"},
+        "clinicNameOnProof": {"type": "string"},
+        "proofDate": {"type": "string"},
+        "totalRupiah": {"type": "integer", "minimum": 0},
+        "clinicNameMatches": {"type": "boolean"},
+    },
+    "required": ["readable", "isProofOfVisit", "clinicNameMatches"],
+}
 
 
 def _output_schema(rules: tuple[str, ...], *, testimony_fields: bool) -> dict[str, Any]:
@@ -210,9 +294,9 @@ def _output_schema(rules: tuple[str, ...], *, testimony_fields: bool) -> dict[st
                 },
             },
             "ownHealthDataWarning": {"type": "boolean"},
-            "proofOfVisit": {"type": "string", "enum": ["accepted", "rejected", "notProvided"]},
+            "proofOfVisit": _PROOF_SCHEMA,
         }
-        required += ["flaggedPhotos", "ownHealthDataWarning", "proofOfVisit"]
+        required += ["flaggedPhotos", "ownHealthDataWarning"]
     return {"type": "object", "properties": properties, "required": required}
 
 
@@ -405,9 +489,9 @@ def _decide(request: ModerationRequest, output: FactsOutput, settings: Settings)
     else:
         decision = "publish"
 
-    # The Proof of Visit check never holds, and its file is deleted after this call, so its
-    # result is returned on every path where the model produced one. Provider facts have
-    # neither photos nor a Proof of Visit.
+    # The Proof of Visit never changes the decision. What was read off it is returned on
+    # every path where the model produced it, so the web service can decide the proof even
+    # when the Testimony is held. Provider facts have neither photos nor a Proof of Visit.
     return Moderation(
         ModerationDecision(
             decision=decision,
@@ -422,14 +506,19 @@ def _decide(request: ModerationRequest, output: FactsOutput, settings: Settings)
             ownHealthDataWarning=(
                 output.ownHealthDataWarning or None if isinstance(output, ModelOutput) else None
             ),
-            proofOfVisit=(
-                (output.proofOfVisit if request.proofOfVisit else "notProvided")
-                if isinstance(output, ModelOutput)
-                else None
-            ),
+            proofOfVisit=_proof_extraction(request, output),
         ),
         outcome or decision,
     )
+
+
+def _proof_extraction(
+    request: ModerationRequest, output: FactsOutput
+) -> ProofOfVisitExtraction | None:
+    """Only for a Proof of Visit that was sent: facts the model offers about none are ignored."""
+    if request.proofOfVisit is None or not isinstance(output, ModelOutput):
+        return None
+    return output.proofOfVisit.extraction() if output.proofOfVisit else None
 
 
 def _utf16_len(text: str) -> int:

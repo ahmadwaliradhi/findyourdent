@@ -57,7 +57,6 @@ def clean_output() -> dict[str, Any]:
         "confidence": 0.95,
         "authorMessage": "Terima kasih.",
         "ownHealthDataWarning": False,
-        "proofOfVisit": "notProvided",
     }
 
 
