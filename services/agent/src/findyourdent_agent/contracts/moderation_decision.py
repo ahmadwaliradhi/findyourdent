@@ -109,7 +109,46 @@ class ModerationDecision(BaseModel):
     """
     The author shared their own health details: a gentle warning only, never a hold (R8 note).
     """
-    proofOfVisit: Literal["accepted", "rejected", "notProvided"] | None = None
+    proofOfVisit: Annotated[
+        ProofOfVisitExtraction | None, Field(title="ProofOfVisitExtraction")
+    ] = None
     """
-    Plausible match with the Provider name and a date within 24 months of the visit month. A rejection never holds the Testimony; it only withholds Kunjungan terbukti. Absent when the check did not run (model error, timeout or invalid output): treat it as not verified, and delete the file anyway.
+    What the model read off the Proof of Visit (spec 09): facts only, never a judgment and never the patient's name. Present only when a Proof of Visit was sent and the model read it; absent when none was sent, or when the check did not run (model error, timeout or invalid output). The web service decides accepted, pending or rejected from these facts; the proof never changes decision.
+    """
+
+
+class ProofOfVisitExtraction(BaseModel):
+    """
+    What the model read off the Proof of Visit (spec 09): facts only, never a judgment and never the patient's name. Present only when a Proof of Visit was sent and the model read it; absent when none was sent, or when the check did not run (model error, timeout or invalid output). The web service decides accepted, pending or rejected from these facts; the proof never changes decision.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    readable: bool
+    """
+    The document could be read.
+    """
+    isProofOfVisit: bool
+    """
+    A receipt, invoice or appointment card from a dental Provider.
+    """
+    clinicNameOnProof: Annotated[str | None, Field(min_length=1)] = None
+    """
+    The clinic name as printed.
+    """
+    proofDate: Annotated[
+        str | None,
+        Field(pattern="^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$"),
+    ] = None
+    """
+    The date printed: YYYY-MM-DD, or YYYY-MM when only the month is printed.
+    """
+    totalRupiah: Annotated[int | None, Field(ge=0)] = None
+    """
+    The total, when printed.
+    """
+    clinicNameMatches: bool
+    """
+    The model's fuzzy judgment that the clinic name on the proof is the typed name or Google's live name.
     """

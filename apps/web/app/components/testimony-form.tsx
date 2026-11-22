@@ -887,12 +887,17 @@ function Result({
       {response.ownHealthDataWarning && (
         <p className="text-sm text-muted-foreground">{t("testimonyForm.result.ownHealthDataNote")}</p>
       )}
-      {proofSent && (
-        <p className="text-sm text-muted-foreground">
-          {response.verifiedVisit
-            ? t("testimonyForm.result.verifiedVisit")
-            : t("testimonyForm.result.proofNotVerified")}
-        </p>
+      {/* The server decided the proof: accepted, waiting for the team, or not accepted and why. */}
+      {response.proof ? (
+        <p className="text-sm text-muted-foreground">{response.proof.message}</p>
+      ) : (
+        proofSent && (
+          <p className="text-sm text-muted-foreground">
+            {response.verifiedVisit
+              ? t("testimonyForm.result.verifiedVisit")
+              : t("testimonyForm.result.proofNotVerified")}
+          </p>
+        )
       )}
       <div className="flex flex-wrap gap-3">
         {published && placeId && (

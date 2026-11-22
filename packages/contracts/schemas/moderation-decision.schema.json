@@ -46,9 +46,29 @@
       "type": "boolean"
     },
     "proofOfVisit": {
-      "description": "Plausible match with the Provider name and a date within 24 months of the visit month. A rejection never holds the Testimony; it only withholds Kunjungan terbukti. Absent when the check did not run (model error, timeout or invalid output): treat it as not verified, and delete the file anyway.",
-      "type": "string",
-      "enum": ["accepted", "rejected", "notProvided"]
+      "description": "What the model read off the Proof of Visit (spec 09): facts only, never a judgment and never the patient's name. Present only when a Proof of Visit was sent and the model read it; absent when none was sent, or when the check did not run (model error, timeout or invalid output). The web service decides accepted, pending or rejected from these facts; the proof never changes decision.",
+      "title": "ProofOfVisitExtraction",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readable", "isProofOfVisit", "clinicNameMatches"],
+      "properties": {
+        "readable": { "description": "The document could be read.", "type": "boolean" },
+        "isProofOfVisit": {
+          "description": "A receipt, invoice or appointment card from a dental Provider.",
+          "type": "boolean"
+        },
+        "clinicNameOnProof": { "description": "The clinic name as printed.", "type": "string", "minLength": 1 },
+        "proofDate": {
+          "description": "The date printed: YYYY-MM-DD, or YYYY-MM when only the month is printed.",
+          "type": "string",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$"
+        },
+        "totalRupiah": { "description": "The total, when printed.", "type": "integer", "minimum": 0 },
+        "clinicNameMatches": {
+          "description": "The model's fuzzy judgment that the clinic name on the proof is the typed name or Google's live name.",
+          "type": "boolean"
+        }
+      }
     }
   },
   "$defs": {

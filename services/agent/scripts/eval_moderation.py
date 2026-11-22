@@ -47,7 +47,6 @@ _CLEAN_OUTPUT = {
     "confidence": 0.95,
     "authorMessage": "Dry run.",
     "ownHealthDataWarning": False,
-    "proofOfVisit": "notProvided",
 }
 
 

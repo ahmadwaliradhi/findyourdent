@@ -1191,6 +1191,18 @@
       }
     ]
   },
+  "proofStatus": {
+    "accepted": "Bukti kunjungan Anda cocok, jadi Testimoni ini ditandai Kunjungan terbukti. File buktinya sudah kami hapus.",
+    "pending": "Bukti kunjungan sedang diperiksa tim FindYourDent, biasanya dalam 72 jam. Sampai selesai, Testimoni ini ditandai Belum terbukti.",
+    "rejected": {
+      "unreadable": "Bukti kunjungan tidak diterima: kami tidak bisa membaca filenya. Coba foto yang lebih jelas atau dokumen lain.",
+      "notAProof": "Bukti kunjungan tidak diterima: file ini bukan kuitansi, invoice atau kartu janji temu dari klinik gigi.",
+      "tooOld": "Bukti kunjungan tidak diterima: tanggalnya lebih dari 12 bulan yang lalu.",
+      "adminRejected": "Bukti kunjungan tidak diterima setelah diperiksa tim FindYourDent.",
+      "expired": "Bukti kunjungan tidak diterima karena belum sempat diperiksa dalam 7 hari. File buktinya sudah kami hapus.",
+      "other": "Bukti kunjungan tidak diterima, jadi Testimoni ini ditandai Belum terbukti."
+    }
+  },
   "transparency": {
     "metaTitle": "Cara kami memverifikasi testimoni",
     "title": "Cara kami memverifikasi testimoni",

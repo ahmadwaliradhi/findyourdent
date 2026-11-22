@@ -172,6 +172,38 @@ export interface TestimonyReply {
   updatedAt: Timestamp;
 }
 
+/** Why a Proof of Visit was not accepted (spec 09). */
+export type ProofRejectedReason = "unreadable" | "notAProof" | "tooOld" | "adminRejected" | "expired";
+/**
+ * Why a Proof of Visit waits for an admin; they accumulate (spec 09). `notChecked`: the
+ * agent's check did not run (model error or timeout), so nothing was read off the file.
+ */
+export type ProofPendingReason = "nameMismatch" | "dateMismatch" | "possibleReuse" | "notChecked";
+
+/** What was read off a Proof of Visit and kept: never the file, never the patient's name. */
+export interface ProofOfVisitExtracted {
+  clinicName?: string;
+  /** YYYY-MM-DD, or YYYY-MM when only the month was printed. */
+  proofDate?: string;
+  totalRupiah?: number;
+}
+
+/**
+ * A Testimony's Proof of Visit decision (spec 09). Only `accepted` makes it a Proven
+ * Testimony (`verifiedVisit`). An accepted or rejected file is deleted right after the
+ * decision; a pending one stays in the private uploads bucket at `filePath` for the admin.
+ */
+export type ProofOfVisitRecord = {
+  checkedAt: Timestamp;
+  /** Absent on proofs checked before spec 09, whose files are gone. */
+  extracted?: ProofOfVisitExtracted;
+} & (
+  | { result: "accepted" }
+  | { result: "pending"; reasons: ProofPendingReason[]; filePath: string }
+  /** `reason` is absent on proofs rejected before spec 09. */
+  | { result: "rejected"; reason?: ProofRejectedReason }
+);
+
 /**
  * One per author per Provider (enforced in a transaction querying
  * authorUid + placeId). Random document id, so the uid never appears in URLs.
@@ -196,8 +228,8 @@ export interface TestimonyDoc extends TestimonyContent {
   status: TestimonyStatus;
   /** Kunjungan terbukti. */
   verifiedVisit: boolean;
-  /** Result only; the Proof of Visit file is deleted right after the check. */
-  proofOfVisit?: { result: "accepted" | "rejected"; checkedAt: Timestamp };
+  /** The Proof of Visit decision (spec 09); absent while none was sent (`notProvided`). */
+  proofOfVisit?: ProofOfVisitRecord;
   consent: { termsVersion: string; acceptedAt: Timestamp };
   /** authorFix rounds so far; after three the Testimony is held. */
   authorFixRounds: number;
@@ -322,7 +354,6 @@ export interface ModerationDecisionDoc {
   flaggedSpans: ModerationDecision["flaggedSpans"];
   flaggedPhotos?: ModerationDecision["flaggedPhotos"];
   confidence: number;
-  proofOfVisit?: ModerationDecision["proofOfVisit"];
   /** Model id from configuration, or "fallback" when the call failed. */
   model: string;
   /** Part of the 10% admin spot-check sample. */

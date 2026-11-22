@@ -12,6 +12,7 @@ import { getAppCheckToken } from "~/lib/firebase.client";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
 import { testimonyPath } from "~/lib/paths";
+import { proofStatusKey } from "~/lib/proof-status";
 import { testimonyStatusBadge } from "~/lib/testimony-status";
 import { cn } from "~/lib/utils";
 import { loadMyTestimonies, type MyTestimony } from "~/server/testimonies.server";
@@ -181,6 +182,7 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
           <span>{item.adminReason}</span>
         </div>
       ) : null}
+      {item.proof ? <p className="text-sm text-muted-foreground">{t(proofStatusKey(item.proof))}</p> : null}
       <p className="line-clamp-4 whitespace-pre-line">{item.text}</p>
       {item.reply ? (
         <div className="flex flex-col gap-1 rounded-md border bg-muted px-4 py-3 text-sm">

@@ -2,7 +2,7 @@
 // protection, validation, the one-per-Provider rule, every Moderation decision path
 // (fix-before-submit, holds, Kunjungan terbukti), Listed Provider creation,
 // aggregates, and that Google's name is never stored.
-import type { ModerationDecision } from "@findyourdent/contracts";
+import type { ModerationDecision, ProofOfVisitExtraction } from "@findyourdent/contracts";
 import {
   COLLECTIONS,
   IMPACT_COUNTERS,
@@ -98,7 +98,6 @@ const PUBLISH: ModerationDecision = {
   flaggedSpans: [],
   confidence: 0.95,
   authorMessage: "Terima kasih!",
-  proofOfVisit: "notProvided",
 };
 
 const HOLD: ModerationDecision = {
@@ -107,7 +106,6 @@ const HOLD: ModerationDecision = {
   flaggedSpans: [],
   confidence: 0.9,
   authorMessage: "Testimoni Anda ditinjau tim.",
-  proofOfVisit: "notProvided",
 };
 
 const PHONE_TEXT = "Dokternya sabar. Hubungi saja 0812-3456-7890 untuk janji. Ruangannya bersih.";
@@ -119,7 +117,6 @@ const AUTHOR_FIX: ModerationDecision = {
   flaggedSpans: [{ start: 30, end: 44, text: "0812-3456-7890", ruleCode: "r1_personal_data" }],
   confidence: 0.9,
   authorMessage: "Mohon hapus nomor telepon sebelum mengirim.",
-  proofOfVisit: "notProvided",
 };
 
 const moderateWith = (decision: unknown) => server.fakes.agent.respondToModerationWith(decision);
@@ -635,7 +632,7 @@ describe("Moderation: holds", () => {
     for (const message of [unsure, photoHeld, firstRound]) expect(message).toContain("24 jam");
   });
 
-  it("holds as a model error, without Kunjungan terbukti, when the agent refuses the call, and still deletes the Proof", async () => {
+  it("holds as a model error, without Kunjungan terbukti, when the agent refuses the call, and keeps the unchecked Proof for the team", async () => {
     moderateWith(new AgentUnavailableError("agent responded 422", 422));
     const { cookie } = await signIn("pasien@example.com");
     const held = await createOk(submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
@@ -644,13 +641,14 @@ describe("Moderation: holds", () => {
     expect(held.message).toContain("24 jam");
     const stored = await testimony(held.testimonyId);
     expect(stored.verifiedVisit).toBe(false);
-    expect(stored.proofOfVisit).toBeUndefined();
+    expect(stored.proofOfVisit).toMatchObject({ result: "pending", reasons: ["notChecked"] });
+    expect(held.proof?.result).toBe("pending");
     expect(await decisionOf(stored.moderationDecisionId)).toMatchObject({
       decision: "hold",
       ruleCodes: ["model_error"],
       model: "fallback",
     });
-    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect(await storedObjects("proof-of-visit/")).toHaveLength(1);
     expect(await count(COLLECTIONS.providers)).toBe(0);
   });
 
@@ -676,40 +674,173 @@ describe("Moderation: the author's own health details", () => {
 });
 
 describe("Moderation: Proof of Visit", () => {
-  it("marks Kunjungan terbukti on an accepted Proof, keeps only the result and date, and deletes the file", async () => {
-    moderateWith({ ...PUBLISH, proofOfVisit: "accepted" });
-    const { cookie } = await signIn("pasien@example.com");
-    const published = await createOk(submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
+  /** What the agent read off a receipt from the right clinic, dated in the visit month (2026-09). */
+  const read = (overrides: Partial<ProofOfVisitExtraction> = {}): ProofOfVisitExtraction => ({
+    readable: true,
+    isProofOfVisit: true,
+    clinicNameOnProof: "Klinik Gigi Ceria Cabang Tebet",
+    proofDate: "2026-09-12",
+    totalRupiah: 300_000,
+    clinicNameMatches: true,
+    ...overrides,
+  });
+  const withProof = async (cookie: string, decision: ModerationDecision = PUBLISH) => {
+    moderateWith(decision);
+    return createOk(submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
+  };
 
-    expect(published).toMatchObject({ status: "published", verifiedVisit: true });
+  it("accepts a matching proof: Kunjungan terbukti, the facts kept, the file deleted and the counter moved", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const published = await withProof(cookie, { ...PUBLISH, proofOfVisit: read() });
+
+    expect(published).toMatchObject({ status: "published", verifiedVisit: true, proof: { result: "accepted" } });
+    expect(published.proof?.message).toContain("Kunjungan terbukti");
     const stored = await testimony(published.testimonyId);
     expect(stored.verifiedVisit).toBe(true);
-    expect(stored.proofOfVisit?.result).toBe("accepted");
+    expect(stored.proofOfVisit).toMatchObject({
+      result: "accepted",
+      extracted: { clinicName: "Klinik Gigi Ceria Cabang Tebet", proofDate: "2026-09-12", totalRupiah: 300_000 },
+    });
     expect(stored.proofOfVisit?.checkedAt).toBeDefined();
     expect(await storedObjects("proof-of-visit/")).toEqual([]);
     expect((await provider(NEW_PLACE))?.aggregates.verifiedVisitCount).toBe(1);
+    expect(await counter("verifiedVisits")).toBe(1);
   });
 
-  it("publishes without the mark when the Proof is rejected, and deletes the file", async () => {
-    moderateWith({ ...PUBLISH, proofOfVisit: "rejected" });
+  it.each([
+    ["unreadable", read({ readable: false, isProofOfVisit: false, clinicNameOnProof: undefined }), "membaca"],
+    ["notAProof", read({ isProofOfVisit: false }), "bukan"],
+    ["tooOld", read({ proofDate: "2024-03-02", clinicNameMatches: false }), "12 bulan"],
+  ] as const)("rejects a %s proof with a plain reason and deletes the file", async (reason, proofOfVisit, words) => {
+    const { cookie } = await signIn("pasien@example.com");
+    const published = await withProof(cookie, { ...PUBLISH, proofOfVisit });
+
+    expect(published).toMatchObject({ status: "published", verifiedVisit: false, proof: { result: "rejected" } });
+    expect(published.proof?.message).toContain(words);
+    const stored = await testimony(published.testimonyId);
+    expect(stored.proofOfVisit).toMatchObject({ result: "rejected", reason });
+    expect(stored.proofOfVisit).not.toHaveProperty("filePath");
+    expect(stored.proofOfVisit).not.toHaveProperty("extracted");
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect(await counter("verifiedVisits")).toBe(0);
+  });
+
+  it("rejects a PDF that is not a proof and deletes it", async () => {
+    moderateWith({ ...PUBLISH, proofOfVisit: read({ isProofOfVisit: false }) });
     const { cookie } = await signIn("pasien@example.com");
     const published = await createOk(submission(), {
       cookie,
       proof: { bytes: Buffer.from("%PDF-1.4\n%%EOF\n"), type: "application/pdf" },
     });
 
-    expect(published).toMatchObject({ status: "published", verifiedVisit: false });
-    expect((await testimony(published.testimonyId)).proofOfVisit?.result).toBe("rejected");
+    expect((await testimony(published.testimonyId)).proofOfVisit).toMatchObject({
+      result: "rejected",
+      reason: "notAProof",
+    });
     expect(await storedObjects("proof-of-visit/")).toEqual([]);
   });
 
+  it.each([
+    ["another clinic's name", read({ clinicNameMatches: false, clinicNameOnProof: "Klinik Lain" }), ["nameMismatch"]],
+    ["a date far from the visit month", read({ proofDate: "2026-05-02" }), ["dateMismatch"]],
+    ["both", read({ clinicNameMatches: false, proofDate: "2026-05" }), ["nameMismatch", "dateMismatch"]],
+  ] as const)(
+    "sends a proof with %s to the team, keeps the file and publishes as Belum terbukti",
+    async (_, proofOfVisit, reasons) => {
+      const { cookie } = await signIn("pasien@example.com");
+      const published = await withProof(cookie, { ...PUBLISH, proofOfVisit });
+
+      expect(published).toMatchObject({ status: "published", verifiedVisit: false, proof: { result: "pending" } });
+      expect(published.proof?.message).toContain("tim FindYourDent");
+      const stored = await testimony(published.testimonyId);
+      expect(stored.status).toBe("published");
+      expect(stored.verifiedVisit).toBe(false);
+      expect(stored.proofOfVisit).toMatchObject({ result: "pending", reasons });
+      const kept = await storedObjects("proof-of-visit/");
+      expect(kept).toHaveLength(1);
+      expect(stored.proofOfVisit).toMatchObject({ filePath: kept[0] });
+      expect((await provider(NEW_PLACE))?.aggregates.verifiedVisitCount).toBe(0);
+      expect(await counter("verifiedVisits")).toBe(0);
+    },
+  );
+
+  it("keeps a pending proof while the Testimony itself is held", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const held = await withProof(cookie, { ...HOLD, proofOfVisit: read({ clinicNameMatches: false }) });
+
+    expect(held).toMatchObject({ status: "held", verifiedVisit: false, proof: { result: "pending" } });
+    expect((await testimony(held.testimonyId)).proofOfVisit?.result).toBe("pending");
+    expect(await storedObjects("proof-of-visit/")).toHaveLength(1);
+  });
+
   it("deletes the Proof file when the Testimony needs a fix", async () => {
-    moderateWith(AUTHOR_FIX);
+    moderateWith({ ...AUTHOR_FIX, proofOfVisit: read({ clinicNameMatches: false }) });
     const { cookie } = await signIn("pasien@example.com");
     await create(submission({ text: PHONE_TEXT }), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
 
     expect(server.fakes.agent.moderationCalls[0]?.proofOfVisit).toBeDefined();
     expect(await storedObjects("proof-of-visit/")).toEqual([]);
+  });
+
+  it("shows the proof status on Testimoni saya", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    await withProof(cookie, { ...PUBLISH, proofOfVisit: read({ clinicNameMatches: false }) });
+
+    const page = await fetch(new URL("/testimoni-saya", server.baseUrl), { headers: { cookie } });
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("Bukti kunjungan sedang diperiksa tim FindYourDent");
+  });
+
+  it("deletes a pending proof's file and record when the author deletes the Testimony", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const { testimonyId } = await withProof(cookie, { ...PUBLISH, proofOfVisit: read({ clinicNameMatches: false }) });
+    expect(await storedObjects("proof-of-visit/")).toHaveLength(1);
+
+    expect((await remove(testimonyId, { cookie })).status).toBe(200);
+
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect((await testimony(testimonyId)).proofOfVisit).toBeUndefined();
+  });
+
+  it("replaces a pending proof with the one sent in an edit, deleting the old file", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const { testimonyId } = await withProof(cookie, { ...HOLD, proofOfVisit: read({ clinicNameMatches: false }) });
+    const [oldFile] = await storedObjects("proof-of-visit/");
+
+    moderateWith({ ...PUBLISH, proofOfVisit: read({ proofDate: "2026-05-02" }) });
+    const response = await edit(testimonyId, submission(), {
+      cookie,
+      proof: { bytes: await photo(), type: "image/jpeg" },
+    });
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as TestimonyStoredResponse).proof?.result).toBe("pending");
+
+    const stored = await testimony(testimonyId);
+    expect(stored.proofOfVisit).toMatchObject({ result: "pending", reasons: ["dateMismatch"] });
+    const files = await storedObjects("proof-of-visit/");
+    expect(files).toHaveLength(1);
+    expect(files).not.toContain(oldFile);
+  });
+
+  it("never replaces an accepted proof with a later one", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const { testimonyId } = await withProof(cookie, { ...HOLD, proofOfVisit: read() });
+
+    moderateWith({ ...PUBLISH, proofOfVisit: read({ isProofOfVisit: false }) });
+    await edit(testimonyId, submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
+
+    const stored = await testimony(testimonyId);
+    expect(stored.verifiedVisit).toBe(true);
+    expect(stored.proofOfVisit?.result).toBe("accepted");
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+  });
+
+  it("answers without a proof status when no proof was sent", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const published = await createOk(submission(), { cookie });
+
+    expect(published).not.toHaveProperty("proof");
+    expect((await testimony(published.testimonyId)).proofOfVisit).toBeUndefined();
   });
 });
 
