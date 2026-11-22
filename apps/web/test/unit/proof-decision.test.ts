@@ -29,8 +29,8 @@ describe("decideProof", () => {
     });
   });
 
-  it("rejects a proof that could not be read at all, when the check did not run", () => {
-    expect(decide(undefined)).toEqual({ result: "rejected", reason: "unreadable" });
+  it("sends a proof to the admin when the check did not run, rather than blaming the file", () => {
+    expect(decide(undefined)).toEqual({ result: "pending", reasons: ["notChecked"] });
   });
 
   it("rejects a document that is not a proof of visit", () => {
@@ -69,6 +69,18 @@ describe("decideProof", () => {
       result: "pending",
       reasons: ["dateMismatch"],
     });
+  });
+
+  it("sends a proof dated after today to the admin, even inside the visit-month window", () => {
+    expect(decide(receipt({ proofDate: "2026-11-23" }), "2026-11")).toEqual({
+      result: "pending",
+      reasons: ["dateMismatch"],
+    });
+    expect(decide(receipt({ proofDate: "2026-12" }), "2026-11")).toEqual({
+      result: "pending",
+      reasons: ["dateMismatch"],
+    });
+    expect(decide(receipt({ proofDate: "2026-11" }), "2026-11")).toEqual({ result: "accepted" });
   });
 
   it("sends a proof with no readable date to the admin", () => {

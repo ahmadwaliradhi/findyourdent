@@ -174,8 +174,11 @@ export interface TestimonyReply {
 
 /** Why a Proof of Visit was not accepted (spec 09). */
 export type ProofRejectedReason = "unreadable" | "notAProof" | "tooOld" | "adminRejected" | "expired";
-/** Why a Proof of Visit waits for an admin; they accumulate (spec 09). */
-export type ProofPendingReason = "nameMismatch" | "dateMismatch" | "possibleReuse";
+/**
+ * Why a Proof of Visit waits for an admin; they accumulate (spec 09). `notChecked`: the
+ * agent's check did not run (model error or timeout), so nothing was read off the file.
+ */
+export type ProofPendingReason = "nameMismatch" | "dateMismatch" | "possibleReuse" | "notChecked";
 
 /** What was read off a Proof of Visit and kept: never the file, never the patient's name. */
 export interface ProofOfVisitExtracted {

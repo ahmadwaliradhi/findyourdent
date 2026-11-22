@@ -8,6 +8,9 @@ export type AuthorProofStatus =
   /** `reason` is absent on proofs rejected before spec 09. */
   | { result: "rejected"; reason?: ProofRejectedReason };
 
+/** A proof status with its plain sentence, as the submit answer carries it. */
+export type AuthorProofFeedback = AuthorProofStatus & { message: string };
+
 export function authorProofStatus(record: ProofOfVisitRecord): AuthorProofStatus {
   if (record.result !== "rejected") return { result: record.result };
   return { result: "rejected", ...(record.reason ? { reason: record.reason } : {}) };

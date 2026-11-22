@@ -19,34 +19,48 @@ function monthIndex(date: string): number {
   return Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1;
 }
 
+const isMonthOnly = (date: string) => date.length === 7;
+
 /**
- * More than 12 months before today. A full date is compared by day (today's date a year
+ * More than 12 months before today. A full date is compared by day (today's day 12 months
  * back is still in time); a month-only date by month, which gives it the benefit of the doubt.
  */
 function isTooOld(proofDate: string, today: string): boolean {
-  if (proofDate.length === 7) return monthIndex(today) - monthIndex(proofDate) > PROOF_MAX_AGE_MONTHS;
-  const limit = `${Number(today.slice(0, 4)) - PROOF_MAX_AGE_MONTHS / 12}${today.slice(4)}`;
-  return proofDate < limit;
+  const monthsBack = monthIndex(today) - monthIndex(proofDate);
+  if (isMonthOnly(proofDate) || monthsBack !== PROOF_MAX_AGE_MONTHS) return monthsBack > PROOF_MAX_AGE_MONTHS;
+  return proofDate.slice(8) < today.slice(8);
+}
+
+/** Dated after today: a month-only date only when its month is still to come. */
+function isInFuture(proofDate: string, today: string): boolean {
+  return isMonthOnly(proofDate) ? monthIndex(proofDate) > monthIndex(today) : proofDate > today;
 }
 
 /**
  * Decides a Proof of Visit. `extraction` is absent when the agent's check did not run
- * (error, timeout, invalid answer): nothing was read, so it is `unreadable`.
+ * (error, timeout, invalid answer): the file may be fine, so the admin looks (`notChecked`)
+ * instead of the author being told it is unreadable.
  * `visitMonth` is `YYYY-MM`; `today` is `YYYY-MM-DD` in Asia/Jakarta.
  */
 export function decideProof(
   extraction: ProofOfVisitExtraction | undefined,
   { visitMonth, today }: { visitMonth: string; today: string },
 ): ProofDecision {
-  if (!extraction?.readable) return { result: "rejected", reason: "unreadable" };
+  if (!extraction) return { result: "pending", reasons: ["notChecked"] };
+  if (!extraction.readable) return { result: "rejected", reason: "unreadable" };
   if (!extraction.isProofOfVisit) return { result: "rejected", reason: "notAProof" };
   const { proofDate } = extraction;
   if (proofDate && isTooOld(proofDate, today)) return { result: "rejected", reason: "tooOld" };
 
   const reasons: ProofPendingReason[] = [];
   if (!extraction.clinicNameMatches) reasons.push("nameMismatch");
-  // A proof with no readable date cannot show the visit month, so the admin looks.
-  if (!proofDate || Math.abs(monthIndex(proofDate) - monthIndex(visitMonth)) > PROOF_VISIT_MONTH_TOLERANCE) {
+  // A proof with no readable date cannot show the visit month, and one dated after today
+  // cannot be a past visit, so the admin looks.
+  if (
+    !proofDate ||
+    isInFuture(proofDate, today) ||
+    Math.abs(monthIndex(proofDate) - monthIndex(visitMonth)) > PROOF_VISIT_MONTH_TOLERANCE
+  ) {
     reasons.push("dateMismatch");
   }
   return reasons.length > 0 ? { result: "pending", reasons } : { result: "accepted" };

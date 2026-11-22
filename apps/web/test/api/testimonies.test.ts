@@ -632,7 +632,7 @@ describe("Moderation: holds", () => {
     for (const message of [unsure, photoHeld, firstRound]) expect(message).toContain("24 jam");
   });
 
-  it("holds as a model error, without Kunjungan terbukti, when the agent refuses the call, and rejects and deletes the Proof", async () => {
+  it("holds as a model error, without Kunjungan terbukti, when the agent refuses the call, and keeps the unchecked Proof for the team", async () => {
     moderateWith(new AgentUnavailableError("agent responded 422", 422));
     const { cookie } = await signIn("pasien@example.com");
     const held = await createOk(submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
@@ -641,13 +641,14 @@ describe("Moderation: holds", () => {
     expect(held.message).toContain("24 jam");
     const stored = await testimony(held.testimonyId);
     expect(stored.verifiedVisit).toBe(false);
-    expect(stored.proofOfVisit).toMatchObject({ result: "rejected", reason: "unreadable" });
+    expect(stored.proofOfVisit).toMatchObject({ result: "pending", reasons: ["notChecked"] });
+    expect(held.proof?.result).toBe("pending");
     expect(await decisionOf(stored.moderationDecisionId)).toMatchObject({
       decision: "hold",
       ruleCodes: ["model_error"],
       model: "fallback",
     });
-    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect(await storedObjects("proof-of-visit/")).toHaveLength(1);
     expect(await count(COLLECTIONS.providers)).toBe(0);
   });
 
@@ -719,6 +720,7 @@ describe("Moderation: Proof of Visit", () => {
     const stored = await testimony(published.testimonyId);
     expect(stored.proofOfVisit).toMatchObject({ result: "rejected", reason });
     expect(stored.proofOfVisit).not.toHaveProperty("filePath");
+    expect(stored.proofOfVisit).not.toHaveProperty("extracted");
     expect(await storedObjects("proof-of-visit/")).toEqual([]);
     expect(await counter("verifiedVisits")).toBe(0);
   });

@@ -43,7 +43,12 @@ import { getI18n, type Language } from "~/i18n/config";
 import { detectLanguage } from "~/i18n/language.server";
 import { APP_CHECK_HEADER } from "~/lib/app-check";
 import { normalizeName } from "~/lib/normalize-name";
-import { type AuthorProofStatus, authorProofStatus, proofStatusKey } from "~/lib/proof-status";
+import {
+  type AuthorProofFeedback,
+  type AuthorProofStatus,
+  authorProofStatus,
+  proofStatusKey,
+} from "~/lib/proof-status";
 import { inferProviderType } from "~/lib/provider-type";
 import {
   MAX_AUTHOR_FIX_ROUNDS,
@@ -297,15 +302,15 @@ function proofRecord(
     ...(extraction?.proofDate ? { proofDate: extraction.proofDate } : {}),
     ...(extraction?.totalRupiah !== undefined ? { totalRupiah: extraction.totalRupiah } : {}),
   };
-  const base = { checkedAt: Timestamp.now(), ...(Object.keys(extracted).length > 0 ? { extracted } : {}) };
+  const checkedAt = Timestamp.now();
+  // The facts read are kept only for a proof that counts or may count (GLOSSARY: Proof Fingerprint).
+  if (decided.result === "rejected") return { checkedAt, ...decided };
+  const base = { checkedAt, ...(Object.keys(extracted).length > 0 ? { extracted } : {}) };
   return decided.result === "pending" ? { ...base, ...decided, filePath: proofPath } : { ...base, ...decided };
 }
 
 /** What the author reads about the proof sent with this submission. */
-function proofFeedback(
-  t: TFunction,
-  record: ProofOfVisitRecord | undefined,
-): { proof?: AuthorProofStatus & { message: string } } {
+function proofFeedback(t: TFunction, record: ProofOfVisitRecord | undefined): { proof?: AuthorProofFeedback } {
   if (!record) return {};
   const status = authorProofStatus(record);
   return { proof: { ...status, message: t(proofStatusKey(status)) } };
@@ -580,7 +585,8 @@ export async function createTestimony(context: AppLoadContext, request: Request)
     };
     return Response.json(body, { status: 201 });
   } finally {
-    if (media.proofPath && !proofKept) await deleteTestimonyMedia(uploads, [media.proofPath]);
+    // Best effort: the Testimony is already stored; a leftover private file is not worth a 500.
+    if (media.proofPath && !proofKept) await deleteTestimonyMedia(uploads, [media.proofPath]).catch(() => {});
   }
 }
 
@@ -696,6 +702,8 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
     let verifiedVisitAfter = current.verifiedVisit;
     let orphaned: string[] = [];
     let replacedProofPath: string | undefined;
+    // Set in the transaction (which may retry); it counts only once the edit is committed.
+    let proofInEdit = false;
     try {
       const status = decided;
       const becomesPublished = !editingPublished && status === "published";
@@ -761,7 +769,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
           };
           after = { photoPaths: content.photoPaths, pending: [] };
           verifiedVisitAfter = verifiedVisit;
-          proofApplied = replacesProof;
+          proofInEdit = replacesProof;
           // A proof still waiting for the admin is superseded by the new one.
           replacedProofPath =
             replacesProof && before.proofOfVisit?.result === "pending" ? before.proofOfVisit.filePath : undefined;
@@ -802,6 +810,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
       return await refusalResponse(request, error);
     }
+    proofApplied = proofInEdit;
 
     await deleteTestimonyMedia(uploads, [...orphaned, ...(replacedProofPath ? [replacedProofPath] : [])]);
     context.logger.info("testimony", { outcome: "edited", status: decided, revision: editingPublished });
@@ -814,8 +823,9 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
     };
     return Response.json(body);
   } finally {
+    // Best effort: the edit is already answered; a leftover private file is not worth a 500.
     if (media.proofPath && !(proofApplied && proof?.result === "pending")) {
-      await deleteTestimonyMedia(uploads, [media.proofPath]);
+      await deleteTestimonyMedia(uploads, [media.proofPath]).catch(() => {});
     }
   }
 }
