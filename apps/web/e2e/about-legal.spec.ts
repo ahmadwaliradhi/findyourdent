@@ -61,7 +61,7 @@ test("the legal pages switch to English and keep their contents list", async ({ 
   );
 });
 
-for (const path of ["/tentang", "/privasi", "/syarat"]) {
+for (const path of ["/tentang", "/privasi", "/syarat", "/verifikasi-testimoni"]) {
   test(`${path} does not scroll sideways`, async ({ page }) => {
     await page.goto(path);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

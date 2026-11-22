@@ -258,7 +258,8 @@
     "note": "FindYourDent gives educational and navigation information, not a diagnosis or a prescription.",
     "links": "Footer",
     "privacy": "Privacy policy",
-    "terms": "Terms of use"
+    "terms": "Terms of use",
+    "transparency": "How we verify Testimonies"
   },
   "shared": {
     "title": "Shared guidance",
@@ -519,6 +520,7 @@
     "filesTitle": "Photos and proof of visit",
     "proofLabel": "Proof of visit (optional, private)",
     "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown: it is checked and then deleted right away. If it matches, your Testimony gets the Verified visit mark.",
+    "transparencyLink": "How we verify Testimonies",
     "proofAdd": "Choose proof file",
     "proofRemove": "Remove proof of visit",
     "displayNameLabel": "Public name",
@@ -1200,5 +1202,72 @@
       "expired": "Proof of visit not accepted because it could not be checked within 7 days. We have deleted the file.",
       "other": "Proof of visit not accepted, so this Testimony shows Not yet verified."
     }
+  },
+  "transparency": {
+    "metaTitle": "How we verify Testimonies",
+    "title": "How we verify Testimonies",
+    "lead": "Only Testimonies with an accepted Proof of Visit move the scores on FindYourDent. Here is how we check them, and what we do not allow.",
+    "effective": "Effective from: 22 November 2026",
+    "updated": "Last updated: 22 November 2026",
+    "seeAlso": "See also: Terms of use",
+    "sections": [
+      {
+        "title": "Only Proven Testimonies count",
+        "blocks": [
+          "Any patient can write a Testimony, and every Testimony that passes moderation is published. But <b>only Proven Testimonies count</b> toward scores, ranking and prices: the service, hygiene and materials and equipment averages, the order in the Directory and the Shortlist, and the price stats.",
+          [
+            "<b>Verified visit</b>: the Proof of Visit was accepted. This Testimony counts.",
+            "<b>Not yet verified</b>: no proof, or the proof is not or not yet accepted. This Testimony can still be read, but it moves no number."
+          ],
+          "So words alone cannot raise a practice's score. It takes a real visit."
+        ]
+      },
+      {
+        "title": "How a Proof of Visit is checked",
+        "blocks": [
+          "A Proof of Visit is a receipt, invoice or appointment card from that practice, as an image or PDF. It is private: it is never shown, only the result is.",
+          "We read the practice name, the date and the total on it. The patient's name is never read or kept. The proof is accepted when:",
+          [
+            "the practice name on it matches the place you wrote about;",
+            "its date is within a month of the visit month you gave;",
+            "it is less than 12 months old when checked;",
+            "the same proof has not been used for another Testimony about that practice."
+          ],
+          "Anything doubtful goes to a FindYourDent admin. Meanwhile your Testimony stays published as Not yet verified. A proof found later can be attached from My Testimonies."
+        ]
+      },
+      {
+        "title": "How long the proof file is kept",
+        "blocks": [
+          "The proof file is <b>deleted right after the check</b>. If an admin needs to look at it, it is kept in private storage until the admin decides, <b>at most 7 days</b>, and then deleted.",
+          "So that one receipt cannot be used many times, we keep only a proof fingerprint: a code derived from the file plus the practice name, date and total read from it. No image and no patient name. The fingerprint is deleted when its Testimony is deleted or its proof is rejected."
+        ]
+      },
+      {
+        "title": "At least three Proven Testimonies",
+        "blocks": [
+          "A star average shows only once a practice has <b>at least three Proven Testimonies</b>. Until then we show \"Not enough verified Testimonies\" with the count, so that one or two Testimonies cannot pass as a reputation.",
+          "The rule is the same for every practice, claimed or not."
+        ]
+      },
+      {
+        "title": "Testimony policy",
+        "blocks": [
+          "<b>FindYourDent never pays</b> for Testimonies or rewards them, and never sells ranking.",
+          [
+            "Practices <b>may not offer anything</b> in exchange for a Testimony, such as discounts, gifts, money or free treatment.",
+            "Practices may not ask <b>only selected patients</b> to write one, for example only happy patients. Inviting every patient is fine.",
+            "A confirmed violation is <b>shown publicly</b> on that practice's page, and Testimonies from the period of the violation stop counting."
+          ],
+          "Before deciding, we contact the practice and give it a chance to respond. If you were offered something to write a Testimony, report it to <email/>."
+        ]
+      },
+      {
+        "title": "What we do not publish",
+        "blocks": [
+          "We will also watch for suspicious patterns, such as many similar Testimonies in a short time. Those will be held for an admin to review, never removed automatically. We deliberately do not publish how detection works, so it cannot be gamed."
+        ]
+      }
+    ]
   }
 }

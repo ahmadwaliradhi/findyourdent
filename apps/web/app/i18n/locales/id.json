@@ -258,7 +258,8 @@
     "note": "FindYourDent memberi informasi edukasi dan navigasi, bukan diagnosis atau resep obat.",
     "links": "Tautan kaki",
     "privacy": "Kebijakan privasi",
-    "terms": "Syarat penggunaan"
+    "terms": "Syarat penggunaan",
+    "transparency": "Cara kami memverifikasi testimoni"
   },
   "shared": {
     "title": "Panduan yang dibagikan",
@@ -519,6 +520,7 @@
     "filesTitle": "Foto dan bukti kunjungan",
     "proofLabel": "Bukti kunjungan (opsional, pribadi)",
     "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan: hanya diperiksa lalu langsung dihapus. Jika cocok, Testimoni Anda diberi tanda Kunjungan terbukti.",
+    "transparencyLink": "Cara kami memverifikasi testimoni",
     "proofAdd": "Pilih file bukti",
     "proofRemove": "Hapus bukti kunjungan",
     "displayNameLabel": "Nama yang ditampilkan",
@@ -1200,5 +1202,72 @@
       "expired": "Bukti kunjungan tidak diterima karena belum sempat diperiksa dalam 7 hari. File buktinya sudah kami hapus.",
       "other": "Bukti kunjungan tidak diterima, jadi Testimoni ini ditandai Belum terbukti."
     }
+  },
+  "transparency": {
+    "metaTitle": "Cara kami memverifikasi testimoni",
+    "title": "Cara kami memverifikasi testimoni",
+    "lead": "Hanya Testimoni dengan Bukti Kunjungan yang diterima yang menggerakkan nilai di FindYourDent. Begini cara kami memeriksanya, dan apa yang tidak kami izinkan.",
+    "effective": "Berlaku sejak: 22 November 2026",
+    "updated": "Terakhir diperbarui: 22 November 2026",
+    "seeAlso": "Baca juga: Syarat penggunaan",
+    "sections": [
+      {
+        "title": "Hanya Testimoni terbukti yang dihitung",
+        "blocks": [
+          "Setiap pasien boleh menulis Testimoni, dan setiap Testimoni yang lolos moderasi tetap tayang. Namun <b>hanya Testimoni terbukti yang dihitung</b> dalam nilai, urutan, dan harga: rata-rata pelayanan, kebersihan, serta bahan dan alat, urutan di Direktori dan Shortlist, serta statistik harga.",
+          [
+            "<b>Kunjungan terbukti</b>: Bukti Kunjungan diterima. Testimoni ini dihitung.",
+            "<b>Belum terbukti</b>: tanpa bukti, atau bukti belum atau tidak diterima. Testimoni ini tetap bisa dibaca, tetapi tidak mengubah angka apa pun."
+          ],
+          "Jadi kata-kata saja tidak bisa menaikkan nilai sebuah tempat praktik. Yang dibutuhkan adalah kunjungan sungguhan."
+        ]
+      },
+      {
+        "title": "Bagaimana Bukti Kunjungan diperiksa",
+        "blocks": [
+          "Bukti Kunjungan adalah struk, kuitansi, invoice, atau kartu janji temu dari tempat praktik itu, berupa gambar atau PDF. Bukti bersifat pribadi: tidak pernah ditampilkan, hanya hasilnya.",
+          "Kami membaca nama tempat praktik, tanggal, dan total pada bukti. Nama pasien tidak dibaca dan tidak disimpan. Bukti diterima jika:",
+          [
+            "nama tempat praktik pada bukti cocok dengan tempat yang Anda ceritakan;",
+            "tanggalnya tidak lebih dari sebulan dari bulan kunjungan yang Anda tulis;",
+            "umurnya kurang dari 12 bulan saat diperiksa;",
+            "bukti yang sama belum dipakai untuk Testimoni lain di tempat praktik itu."
+          ],
+          "Jika ada yang meragukan, bukti diperiksa oleh admin FindYourDent. Selama itu Testimoni Anda tetap tayang sebagai Belum terbukti. Bukti yang ditemukan belakangan bisa dilampirkan dari halaman Testimoni saya."
+        ]
+      },
+      {
+        "title": "Berapa lama file bukti disimpan",
+        "blocks": [
+          "File bukti <b>dihapus segera setelah diperiksa</b>. Jika admin perlu melihatnya, file disimpan di penyimpanan pribadi sampai admin memutuskan, <b>paling lama 7 hari</b>, lalu dihapus.",
+          "Agar satu struk tidak dipakai berkali-kali, kami hanya menyimpan sidik bukti: kode yang diturunkan dari file serta nama tempat praktik, tanggal, dan total yang terbaca. Bukan gambar, dan tanpa nama pasien. Sidik ini dihapus jika Testimoninya dihapus atau buktinya ditolak."
+        ]
+      },
+      {
+        "title": "Minimal tiga Testimoni terbukti",
+        "blocks": [
+          "Rata-rata bintang baru tampil setelah sebuah tempat praktik punya <b>minimal tiga Testimoni terbukti</b>. Sebelum itu kami menampilkan \"Belum cukup testimoni terbukti\" beserta jumlahnya, agar satu atau dua Testimoni tidak terlihat seperti reputasi.",
+          "Aturan ini berlaku sama untuk semua tempat praktik, baik yang sudah diklaim maupun belum."
+        ]
+      },
+      {
+        "title": "Kebijakan testimoni",
+        "blocks": [
+          "<b>FindYourDent tidak pernah membayar</b> atau memberi hadiah untuk Testimoni, dan tidak menjual peringkat.",
+          [
+            "Tempat praktik <b>tidak boleh menawarkan imbalan apa pun</b> untuk Testimoni, seperti diskon, hadiah, uang, atau layanan gratis.",
+            "Tempat praktik tidak boleh meminta Testimoni <b>hanya kepada pasien tertentu</b>, misalnya hanya pasien yang puas. Mengajak semua pasien boleh.",
+            "Pelanggaran yang sudah dikonfirmasi <b>ditampilkan secara publik</b> di halaman tempat praktik itu, dan Testimoni dari periode pelanggaran tidak lagi dihitung."
+          ],
+          "Sebelum memutuskan, kami menghubungi tempat praktik dan memberi kesempatan untuk menjawab. Jika Anda ditawari imbalan untuk menulis Testimoni, laporkan ke <email/>."
+        ]
+      },
+      {
+        "title": "Yang tidak kami umumkan",
+        "blocks": [
+          "Kami juga akan memantau pola yang mencurigakan, seperti banyak Testimoni serupa dalam waktu singkat. Testimoni seperti itu akan ditahan untuk diperiksa admin, tidak pernah dihapus otomatis. Detail cara deteksinya sengaja tidak kami umumkan agar tidak bisa diakali."
+        ]
+      }
+    ]
   }
 }
