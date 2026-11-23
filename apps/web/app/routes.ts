@@ -14,6 +14,7 @@ export default [
   route("api/testimonies", "routes/api.testimonies.ts"),
   route("api/testimonies/:testimonyId", "routes/api.testimonies.$testimonyId.ts"),
   route("api/testimonies/:testimonyId/reply", "routes/api.testimonies.$testimonyId.reply.ts"),
+  route("api/testimonies/:testimonyId/proof", "routes/api.testimonies.$testimonyId.proof.ts"),
   route("api/providers/:placeId/claims", "routes/api.providers.$placeId.claims.ts"),
   route("api/providers/:placeId/owner-facts", "routes/api.providers.$placeId.owner-facts.ts"),
   route("api/providers/:placeId/price-lists", "routes/api.providers.$placeId.price-lists.ts"),

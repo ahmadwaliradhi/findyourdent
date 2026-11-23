@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/proof-of-visit-check-request.schema.json",
+  "title": "ProofOfVisitCheckRequest",
+  "description": "Web service to agent service: Moderation in proof-only mode (spec 09). A Proof of Visit attached later to a published Testimony is read; the Testimony's text and photos are not sent and not screened again.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["language", "visitMonth", "proofOfVisit"],
+  "properties": {
+    "language": {
+      "description": "Author's language.",
+      "type": "string",
+      "enum": ["id", "en"]
+    },
+    "visitMonth": {
+      "description": "Stated visit month of the Testimony, YYYY-MM.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+    },
+    "typedProviderName": {
+      "description": "The Listed Provider name (or the name the author typed).",
+      "type": "string",
+      "minLength": 1
+    },
+    "googleDisplayName": {
+      "description": "Live Google display name fetched by the web service and held in memory only, for the Proof of Visit match. Never stored.",
+      "type": "string",
+      "minLength": 1
+    },
+    "proofOfVisit": {
+      "description": "The private Proof of Visit, deleted by the web service after the decision unless an admin must look at it.",
+      "title": "ProofOfVisitCheckDocument",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mimeType", "dataBase64"],
+      "properties": {
+        "mimeType": { "type": "string", "enum": ["image/jpeg", "image/png", "image/webp", "application/pdf"] },
+        "dataBase64": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

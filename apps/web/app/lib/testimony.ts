@@ -61,6 +61,12 @@ export const SUBMISSION_FIELDS = { json: "testimony", photos: "photos", proof: "
 /** After this many authorFix rounds the Testimony is held for the team instead (spec 03). */
 export const MAX_AUTHOR_FIX_ROUNDS = 3;
 
+/**
+ * Proofs of Visit a Testimony may have checked (spec 09), counting the one sent at
+ * submission: a buzzer cannot try fake receipts until one passes.
+ */
+export const MAX_PROOF_ATTEMPTS = 3;
+
 /** The rules the author can fix before submitting (spec 03); every other rule holds. */
 export const AUTHOR_FIXABLE_RULES = [
   "r1_personal_data",
@@ -111,6 +117,19 @@ export interface TestimonyAuthorFixResponse {
 
 export type TestimonySubmitResponse = TestimonyStoredResponse | TestimonyAuthorFixResponse;
 
+/** 200 body of attaching a Proof of Visit to a published Testimony (spec 09). */
+export interface TestimonyProofResponse {
+  testimonyId: string;
+  /** Whether the Testimony shows Kunjungan terbukti. */
+  verifiedVisit: boolean;
+  /** Accepted, waiting for the team or not accepted, with a plain sentence. */
+  proof: AuthorProofFeedback;
+  /** Proofs the author may still attach to this Testimony. */
+  proofAttemptsLeft: number;
+  /** Whether another proof may be attached now (not accepted, attempts left). */
+  canAttachProof: boolean;
+}
+
 /** 200 body of delete. */
 export interface TestimonyDeleteResponse {
   testimonyId: string;
@@ -130,6 +149,12 @@ export interface TestimonyApiError {
     | "forbidden"
     /** Edit refused: the Testimony is hidden (a report is under review) or removed. Delete still works. */
     | "not_editable"
+    /** Attach proof refused: only a published Testimony without an accepted proof takes one. */
+    | "proof_not_allowed"
+    /** Attach proof (or a proof in an edit) refused: the earlier proof still waits for the team. */
+    | "proof_pending"
+    /** Attach proof (or a proof in an edit) refused: every proof attempt is used. */
+    | "proof_attempts_used"
     | "unavailable";
   /** Friendly message in the Patient's language. */
   message: string;

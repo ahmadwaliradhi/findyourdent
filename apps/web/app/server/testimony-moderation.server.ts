@@ -9,8 +9,12 @@ import {
   type ModerationDecision,
   type ModerationRequest,
   type ModerationRuleCode,
+  type ProofOfVisitCheckRequest,
+  type ProofOfVisitExtraction,
   validateModerationDecision,
   validateModerationRequest,
+  validateProofOfVisitCheckRequest,
+  validateProofOfVisitCheckResponse,
 } from "@findyourdent/contracts";
 import type { ModerationDecisionDoc } from "@findyourdent/contracts/firestore";
 import { Timestamp } from "firebase-admin/firestore";
@@ -51,7 +55,10 @@ export interface ModerationOutcome {
 }
 
 /** Google's live name, in memory only. Without it Moderation runs on the typed name alone. */
-async function googleDisplayName(context: AppLoadContext, input: ModerationInput): Promise<string | undefined> {
+async function googleDisplayName(
+  context: AppLoadContext,
+  input: Pick<ModerationInput, "placeId" | "language">,
+): Promise<string | undefined> {
   const result = await context.adapters.places.getDisplayName({ placeId: input.placeId, language: input.language });
   if (result.ok) return result.displayName;
   context.logger.warn("moderation", { outcome: "google_name_unavailable", reason: result.reason });
@@ -63,7 +70,11 @@ async function base64Of(uploads: Bucket, path: string): Promise<string> {
   return bytes.toString("base64");
 }
 
+/** Where an image proof is stored as JPEG (EXIF stripped) and a PDF as sent: testimony-media.server.ts. */
+const proofMimeType = (path: string) => (path.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+
 /** The request the agent's Moderation endpoint takes; star ratings deliberately left out. */
+
 async function buildRequest(context: AppLoadContext, input: ModerationInput): Promise<ModerationRequest> {
   const { uploads } = context;
   if (!uploads) throw new Error("uploads bucket not configured");
@@ -89,9 +100,8 @@ async function buildRequest(context: AppLoadContext, input: ModerationInput): Pr
     ...(photos.length > 0 ? { photos } : {}),
     ...(input.proofPath && proof
       ? {
-          // Stored as JPEG (images, EXIF stripped) or as sent (PDF): testimony-media.server.ts.
           proofOfVisit: {
-            mimeType: input.proofPath.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+            mimeType: proofMimeType(input.proofPath),
             dataBase64: proof,
           },
         }
@@ -240,4 +250,64 @@ export function moderationDecisionDoc(
     ...(spotCheck ? { spotCheckConfirmed: false } : {}),
     decidedAt: Timestamp.now(),
   };
+}
+
+export interface ProofCheckInput {
+  placeId: string;
+  language: Language;
+  /** The Testimony's stated visit month, YYYY-MM. */
+  visitMonth: string;
+  /** The Listed Provider name, or the name the author typed while it is not Listed. */
+  typedProviderName?: string;
+  /** Stored private Proof of Visit (the uploads bucket). */
+  proofPath: string;
+}
+
+/**
+ * Moderation in proof-only mode (spec 09): reads a Proof of Visit attached to a published
+ * Testimony. The Testimony's text and photos are not sent, so nothing about the public
+ * Testimony is screened or changed. Never throws: when the check fails or its answer does
+ * not validate, the result is undefined, which the proof decision sends to the admin.
+ */
+export async function checkAttachedProof(
+  context: AppLoadContext,
+  input: ProofCheckInput,
+): Promise<ProofOfVisitExtraction | undefined> {
+  let body: unknown;
+  try {
+    const { uploads } = context;
+    if (!uploads) throw new Error("uploads bucket not configured");
+    const [googleName, proof] = await Promise.all([
+      googleDisplayName(context, input),
+      base64Of(uploads, input.proofPath),
+    ]);
+    const request: ProofOfVisitCheckRequest = {
+      language: input.language,
+      visitMonth: input.visitMonth,
+      ...(input.typedProviderName ? { typedProviderName: input.typedProviderName } : {}),
+      ...(googleName ? { googleDisplayName: googleName } : {}),
+      proofOfVisit: { mimeType: proofMimeType(input.proofPath), dataBase64: proof },
+    };
+    if (!validateProofOfVisitCheckRequest(request)) {
+      throw new Error(`invalid proof check: ${formatValidationErrors(validateProofOfVisitCheckRequest.errors)}`);
+    }
+    body = await context.adapters.agent.requestProofCheck(request, { requestId: context.requestId });
+  } catch (error) {
+    context.logger.error("proof_check", {
+      outcome: "agent_failed",
+      error: error instanceof Error ? error.name : "unknown",
+      ...(error instanceof Error && "status" in error && typeof error.status === "number"
+        ? { status: error.status }
+        : {}),
+    });
+    return undefined;
+  }
+  if (!validateProofOfVisitCheckResponse(body)) {
+    context.logger.error("proof_check", {
+      outcome: "invalid_response",
+      errors: formatValidationErrors(validateProofOfVisitCheckResponse.errors),
+    });
+    return undefined;
+  }
+  return body.proofOfVisit;
 }

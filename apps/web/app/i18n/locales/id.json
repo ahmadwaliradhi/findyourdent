@@ -691,10 +691,14 @@
       "not_found": "Testimoni ini tidak ditemukan atau sudah dihapus.",
       "forbidden": "Hanya penulis yang bisa mengubah atau menghapus Testimoni ini.",
       "not_editable": "Testimoni ini sedang ditinjau tim atau sudah diturunkan, jadi tidak bisa diubah. Anda tetap bisa menghapusnya.",
+      "proof_not_allowed": "Bukti kunjungan hanya bisa ditambahkan ke Testimoni yang sudah tayang dan belum ditandai Kunjungan terbukti.",
+      "proof_pending": "Bukti kunjungan sebelumnya masih diperiksa tim FindYourDent, jadi belum bisa mengirim bukti lain. Tunggu keputusannya, biasanya dalam 72 jam.",
+      "proof_attempts_used": "Anda sudah mengirim bukti kunjungan 3 kali untuk Testimoni ini, jadi tidak bisa mengirim lagi. Tunggu keputusan tim, atau hapus Testimoni ini lalu tulis yang baru.",
       "unavailable": "Layanan Testimoni sedang tidak tersedia. Silakan coba lagi sebentar lagi."
     },
     "fields": {
       "placeId": "Pilih tempat praktik dari daftar pencarian.",
+      "proofRequired": "Pilih foto atau PDF kuitansi, invoice, atau kartu janji temu Anda.",
       "providerName": "Tulis nama tempat sesuai papan nama atau yang Anda kenal (maksimal {{max}} karakter).",
       "provinceCode": "Pilih provinsi.",
       "regencyCode": "Pilih kota atau kabupaten di provinsi ini.",
@@ -731,6 +735,14 @@
     }
   },
   "myTestimonies": {
+    "attachProof": {
+      "title": "Tambahkan bukti kunjungan",
+      "hint": "Hanya Testimoni dengan bukti kunjungan yang diterima yang dihitung dalam nilai. Kirim kuitansi, invoice, atau kartu janji temu (gambar atau PDF). Teks Testimoni Anda tidak diperiksa ulang dan tetap tayang. File diperiksa lalu dihapus.",
+      "attemptsLeft": "Sisa kesempatan mengirim bukti: {{count}}.",
+      "pick": "Pilih dan kirim file bukti",
+      "sending": "Mengirim bukti…",
+      "failed": "Bukti belum terkirim. Periksa koneksi Anda lalu coba lagi."
+    },
     "metaTitle": "Testimoni saya",
     "title": "Testimoni saya",
     "intro": "Semua Testimoni yang Anda tulis, statusnya, dan balasan dari tempat praktik.",
@@ -802,6 +814,7 @@
       "falseClaim": "Klaim yang tidak benar",
       "spam": "Spam atau iklan",
       "conflictOfInterest": "Ditulis pemilik, staf, atau pesaing",
+      "incentive": "Klinik menawarkan imbalan untuk testimoni",
       "other": "Lainnya"
     },
     "hidesAtOnce": "Testimoni langsung disembunyikan sampai tim meninjaunya.",

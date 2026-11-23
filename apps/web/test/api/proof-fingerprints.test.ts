@@ -308,37 +308,25 @@ describe("the reuse check", () => {
     });
   });
 
-  it("does not match a Testimony's own earlier proof when its author sends a new one in an edit", async () => {
-    const first = await post("satu@example.com", {
-      proof: await photo(),
-      extraction: read({ clinicNameMatches: false }),
-    });
-
-    const response = await send(`/api/testimonies/${first.testimonyId}`, first.cookie, {
-      proof: await photo(),
-      extraction: read(),
-    });
-    expect(response.status).toBe(200);
-
-    expect((await testimony(first.testimonyId)).proofOfVisit?.result).toBe("accepted");
-    expect(await fingerprint(first.testimonyId)).toMatchObject({ fieldsKey: "klinik gigi ceria|2026-09-12|350000" });
-  });
-
-  it("drops the old fingerprint when an edit's proof is rejected in place of a pending one", async () => {
-    const first = await post("satu@example.com", {
-      proof: await photo(),
-      extraction: read({ clinicNameMatches: false }),
-    });
-    expect(await fingerprint(first.testimonyId)).toBeDefined();
-
-    const response = await send(`/api/testimonies/${first.testimonyId}`, first.cookie, {
-      proof: await photo(),
+  it("checks a new proof sent in an edit after a rejected one, and fingerprints it", async () => {
+    await post("satu@example.com", { proof: await photo(), extraction: read() });
+    const second = await post("dua@example.com", {
+      proof: { bytes: await anotherReceiptPhoto(), type: "image/jpeg" },
       extraction: read({ isProofOfVisit: false }),
     });
+    expect(await fingerprint(second.testimonyId)).toBeUndefined();
+
+    const response = await send(`/api/testimonies/${second.testimonyId}`, second.cookie, {
+      proof: await photo(),
+      extraction: OTHER_FACTS,
+    });
     expect(response.status).toBe(200);
 
-    expect((await testimony(first.testimonyId)).proofOfVisit?.result).toBe("rejected");
-    expect(await fingerprint(first.testimonyId)).toBeUndefined();
+    expect((await testimony(second.testimonyId)).proofOfVisit).toMatchObject({
+      result: "pending",
+      reasons: ["possibleReuse"],
+    });
+    expect(await fingerprint(second.testimonyId)).toMatchObject({ placeId: PLACE });
   });
 });
 
@@ -403,6 +391,49 @@ describe("freeing a fingerprint", () => {
     expect((await testimony(again.testimonyId)).proofOfVisit).toMatchObject({
       result: "pending",
       reasons: ["possibleReuse"],
+    });
+  });
+
+  it("checks a proof attached later the same way: reuse waits for the admin, a fresh receipt is fingerprinted", async () => {
+    await post("satu@example.com", { proof: await photo(), extraction: read() });
+    const attachTo = async (email: string, proof: Proof, extraction: ProofOfVisitExtraction) => {
+      const cookie = await server.signInWithGoogle(email);
+      server.fakes.agent.respondToModerationWith(PUBLISH);
+      const form = new FormData();
+      form.set("testimony", JSON.stringify(submission()));
+      const created = await fetch(new URL("/api/testimonies", server.baseUrl), {
+        method: "POST",
+        headers: { cookie, [APP_CHECK_HEADER]: server.appCheckToken() },
+        body: form,
+      });
+      const { testimonyId } = (await created.json()) as TestimonyStoredResponse;
+      server.fakes.agent.respondToProofCheckWith({ proofOfVisit: extraction });
+      const attachForm = new FormData();
+      attachForm.set("proof", new File([new Uint8Array(proof.bytes)], "struk", { type: proof.type }));
+      const response = await fetch(new URL(`/api/testimonies/${testimonyId}/proof`, server.baseUrl), {
+        method: "POST",
+        headers: { cookie, [APP_CHECK_HEADER]: server.appCheckToken() },
+        body: attachForm,
+      });
+      expect(response.status).toBe(200);
+      return testimonyId;
+    };
+
+    const reused = await attachTo("dua@example.com", await photo(), OTHER_FACTS);
+    expect(await testimony(reused)).toMatchObject({
+      verifiedVisit: false,
+      proofOfVisit: { result: "pending", reasons: ["possibleReuse"] },
+    });
+
+    const fresh = await attachTo(
+      "tiga@example.com",
+      { bytes: await anotherReceiptPhoto(), type: "image/jpeg" },
+      read({ proofDate: "2026-09-03", totalRupiah: 125_000 }),
+    );
+    expect(await testimony(fresh)).toMatchObject({ verifiedVisit: true, proofOfVisit: { result: "accepted" } });
+    expect(await fingerprint(fresh)).toMatchObject({
+      placeId: PLACE,
+      fieldsKey: "klinik gigi ceria|2026-09-03|125000",
     });
   });
 

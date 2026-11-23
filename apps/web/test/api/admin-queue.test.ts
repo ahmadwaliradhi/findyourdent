@@ -135,6 +135,24 @@ describe("POST /api/testimonies/:id/reports: other cases", () => {
     ]);
   });
 
+  it("keeps the Testimony public on an incentive report and queues it with the 24-hour target", async () => {
+    const id = await postTestimony("pasien@example.com");
+    const response = await report(id, { category: "incentive" });
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ hidden: false });
+    expect((await testimony(id)).status).toBe("published");
+    expect(await reports()).toEqual([
+      expect.objectContaining({ category: "incentive", hidTestimony: false, status: "open" }),
+    ]);
+
+    const { items } = await queue(await adminCookie());
+    expect(items).toHaveLength(1);
+    const [item] = items;
+    expect(item).toMatchObject({ kind: "report", subjectId: id, overdue: false });
+    expect(item?.reports?.map((r) => r.category)).toEqual(["incentive"]);
+    expect(Date.parse(item?.dueAt ?? "") - Date.parse(item?.createdAt ?? "")).toBe(24 * 60 * 60 * 1000);
+  });
+
   it("records the reporter when signed in", async () => {
     const id = await postTestimony("pasien@example.com");
     const cookie = await server.signInWithGoogle("pembaca@example.com");
