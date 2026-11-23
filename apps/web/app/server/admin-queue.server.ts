@@ -33,6 +33,8 @@ import {
   type AdminApiError,
   type AdminQueueResponse,
   OWNER_ACTIONS,
+  PROOF_ACTIONS,
+  PROOF_REVIEW_TARGET_HOURS,
   type QueueHistoryEntry,
   type QueueItem,
   type QueueModeration,
@@ -47,6 +49,7 @@ import { testimonyPhotoUrl } from "~/lib/testimony-photos";
 import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
+import { proofAction, proofFileUrl } from "./proof-review.server.ts";
 import {
   NO_ESSENTIALS,
   placeEssentialsFor,
@@ -140,17 +143,18 @@ export async function loadAdminQueue(
   nowMs = Date.now(),
 ): Promise<AdminQueueResponse> {
   const owner = loadOwnerQueue(context, firestore, nowMs);
-  const [held, hidden, revisions, reports, corrections, spotChecks] = await Promise.all([
+  const [held, hidden, revisions, reports, corrections, spotChecks, pendingProofs] = await Promise.all([
     col(firestore, "testimonies").where("status", "==", "held").get(),
     col(firestore, "testimonies").where("status", "==", "hidden").get(),
     col(firestore, "testimonies").where("pendingRevision.status", "==", "held").get(),
     col(firestore, "testimonyReports").where("status", "==", "open").get(),
     col(firestore, "nameCorrections").where("status", "==", "open").get(),
     col(firestore, "moderationDecisions").where("spotCheck", "==", true).where("spotCheckConfirmed", "==", false).get(),
+    col(firestore, "testimonies").where("proofOfVisit.result", "==", "pending").get(),
   ]);
 
   const testimonies = new Map<string, TestimonyDoc>();
-  for (const doc of [...held.docs, ...hidden.docs, ...revisions.docs])
+  for (const doc of [...held.docs, ...hidden.docs, ...revisions.docs, ...pendingProofs.docs])
     testimonies.set(doc.id, doc.data() as TestimonyDoc);
   const reportsByTestimony = new Map<string, Array<{ id: string; report: TestimonyReportDoc }>>();
   for (const doc of reports.docs) {
@@ -295,6 +299,31 @@ export async function loadAdminQueue(
       ),
     );
   }
+  for (const doc of pendingProofs.docs) {
+    const t = testimonies.get(doc.id) as TestimonyDoc;
+    const proof = t.proofOfVisit;
+    if (proof?.result !== "pending" || t.status === "deleted") continue;
+    items.push(
+      view(doc.id).then((testimony) =>
+        queueItem(
+          {
+            id: doc.id,
+            kind: "proofReview",
+            subjectId: doc.id,
+            testimony,
+            proof: {
+              fileUrl: proofFileUrl(doc.id),
+              reasons: proof.reasons,
+              ...(proof.extracted ? { extracted: proof.extracted } : {}),
+            },
+          },
+          proof.checkedAt,
+          nowMs,
+          PROOF_REVIEW_TARGET_HOURS,
+        ),
+      ),
+    );
+  }
   for (const doc of corrections.docs) {
     const c = doc.data() as NameCorrectionDoc;
     items.push(
@@ -337,6 +366,7 @@ async function errorResponse(request: Request, status: number, error: AdminApiEr
 
 const ACTIONS: ReadonlySet<string> = new Set<AdminActionRequest["action"]>([
   ...TESTIMONY_ACTIONS,
+  ...PROOF_ACTIONS,
   "dismissReport",
   "applyNameCorrection",
   "dismissNameCorrection",
@@ -388,6 +418,10 @@ export async function adminActionResponse(context: AppLoadContext, request: Requ
         break;
       case "spotCheckConfirm":
         await firestore.runTransaction((tx) => confirmSpotCheck(tx, acting));
+        break;
+      case "acceptProof":
+      case "rejectProof":
+        await proofAction(context, acting, parsed.action);
         break;
       case "approveClaim":
       case "rejectClaim":

@@ -200,8 +200,11 @@ export type ProofOfVisitRecord = {
 } & (
   | { result: "accepted" }
   | { result: "pending"; reasons: ProofPendingReason[]; filePath: string }
-  /** `reason` is absent on proofs rejected before spec 09. */
-  | { result: "rejected"; reason?: ProofRejectedReason }
+  /**
+   * `reason` is absent on proofs rejected before spec 09. `adminReason`: what the admin
+   * told the author on an `adminRejected` proof.
+   */
+  | { result: "rejected"; reason?: ProofRejectedReason; adminReason?: string }
 );
 
 /**
@@ -398,7 +401,9 @@ export type AdminActionType =
   | "revokeClaim"
   | "applyNameCorrection"
   | "dismissNameCorrection"
-  | "spotCheckConfirm";
+  | "spotCheckConfirm"
+  | "acceptProof"
+  | "rejectProof";
 
 /** Append-only audit log of every admin decision. */
 export interface AdminActionDoc {

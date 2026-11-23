@@ -182,7 +182,16 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
           <span>{item.adminReason}</span>
         </div>
       ) : null}
-      {item.proof ? <p className="text-sm text-muted-foreground">{t(proofStatusKey(item.proof))}</p> : null}
+      {item.proof ? (
+        <p className="text-sm text-muted-foreground">
+          {t(proofStatusKey(item.proof))}
+          {item.proof.result === "rejected" && item.proof.adminReason ? (
+            <span className="mt-1 block whitespace-pre-line">
+              {t("proofStatus.adminNote")} {item.proof.adminReason}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
       <p className="line-clamp-4 whitespace-pre-line">{item.text}</p>
       {item.reply ? (
         <div className="flex flex-col gap-1 rounded-md border bg-muted px-4 py-3 text-sm">
