@@ -34,6 +34,10 @@ _Avoid_: Review (reserved for Google reviews), rating, ulasan
 An optional private document a Patient attaches to a Testimony, at submission or later (such as a receipt, invoice or appointment card), showing they visited that Provider. It is accepted when its clinic name matches the Provider, its date is within a month of the visit month and it is under 12 months old; doubtful ones go to an admin. It is never published, only whether it was accepted.
 _Avoid_: Bukti bayar, verification
 
+**Proof attempt**:
+One check of a Proof of Visit for a Testimony: at submission, on an edit whose proof is stored, or attached later. A Testimony gets at most three; after that the author can only wait for an admin decision on a pending proof, or delete and rewrite the Testimony.
+_Avoid_: Proof check, retry
+
 **Proven Testimony**:
 A published Testimony whose Proof of Visit was accepted, shown as "Kunjungan terbukti". Only Proven Testimonies count toward aspect averages, ranking and price stats; a Provider needs three before a star average is shown. Other published Testimonies are shown as "Belum terbukti".
 _Avoid_: Verified review, valid testimony

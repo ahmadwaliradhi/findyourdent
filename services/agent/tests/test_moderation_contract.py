@@ -887,3 +887,190 @@ def test_wrong_provider_can_be_fixed_without_a_span(
     decision = screen(client, a_testimony(typedProviderName="Apotek Sehat"))
 
     assert decision["decision"] == "authorFix"
+
+
+# Proof-only mode (spec 09, attach proof later): a Proof of Visit added to a published
+# Testimony is read, and nothing else is screened.
+
+
+def a_proof_only(**extra: Any) -> dict[str, Any]:
+    return {
+        "subjectType": "proofOfVisit",
+        "language": "id",
+        "typedProviderName": "Klinik Gigi Senyum",
+        "googleDisplayName": "Klinik Gigi Senyum Sehat",
+        "visitMonth": "2026-08",
+        "proofOfVisit": {"mimeType": "application/pdf", "dataBase64": PDF},
+        **extra,
+    }
+
+
+def without(body: dict[str, Any], field: str) -> dict[str, Any]:
+    return {k: v for k, v in body.items() if k != field}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        a_proof_only(text=CLEAN_TEXT),
+        a_proof_only(photos=[photo()]),
+        a_proof_only(procedureCode="scaling"),
+        a_proof_only(authorFixRound=0),
+        without(a_proof_only(), "proofOfVisit"),
+        without(a_testimony(), "text"),
+        without(a_reply(), "text"),
+        without(provider_facts(), "text"),
+    ],
+)
+def test_a_request_outside_its_mode_is_refused(
+    client: TestClient, fake_gemini: FakeGeminiAdapter, body: dict[str, Any]
+) -> None:
+    response = client.post("/v1/moderation", json=body)
+
+    assert response.status_code == 422
+    assert fake_gemini.calls == []
+    assert CLEAN_TEXT not in response.text
+
+
+def test_proof_only_sends_the_model_the_names_the_visit_month_and_the_proof_only(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(extraction())
+
+    screen(client, a_proof_only())
+
+    (call,) = fake_gemini.calls
+    assert call["model"] == "gemini-3.5-flash-lite"
+    blobs = [p.inline_data for p in call["contents"] if p.inline_data is not None]
+    assert [(b.mime_type, b.data) for b in blobs] == [("application/pdf", base64.b64decode(PDF))]
+    (submission,) = [json.loads(p.text) for p in call["contents"] if p.text and p.text[0] == "{"]
+    assert submission == {
+        "typedProviderName": "Klinik Gigi Senyum",
+        "googleDisplayName": "Klinik Gigi Senyum Sehat",
+        "visitMonth": "2026-08",
+    }
+    # Its own instruction: it reads the proof and screens nothing.
+    instruction = call["instruction"]
+    assert "Proof of Visit" in instruction
+    assert "patient's name" in instruction
+    assert "r1_personal_data" not in instruction
+    # Its own schema: only the proof facts, never rules, a message or a patient name.
+    schema = call["response_schema"]
+    assert set(schema["properties"]) == {
+        "readable",
+        "isProofOfVisit",
+        "clinicNameOnProof",
+        "proofDate",
+        "totalRupiah",
+        "clinicNameMatches",
+    }
+    assert schema["required"] == ["readable", "isProofOfVisit", "clinicNameMatches"]
+
+
+def test_proof_only_returns_the_facts_read_off_the_proof_as_a_publish(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(extraction())
+
+    decision = screen(client, a_proof_only())
+
+    assert decision["decision"] == "publish"
+    assert decision["ruleCodes"] == []
+    assert decision["flaggedSpans"] == []
+    assert decision["proofOfVisit"] == extraction()
+    assert decision["authorMessage"]
+    for absent in ("flaggedPhotos", "ownHealthDataWarning"):
+        assert absent not in decision
+
+
+def test_proof_only_never_holds_or_names_a_rule_whatever_the_model_says(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    # Output beyond the proof schema, as if the model had screened something.
+    fake_gemini.outputs.append(
+        extraction(
+            decision="hold",
+            ruleCodes=["r2_accusation_as_fact", "r9_manipulation"],
+            flaggedSpans=[{"text": "menipu", "ruleCode": "r2_accusation_as_fact"}],
+            flaggedPhotos=[{"photoIndex": 0, "ruleCode": "photo_not_clinic_setting"}],
+            ownHealthDataWarning=True,
+            confidence=0.1,
+            authorMessage="Ditahan.",
+        )
+    )
+
+    decision = screen(client, a_proof_only())
+
+    assert decision["decision"] == "publish"
+    assert decision["ruleCodes"] == []
+    assert decision["flaggedSpans"] == []
+    assert decision["proofOfVisit"] == extraction()
+    for absent in ("flaggedPhotos", "ownHealthDataWarning"):
+        assert absent not in decision
+
+
+def test_proof_only_never_passes_on_a_patient_name(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    fake_gemini.outputs.append(extraction(patientName="Budi Santoso", namaPasien="Budi"))
+
+    decision = screen(client, a_proof_only())
+
+    assert decision["proofOfVisit"] == extraction()
+    assert "Budi" not in json.dumps(decision)
+
+
+def assert_proof_not_checked(decision: dict[str, Any]) -> None:
+    """The published Testimony is not held; an absent extraction sends the proof to an admin."""
+    assert decision["decision"] == "publish"
+    assert decision["ruleCodes"] == []
+    assert decision["flaggedSpans"] == []
+    assert decision["confidence"] == 0.0
+    assert "proofOfVisit" not in decision
+
+
+@pytest.mark.parametrize(
+    "bad_output", [{}, "accepted", {"readable": True}, extraction(readable="maybe")]
+)
+def test_proof_only_unusable_model_output_publishes_without_facts(
+    client: TestClient,
+    fake_gemini: FakeGeminiAdapter,
+    bad_output: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    fake_gemini.outputs.append(bad_output)
+
+    with caplog.at_level(logging.INFO):
+        assert_proof_not_checked(screen(client, a_proof_only()))
+
+    assert [r.outcome for r in caplog.records if hasattr(r, "outcome")] == ["model_invalid_output"]
+
+
+def test_proof_only_model_error_publishes_without_facts(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.INFO), client_with(ExplodingGemini()) as client:
+        assert_proof_not_checked(screen(client, a_proof_only()))
+
+    assert [r.outcome for r in caplog.records if hasattr(r, "outcome")] == ["model_error"]
+
+
+def test_proof_only_model_timeout_publishes_without_facts(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with (
+        caplog.at_level(logging.INFO),
+        client_with(HangingGemini(), moderation_timeout_seconds=0.05) as client,
+    ):
+        assert_proof_not_checked(screen(client, a_proof_only()))
+
+    assert [r.outcome for r in caplog.records if hasattr(r, "outcome")] == ["model_timeout"]
+
+
+def test_proof_only_proof_that_is_not_base64_is_refused(
+    client: TestClient, fake_gemini: FakeGeminiAdapter
+) -> None:
+    body = a_proof_only(proofOfVisit={"mimeType": "image/png", "dataBase64": "not base64!"})
+
+    response = client.post("/v1/moderation", json=body)
+
+    assert response.status_code == 422
+    assert fake_gemini.calls == []

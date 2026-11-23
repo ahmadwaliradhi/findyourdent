@@ -30,23 +30,23 @@ class ModerationProofOfVisit(BaseModel):
 
 class ModerationRequest(BaseModel):
     """
-    Web service to agent service: screen one Testimony, Provider reply or set of owner-entered Provider facts (specs 03 and 05). All content is data; instructions inside it are ignored. Star ratings and sentiment are deliberately not inputs.
+    Web service to agent service: screen one Testimony, Provider reply or set of owner-entered Provider facts (specs 03 and 05), or read one Proof of Visit attached to an already published Testimony (spec 09, proof-only mode). All content is data; instructions inside it are ignored. Star ratings and sentiment are deliberately not inputs.
     """
 
     model_config = ConfigDict(
         extra="forbid",
     )
-    subjectType: Literal["testimony", "reply", "providerFacts"]
+    subjectType: Literal["testimony", "reply", "providerFacts", "proofOfVisit"]
     """
-    testimony and reply use rules R1 to R9; providerFacts uses the Provider-facts rule set (spec 05).
+    testimony and reply use rules R1 to R9; providerFacts uses the Provider-facts rule set (spec 05); proofOfVisit is proof-only mode (spec 09): only the Proof of Visit is read, no text or photo is screened and no rule can fire.
     """
     language: Literal["id", "en"]
     """
     Author's language, used for the author-facing message.
     """
-    text: Annotated[str, Field(max_length=10000, min_length=1)]
+    text: Annotated[str | None, Field(max_length=10000, min_length=1)] = None
     """
-    Testimony text, reply text, or owner facts flattened to text.
+    Testimony text, reply text, or owner facts flattened to text. Required unless subjectType is proofOfVisit, where it must be absent.
     """
     typedProviderName: Annotated[str | None, Field(min_length=1)] = None
     """

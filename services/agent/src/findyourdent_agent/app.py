@@ -25,7 +25,7 @@ from .data import procedure_codes
 from .escalation import default_matcher
 from .guidance import InvalidAudioError, NoSpeechError, answer_turn
 from .knowledge import bpjs_coverage, cost_estimates, guidance_safety
-from .moderation import InvalidAttachmentError, moderate
+from .moderation import InvalidAttachmentError, ModeMismatchError, moderate
 from .price_list import InvalidDocumentError, extract_price_list
 from .shortlist import write_reasons
 
@@ -156,6 +156,19 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
     ) -> ModerationDecision | JSONResponse:
         try:
             result = await moderate(body, adapters.gemini, settings)
+        except ModeMismatchError as error:
+            # Shaped like a body validation error; names the field, never its value.
+            request.state.outcome = "invalid_request"
+            detail = {
+                "type": "missing" if error.missing else "extra_forbidden",
+                "loc": ["body", error.field],
+                "msg": (
+                    "Field required"
+                    if error.missing
+                    else "Extra inputs are not permitted in proof-only mode"
+                ),
+            }
+            return JSONResponse(status_code=422, content={"detail": [detail]})
         except InvalidAttachmentError:
             request.state.outcome = "invalid_request"
             detail = {"type": "invalid_base64", "loc": ["body"], "msg": "attachment is not base64"}

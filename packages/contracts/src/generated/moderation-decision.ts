@@ -23,7 +23,7 @@ export type ModerationRuleCode =
   | "low_confidence";
 
 /**
- * Agent service to web service: the Moderation result (spec 03). Model errors, timeouts or invalid output always become hold with ruleCodes ["model_error"]; a valid model result with no rule hit but too little confidence to publish becomes hold with ruleCodes ["low_confidence"].
+ * Agent service to web service: the Moderation result (spec 03). Model errors, timeouts or invalid output become hold with ruleCodes ["model_error"], except in proof-only mode (spec 09), where nothing is screened: the answer is always publish with no rule codes, and proofOfVisit is absent when the proof could not be read; a valid model result with no rule hit but too little confidence to publish becomes hold with ruleCodes ["low_confidence"].
  */
 export interface ModerationDecision {
   decision: "publish" | "authorFix" | "hold";

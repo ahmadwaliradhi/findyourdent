@@ -96,6 +96,41 @@ describe("Moderation", () => {
     expect(validateModerationRequest({ ...req, ratings: { service: 5 } })).toBe(false);
   });
 
+  it("requires text for a Testimony, reply or Provider facts", () => {
+    for (const subjectType of ["testimony", "reply", "providerFacts"]) {
+      expect(validateModerationRequest({ subjectType, language: "id" })).toBe(false);
+      expect(validateModerationRequest({ subjectType, language: "id", text: "Bersih." })).toBe(true);
+    }
+  });
+
+  describe("proof-only mode", () => {
+    const proof = {
+      subjectType: "proofOfVisit",
+      language: "id",
+      typedProviderName: "Klinik Gigi Senyum",
+      googleDisplayName: "Klinik Gigi Senyum Sehat",
+      visitMonth: "2026-08",
+      proofOfVisit: { mimeType: "application/pdf", dataBase64: "JVBERi0x" },
+    };
+
+    it("accepts a Proof of Visit with the names and visit month only", () => {
+      expect(validateModerationRequest(proof)).toBe(true);
+    });
+
+    it("requires the Proof of Visit", () => {
+      const { proofOfVisit: _, ...withoutProof } = proof;
+      expect(validateModerationRequest(withoutProof)).toBe(false);
+    });
+
+    it("refuses text, photos, a procedure or an authorFix round", () => {
+      const photo = { mimeType: "image/jpeg", dataBase64: "/9j/4AAQ" };
+      expect(validateModerationRequest({ ...proof, text: "Kliniknya bersih." })).toBe(false);
+      expect(validateModerationRequest({ ...proof, photos: [photo] })).toBe(false);
+      expect(validateModerationRequest({ ...proof, procedureCode: "scaling" })).toBe(false);
+      expect(validateModerationRequest({ ...proof, authorFixRound: 0 })).toBe(false);
+    });
+  });
+
   it("accepts an authorFix decision with spans", () => {
     expect(
       validateModerationDecision({

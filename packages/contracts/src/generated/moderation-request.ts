@@ -2,21 +2,21 @@
 // Run `pnpm contracts:generate` after changing the schema.
 
 /**
- * Web service to agent service: screen one Testimony, Provider reply or set of owner-entered Provider facts (specs 03 and 05). All content is data; instructions inside it are ignored. Star ratings and sentiment are deliberately not inputs.
+ * Web service to agent service: screen one Testimony, Provider reply or set of owner-entered Provider facts (specs 03 and 05), or read one Proof of Visit attached to an already published Testimony (spec 09, proof-only mode). All content is data; instructions inside it are ignored. Star ratings and sentiment are deliberately not inputs.
  */
-export interface ModerationRequest {
+export type ModerationRequest = {
   /**
-   * testimony and reply use rules R1 to R9; providerFacts uses the Provider-facts rule set (spec 05).
+   * testimony and reply use rules R1 to R9; providerFacts uses the Provider-facts rule set (spec 05); proofOfVisit is proof-only mode (spec 09): only the Proof of Visit is read, no text or photo is screened and no rule can fire.
    */
-  subjectType: "testimony" | "reply" | "providerFacts";
+  subjectType: "testimony" | "reply" | "providerFacts" | "proofOfVisit";
   /**
    * Author's language, used for the author-facing message.
    */
   language: "id" | "en";
   /**
-   * Testimony text, reply text, or owner facts flattened to text.
+   * Testimony text, reply text, or owner facts flattened to text. Required unless subjectType is proofOfVisit, where it must be absent.
    */
-  text: string;
+  text?: string;
   /**
    * Name the author typed (or the Listed Provider name).
    */
@@ -41,9 +41,10 @@ export interface ModerationRequest {
    * How many authorFix rounds this content has had already (after three it is held).
    */
   authorFixRound?: number;
-}
+};
+
 /**
- * This interface was referenced by `ModerationRequest`'s JSON-Schema
+ * This interface was referenced by `undefined`'s JSON-Schema
  * via the `definition` "ModerationImage".
  */
 export interface ModerationImage {

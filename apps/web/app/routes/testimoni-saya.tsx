@@ -1,5 +1,6 @@
 import type { TestimonyStatus } from "@findyourdent/contracts/firestore";
-import { useState } from "react";
+import { FileCheck, Upload } from "lucide-react";
+import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, redirect } from "react-router";
 import { Badge } from "~/components/ui/badge";
@@ -13,6 +14,13 @@ import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
 import { testimonyPath } from "~/lib/paths";
 import { proofStatusKey } from "~/lib/proof-status";
+import {
+  MAX_PROOF_ATTEMPTS,
+  PROOF_MIME_TYPES,
+  type ProofAttachResponse,
+  SUBMISSION_FIELDS,
+  type TestimonyApiError,
+} from "~/lib/testimony";
 import { testimonyStatusBadge } from "~/lib/testimony-status";
 import { cn } from "~/lib/utils";
 import { loadMyTestimonies, type MyTestimony } from "~/server/testimonies.server";
@@ -69,6 +77,23 @@ export default function MyTestimonies({ loaderData }: Route.ComponentProps) {
               <li key={item.id}>
                 <MyTestimonyCard
                   item={item}
+                  onProofAttached={(result) => {
+                    const { message: _, ...proof } = result.proof;
+                    setItems((list) =>
+                      list.map((other) =>
+                        other.id === item.id
+                          ? {
+                              ...other,
+                              proof,
+                              verifiedVisit: result.verifiedVisit,
+                              // Accepted is final and a pending proof waits for the team: only after a rejected one may another follow.
+                              canAttachProof: result.proof.result === "rejected",
+                              proofAttemptsLeft: result.proofAttemptsLeft,
+                            }
+                          : other,
+                      ),
+                    );
+                  }}
                   onDeleted={() => {
                     setItems((list) => list.filter((other) => other.id !== item.id));
                     setNotice(t("myTestimonies.deleted"));
@@ -120,7 +145,15 @@ function StatusLegend() {
   );
 }
 
-function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: () => void }) {
+function MyTestimonyCard({
+  item,
+  onProofAttached,
+  onDeleted,
+}: {
+  item: MyTestimony;
+  onProofAttached: (result: ProofAttachResponse) => void;
+  onDeleted: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === "en" ? "en" : "id";
   const firebase = useFirebaseConfig();
@@ -182,16 +215,20 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
           <span>{item.adminReason}</span>
         </div>
       ) : null}
-      {item.proof ? (
-        <p className="text-sm text-muted-foreground">
-          {t(proofStatusKey(item.proof))}
-          {item.proof.result === "rejected" && item.proof.adminReason ? (
-            <span className="mt-1 block whitespace-pre-line">
-              {t("proofStatus.adminNote")} {item.proof.adminReason}
-            </span>
-          ) : null}
-        </p>
-      ) : null}
+      {/* Live, so the decision on a proof attached here is announced. */}
+      <div aria-live="polite" className="empty:hidden">
+        {item.proof ? (
+          <p className="text-sm text-muted-foreground">
+            {t(proofStatusKey(item.proof))}
+            {item.proof.result === "rejected" && item.proof.adminReason ? (
+              <span className="mt-1 block whitespace-pre-line">
+                {t("proofStatus.adminNote")} {item.proof.adminReason}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+      </div>
+      {item.canAttachProof ? <AttachProof item={item} onAttached={onProofAttached} /> : null}
       <p className="line-clamp-4 whitespace-pre-line">{item.text}</p>
       {item.reply ? (
         <div className="flex flex-col gap-1 rounded-md border bg-muted px-4 py-3 text-sm">
@@ -247,5 +284,103 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
         </div>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * "Lampirkan bukti kunjungan" (spec 09): a published Testimony without an accepted proof
+ * takes a proof later, while proof attempts are left; then only the plain message shows.
+ */
+function AttachProof({ item, onAttached }: { item: MyTestimony; onAttached: (result: ProofAttachResponse) => void }) {
+  const { t } = useTranslation();
+  const firebase = useFirebaseConfig();
+  const [file, setFile] = useState<File | null>(null);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputId = `attach-proof-${item.id}`;
+
+  if (item.proofAttemptsLeft === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t("testimonyApi.errors.proof_attempts_used", { max: MAX_PROOF_ATTEMPTS })}
+      </p>
+    );
+  }
+
+  const send = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!file) return;
+    setSending(true);
+    setError(null);
+    try {
+      const body = new FormData();
+      body.set(SUBMISSION_FIELDS.proof, file);
+      const token = await getAppCheckToken(firebase);
+      const response = await fetch(`/api/testimonies/${encodeURIComponent(item.id)}/proof`, {
+        method: "POST",
+        body,
+        headers: token ? { [APP_CHECK_HEADER]: token } : {},
+      });
+      if (response.ok) {
+        setFile(null);
+        onAttached((await response.json()) as ProofAttachResponse);
+        return;
+      }
+      const problem = (await response.json().catch(() => null)) as TestimonyApiError | null;
+      setError(problem?.fieldErrors?.proof ?? problem?.message ?? t("myTestimonies.attachProof.failed"));
+    } catch {
+      setError(t("myTestimonies.attachProof.failed"));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={send}
+      aria-labelledby={`${inputId}-title`}
+      className="flex flex-col gap-3 rounded-md border bg-muted px-4 py-3"
+    >
+      <div className="flex flex-col gap-1">
+        <h3 id={`${inputId}-title`} className="text-base leading-[22px] font-[650]">
+          {t("myTestimonies.attachProof.title")}
+        </h3>
+        <p id={`${inputId}-hint`} className="text-sm text-muted-foreground">
+          {t("myTestimonies.attachProof.hint")}{" "}
+          {t("myTestimonies.attachProof.attemptsLeft", { count: item.proofAttemptsLeft })}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <label
+          htmlFor={inputId}
+          className="inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-md border border-border-strong bg-card px-4 text-base font-semibold shadow-xs hover:border-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+        >
+          {file ? (
+            <FileCheck aria-hidden="true" strokeWidth={1.75} className="size-5 text-success" />
+          ) : (
+            <Upload aria-hidden="true" strokeWidth={1.75} className="size-5 text-muted-foreground" />
+          )}
+          {file ? t("myTestimonies.attachProof.change") : t("myTestimonies.attachProof.choose")}
+          <input
+            id={inputId}
+            type="file"
+            accept={PROOF_MIME_TYPES.join(",")}
+            aria-describedby={`${inputId}-hint`}
+            className="sr-only"
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setError(null);
+            }}
+          />
+        </label>
+        {file ? <span className="min-w-0 max-w-full break-all text-sm font-semibold">{file.name}</span> : null}
+      </div>
+      <div>
+        <Button type="submit" size="sm" loading={sending} disabled={!file}>
+          {sending ? t("myTestimonies.attachProof.sending") : t("myTestimonies.attachProof.submit")}
+        </Button>
+      </div>
+      {error ? <FieldError role="alert">{error}</FieldError> : null}
+    </form>
   );
 }

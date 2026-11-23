@@ -676,10 +676,15 @@
       "not_found": "Testimoni ini tidak ditemukan atau sudah dihapus.",
       "forbidden": "Hanya penulis yang bisa mengubah atau menghapus Testimoni ini.",
       "not_editable": "Testimoni ini sedang ditinjau tim atau sudah diturunkan, jadi tidak bisa diubah. Anda tetap bisa menghapusnya.",
+      "not_published": "Bukti kunjungan hanya bisa dilampirkan pada Testimoni yang sedang tayang.",
+      "already_proven": "Testimoni ini sudah ditandai Kunjungan terbukti, jadi tidak perlu bukti lagi.",
+      "proof_pending": "Bukti kunjungan yang Anda kirim sedang diperiksa tim FindYourDent. Tunggu keputusannya dulu, biasanya dalam 72 jam, sebelum mengirim bukti lain.",
+      "proof_attempts_used": "Anda sudah memakai {{max}} kesempatan mengirim bukti kunjungan untuk Testimoni ini. Jika ada bukti yang sedang diperiksa tim, tunggu keputusannya. Jika tidak, Anda bisa menghapus Testimoni ini lalu menulisnya lagi.",
       "unavailable": "Layanan Testimoni sedang tidak tersedia. Silakan coba lagi sebentar lagi."
     },
     "fields": {
       "placeId": "Pilih tempat praktik dari daftar pencarian.",
+      "proof": "Pilih satu file bukti kunjungan, berupa gambar atau PDF.",
       "providerName": "Tulis nama tempat sesuai papan nama atau yang Anda kenal (maksimal {{max}} karakter).",
       "provinceCode": "Pilih provinsi.",
       "regencyCode": "Pilih kota atau kabupaten di provinsi ini.",
@@ -753,6 +758,17 @@
     "deleting": "Menghapus…",
     "deleteFailed": "Testimoni belum terhapus. Silakan coba lagi.",
     "deleted": "Testimoni sudah dihapus.",
+    "attachProof": {
+      "title": "Lampirkan bukti kunjungan",
+      "hint": "Baru menemukan struk atau kuitansinya? Lampirkan di sini agar Testimoni ini ikut dihitung dalam nilai. Teks Testimoni tidak diperiksa ulang dan tetap tayang. Bukti tidak pernah ditampilkan.",
+      "attemptsLeft_one": "Sisa {{count}} kesempatan.",
+      "attemptsLeft": "Sisa {{count}} kesempatan.",
+      "choose": "Pilih file bukti",
+      "change": "Ganti file",
+      "submit": "Kirim bukti",
+      "sending": "Mengirim…",
+      "failed": "Bukti belum terkirim. Silakan coba lagi."
+    },
     "legend": {
       "title": "Arti status",
       "published": "Tampil di halaman tempat dan di beranda.",
@@ -1220,7 +1236,8 @@
       "adminRejected": "Bukti kunjungan tidak diterima setelah diperiksa tim FindYourDent.",
       "expired": "Bukti kunjungan tidak diterima karena belum sempat diperiksa dalam 7 hari. File buktinya sudah kami hapus.",
       "other": "Bukti kunjungan tidak diterima, jadi Testimoni ini ditandai Belum terbukti."
-    }
+    },
+    "attemptsUsed": "Bukti kunjungan yang Anda kirim tidak kami periksa karena {{max}} kesempatan untuk Testimoni ini sudah terpakai, dan filenya sudah kami hapus. Perubahan Testimoni Anda tetap tersimpan."
   },
   "proof": {
     "verified": "Kunjungan terbukti",

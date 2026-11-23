@@ -9,6 +9,7 @@ import {
   type ModerationDecision,
   type ModerationRequest,
   type ModerationRuleCode,
+  type ProofOfVisitExtraction,
   validateModerationDecision,
   validateModerationRequest,
 } from "@findyourdent/contracts";
@@ -51,7 +52,10 @@ export interface ModerationOutcome {
 }
 
 /** Google's live name, in memory only. Without it Moderation runs on the typed name alone. */
-async function googleDisplayName(context: AppLoadContext, input: ModerationInput): Promise<string | undefined> {
+async function googleDisplayName(
+  context: AppLoadContext,
+  input: Pick<ModerationInput, "placeId" | "language">,
+): Promise<string | undefined> {
   const result = await context.adapters.places.getDisplayName({ placeId: input.placeId, language: input.language });
   if (result.ok) return result.displayName;
   context.logger.warn("moderation", { outcome: "google_name_unavailable", reason: result.reason });
@@ -61,6 +65,11 @@ async function googleDisplayName(context: AppLoadContext, input: ModerationInput
 async function base64Of(uploads: Bucket, path: string): Promise<string> {
   const [bytes] = await uploads.file(path).download();
   return bytes.toString("base64");
+}
+
+/** Stored as JPEG (images, EXIF stripped) or as sent (PDF): testimony-media.server.ts. */
+function proofImage(path: string, dataBase64: string): NonNullable<ModerationRequest["proofOfVisit"]> {
+  return { mimeType: path.endsWith(".pdf") ? "application/pdf" : "image/jpeg", dataBase64 };
 }
 
 /** The request the agent's Moderation endpoint takes; star ratings deliberately left out. */
@@ -87,15 +96,7 @@ async function buildRequest(context: AppLoadContext, input: ModerationInput): Pr
     ...(googleName ? { googleDisplayName: googleName } : {}),
     ...(input.procedureCode ? { procedureCode: input.procedureCode } : {}),
     ...(photos.length > 0 ? { photos } : {}),
-    ...(input.proofPath && proof
-      ? {
-          // Stored as JPEG (images, EXIF stripped) or as sent (PDF): testimony-media.server.ts.
-          proofOfVisit: {
-            mimeType: input.proofPath.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
-            dataBase64: proof,
-          },
-        }
-      : {}),
+    ...(input.proofPath && proof ? { proofOfVisit: proofImage(input.proofPath, proof) } : {}),
   };
   if (!validateModerationRequest(request)) {
     throw new Error(`invalid moderation request: ${formatValidationErrors(validateModerationRequest.errors)}`);
@@ -153,6 +154,69 @@ export async function moderateTestimony(context: AppLoadContext, input: Moderati
     };
   }
   return { decision, model: MODERATION_MODEL };
+}
+
+export interface ProofCheckInput {
+  placeId: string;
+  language: Language;
+  /** The Listed Provider's name, for the clinic name match. */
+  typedProviderName?: string;
+  /** The Testimony's visit month, for the date match. */
+  visitMonth: string;
+  /** Stored private Proof of Visit; the caller deletes it unless it is kept for the admin. */
+  proofPath: string;
+}
+
+/**
+ * Reads one Proof of Visit attached to an already published Testimony: Moderation in
+ * proof-only mode (spec 09), so no text or photo is screened and the decision is ignored.
+ * Never throws: when the call fails or its answer does not validate, the extraction is
+ * absent, which the proof decision sends to the team as `notChecked`.
+ */
+export async function readProofOnly(
+  context: AppLoadContext,
+  input: ProofCheckInput,
+): Promise<ProofOfVisitExtraction | undefined> {
+  let body: unknown;
+  try {
+    const { uploads } = context;
+    if (!uploads) throw new Error("uploads bucket not configured");
+    const [googleName, proof] = await Promise.all([
+      googleDisplayName(context, input),
+      base64Of(uploads, input.proofPath),
+    ]);
+    const request: ModerationRequest = {
+      subjectType: "proofOfVisit",
+      language: input.language,
+      visitMonth: input.visitMonth,
+      ...(input.typedProviderName ? { typedProviderName: input.typedProviderName } : {}),
+      ...(googleName ? { googleDisplayName: googleName } : {}),
+      proofOfVisit: proofImage(input.proofPath, proof),
+    };
+    if (!validateModerationRequest(request)) {
+      throw new Error(`invalid moderation request: ${formatValidationErrors(validateModerationRequest.errors)}`);
+    }
+    body = await context.adapters.agent.requestModeration(request, { requestId: context.requestId });
+  } catch (error) {
+    context.logger.error("moderation", {
+      outcome: "agent_failed",
+      mode: "proofOnly",
+      error: error instanceof Error ? error.name : "unknown",
+      ...(error instanceof Error && "status" in error && typeof error.status === "number"
+        ? { status: error.status }
+        : {}),
+    });
+    return undefined;
+  }
+  if (!validateModerationDecision(body)) {
+    context.logger.error("moderation", {
+      outcome: "invalid_decision",
+      mode: "proofOnly",
+      errors: formatValidationErrors(validateModerationDecision.errors),
+    });
+    return undefined;
+  }
+  return body.proofOfVisit;
 }
 
 /** The status a stored decision leads to; an authorFix is never stored. */

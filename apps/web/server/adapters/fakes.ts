@@ -88,14 +88,25 @@ const STUB_PROMOTIONAL = /\b(terbaik|termurah|diskon|promo)\b/i;
  * A stub Moderation decision, valid against moderation-decision.schema.json. A
  * Testimony with an Indonesian mobile number is an R1 authorFix (a hold after three
  * rounds); owner facts or a reply with promotional wording are held (a practice's own
- * phone is expected there). Anything else publishes, and a Proof of Visit always reads
+ * phone is expected there). Anything else publishes; proof-only mode screens nothing. A Proof of Visit always reads
  * as a receipt from the named clinic dated in the visit month, so it is accepted. Lets local runs and browser tests walk both flows without Gemini.
  */
 export function stubModeration(request: ModerationRequest): ModerationDecision {
   const en = request.language === "en";
+  if (request.subjectType === "proofOfVisit") {
+    // Proof-only mode (spec 09): nothing is screened, only the proof is read.
+    return {
+      decision: "publish",
+      ruleCodes: [],
+      flaggedSpans: [],
+      confidence: 1,
+      authorMessage: en ? "Thank you." : "Terima kasih.",
+      ...(request.proofOfVisit ? { proofOfVisit: stubProofExtraction(request) } : {}),
+    };
+  }
   if (request.subjectType !== "testimony") return stubOwnerModeration(request, en);
   const proofOfVisit = request.proofOfVisit ? stubProofExtraction(request) : undefined;
-  const phone = STUB_PHONE_NUMBER.exec(request.text);
+  const phone = STUB_PHONE_NUMBER.exec(request.text ?? "");
   if (!phone) {
     const authorMessage = en ? "Thank you! Your Testimony is live." : "Terima kasih! Testimoni Anda sudah tayang.";
     return {
@@ -134,7 +145,7 @@ function stubProofExtraction(request: ModerationRequest): ProofOfVisitExtraction
 }
 
 function stubOwnerModeration(request: ModerationRequest, en: boolean): ModerationDecision {
-  const hit = STUB_PROMOTIONAL.exec(request.text);
+  const hit = STUB_PROMOTIONAL.exec(request.text ?? "");
   if (!hit) {
     const authorMessage = en ? "Thank you, it is live." : "Terima kasih, sudah tayang.";
     return { decision: "publish", ruleCodes: [], flaggedSpans: [], confidence: 0.95, authorMessage };

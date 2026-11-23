@@ -1,8 +1,8 @@
 // Shared by the posting form (browser) and the Testimony web API (server), spec 03.
 // Plain types and limits only, so it stays light in the browser bundle.
 import type { FlaggedSpan, ModerationRuleCode } from "@findyourdent/contracts";
-import type { AspectRatings, RegionRef, YearMonth } from "@findyourdent/contracts/firestore";
-import type { AuthorProofFeedback } from "./proof-status";
+import type { AspectRatings, RegionRef, TestimonyDoc, YearMonth } from "@findyourdent/contracts/firestore";
+import type { AuthorProofFeedback, AuthorProofStatus } from "./proof-status";
 
 export const TESTIMONY_LIMITS = {
   /** Technical cap; there is no product limit on length. */
@@ -61,6 +61,46 @@ export const SUBMISSION_FIELDS = { json: "testimony", photos: "photos", proof: "
 /** After this many authorFix rounds the Testimony is held for the team instead (spec 03). */
 export const MAX_AUTHOR_FIX_ROUNDS = 3;
 
+/**
+ * Proof attempts a Testimony may have (spec 09, GLOSSARY: Proof attempt): the proof sent
+ * with it, one sent with an edit that is stored, and each one attached later. After that
+ * the author waits for the team's decision on a pending proof, or deletes and rewrites.
+ */
+export const MAX_PROOF_ATTEMPTS = 3;
+
+type ProofAttemptFields = Pick<TestimonyDoc, "proofAttempts" | "proofOfVisit">;
+
+/**
+ * Proof attempts the Testimony has used. A Testimony stored before the count existed has
+ * used one if it carries a proof decision, else none.
+ */
+export function proofAttemptsUsed(testimony: ProofAttemptFields): number {
+  return testimony.proofAttempts ?? (testimony.proofOfVisit ? 1 : 0);
+}
+
+/** Proof attempts left for the Testimony, never below zero. */
+export function proofAttemptsLeft(testimony: ProofAttemptFields): number {
+  return Math.max(0, MAX_PROOF_ATTEMPTS - proofAttemptsUsed(testimony));
+}
+
+/** Why a proof cannot be attached to a Testimony now, in the order the author is told. */
+export type ProofAttachRefusal = "not_published" | "already_proven" | "proof_pending" | "proof_attempts_used";
+
+/**
+ * Whether the author may attach a proof to the Testimony (spec 09): only a published one
+ * without an accepted proof, not while a proof waits for the team (the author waits for
+ * that decision), and only with proof attempts left. Null when attaching is allowed.
+ */
+export function proofAttachRefusal(
+  testimony: Pick<TestimonyDoc, "status" | "verifiedVisit" | "proofAttempts" | "proofOfVisit">,
+): ProofAttachRefusal | null {
+  if (testimony.status !== "published") return "not_published";
+  if (testimony.proofOfVisit?.result === "accepted" || testimony.verifiedVisit) return "already_proven";
+  if (testimony.proofOfVisit?.result === "pending") return "proof_pending";
+  if (proofAttemptsUsed(testimony) >= MAX_PROOF_ATTEMPTS) return "proof_attempts_used";
+  return null;
+}
+
 /** The rules the author can fix before submitting (spec 03); every other rule holds. */
 export const AUTHOR_FIXABLE_RULES = [
   "r1_personal_data",
@@ -85,7 +125,11 @@ export interface TestimonyStoredResponse {
   verifiedVisit: boolean;
   /** The author shared their own health details: a gentle note only, never a hold (R8). */
   ownHealthDataWarning?: boolean;
-  /** Only when a Proof of Visit was sent and decided: accepted, waiting for the team or not accepted, with a plain sentence. */
+  /**
+   * Only when a Proof of Visit was sent: accepted, waiting for the team or not accepted,
+   * with a plain sentence; `attemptsUsed` when an edit's proof was dropped unchecked
+   * because the Testimony had used all its proof attempts.
+   */
   proof?: AuthorProofFeedback;
 }
 
@@ -111,6 +155,21 @@ export interface TestimonyAuthorFixResponse {
 
 export type TestimonySubmitResponse = TestimonyStoredResponse | TestimonyAuthorFixResponse;
 
+/**
+ * POST /api/testimonies/:testimonyId/proof: a Proof of Visit attached to a published
+ * Testimony later (spec 09), multipart with one `proof` file. 200 body once decided;
+ * nothing public about the Testimony changes.
+ */
+export interface ProofAttachResponse {
+  testimonyId: string;
+  /** Whether the Testimony now shows Kunjungan terbukti. */
+  verifiedVisit: boolean;
+  /** Accepted, waiting for the team or not accepted, with a plain sentence. */
+  proof: AuthorProofStatus & { message: string };
+  /** Proof attempts left for this Testimony. */
+  proofAttemptsLeft: number;
+}
+
 /** 200 body of delete. */
 export interface TestimonyDeleteResponse {
   testimonyId: string;
@@ -130,6 +189,14 @@ export interface TestimonyApiError {
     | "forbidden"
     /** Edit refused: the Testimony is hidden (a report is under review) or removed. Delete still works. */
     | "not_editable"
+    /** Proof attach refused: only a published Testimony takes a later proof. */
+    | "not_published"
+    /** Proof attach refused: the Testimony already has an accepted proof. */
+    | "already_proven"
+    /** Proof attach refused: a proof already waits for the team's decision. */
+    | "proof_pending"
+    /** Proof attach refused: the Testimony has used all MAX_PROOF_ATTEMPTS proof attempts. */
+    | "proof_attempts_used"
     | "unavailable";
   /** Friendly message in the Patient's language. */
   message: string;

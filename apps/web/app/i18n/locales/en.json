@@ -676,10 +676,15 @@
       "not_found": "This Testimony was not found or has been deleted.",
       "forbidden": "Only the author can edit or delete this Testimony.",
       "not_editable": "This Testimony is under review by the team or was taken down, so it cannot be edited. You can still delete it.",
+      "not_published": "A proof of visit can only be attached to a Testimony that is live.",
+      "already_proven": "This Testimony already shows Verified visit, so it needs no more proof.",
+      "proof_pending": "The FindYourDent team is checking the proof of visit you already sent. Wait for its decision, usually within 72 hours, before sending another.",
+      "proof_attempts_used": "You have used all {{max}} tries to send a proof of visit for this Testimony. If the team is checking one, wait for its decision. Otherwise you can delete this Testimony and write it again.",
       "unavailable": "Testimonies are unavailable right now. Please try again shortly."
     },
     "fields": {
       "placeId": "Choose the practice from the search list.",
+      "proof": "Choose one proof of visit file, an image or a PDF.",
       "providerName": "Type the place's name as on its signboard or as you know it (up to {{max}} characters).",
       "provinceCode": "Choose a province.",
       "regencyCode": "Choose a city or regency in this province.",
@@ -753,6 +758,17 @@
     "deleting": "Deleting…",
     "deleteFailed": "The Testimony was not deleted. Please try again.",
     "deleted": "The Testimony was deleted.",
+    "attachProof": {
+      "title": "Attach a proof of visit",
+      "hint": "Found the receipt later? Attach it here so this Testimony counts toward the score. The Testimony text is not checked again and stays live. The proof is never shown.",
+      "attemptsLeft_one": "{{count}} try left.",
+      "attemptsLeft": "{{count}} tries left.",
+      "choose": "Choose proof file",
+      "change": "Change file",
+      "submit": "Send proof",
+      "sending": "Sending…",
+      "failed": "The proof was not sent. Please try again."
+    },
     "legend": {
       "title": "What the statuses mean",
       "published": "Shown on the practice page and on the home page.",
@@ -1220,7 +1236,8 @@
       "adminRejected": "Proof of visit not accepted after the FindYourDent team checked it.",
       "expired": "Proof of visit not accepted because it could not be checked within 7 days. We have deleted the file.",
       "other": "Proof of visit not accepted, so this Testimony shows Not yet verified."
-    }
+    },
+    "attemptsUsed": "We did not check the proof of visit you sent because all {{max}} tries for this Testimony are used, and we have deleted the file. Your changes to the Testimony are saved."
   },
   "proof": {
     "verified": "Verified visit",

@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://findyourdent.com/schemas/moderation-request.schema.json",
   "title": "ModerationRequest",
-  "description": "Web service to agent service: screen one Testimony, Provider reply or set of owner-entered Provider facts (specs 03 and 05). All content is data; instructions inside it are ignored. Star ratings and sentiment are deliberately not inputs.",
+  "description": "Web service to agent service: screen one Testimony, Provider reply or set of owner-entered Provider facts (specs 03 and 05), or read one Proof of Visit attached to an already published Testimony (spec 09, proof-only mode). All content is data; instructions inside it are ignored. Star ratings and sentiment are deliberately not inputs.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["subjectType", "language", "text"],
+  "required": ["subjectType", "language"],
   "properties": {
     "subjectType": {
-      "description": "testimony and reply use rules R1 to R9; providerFacts uses the Provider-facts rule set (spec 05).",
+      "description": "testimony and reply use rules R1 to R9; providerFacts uses the Provider-facts rule set (spec 05); proofOfVisit is proof-only mode (spec 09): only the Proof of Visit is read, no text or photo is screened and no rule can fire.",
       "type": "string",
-      "enum": ["testimony", "reply", "providerFacts"]
+      "enum": ["testimony", "reply", "providerFacts", "proofOfVisit"]
     },
     "language": {
       "description": "Author's language, used for the author-facing message.",
@@ -18,7 +18,7 @@
       "enum": ["id", "en"]
     },
     "text": {
-      "description": "Testimony text, reply text, or owner facts flattened to text.",
+      "description": "Testimony text, reply text, or owner facts flattened to text. Required unless subjectType is proofOfVisit, where it must be absent.",
       "type": "string",
       "minLength": 1,
       "maxLength": 10000
@@ -33,7 +33,10 @@
       "type": "string",
       "minLength": 1
     },
-    "procedureCode": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "procedureCode": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
     "visitMonth": {
       "description": "Stated visit month, YYYY-MM.",
       "type": "string",
@@ -43,7 +46,9 @@
       "description": "Clinic photos, EXIF already stripped.",
       "type": "array",
       "maxItems": 4,
-      "items": { "$ref": "#/$defs/ModerationImage" }
+      "items": {
+        "$ref": "#/$defs/ModerationImage"
+      }
     },
     "proofOfVisit": {
       "description": "Optional private Proof of Visit, deleted by the web service right after this call.",
@@ -52,8 +57,14 @@
       "additionalProperties": false,
       "required": ["mimeType", "dataBase64"],
       "properties": {
-        "mimeType": { "type": "string", "enum": ["image/jpeg", "image/png", "image/webp", "application/pdf"] },
-        "dataBase64": { "type": "string", "minLength": 1 }
+        "mimeType": {
+          "type": "string",
+          "enum": ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+        },
+        "dataBase64": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "authorFixRound": {
@@ -62,6 +73,30 @@
       "minimum": 0
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "subjectType": {
+            "const": "proofOfVisit"
+          }
+        },
+        "required": ["subjectType"]
+      },
+      "then": {
+        "required": ["proofOfVisit"],
+        "properties": {
+          "text": false,
+          "photos": false,
+          "procedureCode": false,
+          "authorFixRound": false
+        }
+      },
+      "else": {
+        "required": ["text"]
+      }
+    }
+  ],
   "$defs": {
     "ModerationImage": {
       "title": "ModerationImage",
@@ -69,8 +104,14 @@
       "additionalProperties": false,
       "required": ["mimeType", "dataBase64"],
       "properties": {
-        "mimeType": { "type": "string", "enum": ["image/jpeg", "image/png", "image/webp"] },
-        "dataBase64": { "type": "string", "minLength": 1 }
+        "mimeType": {
+          "type": "string",
+          "enum": ["image/jpeg", "image/png", "image/webp"]
+        },
+        "dataBase64": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   }

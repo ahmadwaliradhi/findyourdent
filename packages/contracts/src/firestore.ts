@@ -238,6 +238,12 @@ export interface TestimonyDoc extends TestimonyContent {
   verifiedVisit: boolean;
   /** The Proof of Visit decision (spec 09); absent while none was sent (`notProvided`). */
   proofOfVisit?: ProofOfVisitRecord;
+  /**
+   * Proof attempts used so far (spec 09, GLOSSARY): the proof sent with the Testimony, one sent
+   * with an edit that was stored, and each later attachment. At most three; absent on
+   * Testimonies stored before the count, which read it as 1 with a `proofOfVisit`, else 0.
+   */
+  proofAttempts?: number;
   consent: { termsVersion: string; acceptedAt: Timestamp };
   /** authorFix rounds so far; after three the Testimony is held. */
   authorFixRounds: number;

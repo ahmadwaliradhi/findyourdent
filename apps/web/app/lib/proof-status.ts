@@ -8,8 +8,12 @@ export type AuthorProofStatus =
   /** `reason` is absent on proofs rejected before spec 09; `adminReason` is the admin's note to the author. */
   | { result: "rejected"; reason?: ProofRejectedReason; adminReason?: string };
 
-/** A proof status with its plain sentence, as the submit answer carries it. */
-export type AuthorProofFeedback = AuthorProofStatus & { message: string };
+/**
+ * A proof status with its plain sentence, as the submit answer carries it. `attemptsUsed`:
+ * the proof sent with an edit was dropped unchecked (its file deleted) because the
+ * Testimony had used all its proof attempts.
+ */
+export type AuthorProofFeedback = (AuthorProofStatus | { result: "attemptsUsed" }) & { message: string };
 
 export function authorProofStatus(record: ProofOfVisitRecord): AuthorProofStatus {
   if (record.result !== "rejected") return { result: record.result };

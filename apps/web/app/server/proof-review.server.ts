@@ -8,8 +8,7 @@ import { type Firestore, Timestamp } from "firebase-admin/firestore";
 import type { AppLoadContext } from "react-router";
 import type { ProofAction } from "~/lib/admin-queue";
 import { type Acting, AdminRefusal, logAction } from "./admin-common.server.ts";
-import { recordTestimonyTransition } from "./impact.server.ts";
-import { publishedOf, writeProviderOnPublish } from "./testimonies.server.ts";
+import { writeProofDecision } from "./testimonies.server.ts";
 import { deleteTestimonyMedia, privateFileResponse } from "./testimony-media.server.ts";
 
 const TESTIMONY_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -50,19 +49,6 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
     filePath = proof.filePath;
     const now = Timestamp.now();
     const accepting = action === "acceptProof";
-
-    if (accepting && testimony.status === "published") {
-      const provider = await tx.get(firestore.collection(COLLECTIONS.providers).doc(testimony.placeId));
-      const published = await tx.get(publishedOf(firestore, testimony.placeId));
-      writeProviderOnPublish(tx, {
-        placeId: testimony.placeId,
-        provider,
-        published,
-        testimonyId: ref.id,
-        self: { ...testimony, verifiedVisit: true },
-        proposal: null,
-      });
-    }
     const decided: ProofOfVisitRecord = accepting
       ? { checkedAt: now, result: "accepted", ...(proof.extracted ? { extracted: proof.extracted } : {}) }
       : {
@@ -71,13 +57,7 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
           reason: "adminRejected",
           ...(acting.request.reason ? { adminReason: acting.request.reason } : {}),
         };
-    tx.update(ref, { proofOfVisit: decided, verifiedVisit: accepting, updatedAt: now });
-    recordTestimonyTransition(
-      firestore,
-      tx,
-      { status: testimony.status, verifiedVisit: testimony.verifiedVisit },
-      { status: testimony.status, verifiedVisit: accepting },
-    );
+    await writeProofDecision(tx, firestore, { ref, testimony, record: decided });
     logAction(tx, acting, {
       subjectType: "testimony",
       subjectId: ref.id,
