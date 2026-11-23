@@ -215,6 +215,16 @@
         "admin": "Admin"
       },
       "photo": "Photo {{number}}",
+      "detection": {
+        "title": "Detection",
+        "velocity": "many Testimonies for this Provider in a short time",
+        "author": "Author of this Testimony",
+        "linked_one": "{{count}} other Testimony for this Provider in the detection window",
+        "linked_other": "{{count}} other Testimonies for this Provider in the detection window",
+        "withinDay": "short window",
+        "onlyThisProvider": "wrote about this Provider only",
+        "otherProviders": "also wrote about other Providers"
+      },
       "correction": {
         "current": "Current",
         "suggested": "Suggested"

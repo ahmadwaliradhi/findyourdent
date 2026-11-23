@@ -47,6 +47,7 @@ import {
 import { normalizeName } from "~/lib/normalize-name";
 import { testimonyPhotoUrl } from "~/lib/testimony-photos";
 import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
+import { type DetectionHold, loadDetectionViews } from "./admin-detection.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
 import { proofAction, proofFileUrl } from "./proof-review.server.ts";
@@ -85,6 +86,7 @@ function moderationView(decision: ModerationDecisionDoc | undefined): QueueModer
   return {
     decision: decision.decision,
     ruleCodes: decision.ruleCodes,
+    ...(decision.detectionRuleCodes?.length ? { detectionRuleCodes: decision.detectionRuleCodes } : {}),
     flaggedSpans: decision.flaggedSpans,
     ...(decision.flaggedPhotos ? { flaggedPhotos: decision.flaggedPhotos } : {}),
     confidence: decision.confidence,
@@ -102,7 +104,13 @@ async function historyOf(firestore: Firestore, testimonyId: string): Promise<Que
   const entries: Array<QueueHistoryEntry & { ms: number }> = [
     ...decisions.docs.map((doc) => {
       const d = doc.data() as ModerationDecisionDoc;
-      const detail = [d.subjectType === "testimonyRevision" ? "edit" : "", ...d.ruleCodes].filter(Boolean).join(", ");
+      const detail = [
+        d.subjectType === "testimonyRevision" ? "edit" : "",
+        ...d.ruleCodes,
+        ...(d.detectionRuleCodes ?? []),
+      ]
+        .filter(Boolean)
+        .join(", ");
       return {
         ms: d.decidedAt.toMillis(),
         at: iso(d.decidedAt),
@@ -190,6 +198,16 @@ export async function loadAdminQueue(
   ]);
   const names = new Map(providerSnaps.filter((s) => s.exists).map((s) => [s.id, s.get("name") as string] as const));
   const decisions = new Map(decisionSnaps.map((s) => [s.id, s.data() as ModerationDecisionDoc | undefined] as const));
+  const latestDecision = (t: TestimonyDoc) =>
+    decisions.get(t.pendingRevision?.moderationDecisionId ?? t.moderationDecisionId ?? "");
+
+  // Admin only (spec 09 part 2): what lies behind a hold that detection made.
+  const detectionHolds: DetectionHold[] = held.docs.flatMap((doc) => {
+    const testimony = testimonies.get(doc.id) as TestimonyDoc;
+    const ruleCodes = latestDecision(testimony)?.detectionRuleCodes ?? [];
+    return ruleCodes.length ? [{ id: doc.id, testimony, ruleCodes }] : [];
+  });
+  const detections = loadDetectionViews(firestore, detectionHolds);
 
   const views = new Map<string, Promise<QueueTestimony>>();
   const view = (id: string): Promise<QueueTestimony> => {
@@ -209,9 +227,7 @@ export async function loadAdminQueue(
           ...(t.adminReason ? { adminReason: t.adminReason } : {}),
           ...contentView(id, t, t.displayName),
           ...(revision ? { revision: contentView(id, revision, revision.displayName ?? t.displayName) } : {}),
-          moderation: moderationView(
-            decisions.get(t.pendingRevision?.moderationDecisionId ?? t.moderationDecisionId ?? ""),
-          ),
+          moderation: moderationView(latestDecision(t)),
           history,
         };
       });
@@ -224,9 +240,14 @@ export async function loadAdminQueue(
   for (const doc of held.docs) {
     const t = testimonies.get(doc.id) as TestimonyDoc;
     items.push(
-      view(doc.id).then((testimony) =>
-        queueItem({ id: doc.id, kind: "held", subjectId: doc.id, testimony }, t.updatedAt, nowMs),
-      ),
+      Promise.all([view(doc.id), detections]).then(([testimony, detectionViews]) => {
+        const detection = detectionViews.get(doc.id);
+        return queueItem(
+          { id: doc.id, kind: "held", subjectId: doc.id, testimony, ...(detection ? { detection } : {}) },
+          t.updatedAt,
+          nowMs,
+        );
+      }),
     );
   }
   for (const doc of hidden.docs) {

@@ -23,6 +23,7 @@ import {
   type AspectRatings,
   authorFixCounterId,
   COLLECTIONS,
+  type ModerationDecisionDoc,
   type ProofOfVisitRecord,
   type ProviderDoc,
   type ProviderType,
@@ -70,6 +71,7 @@ import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import { type AggregateInput, computeAggregates } from "./aggregates.ts";
+import { DETECTION_LOOKBACK_MS, type DetectionRuleCode, detectionRuleCodes } from "./detection.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { decideProof } from "./proof-decision.ts";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
@@ -81,8 +83,10 @@ import {
 } from "./testimony-media.server.ts";
 import {
   checkAttachedProof,
+  heldByDetection,
   holdMessage,
   isSpotCheck,
+  keptDetection,
   type ModerationOutcome,
   moderateTestimony,
   moderationDecisionDoc,
@@ -273,18 +277,22 @@ async function authorFixResponse(
   return Response.json(body);
 }
 
-/** What the author reads once the decision is stored. */
+/**
+ * What the author reads once the decision is stored. A detection hold reads the standard
+ * held message: no rule, threshold or reason (spec 09 part 2).
+ */
 function storedFeedback(
   t: TFunction,
   status: "published" | "held",
   outcome: ModerationOutcome,
   options: { withAdmin?: boolean; authorFixRound: number },
 ): Pick<TestimonyStoredResponse, "message" | "ownHealthDataWarning"> {
+  const heldMessage = () =>
+    outcome.detectionRuleCodes?.length
+      ? t("testimonyApi.moderation.held")
+      : holdMessage(t, outcome.decision.ruleCodes, options);
   return {
-    message:
-      status === "published"
-        ? t("testimonyApi.moderation.published")
-        : holdMessage(t, outcome.decision.ruleCodes, options),
+    message: status === "published" ? t("testimonyApi.moderation.published") : heldMessage(),
     ...(outcome.decision.ownHealthDataWarning ? { ownHealthDataWarning: true } : {}),
   };
 }
@@ -437,6 +445,25 @@ async function activeTestimonyId(firestore: Firestore, uid: string, placeId: str
   return snapshot.docs.find((doc) => doc.get("status") !== "deleted")?.id ?? null;
 }
 
+/**
+ * Detection for a new Testimony (spec 09 part 2): the triggers it fires, from when the
+ * Provider's other Testimonies that are not deleted were submitted. Read in the
+ * transaction that creates it, so a concurrent create in the same window makes one of
+ * them retry and see the other; a burst sent at once cannot all slip through.
+ */
+async function detectOnCreate(tx: Transaction, firestore: Firestore, placeId: string): Promise<DetectionRuleCode[]> {
+  const nowMs = Date.now();
+  const recent = await tx.get(
+    testimonies(firestore)
+      .where("placeId", "==", placeId)
+      .where("createdAt", ">=", Timestamp.fromMillis(nowMs - DETECTION_LOOKBACK_MS)),
+  );
+  const otherSubmittedAtMs = recent.docs
+    .filter((doc) => doc.get("status") !== "deleted")
+    .map((doc) => (doc.get("createdAt") as Timestamp).toMillis());
+  return detectionRuleCodes({ otherSubmittedAtMs, nowMs });
+}
+
 async function refusalResponse(request: Request, error: unknown): Promise<Response> {
   if (!(error instanceof TestimonyRefusal)) throw error;
   return errorResponse(request, error.status, error.code, error.testimonyId ? { testimonyId: error.testimonyId } : {});
@@ -487,12 +514,11 @@ export async function createTestimony(context: AppLoadContext, request: Request)
     await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
     throw error;
   }
-  const { decision: moderation } = outcome;
   const proof = proofRecord(outcome.decision.proofOfVisit, media.proofPath, value.visitMonth);
   // Only a pending proof keeps its file, and only once the Testimony is stored (spec 09).
   let proofKept = false;
   try {
-    if (moderation.decision === "authorFix") {
+    if (outcome.decision.decision === "authorFix") {
       context.logger.info("testimony", { outcome: "author_fix", round: roundsUsed + 1 });
       return await authorFixResponse(gate, {
         placeId: value.placeId,
@@ -503,10 +529,22 @@ export async function createTestimony(context: AppLoadContext, request: Request)
       });
     }
     const verifiedVisit = proof?.result === "accepted";
-    const status = statusForDecision(moderation.decision);
+    const moderated = outcome;
+    const moderatedDecision = outcome.decision.decision;
+    // Set by the committed attempt of the transaction (which may retry): detection there
+    // may still turn Moderation's publish into hold.
+    let stored: { status: "published" | "held"; outcome: ModerationOutcome; detected: DetectionRuleCode[] } = {
+      status: statusForDecision(moderatedDecision),
+      outcome: moderated,
+      detected: [],
+    };
     try {
+      // Only a publish of a place not Listed yet needs Google's coordinates and types. Fetched
+      // before the transaction, never in it, even when detection then holds it.
       const essentials =
-        status === "published" && !listedAtStart ? await placeEssentialsFor(context, value.placeId) : NO_ESSENTIALS;
+        moderatedDecision === "publish" && !listedAtStart
+          ? await placeEssentialsFor(context, value.placeId)
+          : NO_ESSENTIALS;
       const decisionRef = firestore.collection(COLLECTIONS.moderationDecisions).doc();
 
       await firestore.runTransaction(async (tx) => {
@@ -515,6 +553,10 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         );
         const active = mine.docs.find((doc) => doc.get("status") !== "deleted");
         if (active) throw new TestimonyRefusal(409, "already_posted", active.id);
+        // Detection only ever turns Moderation's publish into hold. A failed read fails the request.
+        const detected = moderatedDecision === "publish" ? await detectOnCreate(tx, firestore, value.placeId) : [];
+        const attemptOutcome = detected.length > 0 ? heldByDetection(t, moderated, detected) : moderated;
+        const status = detected.length > 0 ? "held" : statusForDecision(moderatedDecision);
         const provider = await tx.get(providers(firestore).doc(value.placeId));
         const published = status === "published" ? await tx.get(publishedOf(firestore, value.placeId)) : null;
 
@@ -547,7 +589,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         tx.create(
           decisionRef,
           moderationDecisionDoc(
-            outcome,
+            attemptOutcome,
             { subjectType: "testimony", subjectId: ref.id, placeId: value.placeId },
             isSpotCheck(status === "published", context.config.spotCheckRate),
           ),
@@ -573,18 +615,23 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         };
         tx.create(ref, doc);
         recordTestimonyTransition(firestore, tx, null, { status, verifiedVisit });
+        stored = { status, outcome: attemptOutcome, detected };
       });
     } catch (error) {
       await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
       return await refusalResponse(request, error);
     }
     proofKept = proof?.result === "pending";
+    const { status } = stored;
 
+    if (stored.detected.length > 0) {
+      context.logger.info("testimony", { outcome: "held_by_detection", detection: stored.detected.join(",") });
+    }
     context.logger.info("testimony", { outcome: "created", status, ...(proof ? { proof: proof.result } : {}) });
     const body: TestimonyStoredResponse = {
       testimonyId: ref.id,
       status,
-      ...storedFeedback(t, status, outcome, { authorFixRound: roundsUsed }),
+      ...storedFeedback(t, status, stored.outcome, { authorFixRound: roundsUsed }),
       verifiedVisit,
       ...proofFeedback(t, proof),
     };
@@ -766,6 +813,14 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
         const provider = await tx.get(providers(firestore).doc(before.placeId));
         const publicChanges = becomesPublished || (editingPublished && status === "published");
         const published = publicChanges ? await tx.get(publishedOf(firestore, before.placeId)) : null;
+        // A detection hold still waiting for the admin keeps its triggers on the new decision
+        // (spec 09 part 2); once an admin has decided it, they are not carried.
+        const heldDecision =
+          before.status === "held" && before.moderationDecisionId
+            ? await tx.get(firestore.collection(COLLECTIONS.moderationDecisions).doc(before.moderationDecisionId))
+            : null;
+        const heldBy = (heldDecision?.data() as ModerationDecisionDoc | undefined)?.detectionRuleCodes ?? [];
+        const decisionOutcome = heldBy.length > 0 ? keptDetection(outcome, heldBy) : outcome;
 
         const now = Timestamp.now();
         const content = contentOf(value, [...keep, ...media.photoPaths]);
@@ -776,7 +831,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
         tx.create(
           decisionRef,
           moderationDecisionDoc(
-            outcome,
+            decisionOutcome,
             {
               subjectType: editingPublished ? "testimonyRevision" : "testimony",
               subjectId: testimonyId,

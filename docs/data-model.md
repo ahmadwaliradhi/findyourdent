@@ -51,7 +51,7 @@ A Patient's Testimony. Random document id (the author uid never appears in a URL
 | `reply` | The claimed Provider's one public reply (editable), with its own Moderation status and the `claimId` it was written under; shown only while that Claim is the place's current one. |
 | `consent`, `moderationDecisionId`, `adminReason`, `createdAt`, `updatedAt`, `publishedAt`, `deletedAt` | On `deleted`, text, photos (and their stored objects), any pending revision and reply are removed. |
 
-Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`, `providerType`, `verifiedVisit` combinations for feed filters; `placeId` + `status` + `publishedAt desc` (Provider page); `authorUid` + `placeId` (uniqueness).
+Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`, `providerType`, `verifiedVisit` combinations for feed filters; `placeId` + `status` + `publishedAt desc` (Provider page); `placeId` + `createdAt` (detection, spec 09 part 2); `authorUid` + `placeId` (uniqueness).
 
 ### `testimonyReports`
 
@@ -71,7 +71,7 @@ Queries: `placeId` + `status` (the current list of a place; `in` on `placeId` fo
 
 ### `moderationDecisions`
 
-One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). It never stores the moderated text or images. Type `ModerationDecisionDoc`.
+One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). When detection (spec 09 part 2) holds a new Testimony that Moderation published, `decision` is `hold`, `ruleCodes` stay as the agent returned them, and `detectionRuleCodes` names the triggers (`D1` velocity: 3 or more Testimonies for the `placeId` within 24 hours, or 5 or more within 7 days); admin only, never shown to the author, and such a decision is never in the spot-check sample. The window is read in the transaction that creates the Testimony, so a burst sent at once is counted. An author's edit of such a Testimony while it is still `held` writes a `hold` decision that keeps the `detectionRuleCodes`; once an admin has decided it (published, rejected or sent back), they are not carried. It never stores the moderated text or images. Type `ModerationDecisionDoc`.
 
 ### `proofFingerprints` (spec 09, not yet in contracts)
 

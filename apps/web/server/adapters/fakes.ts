@@ -200,6 +200,11 @@ export interface FakeAgentAdapter extends AgentAdapter {
    * the default is `stubModeration`.
    */
   respondToModerationWith(response: unknown): void;
+  /**
+   * Makes the next `count` requestModeration calls wait for one another and answer
+   * together, so concurrent submissions leave Moderation at the same moment.
+   */
+  answerModerationTogether(count: number): void;
   readonly proofCheckCalls: ProofOfVisitCheckRequest[];
   /**
    * Next value returned (or thrown, if an Error) by requestProofCheck, until changed;
@@ -229,6 +234,7 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
   const calls: GuidanceRequest[] = [];
   const reasonsCalls: ShortlistReasonsRequest[] = [];
   const moderationCalls: ModerationRequest[] = [];
+  let moderationBarrier: { count: number; waiting: Array<() => void> } | null = null;
   return {
     calls,
     reasonsCalls,
@@ -246,8 +252,20 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
     respondToModerationWith(response) {
       nextModeration = response;
     },
+    answerModerationTogether(count) {
+      moderationBarrier = { count, waiting: [] };
+    },
     async requestModeration(request) {
       moderationCalls.push(structuredClone(request));
+      const barrier = moderationBarrier;
+      if (barrier) {
+        await new Promise<void>((resolve) => {
+          barrier.waiting.push(resolve);
+          if (barrier.waiting.length < barrier.count) return;
+          moderationBarrier = null;
+          for (const release of barrier.waiting) release();
+        });
+      }
       if (nextModeration instanceof Error) throw nextModeration;
       return nextModeration === undefined ? stubModeration(request) : structuredClone(nextModeration);
     },

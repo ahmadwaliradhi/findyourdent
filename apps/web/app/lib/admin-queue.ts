@@ -3,6 +3,7 @@
 import type {
   AspectRatings,
   ClaimDoc,
+  DetectionRuleCode,
   ModerationDecisionDoc,
   ProcedureCode,
   ProofOfVisitExtracted,
@@ -112,8 +113,35 @@ export interface QueueHistoryEntry {
 
 export type QueueModeration = Pick<
   ModerationDecisionDoc,
-  "decision" | "ruleCodes" | "flaggedSpans" | "flaggedPhotos" | "confidence" | "model"
+  "decision" | "ruleCodes" | "detectionRuleCodes" | "flaggedSpans" | "flaggedPhotos" | "confidence" | "model"
 >;
+
+/** How much of a linked Testimony's text the queue shows. */
+export const LINKED_TEXT_PREVIEW_CHARS = 160;
+
+/** Another Testimony for the same Provider in the detection window (spec 09 part 2). */
+export interface QueueLinkedTestimony {
+  id: string;
+  displayName: string;
+  status: TestimonyStatus;
+  /** ISO. */
+  createdAt: string;
+  /** Submitted within the D1 24-hour window before the held one (else only the 7-day one). */
+  withinDay: boolean;
+  /** The text, cut to LINKED_TEXT_PREVIEW_CHARS. */
+  textPreview: string;
+  /** Its author has a Testimony, not deleted, for any other Provider. */
+  wroteAboutOtherProviders: boolean;
+}
+
+/** Admin only: why detection held a Testimony Moderation would have published. */
+export interface QueueDetection {
+  ruleCodes: DetectionRuleCode[];
+  /** The held Testimony's own author has written about any other Provider. */
+  authorWroteAboutOtherProviders: boolean;
+  /** The Provider's other Testimonies (not deleted) in the 7 days up to the held one, oldest first. */
+  linked: QueueLinkedTestimony[];
+}
 
 export interface QueueTestimonyContent {
   ratings: AspectRatings;
@@ -231,6 +259,8 @@ export interface QueueItem {
   dueAt: string;
   overdue: boolean;
   testimony?: QueueTestimony;
+  /** On a `held` item that detection held. */
+  detection?: QueueDetection;
   reports?: QueueReport[];
   correction?: QueueNameCorrection;
   proof?: QueueProof;
