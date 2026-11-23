@@ -99,13 +99,18 @@ export interface ProcedurePriceAggregate {
   maxRupiah: number;
 }
 
-/** Recomputed whenever a Testimony enters or leaves `published`. */
+/**
+ * Recomputed whenever a Testimony enters or leaves `published` or its proof result
+ * changes. Only Proven Testimonies (spec 09) move the averages and price stats.
+ */
 export interface ProviderAggregates {
+  /** All published Testimonies, shown as a count only. */
   testimonyCount: number;
+  /** Proven Testimonies: published with an accepted Proof of Visit. */
   verifiedVisitCount: number;
-  /** Aspect averages over published Testimonies; null when there are none. */
+  /** Aspect averages over Proven Testimonies; null below three of them. */
   averages: AspectRatings | null;
-  /** Keyed by procedure code; the median is shown only when count >= 2. */
+  /** From Proven Testimonies only, keyed by procedure code; the median is shown only when count >= 2. */
   procedurePrices: Record<ProcedureCode, ProcedurePriceAggregate>;
 }
 

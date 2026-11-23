@@ -14,6 +14,7 @@ REGION="${REGION:-asia-southeast2}"
 REPOSITORY="${REPOSITORY:-findyourdent}"
 WEB_SERVICE=fyd-web
 COORDINATES_JOB=coordinates-refresh
+RECOMPUTE_JOB=aggregates-recompute
 AGENT_SERVICE=fyd-agent
 WEB_SA="fyd-web@${PROJECT_ID}.iam.gserviceaccount.com"
 AGENT_SA="fyd-agent@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -290,6 +291,19 @@ gcloud scheduler jobs "$verb" http "$COORDINATES_JOB" --project "$PROJECT_ID" --
   --oauth-service-account-email="$SCHEDULER_SA" \
   --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
 echo "    ${COORDINATES_JOB}: 0 3 * * * (Asia/Jakarta)"
+
+# Aggregates recompute (spec 09, ADR-0011): a one-off Cloud Run Job on the web image
+# that recomputes every Listed Provider's aggregates so only Proven Testimonies count.
+# No schedule: run it once at the spec 09 release (infra/gcp/README.md). It only writes
+# Providers whose aggregates changed, so running it again is harmless.
+log "Aggregates recompute job"
+gcloud run jobs deploy "$RECOMPUTE_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --image "$IMAGE" --service-account "$WEB_SA" \
+  --command=node --args=recompute-aggregates.ts \
+  --tasks=1 --max-retries=1 --task-timeout=10m --cpu=1 --memory=512Mi \
+  --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
+  --quiet >/dev/null
+echo "    ${RECOMPUTE_JOB}: deployed, run once by hand"
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).
 log "Firebase Hosting"

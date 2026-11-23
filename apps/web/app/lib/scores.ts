@@ -16,6 +16,13 @@ export interface ScorePrior {
   weight: number;
 }
 
+/**
+ * Proven Testimonies a Provider needs before it has aspect averages (spec 09): below
+ * this its averages are null and pages show "Belum cukup testimoni terbukti". Shared
+ * by aggregates, ranking and display.
+ */
+export const MIN_PROVEN_FOR_SCORE = 3;
+
 /** Pull of the prior, in Testimonies. */
 export const DEFAULT_PRIOR_WEIGHT = 3;
 /** Prior mean when no Provider is rated yet: the middle of the 1 to 5 scale. */

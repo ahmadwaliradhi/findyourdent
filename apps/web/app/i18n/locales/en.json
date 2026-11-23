@@ -287,7 +287,6 @@
         "hygiene": "Hygiene",
         "materialsEquipment": "Materials and equipment"
       },
-      "verified": "Verified visit",
       "visitMonth": "Visited {{month}}",
       "procedure": "Procedure",
       "price": "Price paid",
@@ -399,7 +398,6 @@
     "verifiedVisitCount": "{{count}} verified visits",
     "testimoniesTitle": "Patient testimonies",
     "noTestimonies": "No published testimonies for this place yet.",
-    "verifiedVisit": "Verified visit",
     "visitMonth": "Visited {{month}}",
     "ratingsLabel": "Ratings for {{name}}",
     "metaDescriptionUnlisted": "Dental practice information on FindYourDent.",
@@ -519,7 +517,7 @@
     "photosReattach": "Photos and proof of visit are not kept in the draft. Choose them again before sending.",
     "filesTitle": "Photos and proof of visit",
     "proofLabel": "Proof of visit (optional, private)",
-    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown: it is checked and then deleted right away. If it matches, your Testimony gets the Verified visit mark.",
+    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Only Testimonies with an accepted Proof of Visit count toward the score. The proof is never shown, and the file is deleted after the check.",
     "transparencyLink": "How we verify Testimonies",
     "proofAdd": "Choose proof file",
     "proofRemove": "Remove proof of visit",
@@ -1202,6 +1200,14 @@
       "expired": "Proof of visit not accepted because it could not be checked within 7 days. We have deleted the file.",
       "other": "Proof of visit not accepted, so this Testimony shows Not yet verified."
     }
+  },
+  "proof": {
+    "verified": "Verified visit",
+    "unverified": "Not yet verified",
+    "unverifiedHint": "Without an accepted Proof of Visit, this Testimony does not count toward the score. How we verify Testimonies.",
+    "notEnough": "Not enough verified Testimonies",
+    "provenCount_one": "{{count}} verified Testimony",
+    "provenCount": "{{count}} verified Testimonies"
   },
   "transparency": {
     "metaTitle": "How we verify Testimonies",

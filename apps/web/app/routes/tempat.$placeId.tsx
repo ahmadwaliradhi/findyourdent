@@ -4,6 +4,7 @@ import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
+import { NotEnoughProven, ProofLabel } from "~/components/proof-label";
 import { ReportButton } from "~/components/report-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -283,6 +284,8 @@ function Aspects({ provider, language }: { provider: ProviderSummary; language: 
           </dl>
           <p className="text-xs font-medium text-muted-foreground">{t("provider.scoreScale")}</p>
         </>
+      ) : provider.testimonyCount > 0 ? (
+        <NotEnoughProven count={provider.verifiedVisitCount} />
       ) : (
         <p className="text-muted-foreground">{t("provider.noScores")}</p>
       )}
@@ -467,7 +470,7 @@ function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; la
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-semibold">{testimony.displayName}</span>
-          {testimony.verifiedVisit && <Badge variant="success">{t("provider.verifiedVisit")}</Badge>}
+          <ProofLabel verifiedVisit={testimony.verifiedVisit} />
         </div>
         <p className="text-sm text-muted-foreground">
           {t("provider.visitMonth", { month: formatVisitMonth(testimony.visitMonth, language) })}

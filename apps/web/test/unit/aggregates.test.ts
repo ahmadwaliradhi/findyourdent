@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { MIN_PROVEN_FOR_SCORE } from "../../app/lib/scores.ts";
 import { computeAggregates } from "../../app/server/aggregates.ts";
 
 const ratings = (service: number, hygiene: number, materialsEquipment: number) => ({
   service,
   hygiene,
   materialsEquipment,
+});
+
+const proven = (service: number, hygiene: number, materialsEquipment: number) => ({
+  ratings: ratings(service, hygiene, materialsEquipment),
+  verifiedVisit: true,
 });
 
 describe("computeAggregates", () => {
@@ -17,26 +23,50 @@ describe("computeAggregates", () => {
     });
   });
 
-  it("counts, averages each aspect to two decimals and counts Kunjungan terbukti", () => {
+  it("needs three Proven Testimonies before it has averages", () => {
+    expect(MIN_PROVEN_FOR_SCORE).toBe(3);
+    const two = computeAggregates([proven(5, 4, 3), proven(4, 4, 2)]);
+    expect(two.verifiedVisitCount).toBe(2);
+    expect(two.averages).toBeNull();
+
+    const three = computeAggregates([proven(5, 4, 3), proven(4, 4, 2), proven(4, 5, 2)]);
+    expect(three.verifiedVisitCount).toBe(3);
+    expect(three.averages).toEqual({ service: 4.33, hygiene: 4.33, materialsEquipment: 2.33 });
+  });
+
+  it("counts every published Testimony but averages only the Proven ones", () => {
     const aggregates = computeAggregates([
-      { ratings: ratings(5, 4, 3), verifiedVisit: true },
-      { ratings: ratings(4, 4, 2), verifiedVisit: false },
-      { ratings: ratings(4, 5, 2), verifiedVisit: true },
+      proven(5, 4, 3),
+      { ratings: ratings(1, 1, 1), verifiedVisit: false },
+      proven(4, 4, 2),
+      { ratings: ratings(1, 1, 1), verifiedVisit: false },
+      proven(4, 5, 2),
     ]);
-    expect(aggregates.testimonyCount).toBe(3);
-    expect(aggregates.verifiedVisitCount).toBe(2);
+    expect(aggregates.testimonyCount).toBe(5);
+    expect(aggregates.verifiedVisitCount).toBe(3);
     expect(aggregates.averages).toEqual({ service: 4.33, hygiene: 4.33, materialsEquipment: 2.33 });
   });
 
-  it("gives median, min and max price per procedure, only from Testimonies with both", () => {
+  it("has no averages from many unproven Testimonies", () => {
+    const aggregates = computeAggregates(
+      Array.from({ length: 10 }, () => ({ ratings: ratings(5, 5, 5), verifiedVisit: false })),
+    );
+    expect(aggregates.testimonyCount).toBe(10);
+    expect(aggregates.verifiedVisitCount).toBe(0);
+    expect(aggregates.averages).toBeNull();
+  });
+
+  it("gives median, min and max price per procedure, only from Proven Testimonies with both", () => {
     const aggregates = computeAggregates([
-      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "scaling", pricePaidRupiah: 300_000 },
-      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "scaling", pricePaidRupiah: 150_000 },
-      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "scaling", pricePaidRupiah: 200_000 },
-      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "tooth_filling", pricePaidRupiah: 100_000 },
-      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "tooth_filling", pricePaidRupiah: 250_001 },
-      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "tooth_extraction" },
-      { ratings: ratings(5, 5, 5), verifiedVisit: false, pricePaidRupiah: 999 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: true, procedureCode: "scaling", pricePaidRupiah: 300_000 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: true, procedureCode: "scaling", pricePaidRupiah: 150_000 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: true, procedureCode: "scaling", pricePaidRupiah: 200_000 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "scaling", pricePaidRupiah: 10_000 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: true, procedureCode: "tooth_filling", pricePaidRupiah: 100_000 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: true, procedureCode: "tooth_filling", pricePaidRupiah: 250_001 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: false, procedureCode: "dental_crown", pricePaidRupiah: 1_000_000 },
+      { ratings: ratings(5, 5, 5), verifiedVisit: true, procedureCode: "tooth_extraction" },
+      { ratings: ratings(5, 5, 5), verifiedVisit: true, pricePaidRupiah: 999 },
     ]);
     expect(aggregates.procedurePrices).toEqual({
       scaling: { count: 3, medianRupiah: 200_000, minRupiah: 150_000, maxRupiah: 300_000 },
@@ -47,7 +77,7 @@ describe("computeAggregates", () => {
 
   it("counts a free visit (price 0) as a price", () => {
     const aggregates = computeAggregates([
-      { ratings: ratings(3, 3, 3), verifiedVisit: false, procedureCode: "consultation", pricePaidRupiah: 0 },
+      { ratings: ratings(3, 3, 3), verifiedVisit: true, procedureCode: "consultation", pricePaidRupiah: 0 },
     ]);
     expect(aggregates.procedurePrices).toEqual({
       consultation: { count: 1, medianRupiah: 0, minRupiah: 0, maxRupiah: 0 },
