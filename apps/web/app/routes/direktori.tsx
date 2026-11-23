@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { FilterSection } from "~/components/filter-section";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
+import { NotEnoughProven } from "~/components/proof-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { fieldClassName } from "~/components/ui/field";
@@ -325,6 +326,8 @@ function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: stri
               }).join("")}
             </span>
           </p>
+        ) : row.testimonyCount > 0 ? (
+          <NotEnoughProven count={row.verifiedVisitCount} className="text-sm" />
         ) : (
           <p className="text-sm text-muted-foreground">{t("directory.noRatings")}</p>
         )}

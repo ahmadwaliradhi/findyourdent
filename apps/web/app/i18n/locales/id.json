@@ -307,7 +307,6 @@
         "hygiene": "Kebersihan",
         "materialsEquipment": "Bahan dan peralatan"
       },
-      "verified": "Kunjungan terbukti",
       "visitMonth": "Kunjungan {{month}}",
       "procedure": "Tindakan",
       "price": "Biaya dibayar",
@@ -399,7 +398,7 @@
   },
   "provider": {
     "title": "{{name}}, {{area}}",
-    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni.",
+    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni terbukti.",
     "metaDescriptionNoScores": "{{name}} di {{area}}. Baca testimoni pasien dan ceritakan pengalamanmu di FindYourDent.",
     "type": {
       "klinik": "Klinik Gigi",
@@ -419,7 +418,6 @@
     "verifiedVisitCount": "{{count}} kunjungan terbukti",
     "testimoniesTitle": "Testimoni pasien",
     "noTestimonies": "Belum ada testimoni yang terbit untuk tempat ini.",
-    "verifiedVisit": "Kunjungan terbukti",
     "visitMonth": "Berkunjung {{month}}",
     "ratingsLabel": "Penilaian {{name}}",
     "metaDescriptionUnlisted": "Info tempat praktik dokter gigi di FindYourDent.",
@@ -465,7 +463,7 @@
       "emergencyNoDistance": "Rumah sakit dengan IGD di area yang Anda tulis",
       "hospitalFit": "Rumah sakit, sesuai untuk {{procedure}}",
       "listedService": "Mencantumkan layanan {{procedure}}",
-      "testimonies": "Nilai Testimoni {{score}} dari {{count}} pasien",
+      "testimonies": "Nilai Testimoni {{score}} dari {{count}} Testimoni terbukti",
       "distance": "Sekitar {{distance}} dari lokasi Anda",
       "procedure": "Dapat menangani {{procedure}}",
       "generic": "Dokter gigi di dekat Anda"
@@ -539,7 +537,7 @@
     "photosReattach": "Foto dan bukti kunjungan tidak ikut tersimpan di draf. Pilih lagi sebelum mengirim.",
     "filesTitle": "Foto dan bukti kunjungan",
     "proofLabel": "Bukti kunjungan (opsional, pribadi)",
-    "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Tidak pernah ditampilkan: hanya diperiksa lalu langsung dihapus. Jika cocok, Testimoni Anda diberi tanda Kunjungan terbukti.",
+    "proofHint": "Struk, kuitansi, atau tangkapan layar janji temu, berupa gambar atau PDF. Hanya Testimoni dengan Bukti Kunjungan yang diterima yang dihitung dalam nilai. Bukti tidak pernah ditampilkan, dan filenya dihapus setelah diperiksa.",
     "transparencyLink": "Cara kami memverifikasi testimoni",
     "proofAdd": "Pilih file bukti",
     "proofRemove": "Hapus bukti kunjungan",
@@ -1223,6 +1221,14 @@
       "expired": "Bukti kunjungan tidak diterima karena belum sempat diperiksa dalam 7 hari. File buktinya sudah kami hapus.",
       "other": "Bukti kunjungan tidak diterima, jadi Testimoni ini ditandai Belum terbukti."
     }
+  },
+  "proof": {
+    "verified": "Kunjungan terbukti",
+    "unverified": "Belum terbukti",
+    "unverifiedHint": "Tanpa Bukti Kunjungan yang diterima, Testimoni ini tidak dihitung dalam nilai. Cara kami memverifikasi testimoni.",
+    "notEnough": "Belum cukup testimoni terbukti",
+    "provenCount_one": "{{count}} testimoni terbukti",
+    "provenCount": "{{count}} testimoni terbukti"
   },
   "transparency": {
     "metaTitle": "Cara kami memverifikasi testimoni",

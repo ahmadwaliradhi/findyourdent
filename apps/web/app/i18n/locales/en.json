@@ -307,7 +307,6 @@
         "hygiene": "Hygiene",
         "materialsEquipment": "Materials and equipment"
       },
-      "verified": "Verified visit",
       "visitMonth": "Visited {{month}}",
       "procedure": "Procedure",
       "price": "Price paid",
@@ -399,7 +398,7 @@
   },
   "provider": {
     "title": "{{name}}, {{area}}",
-    "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} testimonies.",
+    "metaDescription": "Patient testimonies about {{name}} in {{area}}. Service {{service}}, hygiene {{hygiene}}, materials and equipment {{materials}} from {{count}} verified testimonies.",
     "metaDescriptionNoScores": "{{name}} in {{area}}. Read patient testimonies and share your own on FindYourDent.",
     "type": {
       "klinik": "Dental clinic",
@@ -419,7 +418,6 @@
     "verifiedVisitCount": "{{count}} verified visits",
     "testimoniesTitle": "Patient testimonies",
     "noTestimonies": "No published testimonies for this place yet.",
-    "verifiedVisit": "Verified visit",
     "visitMonth": "Visited {{month}}",
     "ratingsLabel": "Ratings for {{name}}",
     "metaDescriptionUnlisted": "Dental practice information on FindYourDent.",
@@ -465,7 +463,7 @@
       "emergencyNoDistance": "Hospital with an emergency department in the area you typed",
       "hospitalFit": "Hospital, suited to {{procedure}}",
       "listedService": "Lists {{procedure}} among its services",
-      "testimonies": "Testimony score {{score}} from {{count}} patients",
+      "testimonies": "Testimony score {{score}} from {{count}} verified Testimonies",
       "distance": "About {{distance}} from you",
       "procedure": "Can handle {{procedure}}",
       "generic": "Dentist near you"
@@ -539,7 +537,7 @@
     "photosReattach": "Photos and proof of visit are not kept in the draft. Choose them again before sending.",
     "filesTitle": "Photos and proof of visit",
     "proofLabel": "Proof of visit (optional, private)",
-    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Never shown: it is checked and then deleted right away. If it matches, your Testimony gets the Verified visit mark.",
+    "proofHint": "A receipt, invoice or appointment screenshot, as an image or PDF. Only Testimonies with an accepted Proof of Visit count toward the score. The proof is never shown, and the file is deleted after the check.",
     "transparencyLink": "How we verify Testimonies",
     "proofAdd": "Choose proof file",
     "proofRemove": "Remove proof of visit",
@@ -1223,6 +1221,14 @@
       "expired": "Proof of visit not accepted because it could not be checked within 7 days. We have deleted the file.",
       "other": "Proof of visit not accepted, so this Testimony shows Not yet verified."
     }
+  },
+  "proof": {
+    "verified": "Verified visit",
+    "unverified": "Not yet verified",
+    "unverifiedHint": "Without an accepted Proof of Visit, this Testimony does not count toward the score. How we verify Testimonies.",
+    "notEnough": "Not enough verified Testimonies",
+    "provenCount_one": "{{count}} verified Testimony",
+    "provenCount": "{{count}} verified Testimonies"
   },
   "transparency": {
     "metaTitle": "How we verify Testimonies",
