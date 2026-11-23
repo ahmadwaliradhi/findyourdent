@@ -18,8 +18,8 @@ export interface ScorePrior {
 
 /**
  * Proven Testimonies a Provider needs before it has aspect averages (spec 09): below
- * this its averages are null and pages show "Belum cukup testimoni terbukti". Shared
- * by aggregates, ranking and display.
+ * this computeAggregates leaves them null, and every page and ranking that reads
+ * `averages` shows "Belum cukup testimoni terbukti" or treats the Provider as unrated.
  */
 export const MIN_PROVEN_FOR_SCORE = 3;
 

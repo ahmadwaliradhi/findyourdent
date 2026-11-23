@@ -65,7 +65,8 @@ export function meta({ loaderData, matches }: Route.MetaArgs) {
         service: formatScore(provider.averages.service, language),
         hygiene: formatScore(provider.averages.hygiene, language),
         materials: formatScore(provider.averages.materialsEquipment, language),
-        count: provider.testimonyCount,
+        // The averages come from Proven Testimonies only (spec 09).
+        count: provider.verifiedVisitCount,
       })
     : t("provider.metaDescriptionNoScores", { name: provider.name, area: provider.area });
   return [

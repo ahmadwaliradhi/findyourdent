@@ -378,7 +378,7 @@
   },
   "provider": {
     "title": "{{name}}, {{area}}",
-    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni.",
+    "metaDescription": "Testimoni pasien tentang {{name}} di {{area}}. Pelayanan {{service}}, kebersihan {{hygiene}}, bahan dan alat {{materials}} dari {{count}} testimoni terbukti.",
     "metaDescriptionNoScores": "{{name}} di {{area}}. Baca testimoni pasien dan ceritakan pengalamanmu di FindYourDent.",
     "type": {
       "klinik": "Klinik Gigi",
@@ -443,7 +443,7 @@
       "emergencyNoDistance": "Rumah sakit dengan IGD di area yang Anda tulis",
       "hospitalFit": "Rumah sakit, sesuai untuk {{procedure}}",
       "listedService": "Mencantumkan layanan {{procedure}}",
-      "testimonies": "Nilai Testimoni {{score}} dari {{count}} pasien",
+      "testimonies": "Nilai Testimoni {{score}} dari {{count}} Testimoni terbukti",
       "distance": "Sekitar {{distance}} dari lokasi Anda",
       "procedure": "Dapat menangani {{procedure}}",
       "generic": "Dokter gigi di dekat Anda"
