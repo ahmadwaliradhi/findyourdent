@@ -186,7 +186,8 @@
         "hidden": "Hidden Testimony",
         "claim": "Page claim",
         "ownerFacts": "Owner details held",
-        "reply": "Reply held"
+        "reply": "Reply held",
+        "proofReview": "Proof of visit"
       },
       "status": {
         "submitted": "Being checked",
@@ -234,7 +235,9 @@
         "publishOwnerFacts": "Publish details",
         "rejectOwnerFacts": "Reject details",
         "publishReply": "Publish reply",
-        "rejectReply": "Reject reply"
+        "rejectReply": "Reject reply",
+        "acceptProof": "Accept proof",
+        "rejectProof": "Reject proof"
       },
       "reasonFor": "Reason for \"{{action}}\" (logged; the author sees it except for hide)",
       "logged": "Every action is logged with the admin, time and reason.",
@@ -251,6 +254,23 @@
         "permit": "Document",
         "openPermit": "Open the SIP or practice permit",
         "callHint": "Phone the number on Google (not the claimant's) to confirm the owner. The document is deleted as soon as the claim is decided."
+      },
+      "proof": {
+        "file": "Proof file",
+        "openFile": "Open proof file",
+        "reasons": "Why it is checked",
+        "extracted": "Read off the proof",
+        "clinicName": "Clinic name",
+        "proofDate": "Date",
+        "total": "Total",
+        "nothingRead": "Nothing read",
+        "reason": {
+          "nameMismatch": "Clinic name does not match",
+          "dateMismatch": "Date far from the visit month",
+          "possibleReuse": "Possibly a reused proof",
+          "notChecked": "The automatic check failed, nothing was read"
+        },
+        "expiryHint": "A proof not decided within 7 days is rejected automatically and its file deleted. The rejection reason is shown to the author."
       }
     }
   },
@@ -1194,6 +1214,7 @@
   "proofStatus": {
     "accepted": "Your proof of visit matched, so this Testimony shows Verified visit. We have deleted the file.",
     "pending": "The FindYourDent team is checking your proof of visit, usually within 72 hours. Until then this Testimony shows Not yet verified.",
+    "adminNote": "Note from the team:",
     "rejected": {
       "unreadable": "Proof of visit not accepted: we could not read the file. Try a sharper photo or another document.",
       "notAProof": "Proof of visit not accepted: this file is not a receipt, invoice or appointment card from a dental clinic.",

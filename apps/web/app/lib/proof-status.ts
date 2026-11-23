@@ -5,15 +5,19 @@ import type { ProofOfVisitRecord, ProofRejectedReason } from "@findyourdent/cont
 /** The author's view of a proof decision: never the file, the reasons for an admin or the facts read. */
 export type AuthorProofStatus =
   | { result: "accepted" | "pending" }
-  /** `reason` is absent on proofs rejected before spec 09. */
-  | { result: "rejected"; reason?: ProofRejectedReason };
+  /** `reason` is absent on proofs rejected before spec 09; `adminReason` is the admin's note to the author. */
+  | { result: "rejected"; reason?: ProofRejectedReason; adminReason?: string };
 
 /** A proof status with its plain sentence, as the submit answer carries it. */
 export type AuthorProofFeedback = AuthorProofStatus & { message: string };
 
 export function authorProofStatus(record: ProofOfVisitRecord): AuthorProofStatus {
   if (record.result !== "rejected") return { result: record.result };
-  return { result: "rejected", ...(record.reason ? { reason: record.reason } : {}) };
+  return {
+    result: "rejected",
+    ...(record.reason ? { reason: record.reason } : {}),
+    ...(record.adminReason ? { adminReason: record.adminReason } : {}),
+  };
 }
 
 export type ProofStatusKey =

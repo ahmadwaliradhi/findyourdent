@@ -14,6 +14,7 @@ REGION="${REGION:-asia-southeast2}"
 REPOSITORY="${REPOSITORY:-findyourdent}"
 WEB_SERVICE=fyd-web
 COORDINATES_JOB=coordinates-refresh
+PROOF_EXPIRY_JOB=proof-expiry
 AGENT_SERVICE=fyd-agent
 WEB_SA="fyd-web@${PROJECT_ID}.iam.gserviceaccount.com"
 AGENT_SA="fyd-agent@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -290,6 +291,30 @@ gcloud scheduler jobs "$verb" http "$COORDINATES_JOB" --project "$PROJECT_ID" --
   --oauth-service-account-email="$SCHEDULER_SA" \
   --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
 echo "    ${COORDINATES_JOB}: 0 3 * * * (Asia/Jakarta)"
+
+# Proof expiry (spec 09, ADR-0011): a Proof of Visit nobody decided within 7 days is
+# rejected as expired and its file deleted (apps/web/server/proof-expiry.ts), never
+# accepted. Daily at 03:30, after the coordinates refresh; the bucket lifecycle rule
+# on proof-of-visit/ (setup.sh) is the backstop.
+log "Proof expiry job"
+gcloud run jobs deploy "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --image "$IMAGE" --service-account "$WEB_SA" \
+  --command=node --args=expire-proofs.ts \
+  --tasks=1 --max-retries=1 --task-timeout=10m --cpu=1 --memory=512Mi \
+  --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
+  --quiet >/dev/null
+gcloud run jobs add-iam-policy-binding "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
+verb=create
+if gcloud scheduler jobs describe "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+  verb=update
+fi
+gcloud scheduler jobs "$verb" http "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" \
+  --schedule="30 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
+  --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${PROOF_EXPIRY_JOB}:run" \
+  --oauth-service-account-email="$SCHEDULER_SA" \
+  --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+echo "    ${PROOF_EXPIRY_JOB}: 30 3 * * * (Asia/Jakarta)"
 
 # Firebase Hosting forwards every path to fyd-web (firebase.json, ADR-0008).
 log "Firebase Hosting"
