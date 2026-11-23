@@ -72,9 +72,9 @@ Queries: `placeId` + `status` (the current list of a place; `in` on `placeId` fo
 
 One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). It never stores the moderated text or images. Type `ModerationDecisionDoc`.
 
-### `proofFingerprints` (spec 09, not yet in contracts)
+### `proofFingerprints` (spec 09)
 
-One per Testimony with an `accepted` or `pending` Proof of Visit: `testimonyId`, `placeId`, `perceptualHash` (64-bit, images) or `fileSha256` (PDFs), and `fieldsKey` (normalised clinic name, proof date and total). No image and no patient name. Deleted when the Testimony is deleted or its proof is rejected. Queried by `placeId` for the reuse check.
+One per Testimony with an `accepted` or `pending` Proof of Visit; the document id is the Testimony id. Type `ProofFingerprintDoc`: `testimonyId`, `placeId`, `perceptualHash` (64-bit pHash as 16 hex chars, images) or `fileSha256` (PDFs), `fieldsKey` (normalised clinic name, proof date and total; absent unless all three were read) and `createdAt`. No image and no patient name. Deleted when the Testimony is deleted or its proof is rejected. Queried by `placeId` for the reuse check: the same `fieldsKey`, the same `fileSha256`, or perceptual hashes at most 10 bits apart (`REUSE_MAX_HAMMING_BITS`) is `possibleReuse`.
 
 ### `submissionSignals` (spec 09 part 2, not yet in contracts)
 

@@ -38,6 +38,7 @@ import {
   type QueueHistoryEntry,
   type QueueItem,
   type QueueModeration,
+  type QueueProofMatch,
   type QueueTestimony,
   type QueueTestimonyContent,
   REASON_REQUIRED,
@@ -45,10 +46,12 @@ import {
   type TestimonyAction,
 } from "~/lib/admin-queue";
 import { normalizeName } from "~/lib/normalize-name";
+import { testimonyPath } from "~/lib/paths";
 import { testimonyPhotoUrl } from "~/lib/testimony-photos";
 import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
+import { storedReuseMatches } from "./proof-fingerprints.server.ts";
 import { proofAction, proofFileUrl } from "./proof-review.server.ts";
 import {
   NO_ESSENTIALS,
@@ -134,6 +137,32 @@ async function historyOf(firestore: Firestore, testimonyId: string): Promise<Que
     }),
   ];
   return entries.sort((a, b) => a.ms - b.ms).map(({ ms: _ms, ...entry }) => entry);
+}
+
+/**
+ * The Testimonies whose Proof Fingerprint matches this one's, for a `possibleReuse` proof.
+ * Each links to its card on the public Provider page only while it is published.
+ */
+async function reuseMatchesView(firestore: Firestore, testimonyId: string): Promise<QueueProofMatch[]> {
+  const matches = await storedReuseMatches(firestore, testimonyId);
+  if (matches.length === 0) return [];
+  const snapshots = await firestore.getAll(...matches.map((m) => col(firestore, "testimonies").doc(m.testimonyId)));
+  return matches.flatMap((match, i) => {
+    const t = snapshots[i]?.data() as TestimonyDoc | undefined;
+    const proofResult = t?.proofOfVisit?.result;
+    // A fingerprint outliving its proof would be a bug elsewhere; it is not shown as a match.
+    if (!t || t.status === "deleted" || (proofResult !== "accepted" && proofResult !== "pending")) return [];
+    return [
+      {
+        testimonyId: match.testimonyId,
+        displayName: t.displayName,
+        status: t.status,
+        proofResult,
+        matchedOn: match.matchedOn,
+        ...(t.status === "published" ? { href: testimonyPath(t.placeId, match.testimonyId) } : {}),
+      },
+    ];
+  });
 }
 
 /** Everything waiting for an admin: hidden Testimonies first (harm is paused, a decision is owed), then oldest first. */
@@ -303,8 +332,9 @@ export async function loadAdminQueue(
     const t = testimonies.get(doc.id) as TestimonyDoc;
     const proof = t.proofOfVisit;
     if (proof?.result !== "pending" || t.status === "deleted") continue;
+    const matches = proof.reasons.includes("possibleReuse") ? reuseMatchesView(firestore, doc.id) : undefined;
     items.push(
-      view(doc.id).then((testimony) =>
+      Promise.all([view(doc.id), matches]).then(([testimony, reuseMatches]) =>
         queueItem(
           {
             id: doc.id,
@@ -315,6 +345,7 @@ export async function loadAdminQueue(
               fileUrl: proofFileUrl(doc.id),
               reasons: proof.reasons,
               ...(proof.extracted ? { extracted: proof.extracted } : {}),
+              ...(reuseMatches ? { reuseMatches } : {}),
             },
           },
           proof.checkedAt,

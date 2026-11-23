@@ -60,6 +60,9 @@ export async function expirePendingProofs({
           reason: "expired",
         };
         tx.update(doc.ref, { proofOfVisit: expired, updatedAt: at });
+        // A rejected proof keeps no Proof Fingerprint. Deleted here directly for the same
+        // reason as the file below: proof-fingerprints.server.ts does not ship in the job image.
+        tx.delete(firestore.collection(COLLECTIONS.proofFingerprints).doc(doc.id));
         return proof.filePath;
       });
       if (filePath === null) continue;
