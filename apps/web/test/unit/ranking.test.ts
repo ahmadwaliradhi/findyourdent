@@ -15,7 +15,12 @@ function candidate(placeId: string, overrides: Partial<RankingCandidate> = {}): 
   };
 }
 
-function rated(count: number, average: number, verifiedVisitCount = 0): RankingCandidate["testimonies"] {
+/** Aspect averages over `verifiedVisitCount` Proven Testimonies; `count` (all published) defaults to the same. */
+function rated(
+  verifiedVisitCount: number,
+  average: number,
+  count = verifiedVisitCount,
+): RankingCandidate["testimonies"] {
   return {
     count,
     verifiedVisitCount,
@@ -53,7 +58,7 @@ describe("Shortlist ranking", () => {
   it("keeps procedure fit first: a nearer, better-rated Klinik does not outrank a Hospital for a surgical referral", () => {
     const ranked = rankProviders(
       [
-        candidate("klinik-near-loved", { testimonies: rated(12, 4.9, 5), distanceMeters: 200 }),
+        candidate("klinik-near-loved", { testimonies: rated(5, 4.9, 12), distanceMeters: 200 }),
         candidate("hospital-far-average", {
           providerType: "hospital",
           testimonies: rated(3, 2.5),
@@ -79,29 +84,73 @@ describe("Shortlist ranking", () => {
     expect(ranked[0]?.procedureFit).toEqual(["wisdom_tooth_surgery"]);
   });
 
-  it("trusts many good Testimonies over a single perfect one", () => {
+  it("trusts many good Testimonies over a few perfect ones", () => {
+    // Three Proven is the fewest that has averages. Prior (3*5 + 12*4.8 + 6*2.5) / 21 = 4.171:
+    // few-perfect shrinks to 4.586, many-good to 4.674.
     const ranked = rankProviders(
       [
-        candidate("one-perfect", { testimonies: rated(1, 5) }),
-        candidate("many-good", { testimonies: rated(10, 4.6) }),
-        candidate("some-poor", { testimonies: rated(4, 3) }),
+        candidate("few-perfect", { testimonies: rated(3, 5) }),
+        candidate("many-good", { testimonies: rated(12, 4.8) }),
+        candidate("some-poor", { testimonies: rated(6, 2.5) }),
       ],
       ROOT_CANAL,
     );
 
-    expect(order(ranked)).toEqual(["many-good", "one-perfect", "some-poor"]);
+    expect(order(ranked)).toEqual(["many-good", "few-perfect", "some-poor"]);
   });
 
-  it("gives a small bonus for Kunjungan terbukti", () => {
+  it("shrinks toward the overall mean by Proven Testimonies, not by all published ones", () => {
+    // Same proven-only average; few-proven has many more published (unproven) Testimonies.
     const ranked = rankProviders(
       [
-        candidate("unproven", { testimonies: rated(5, 4.5, 0) }),
-        candidate("proven", { testimonies: rated(5, 4.5, 4) }),
+        candidate("few-proven", { testimonies: rated(3, 4.8, 40) }),
+        candidate("many-proven", { testimonies: rated(12, 4.8, 12) }),
+        candidate("poorly-rated", { testimonies: rated(6, 3) }),
       ],
       ROOT_CANAL,
     );
 
-    expect(order(ranked)).toEqual(["proven", "unproven"]);
+    expect(order(ranked)).toEqual(["many-proven", "few-proven", "poorly-rated"]);
+  });
+
+  it("never lets the count of published Testimonies change a score or the order", () => {
+    const providers = [
+      candidate("p1", { testimonies: rated(4, 4.4), distanceMeters: 1500 }),
+      candidate("p2", { testimonies: rated(3, 4.6), distanceMeters: 2500 }),
+      candidate("p3", { testimonies: { count: 2, verifiedVisitCount: 0, averages: null }, distanceMeters: 900 }),
+    ];
+    const before = rankProviders(providers, ROOT_CANAL);
+
+    // Buzzers add 50 unproven Testimonies to every Provider in turn.
+    for (const placeId of ["p1", "p2", "p3"]) {
+      const buzzed = providers.map((p) =>
+        p.placeId === placeId ? { ...p, testimonies: { ...p.testimonies, count: p.testimonies.count + 50 } } : p,
+      );
+      const after = rankProviders(buzzed, ROOT_CANAL);
+      expect(after.map((p) => [p.placeId, p.scores])).toEqual(before.map((p) => [p.placeId, p.scores]));
+    }
+  });
+
+  it("places a Provider without proven-only averages at the overall mean", () => {
+    const ranked = rankProviders(
+      [
+        candidate("rated-4", { testimonies: rated(3, 4) }),
+        candidate("rated-5", { testimonies: rated(3, 5) }),
+        candidate("unrated", { testimonies: { count: 30, verifiedVisitCount: 2, averages: null } }),
+      ],
+      ROOT_CANAL,
+    );
+
+    // Overall mean 4.5 on the 1 to 5 scale.
+    expect(ranked.find((p) => p.placeId === "unrated")?.scores.testimonies).toBeCloseTo((4.5 - 1) / 4, 9);
+    expect(order(ranked)).toEqual(["rated-5", "unrated", "rated-4"]);
+  });
+
+  it("gives no separate bonus for Kunjungan terbukti: proof is already the whole input", () => {
+    // Alone, a Provider is the overall mean, so its score is exactly its proven-only average.
+    const [only] = rankProviders([candidate("all-proven", { testimonies: rated(5, 4) })], ROOT_CANAL);
+
+    expect(only?.scores.testimonies).toBeCloseTo((4 - 1) / 4, 9);
   });
 
   it("prefers a price at the low end of the Cost Estimate", () => {
@@ -129,7 +178,7 @@ describe("Shortlist ranking", () => {
     const ranked = rankProviders(
       [
         candidate("A-near-unknown", { distanceMeters: 300 }),
-        candidate("B-well-rated", { testimonies: rated(8, 4.7, 3), distanceMeters: 4000 }),
+        candidate("B-well-rated", { testimonies: rated(8, 4.9), distanceMeters: 2500 }),
         candidate("C-cheap", { prices: { root_canal_treatment: 900_000 }, distanceMeters: 2500 }),
         candidate("D-poorly-rated-near", { testimonies: rated(6, 2.5), distanceMeters: 200 }),
         candidate("E-hospital", { providerType: "hospital", distanceMeters: 1500 }),
@@ -156,7 +205,7 @@ describe("Shortlist ranking", () => {
     const providers = [
       candidate("p1", { testimonies: rated(3, 4.2), distanceMeters: 1200 }),
       candidate("p2", { testimonies: rated(3, 4.2), distanceMeters: 1200 }),
-      candidate("p3", { testimonies: rated(2, 4.0), distanceMeters: 900 }),
+      candidate("p3", { testimonies: rated(3, 4.0), distanceMeters: 900 }),
     ];
     const unclaimed = order(rankProviders(providers, ROOT_CANAL));
 

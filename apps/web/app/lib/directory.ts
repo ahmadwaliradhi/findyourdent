@@ -25,7 +25,10 @@ export interface DirectoryRow {
   testimonyCount: number;
   verifiedVisitCount: number;
   claimed: boolean;
-  /** Shrunk aspect score (lib/scores.ts); null without Testimonies. */
+  /**
+   * Shrunk aspect score over Proven Testimonies (lib/scores.ts); null while `averages` is
+   * null (below three Proven Testimonies). The score sort places such a row at the prior mean.
+   */
   score: number | null;
   /** Stored coordinates only (never their fetch date), for distance computed in the browser. */
   location: LatLng | null;
