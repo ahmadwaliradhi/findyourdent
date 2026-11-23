@@ -189,6 +189,25 @@ export async function storeTestimonyMedia(
   }
 }
 
+/**
+ * Streams a private object (a Claim permit, a pending Proof of Visit) to an allowlisted
+ * admin: JPEG or PDF, never cached, never sniffed. 404 when the object is gone.
+ */
+export async function privateFileResponse(uploads: Bucket, path: string): Promise<Response> {
+  const file = uploads.file(path);
+  const [exists] = await file.exists();
+  if (!exists) return new Response(null, { status: 404 });
+  const [bytes] = await file.download();
+  return new Response(new Uint8Array(bytes), {
+    headers: {
+      "Content-Type": path.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": "inline",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
 /** Deletes stored objects; missing ones are ignored. */
 export async function deleteTestimonyMedia(uploads: Bucket, paths: readonly string[]): Promise<void> {
   await Promise.all(paths.map((path) => uploads.file(path).delete({ ignoreNotFound: true })));

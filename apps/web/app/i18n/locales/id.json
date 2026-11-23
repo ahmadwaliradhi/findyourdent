@@ -186,7 +186,8 @@
         "hidden": "Testimoni disembunyikan",
         "claim": "Klaim halaman",
         "ownerFacts": "Data pemilik ditahan",
-        "reply": "Balasan ditahan"
+        "reply": "Balasan ditahan",
+        "proofReview": "Bukti kunjungan"
       },
       "status": {
         "submitted": "Diperiksa",
@@ -234,7 +235,9 @@
         "publishOwnerFacts": "Tayangkan data",
         "rejectOwnerFacts": "Tolak data",
         "publishReply": "Tayangkan balasan",
-        "rejectReply": "Tolak balasan"
+        "rejectReply": "Tolak balasan",
+        "acceptProof": "Terima bukti",
+        "rejectProof": "Tolak bukti"
       },
       "reasonFor": "Alasan untuk \"{{action}}\" (dicatat; penulis melihatnya kecuali saat disembunyikan)",
       "logged": "Setiap tindakan dicatat dengan nama admin, waktu dan alasan.",
@@ -251,6 +254,23 @@
         "permit": "Dokumen",
         "openPermit": "Buka SIP atau izin praktik",
         "callHint": "Telepon nomor di Google (bukan nomor pengklaim) untuk memastikan pemiliknya. Dokumen dihapus begitu klaim diputuskan."
+      },
+      "proof": {
+        "file": "File bukti",
+        "openFile": "Buka file bukti",
+        "reasons": "Alasan diperiksa",
+        "extracted": "Terbaca dari bukti",
+        "clinicName": "Nama klinik",
+        "proofDate": "Tanggal",
+        "total": "Total",
+        "nothingRead": "Tidak ada yang terbaca",
+        "reason": {
+          "nameMismatch": "Nama klinik tidak cocok",
+          "dateMismatch": "Tanggal jauh dari bulan kunjungan",
+          "possibleReuse": "Mungkin bukti yang sama dipakai ulang",
+          "notChecked": "Pemeriksaan otomatis gagal, belum ada yang terbaca"
+        },
+        "expiryHint": "Bukti yang belum diputuskan dalam 7 hari ditolak otomatis dan filenya dihapus. Alasan penolakan ditampilkan ke penulis."
       }
     }
   },
@@ -1192,6 +1212,7 @@
   "proofStatus": {
     "accepted": "Bukti kunjungan Anda cocok, jadi Testimoni ini ditandai Kunjungan terbukti. File buktinya sudah kami hapus.",
     "pending": "Bukti kunjungan sedang diperiksa tim FindYourDent, biasanya dalam 72 jam. Sampai selesai, Testimoni ini ditandai Belum terbukti.",
+    "adminNote": "Catatan tim:",
     "rejected": {
       "unreadable": "Bukti kunjungan tidak diterima: kami tidak bisa membaca filenya. Coba foto yang lebih jelas atau dokumen lain.",
       "notAProof": "Bukti kunjungan tidak diterima: file ini bukan kuitansi, invoice atau kartu janji temu dari klinik gigi.",
