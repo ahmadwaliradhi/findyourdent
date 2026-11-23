@@ -191,7 +191,7 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "aggregates.testimonyCount",
+          "fieldPath": "aggregates.verifiedVisitCount",
           "order": "DESCENDING"
         }
       ]
@@ -219,7 +219,7 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "aggregates.testimonyCount",
+          "fieldPath": "aggregates.verifiedVisitCount",
           "order": "DESCENDING"
         }
       ]
@@ -247,7 +247,7 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "aggregates.testimonyCount",
+          "fieldPath": "aggregates.verifiedVisitCount",
           "order": "DESCENDING"
         }
       ]
@@ -275,7 +275,7 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "aggregates.testimonyCount",
+          "fieldPath": "aggregates.verifiedVisitCount",
           "order": "DESCENDING"
         }
       ]

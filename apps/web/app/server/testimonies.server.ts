@@ -17,13 +17,13 @@
 // - Fix before submit: an authorFix decision is answered with the flagged spans and
 //   stores nothing (no Testimony, no decision, no photos); only the round count is kept,
 //   per Patient and place (`authorFixCounterId`), until a submission is stored.
-
 import type { ProofOfVisitExtraction } from "@findyourdent/contracts";
 import {
   type AspectRatings,
   authorFixCounterId,
   COLLECTIONS,
   type ModerationDecisionDoc,
+  type ProofOfVisitExtracted,
   type ProofOfVisitRecord,
   type ProviderDoc,
   type ProviderType,
@@ -74,6 +74,8 @@ import { type AggregateInput, computeAggregates } from "./aggregates.ts";
 import { DETECTION_LOOKBACK_MS, type DetectionRuleCode, detectionRuleCodes } from "./detection.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { decideProof } from "./proof-decision.ts";
+import { fingerprintOf, type ProofFingerprint } from "./proof-fingerprint.ts";
+import { deleteFingerprint, reuseMatchesIn, setFingerprint } from "./proof-fingerprints.server.ts";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
 import {
   deleteTestimonyMedia,
@@ -297,29 +299,88 @@ function storedFeedback(
   };
 }
 
+/** A Proof of Visit sent with this submission, before the reuse check decides it. */
+interface SentProof {
+  path: string;
+  /** Absent when the agent's check did not run. */
+  extraction?: ProofOfVisitExtraction;
+  extracted: ProofOfVisitExtracted;
+  visitMonth: string;
+  /** Absent when the proof is rejected whatever the reuse check finds: nothing to compare or keep. */
+  fingerprint?: ProofFingerprint;
+}
+
 /**
- * The Proof of Visit decision for a proof sent with this submission or attached later
- * (spec 09), or undefined when none was sent. `extraction` is what the agent read off it,
- * undefined when the check did not run. Keeps the result, its reasons and the facts read off the
- * proof (never the patient's name); a pending proof also keeps its file path for the admin.
+ * The proof sent with this submission or attached later, with its fingerprint computed
+ * from the uploaded file while it still exists (spec 09); undefined when none was sent.
+ * `extraction` is what the agent read off it, undefined when the check did not run. Runs
+ * before the transaction: hashing an image is too slow to repeat on every retry.
  */
-function proofRecord(
+async function sentProof(
   extraction: ProofOfVisitExtraction | undefined,
   proofPath: string | undefined,
+  file: File | null,
   visitMonth: string,
-): ProofOfVisitRecord | undefined {
-  if (!proofPath) return undefined;
-  const decided = decideProof(extraction, { visitMonth, today: jakartaDate(Date.now()) });
-  const extracted = {
+): Promise<SentProof | undefined> {
+  if (!proofPath || !file) return undefined;
+  const extracted: ProofOfVisitExtracted = {
     ...(extraction?.clinicNameOnProof ? { clinicName: extraction.clinicNameOnProof } : {}),
     ...(extraction?.proofDate ? { proofDate: extraction.proofDate } : {}),
     ...(extraction?.totalRupiah !== undefined ? { totalRupiah: extraction.totalRupiah } : {}),
   };
+  const sent: SentProof = { path: proofPath, ...(extraction ? { extraction } : {}), extracted, visitMonth };
+  // Reuse never rejects, so a proof rejected without it is rejected with it.
+  if (decideProofSent(sent, false).result === "rejected") return sent;
+  // `file.type` is the sniffed type (readTestimonyFiles), not the browser's claim.
+  const bytes = Buffer.from(await file.arrayBuffer());
+  return { ...sent, fingerprint: await fingerprintOf({ bytes, mimeType: file.type }, extracted) };
+}
+
+const decideProofSent = (sent: SentProof, reuse: boolean) =>
+  decideProof(sent.extraction, { visitMonth: sent.visitMonth, today: jakartaDate(Date.now()), reuse });
+
+/**
+ * The reuse check for a sent proof that has a fingerprint, as a transaction read (so
+ * before any write): whether another Testimony at the place holds a matching one.
+ */
+async function proofReused(
+  tx: Transaction,
+  firestore: Firestore,
+  sent: SentProof,
+  ids: { testimonyId: string; placeId: string },
+): Promise<boolean> {
+  if (!sent.fingerprint) return false;
+  return (await reuseMatchesIn(tx, firestore, { ...ids, fingerprint: sent.fingerprint })).length > 0;
+}
+
+/**
+ * The Proof of Visit decision (spec 09). Keeps the result, its reasons and the facts read
+ * off the proof (never the patient's name); a pending proof also keeps its file path for
+ * the admin.
+ */
+function proofRecord(sent: SentProof, reuse: boolean): ProofOfVisitRecord {
+  const decided = decideProofSent(sent, reuse);
   const checkedAt = Timestamp.now();
   // The facts read are kept only for a proof that counts or may count (GLOSSARY: Proof Fingerprint).
   if (decided.result === "rejected") return { checkedAt, ...decided };
-  const base = { checkedAt, ...(Object.keys(extracted).length > 0 ? { extracted } : {}) };
-  return decided.result === "pending" ? { ...base, ...decided, filePath: proofPath } : { ...base, ...decided };
+  const base = { checkedAt, ...(Object.keys(sent.extracted).length > 0 ? { extracted: sent.extracted } : {}) };
+  return decided.result === "pending" ? { ...base, ...decided, filePath: sent.path } : { ...base, ...decided };
+}
+
+/**
+ * The fingerprint follows the proof stored on the Testimony: kept for accepted and
+ * pending, gone for rejected (which may replace a pending proof that had one).
+ */
+function writeProofFingerprint(
+  tx: Transaction,
+  firestore: Firestore,
+  sent: SentProof,
+  record: ProofOfVisitRecord,
+  ids: { testimonyId: string; placeId: string },
+): void {
+  if (record.result !== "rejected" && sent.fingerprint)
+    setFingerprint(tx, firestore, { ...ids, fingerprint: sent.fingerprint });
+  else deleteFingerprint(tx, firestore, ids.testimonyId);
 }
 
 /** What the author reads about the proof sent with this submission. */
@@ -514,7 +575,8 @@ export async function createTestimony(context: AppLoadContext, request: Request)
     await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
     throw error;
   }
-  const proof = proofRecord(outcome.decision.proofOfVisit, media.proofPath, value.visitMonth);
+  // Decided in the transaction (the reuse check reads there); it holds only once committed.
+  let proof = undefined as ProofOfVisitRecord | undefined;
   // Only a pending proof keeps its file, and only once the Testimony is stored (spec 09).
   let proofKept = false;
   try {
@@ -528,7 +590,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         newPhotoPaths: media.photoPaths,
       });
     }
-    const verifiedVisit = proof?.result === "accepted";
+    let verifiedVisit = false;
     const moderated = outcome;
     const moderatedDecision = outcome.decision.decision;
     // Set by the committed attempt of the transaction (which may retry): detection there
@@ -539,6 +601,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
       detected: [],
     };
     try {
+      const sent = await sentProof(outcome.decision.proofOfVisit, media.proofPath, files.files.proof, value.visitMonth);
       // Only a publish of a place not Listed yet needs Google's coordinates and types. Fetched
       // before the transaction, never in it, even when detection then holds it.
       const essentials =
@@ -559,7 +622,13 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         const status = detected.length > 0 ? "held" : statusForDecision(moderatedDecision);
         const provider = await tx.get(providers(firestore).doc(value.placeId));
         const published = status === "published" ? await tx.get(publishedOf(firestore, value.placeId)) : null;
+        const ids = { testimonyId: ref.id, placeId: value.placeId };
+        const reused = sent ? await proofReused(tx, firestore, sent, ids) : false;
 
+        // Assigned on every attempt: a retry may see a fingerprint the first did not.
+        proof = sent ? proofRecord(sent, reused) : undefined;
+        verifiedVisit = proof?.result === "accepted";
+        if (sent && proof) writeProofFingerprint(tx, firestore, sent, proof, ids);
         const now = Timestamp.now();
         const content = contentOf(value, media.photoPaths);
         let region: RegionRef;
@@ -770,10 +839,9 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
     await deleteTestimonyMedia(uploads, media.photoPaths).catch(() => {});
     throw error;
   }
-  const proof = proofRecord(outcome.decision.proofOfVisit, media.proofPath, value.visitMonth);
-  // Whether the edit's proof was stored on the Testimony: an accepted proof is never
+  // The edit's proof as stored on the Testimony, once committed: an accepted proof is never
   // replaced, and an edit that waits as a pending revision does not touch the proof.
-  let proofApplied = false;
+  let proofApplied = undefined as ProofOfVisitRecord | undefined;
   try {
     if (outcome.decision.decision === "authorFix") {
       // The Testimony stays exactly as it was until the author sends a fixed edit.
@@ -794,16 +862,22 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
     let verifiedVisitAfter = current.verifiedVisit;
     let orphaned: string[] = [];
     // Set in the transaction (which may retry); it counts only once the edit is committed.
-    let proofInEdit = false;
+    let proofInEdit = undefined as ProofOfVisitRecord | undefined;
     try {
       const status = decided;
       const becomesPublished = !editingPublished && status === "published";
+      // A published Testimony whose edit is not published keeps the edit as a pending revision.
+      const editWaits = editingPublished && status !== "published";
+      const sent = editWaits
+        ? undefined
+        : await sentProof(outcome.decision.proofOfVisit, media.proofPath, files.files.proof, value.visitMonth);
       const essentials =
         becomesPublished && !listedAtStart ? await placeEssentialsFor(context, current.placeId) : NO_ESSENTIALS;
       const decisionRef = firestore.collection(COLLECTIONS.moderationDecisions).doc();
       const ref = testimonies(firestore).doc(testimonyId);
 
       await firestore.runTransaction(async (tx) => {
+        proofInEdit = undefined;
         const snapshot = await tx.get(ref);
         const before = checkOwn(snapshot, user.uid);
         // Moved meanwhile (an admin hid it, Moderation decided an earlier edit): ask again.
@@ -821,13 +895,16 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
             : null;
         const heldBy = (heldDecision?.data() as ModerationDecisionDoc | undefined)?.detectionRuleCodes ?? [];
         const decisionOutcome = heldBy.length > 0 ? keptDetection(outcome, heldBy) : outcome;
+        const ids = { testimonyId, placeId: before.placeId };
+        // Never an accepted proof, nor one waiting for the admin (refused above unless it got there meanwhile).
+        const replaceable = before.proofOfVisit === undefined || before.proofOfVisit.result === "rejected";
+        const replacing = sent && replaceable ? sent : undefined;
+        const reused = replacing ? await proofReused(tx, firestore, replacing, ids) : false;
 
         const now = Timestamp.now();
         const content = contentOf(value, [...keep, ...media.photoPaths]);
-        // Never an accepted proof, nor one waiting for the admin (refused above unless it got there meanwhile).
-        const replacesProof =
-          proof !== undefined && (before.proofOfVisit === undefined || before.proofOfVisit.result === "rejected");
-        const verifiedVisit = before.verifiedVisit || (replacesProof && proof.result === "accepted");
+        const proof = replacing ? proofRecord(replacing, reused) : undefined;
+        const verifiedVisit = before.verifiedVisit || proof?.result === "accepted";
         tx.create(
           decisionRef,
           moderationDecisionDoc(
@@ -843,7 +920,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
 
         let update: Record<string, unknown>;
         let after: { photoPaths: string[]; pending: string[] };
-        if (editingPublished && status !== "published") {
+        if (editWaits) {
           // The public version stays; the edit, public name included, waits for a decision.
           update = {
             pendingRevision: {
@@ -862,7 +939,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
             displayName: value.displayName,
             status,
             verifiedVisit,
-            ...(replacesProof ? { proofOfVisit: proof, proofAttempts: proofAttemptsOf(before) + 1 } : {}),
+            ...(proof ? { proofOfVisit: proof, proofAttempts: proofAttemptsOf(before) + 1 } : {}),
             moderationDecisionId: decisionRef.id,
             pendingRevision: FieldValue.delete(),
             authorFixRounds: roundsUsed,
@@ -870,7 +947,8 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
           };
           after = { photoPaths: content.photoPaths, pending: [] };
           verifiedVisitAfter = verifiedVisit;
-          proofInEdit = replacesProof;
+          proofInEdit = proof;
+          if (replacing && proof) writeProofFingerprint(tx, firestore, replacing, proof, ids);
           let region = before.region;
           let providerType = before.providerType;
           if (!provider.exists && value.region) region = regionValue(value.region);
@@ -917,12 +995,12 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       status: decided,
       ...storedFeedback(t, decided, outcome, { withAdmin, authorFixRound: roundsUsed }),
       verifiedVisit: verifiedVisitAfter,
-      ...(proofApplied ? proofFeedback(t, proof) : {}),
+      ...proofFeedback(t, proofApplied),
     };
     return Response.json(body);
   } finally {
     // Best effort: the edit is already answered; a leftover private file is not worth a 500.
-    if (media.proofPath && !(proofApplied && proof?.result === "pending")) {
+    if (media.proofPath && proofApplied?.result !== "pending") {
       await deleteTestimonyMedia(uploads, [media.proofPath]).catch(() => {});
     }
   }
@@ -974,8 +1052,12 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
       ...(typedProviderName ? { typedProviderName } : {}),
       proofPath,
     });
-    const proof = proofRecord(extraction, proofPath, current.visitMonth) as ProofOfVisitRecord;
-    const verifiedVisit = proof.result === "accepted";
+    // `sentProof` is defined: a path and a file were both given.
+    const sent = (await sentProof(extraction, proofPath, file, current.visitMonth)) as SentProof;
+    // Reuse can only hold an acceptable proof back, so the Provider is read whenever it may be accepted.
+    const mayAccept = decideProofSent(sent, false).result === "accepted";
+    // Decided in the transaction (the reuse check reads there); it holds only once committed.
+    let decided: ProofOfVisitRecord | undefined;
     let after: TestimonyDoc | undefined;
     try {
       const ref = testimonies(firestore).doc(testimonyId);
@@ -983,8 +1065,12 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
         const before = checkOwn(await tx.get(ref), user.uid);
         // Moved meanwhile (unpublished, another proof stored, attempts used): ask again.
         checkProofAllowed(before);
-        const provider = verifiedVisit ? await tx.get(providers(firestore).doc(before.placeId)) : null;
-        const published = verifiedVisit ? await tx.get(publishedOf(firestore, before.placeId)) : null;
+        const provider = mayAccept ? await tx.get(providers(firestore).doc(before.placeId)) : null;
+        const published = mayAccept ? await tx.get(publishedOf(firestore, before.placeId)) : null;
+        const ids = { testimonyId, placeId: before.placeId };
+        const proof = proofRecord(sent, await proofReused(tx, firestore, sent, ids));
+        const verifiedVisit = proof.result === "accepted";
+        decided = proof;
 
         const attempts = proofAttemptsOf(before) + 1;
         after = {
@@ -993,7 +1079,8 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
           proofAttempts: attempts,
           verifiedVisit: before.verifiedVisit || verifiedVisit,
         };
-        if (provider && published) {
+        writeProofFingerprint(tx, firestore, sent, proof, ids);
+        if (verifiedVisit && provider && published) {
           writeProviderOnPublish(tx, {
             placeId: before.placeId,
             provider,
@@ -1019,9 +1106,11 @@ export async function attachProof(context: AppLoadContext, request: Request, tes
     } catch (error) {
       return await refusalResponse(request, error);
     }
-    proofKept = proof.result === "pending";
-    // Set by the committed transaction; TypeScript cannot see the assignment in the callback.
+    // Both set by the committed transaction; TypeScript cannot see the assignments in the callback.
+    const proof = decided as unknown as ProofOfVisitRecord;
     const stored = after as unknown as TestimonyDoc;
+    const verifiedVisit = proof.result === "accepted";
+    proofKept = proof.result === "pending";
 
     context.logger.info("testimony", { outcome: "proof_attached", proof: proof.result });
     const body: TestimonyProofResponse = {
@@ -1078,6 +1167,8 @@ export async function deleteTestimony(context: AppLoadContext, request: Request,
         // A proof waiting for the admin goes with its file; a decided one keeps only its result.
         ...(before.proofOfVisit?.result === "pending" ? { proofOfVisit: FieldValue.delete() } : {}),
       });
+      // Erasure takes the fingerprint too, accepted or not, which frees the receipt (spec 09).
+      deleteFingerprint(tx, firestore, testimonyId);
       recordTestimonyTransition(
         firestore,
         tx,

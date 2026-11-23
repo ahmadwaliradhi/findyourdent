@@ -2,6 +2,7 @@
 import { COLLECTIONS, type ProviderDoc, type TestimonyDoc } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
 import { normalizeName } from "../../app/lib/normalize-name.ts";
+import { DETECTION_LOOKBACK_MS } from "../../app/server/detection.ts";
 
 type Writable<T> = {
   [K in keyof T]: NonNullable<T[K]> extends { toDate(): Date } ? Date | Extract<T[K], undefined> : T[K];
@@ -73,4 +74,17 @@ export async function seedTestimony(
   };
   const ref = await firestore.collection(COLLECTIONS.testimonies).add(testimony);
   return { ...testimony, id: ref.id };
+}
+
+/**
+ * Moves a stored Testimony's submission out of the detection window (spec 09 part 2), as
+ * if it had come in weeks ago. For tests that post several Testimonies for one Provider
+ * through the API and are not about bursts: without it the third would be held.
+ */
+export async function submittedBeforeDetectionWindow(firestore: Firestore, testimonyId: string): Promise<void> {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  await firestore
+    .collection(COLLECTIONS.testimonies)
+    .doc(testimonyId)
+    .update({ createdAt: new Date(Date.now() - DETECTION_LOOKBACK_MS - DAY_MS) });
 }

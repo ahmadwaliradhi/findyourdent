@@ -21,8 +21,8 @@ import type {
   TestimonyStoredResponse,
   TestimonySubmission,
 } from "../../app/lib/testimony.ts";
-import { DETECTION_LOOKBACK_MS } from "../../app/server/detection.ts";
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
+import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -1067,13 +1067,11 @@ describe("Proven Testimonies and aggregates (spec 09)", () => {
     moderateWith(proven ? ACCEPTED : PUBLISH);
     const stored = await createOk(submission(overrides), {
       cookie,
-      ...(proven ? { proof: { bytes: await photo(), type: "image/jpeg" } } : {}),
+      // Each Patient brings their own receipt: one file twice at a place is possible reuse.
+      ...(proven ? { proof: { bytes: Buffer.from(`%PDF-1.4\n% ${email}\n%%EOF\n`), type: "application/pdf" } } : {}),
     });
     expect(stored).toMatchObject({ status: "published", verifiedVisit: proven });
-    await server.firestore
-      .collection(COLLECTIONS.testimonies)
-      .doc(stored.testimonyId)
-      .update({ createdAt: new Date(Date.now() - DETECTION_LOOKBACK_MS - 24 * 60 * 60 * 1000) });
+    await submittedBeforeDetectionWindow(server.firestore, stored.testimonyId);
     return { ...stored, cookie };
   }
 

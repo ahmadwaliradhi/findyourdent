@@ -55,7 +55,7 @@ Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`,
 
 ### `testimonyReports`
 
-Reports from anyone (category `personalData`, `threat`, `falseClaim`, `spam`, `conflictOfInterest`, `other`; spec 09 part 2 adds `incentive`, which does not hide). `personalData` and `threat` set the Testimony to `hidden` immediately (`hidTestimony: true`). Every report goes to the admin queue with a 24-hour target. Type `TestimonyReportDoc`.
+Reports from anyone (category `personalData`, `threat`, `falseClaim`, `spam`, `conflictOfInterest`, `incentive`, `other`; `incentive` is spec 09's report of a clinic rewarding Testimonies). `personalData` and `threat` set the Testimony to `hidden` immediately (`hidTestimony: true`). Every report goes to the admin queue with a 24-hour target. Type `TestimonyReportDoc`.
 
 ### `claims`
 
@@ -73,9 +73,9 @@ Queries: `placeId` + `status` (the current list of a place; `in` on `placeId` fo
 
 One document per Moderation call on a Testimony, Testimony revision, reply or owner facts: `decision`, `ruleCodes`, `flaggedSpans`, `flaggedPhotos`, `confidence`, `model` (or `fallback` when the call failed and the content was held), `spotCheck` (the 10% admin sample of Moderation publishes) with `spotCheckConfirmed` (false until an admin confirms it in the queue). When detection (spec 09 part 2) holds a new Testimony that Moderation published, `decision` is `hold`, `ruleCodes` stay as the agent returned them, and `detectionRuleCodes` names the triggers (`D1` velocity: 3 or more Testimonies for the `placeId` within 24 hours, or 5 or more within 7 days); admin only, never shown to the author, and such a decision is never in the spot-check sample. The window is read in the transaction that creates the Testimony, so a burst sent at once is counted. An author's edit of such a Testimony while it is still `held` writes a `hold` decision that keeps the `detectionRuleCodes`; once an admin has decided it (published, rejected or sent back), they are not carried. It never stores the moderated text or images. Type `ModerationDecisionDoc`.
 
-### `proofFingerprints` (spec 09, not yet in contracts)
+### `proofFingerprints` (spec 09)
 
-One per Testimony with an `accepted` or `pending` Proof of Visit: `testimonyId`, `placeId`, `perceptualHash` (64-bit, images) or `fileSha256` (PDFs), and `fieldsKey` (normalised clinic name, proof date and total). No image and no patient name. Deleted when the Testimony is deleted or its proof is rejected. Queried by `placeId` for the reuse check.
+One per Testimony with an `accepted` or `pending` Proof of Visit; the document id is the Testimony id. Type `ProofFingerprintDoc`: `testimonyId`, `placeId`, `perceptualHash` (64-bit pHash as 16 hex chars, images) or `fileSha256` (PDFs), `fieldsKey` (normalised clinic name, proof date and total; absent unless all three were read) and `createdAt`. No image and no patient name. Deleted when the Testimony is deleted or its proof is rejected. Queried by `placeId` for the reuse check: the same `fieldsKey`, the same `fileSha256`, or perceptual hashes at most 10 bits apart (`REUSE_MAX_HAMMING_BITS`) is `possibleReuse`.
 
 ### `submissionSignals` (spec 09 part 2, not yet in contracts)
 

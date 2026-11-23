@@ -19,6 +19,7 @@ import {
   type QueueModeration,
   type QueueOwnerFacts,
   type QueueProof,
+  type QueueProofMatch,
   type QueueTestimony,
   type QueueTestimonyContent,
   REASON_REQUIRED,
@@ -349,8 +350,54 @@ function ProofView({ proof }: { proof: QueueProof }) {
           t("admin.queue.proof.nothingRead")
         )}
       </dd>
+      {(proof.reasons.includes("possibleReuse") || (proof.reuseMatches?.length ?? 0) > 0) && (
+        <ReuseMatches matches={proof.reuseMatches ?? []} />
+      )}
       <dd className="col-span-2 text-xs text-muted-foreground">{t("admin.queue.proof.expiryHint")}</dd>
     </dl>
+  );
+}
+
+/**
+ * The Testimonies whose Proof Fingerprint matches the held proof (spec 09). Rendered inside
+ * ProofView's dl. A published match links to its public Provider page; when the reason is
+ * `possibleReuse` but no match is left, the other Testimony was deleted since.
+ */
+function ReuseMatches({ matches }: { matches: QueueProofMatch[] }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <dt className="text-muted-foreground">{t("admin.queue.proof.reuse.title")}</dt>
+      <dd>
+        {matches.length === 0 ? (
+          t("admin.queue.proof.reuse.gone")
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {matches.map((match) => {
+              const label = t("admin.queue.proof.reuse.testimony", { name: match.displayName });
+              return (
+                <li key={match.testimonyId} className="break-words">
+                  {match.href ? (
+                    <a href={match.href} target="_blank" rel="noreferrer" className="font-semibold underline">
+                      {label}
+                    </a>
+                  ) : (
+                    <span className="font-semibold">{label}</span>
+                  )}{" "}
+                  · {t(`admin.queue.status.${match.status}`)} ·{" "}
+                  {t(`admin.queue.proof.reuse.proofResult.${match.proofResult}`)}
+                  <span className="block text-muted-foreground">
+                    {t("admin.queue.proof.reuse.matchedOn", {
+                      kinds: match.matchedOn.map((kind) => t(`admin.queue.proof.reuse.kind.${kind}`)).join(", "),
+                    })}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </dd>
+    </>
   );
 }
 

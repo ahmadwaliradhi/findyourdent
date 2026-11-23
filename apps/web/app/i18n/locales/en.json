@@ -280,6 +280,21 @@
           "possibleReuse": "Possibly a reused proof",
           "notChecked": "The automatic check failed, nothing was read"
         },
+        "reuse": {
+          "title": "Testimonies with a matching receipt",
+          "testimony": "Testimony by {{name}}",
+          "proofResult": {
+            "accepted": "proof accepted",
+            "pending": "proof awaiting a decision"
+          },
+          "matchedOn": "Matched on: {{kinds}}",
+          "kind": {
+            "fieldsKey": "same clinic name, date and total",
+            "fileHash": "same file",
+            "perceptualHash": "near-identical image"
+          },
+          "gone": "The Testimony with the matching receipt no longer exists, it was probably deleted."
+        },
         "expiryHint": "A proof not decided within 7 days is rejected automatically and its file deleted. The rejection reason is shown to the author."
       }
     }
@@ -367,7 +382,7 @@
     "searchPlaceholder": "For example: Klinik Gigi Sehat",
     "sortLabel": "Sort by",
     "sort": {
-      "testimoni": "Most Testimonies",
+      "testimoni": "Most Proven Testimonies",
       "skor": "Highest score",
       "jarak": "Nearest"
     },
@@ -391,8 +406,8 @@
     "distance": "{{km}} km",
     "noLocation": "Distance unavailable",
     "locating": "Finding your location...",
-    "locationDenied": "Your location could not be used, so the list is sorted by number of Testimonies. Allow location access in your browser to sort by distance.",
-    "locationUnsupported": "This browser cannot share your location, so the list is sorted by number of Testimonies.",
+    "locationDenied": "Your location could not be used, so the list is sorted by number of Proven Testimonies. Allow location access in your browser to sort by distance.",
+    "locationUnsupported": "This browser cannot share your location, so the list is sorted by number of Proven Testimonies.",
     "locationReady": "Sorted from nearest to your location.",
     "emptyTitle": "No matching places yet",
     "emptyBody": "No Patient has written about a place matching these filters yet. Be the first.",
@@ -809,6 +824,7 @@
       "falseClaim": "False claim",
       "spam": "Spam or advertising",
       "conflictOfInterest": "Written by the owner, staff or a competitor",
+      "incentive": "The clinic offers a reward for testimonies",
       "other": "Other"
     },
     "hidesAtOnce": "The Testimony is hidden at once until the team reviews it.",

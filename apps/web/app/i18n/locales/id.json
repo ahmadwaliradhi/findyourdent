@@ -280,6 +280,21 @@
           "possibleReuse": "Mungkin bukti yang sama dipakai ulang",
           "notChecked": "Pemeriksaan otomatis gagal, belum ada yang terbaca"
         },
+        "reuse": {
+          "title": "Testimoni dengan bukti yang cocok",
+          "testimony": "Testimoni oleh {{name}}",
+          "proofResult": {
+            "accepted": "bukti diterima",
+            "pending": "bukti menunggu keputusan"
+          },
+          "matchedOn": "Cocok karena: {{kinds}}",
+          "kind": {
+            "fieldsKey": "nama klinik, tanggal dan total sama",
+            "fileHash": "file sama persis",
+            "perceptualHash": "gambar nyaris sama"
+          },
+          "gone": "Testimoni yang buktinya cocok sudah tidak ada, mungkin sudah dihapus."
+        },
         "expiryHint": "Bukti yang belum diputuskan dalam 7 hari ditolak otomatis dan filenya dihapus. Alasan penolakan ditampilkan ke penulis."
       }
     }
@@ -367,7 +382,7 @@
     "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
     "sortLabel": "Urutkan",
     "sort": {
-      "testimoni": "Testimoni terbanyak",
+      "testimoni": "Testimoni terbukti terbanyak",
       "skor": "Skor tertinggi",
       "jarak": "Jarak terdekat"
     },
@@ -391,8 +406,8 @@
     "distance": "{{km}} km",
     "noLocation": "Jarak tidak tersedia",
     "locating": "Mencari lokasimu...",
-    "locationDenied": "Lokasimu tidak bisa dipakai, jadi daftar diurutkan menurut jumlah testimoni. Izinkan akses lokasi di browser untuk mengurutkan menurut jarak.",
-    "locationUnsupported": "Browser ini tidak bisa membagikan lokasi, jadi daftar diurutkan menurut jumlah testimoni.",
+    "locationDenied": "Lokasimu tidak bisa dipakai, jadi daftar diurutkan menurut jumlah testimoni terbukti. Izinkan akses lokasi di browser untuk mengurutkan menurut jarak.",
+    "locationUnsupported": "Browser ini tidak bisa membagikan lokasi, jadi daftar diurutkan menurut jumlah testimoni terbukti.",
     "locationReady": "Diurutkan dari yang terdekat dengan lokasimu.",
     "emptyTitle": "Belum ada tempat yang cocok",
     "emptyBody": "Belum ada pasien yang menulis tentang tempat dengan filter ini. Jadilah yang pertama.",
@@ -809,6 +824,7 @@
       "falseClaim": "Klaim yang tidak benar",
       "spam": "Spam atau iklan",
       "conflictOfInterest": "Ditulis pemilik, staf, atau pesaing",
+      "incentive": "Klinik menawarkan imbalan untuk testimoni",
       "other": "Lainnya"
     },
     "hidesAtOnce": "Testimoni langsung disembunyikan sampai tim meninjaunya.",

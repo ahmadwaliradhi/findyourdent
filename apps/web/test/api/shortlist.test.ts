@@ -1,11 +1,14 @@
-import type { Guidance } from "@findyourdent/contracts";
-import { COLLECTIONS, type ProviderDoc } from "@findyourdent/contracts/firestore";
+import type { Guidance, ModerationDecision, ProofOfVisitExtraction } from "@findyourdent/contracts";
+import { type AspectRatings, COLLECTIONS, type ProviderDoc } from "@findyourdent/contracts/firestore";
 import { Timestamp } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
+import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
 import { shareToken } from "../../app/server/share.server.ts";
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
 import type { PlaceSummary } from "../../server/adapters/places.ts";
+import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -334,7 +337,7 @@ describe("POST /api/shortlist", () => {
     server.fakes.places.respondWith([GOOGLE_CLINIC, GOOGLE_DRG]);
     const ratings = (average: number) => ({
       testimonyCount: 5,
-      verifiedVisitCount: 0,
+      verifiedVisitCount: 5,
       averages: { service: average, hygiene: average, materialsEquipment: average },
       procedurePrices: {},
     });
@@ -358,7 +361,7 @@ describe("POST /api/shortlist", () => {
   it("ranks a claimed Provider exactly as the same Provider unclaimed", async () => {
     const ratings = {
       testimonyCount: 4,
-      verifiedVisitCount: 1,
+      verifiedVisitCount: 4,
       averages: { service: 4.2, hygiene: 4.4, materialsEquipment: 4 },
       procedurePrices: {},
     };
@@ -658,5 +661,154 @@ describe("POST /api/shortlist reasons (T09)", () => {
     );
 
     expect(body.providers[0]?.reason).toMatch(/^Hospital with an emergency department/);
+  });
+});
+
+describe("POST /api/shortlist ranks on Proven Testimonies only (spec 09)", () => {
+  /**
+   * Kliniks for a root canal: equal fit and no price signal, so Testimonies and distance decide.
+   * Score = 0.6 * Testimonies + 0.2 * price (0.5, no signal) + 0.2 * distance, with Testimonies
+   * (shrunk - 1) / 4 and shrunk = (3 * prior + n * average) / (3 + n).
+   */
+  const NEAR: PlaceSummary = {
+    placeId: "place-klinik-dekat",
+    displayName: "Klinik Gigi Dekat Google Name",
+    formattedAddress: "Jl. Google Address 4, Surabaya",
+    location: GUBENG,
+    types: ["dentist", "health"],
+    googleMapsUri: "https://maps.google.com/?cid=google-near",
+  };
+  /** 9452 m south of the Patient: distance score 0.055, against the near Klinik's 1. */
+  const FAR: PlaceSummary = {
+    placeId: "place-klinik-jauh",
+    displayName: "Klinik Gigi Jauh Google Name",
+    formattedAddress: "Jl. Google Address 5, Surabaya",
+    location: { lat: GUBENG.lat - 0.085, lng: GUBENG.lng },
+    types: ["dentist", "health"],
+    googleMapsUri: "https://maps.google.com/?cid=google-far",
+  };
+  /**
+   * About 22 km away (past the distance horizon) with 50 Proven 2-star Testimonies: it holds the
+   * overall mean the others shrink toward near 2, so the far Klinik's own count, not a drifting
+   * mean, decides each step. It ranks last throughout.
+   */
+  const ANCHOR_LOCATION = { lat: GUBENG.lat + 0.2, lng: GUBENG.lng };
+  const ANCHOR: PlaceSummary = {
+    placeId: "place-klinik-ramai",
+    displayName: "Klinik Gigi Ramai Google Name",
+    formattedAddress: "Jl. Google Address 6, Surabaya",
+    location: ANCHOR_LOCATION,
+    types: ["dentist", "health"],
+    googleMapsUri: "https://maps.google.com/?cid=google-busy",
+  };
+  const TYPED_NAME: Record<string, string> = {
+    [NEAR.placeId]: "Klinik Gigi Dekat",
+    [FAR.placeId]: "Klinik Gigi Jauh",
+  };
+  const PUBLISH: ModerationDecision = {
+    decision: "publish",
+    ruleCodes: [],
+    flaggedSpans: [],
+    confidence: 0.95,
+    authorMessage: "Terima kasih!",
+  };
+  /** What the agent reads off a matching receipt from the visit month. */
+  let patients = 0;
+
+  /**
+   * What the agent reads off a matching receipt from the visit month. Each Patient paid a
+   * different total: the same clinic, date and total twice would be held as possible reuse.
+   */
+  const receipt = (placeId: string): ProofOfVisitExtraction => ({
+    readable: true,
+    isProofOfVisit: true,
+    clinicNameOnProof: TYPED_NAME[placeId] ?? placeId,
+    proofDate: "2026-09-12",
+    totalRupiah: 300_000 + patients * 1_000,
+    clinicNameMatches: true,
+  });
+
+  /** One new Patient posts a Testimony through the API, with an accepted Proof of Visit or none. */
+  async function postTestimony(placeId: string, score: number, proven: boolean): Promise<void> {
+    patients += 1;
+    const cookie = await server.signInWithGoogle(`pasien.${patients}@example.com`);
+    server.fakes.agent.respondToModerationWith(proven ? { ...PUBLISH, proofOfVisit: receipt(placeId) } : PUBLISH);
+    const ratings: AspectRatings = { service: score, hygiene: score, materialsEquipment: score };
+    const submission: TestimonySubmission = {
+      placeId,
+      providerName: TYPED_NAME[placeId],
+      region: { provinceCode: "35", regencyCode: "35.78" },
+      ratings,
+      text: `Pengalaman pasien ${patients}: dokternya menjelaskan perawatan dan biayanya dengan jelas.`,
+      visitMonth: "2026-09",
+      displayName: `Pasien ${patients}`,
+      consent: { honestExperience: true, noOthersPersonalData: true },
+    };
+    const form = new FormData();
+    form.set("testimony", JSON.stringify(submission));
+    if (proven) {
+      // Each Patient's own receipt: one file twice at a place would be held as possible reuse.
+      const bytes = Buffer.from(`%PDF-1.4\n% pasien ${patients}\n%%EOF\n`);
+      form.set("proof", new File([new Uint8Array(bytes)], "struk.pdf", { type: "application/pdf" }));
+    }
+    const response = await fetch(new URL("/api/testimonies", server.baseUrl), {
+      method: "POST",
+      headers: { cookie, [APP_CHECK_HEADER]: server.appCheckToken() },
+      body: form,
+    });
+    if (response.status !== 201) throw new Error(`testimony failed: ${response.status} ${await response.text()}`);
+    const stored = (await response.json()) as TestimonyStoredResponse;
+    expect(stored).toMatchObject({ status: "published", verifiedVisit: proven });
+    await submittedBeforeDetectionWindow(server.firestore, stored.testimonyId);
+  }
+
+  const postMany = async (placeId: string, score: number, proven: boolean, times: number) => {
+    for (let i = 0; i < times; i += 1) await postTestimony(placeId, score, proven);
+  };
+
+  async function shortlistOrder(): Promise<string[]> {
+    server.fakes.places.respondWith([FAR, ANCHOR, NEAR]);
+    const { response, body } = await shortlist({
+      purpose: "shortlist",
+      guidanceToken: tokenFor(ROOT_CANAL_GUIDANCE),
+      location: GUBENG,
+    });
+    expect(response.status).toBe(200);
+    return body.providers.map((p) => p.placeId);
+  }
+
+  it("never reorders on unproven Testimonies, and reorders on Proven ones", async () => {
+    await seedProviders(
+      listedProvider(ANCHOR.placeId, {
+        location: { ...ANCHOR_LOCATION, fetchedAt: NOW },
+        aggregates: {
+          testimonyCount: 50,
+          verifiedVisitCount: 50,
+          averages: { service: 2, hygiene: 2, materialsEquipment: 2 },
+          procedurePrices: {},
+        },
+      }),
+    );
+
+    // Three Proven Testimonies each: the near Klinik averages 3, the far one 5.
+    // Prior (3*3 + 3*5 + 50*2) / 56 = 2.214. Near: shrunk 2.607, 0.6*0.402 + 0.1 + 0.2 = 0.541.
+    // Far: shrunk 3.607, 0.6*0.652 + 0.1 + 0.011 = 0.502. Near leads by 0.039.
+    await postMany(NEAR.placeId, 3, true, 3);
+    await postMany(FAR.placeId, 5, true, 3);
+    const before = await shortlistOrder();
+    expect(before).toEqual([NEAR.placeId, FAR.placeId, ANCHOR.placeId]);
+
+    // Four unproven 5-star Testimonies for the far Klinik move no input of the new rule: near still
+    // leads by 0.039. The old rule (prior and shrinkage weighted by every published Testimony, plus
+    // 0.02 per Proven visit, here 0.06 each) would have put the far one first by 0.039:
+    // prior (3*3 + 7*5 + 50*2) / 60 = 2.400; near shrunk 2.700, 0.6*(0.425 + 0.06) + 0.3 = 0.591;
+    // far shrunk (3*2.4 + 7*5) / 10 = 4.220, 0.6*(0.805 + 0.06) + 0.111 = 0.630.
+    await postMany(FAR.placeId, 5, false, 4);
+    expect(await shortlistOrder()).toEqual(before);
+
+    // Four more Proven 5-star Testimonies do put it first: 7 Proven, prior 2.400 as above,
+    // near 0.6*0.425 + 0.3 = 0.555, far 0.6*0.805 + 0.111 = 0.594. Far leads by 0.039.
+    await postMany(FAR.placeId, 5, true, 4);
+    expect(await shortlistOrder()).toEqual([FAR.placeId, NEAR.placeId, ANCHOR.placeId]);
   });
 });

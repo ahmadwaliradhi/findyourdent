@@ -14,8 +14,9 @@ const receipt = (overrides: Partial<ProofOfVisitExtraction> = {}): ProofOfVisitE
 });
 
 const TODAY = "2026-11-22";
-const decide = (extraction: ProofOfVisitExtraction | undefined, visitMonth = "2026-08", today = TODAY) =>
-  decideProof(extraction, { visitMonth, today });
+const decide = (extraction: ProofOfVisitExtraction | undefined, visitMonth = "2026-08", today = TODAY, reuse = false) =>
+  decideProof(extraction, { visitMonth, today, reuse });
+const decideReused = (extraction: ProofOfVisitExtraction | undefined) => decide(extraction, "2026-08", TODAY, true);
 
 describe("decideProof", () => {
   it("accepts a readable proof from the right clinic dated in the visit month", () => {
@@ -92,5 +93,26 @@ describe("decideProof", () => {
       result: "pending",
       reasons: ["nameMismatch", "dateMismatch"],
     });
+  });
+
+  it("sends a proof that would be accepted to the admin when another Testimony's fingerprint matches", () => {
+    expect(decideReused(receipt())).toEqual({ result: "pending", reasons: ["possibleReuse"] });
+  });
+
+  it("adds possibleReuse after the name and date reasons", () => {
+    expect(decideReused(receipt({ clinicNameMatches: false, proofDate: "2026-03-02" }))).toEqual({
+      result: "pending",
+      reasons: ["nameMismatch", "dateMismatch", "possibleReuse"],
+    });
+  });
+
+  it("adds possibleReuse to notChecked, since a file hash can match with nothing read", () => {
+    expect(decideReused(undefined)).toEqual({ result: "pending", reasons: ["notChecked", "possibleReuse"] });
+  });
+
+  it("still rejects a reused proof that is unreadable, not a proof or too old", () => {
+    expect(decideReused(receipt({ readable: false }))).toEqual({ result: "rejected", reason: "unreadable" });
+    expect(decideReused(receipt({ isProofOfVisit: false }))).toEqual({ result: "rejected", reason: "notAProof" });
+    expect(decideReused(receipt({ proofDate: "2025-10-01" }))).toEqual({ result: "rejected", reason: "tooOld" });
   });
 });

@@ -185,12 +185,28 @@ export interface QueueNameCorrection {
   suggestedRegion?: RegionRef;
 }
 
+/** How two Proof Fingerprints match (spec 09): same read facts, same PDF, or a near-identical image. */
+export type ReuseMatchKind = "fieldsKey" | "fileHash" | "perceptualHash";
+
+/** Another Testimony whose Proof Fingerprint matches this proof, shown for `possibleReuse`. */
+export interface QueueProofMatch {
+  testimonyId: string;
+  displayName: string;
+  status: TestimonyStatus;
+  proofResult: "accepted" | "pending";
+  matchedOn: ReuseMatchKind[];
+  /** Public Provider page, when the Testimony is published. */
+  href?: string;
+}
+
 /** A pending Proof of Visit for the admin: the private file, what was read off it and why it waits. */
 export interface QueueProof {
   /** Admin-only route that streams the private proof file. */
   fileUrl: string;
   reasons: ProofPendingReason[];
   extracted?: ProofOfVisitExtracted;
+  /** The Testimonies whose Proof Fingerprint matches this proof, shown for `possibleReuse`. */
+  reuseMatches?: QueueProofMatch[];
 }
 
 /** A submitted Claim: the admin opens the permit, then phones the Google listing number. */
