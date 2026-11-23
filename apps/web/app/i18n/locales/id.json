@@ -270,6 +270,21 @@
           "possibleReuse": "Mungkin bukti yang sama dipakai ulang",
           "notChecked": "Pemeriksaan otomatis gagal, belum ada yang terbaca"
         },
+        "reuse": {
+          "title": "Testimoni dengan bukti yang cocok",
+          "testimony": "Testimoni oleh {{name}}",
+          "proofResult": {
+            "accepted": "bukti diterima",
+            "pending": "bukti menunggu keputusan"
+          },
+          "matchedOn": "Cocok karena: {{kinds}}",
+          "kind": {
+            "fieldsKey": "nama klinik, tanggal dan total sama",
+            "fileHash": "file sama persis",
+            "perceptualHash": "gambar nyaris sama"
+          },
+          "gone": "Testimoni yang buktinya cocok sudah tidak ada, mungkin sudah dihapus."
+        },
         "expiryHint": "Bukti yang belum diputuskan dalam 7 hari ditolak otomatis dan filenya dihapus. Alasan penolakan ditampilkan ke penulis."
       }
     }

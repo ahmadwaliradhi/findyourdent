@@ -1,7 +1,6 @@
 import type { Guidance, ModerationDecision, ProofOfVisitExtraction } from "@findyourdent/contracts";
 import { type AspectRatings, COLLECTIONS, type ProviderDoc } from "@findyourdent/contracts/firestore";
 import { Timestamp } from "firebase-admin/firestore";
-import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
@@ -713,16 +712,20 @@ describe("POST /api/shortlist ranks on Proven Testimonies only (spec 09)", () =>
     authorMessage: "Terima kasih!",
   };
   /** What the agent reads off a matching receipt from the visit month. */
+  let patients = 0;
+
+  /**
+   * What the agent reads off a matching receipt from the visit month. Each Patient paid a
+   * different total: the same clinic, date and total twice would be held as possible reuse.
+   */
   const receipt = (placeId: string): ProofOfVisitExtraction => ({
     readable: true,
     isProofOfVisit: true,
     clinicNameOnProof: TYPED_NAME[placeId] ?? placeId,
     proofDate: "2026-09-12",
-    totalRupiah: 300_000,
+    totalRupiah: 300_000 + patients * 1_000,
     clinicNameMatches: true,
   });
-
-  let patients = 0;
 
   /** One new Patient posts a Testimony through the API, with an accepted Proof of Visit or none. */
   async function postTestimony(placeId: string, score: number, proven: boolean): Promise<void> {
@@ -743,10 +746,9 @@ describe("POST /api/shortlist ranks on Proven Testimonies only (spec 09)", () =>
     const form = new FormData();
     form.set("testimony", JSON.stringify(submission));
     if (proven) {
-      const bytes = await sharp({ create: { width: 640, height: 480, channels: 3, background: "#ffffff" } })
-        .jpeg()
-        .toBuffer();
-      form.set("proof", new File([new Uint8Array(bytes)], "struk", { type: "image/jpeg" }));
+      // Each Patient's own receipt: one file twice at a place would be held as possible reuse.
+      const bytes = Buffer.from(`%PDF-1.4\n% pasien ${patients}\n%%EOF\n`);
+      form.set("proof", new File([new Uint8Array(bytes)], "struk.pdf", { type: "application/pdf" }));
     }
     const response = await fetch(new URL("/api/testimonies", server.baseUrl), {
       method: "POST",

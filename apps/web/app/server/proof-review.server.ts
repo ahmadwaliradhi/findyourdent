@@ -9,6 +9,8 @@ import type { AppLoadContext } from "react-router";
 import type { ProofAction } from "~/lib/admin-queue";
 import { type Acting, AdminRefusal, logAction } from "./admin-common.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
+import { fingerprintOf, type ProofFingerprint } from "./proof-fingerprint.ts";
+import { deleteFingerprint, fingerprintRef, setFingerprint } from "./proof-fingerprints.server.ts";
 import { publishedOf, writeProviderOnPublish } from "./testimonies.server.ts";
 import { deleteTestimonyMedia, privateFileResponse } from "./testimony-media.server.ts";
 
@@ -33,6 +35,28 @@ export async function proofFileResponse(context: AppLoadContext, testimonyId: st
 }
 
 /**
+ * The fingerprint of a pending proof that has none: it was sent to the admin before
+ * fingerprints were kept. Computed from the held file while it still exists, so the
+ * receipt cannot be used again once it is accepted. Undefined when there is nothing to add.
+ */
+async function missingFingerprint(
+  context: AppLoadContext,
+  firestore: Firestore,
+  testimonyId: string,
+): Promise<{ filePath: string; fingerprint: ProofFingerprint } | undefined> {
+  const { uploads } = context;
+  if (!uploads || (await fingerprintRef(firestore, testimonyId).get()).exists) return undefined;
+  const proof = ((await testimonies(firestore).doc(testimonyId).get()).data() as TestimonyDoc | undefined)
+    ?.proofOfVisit;
+  if (proof?.result !== "pending") return undefined;
+  const file = uploads.file(proof.filePath);
+  if (!(await file.exists())[0]) return undefined;
+  const [bytes] = await file.download();
+  const mimeType = proof.filePath.endsWith(".pdf") ? "application/pdf" : "image/jpeg";
+  return { filePath: proof.filePath, fingerprint: await fingerprintOf({ bytes, mimeType }, proof.extracted) };
+}
+
+/**
  * Applies an admin decision on a pending proof, then deletes its file. Accept moves the
  * Testimony into the Proven Testimonies (aggregates and the Kunjungan terbukti counter
  * follow when it is published); reject keeps it Belum terbukti with the admin's reason.
@@ -40,6 +64,8 @@ export async function proofFileResponse(context: AppLoadContext, testimonyId: st
 export async function proofAction(context: AppLoadContext, acting: Acting, action: ProofAction): Promise<void> {
   const { firestore } = acting;
   const ref = testimonies(firestore).doc(acting.request.subjectId);
+  const accepting = action === "acceptProof";
+  const missing = accepting ? await missingFingerprint(context, firestore, ref.id) : undefined;
   let filePath = "";
   await firestore.runTransaction(async (tx) => {
     const testimony = (await tx.get(ref)).data() as TestimonyDoc | undefined;
@@ -47,9 +73,9 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
     if (!testimony || testimony.status === "deleted" || proof?.result !== "pending") {
       throw new AdminRefusal(404, "not_found");
     }
+    const hasFingerprint = missing ? (await tx.get(fingerprintRef(firestore, ref.id))).exists : true;
     filePath = proof.filePath;
     const now = Timestamp.now();
-    const accepting = action === "acceptProof";
 
     if (accepting && testimony.status === "published") {
       const provider = await tx.get(firestore.collection(COLLECTIONS.providers).doc(testimony.placeId));
@@ -72,6 +98,15 @@ export async function proofAction(context: AppLoadContext, acting: Acting, actio
           ...(acting.request.reason ? { adminReason: acting.request.reason } : {}),
         };
     tx.update(ref, { proofOfVisit: decided, verifiedVisit: accepting, updatedAt: now });
+    // An accepted proof keeps its fingerprint so the receipt cannot be used again; a rejected one never counted.
+    if (!accepting) deleteFingerprint(tx, firestore, ref.id);
+    else if (missing && !hasFingerprint && missing.filePath === proof.filePath) {
+      setFingerprint(tx, firestore, {
+        testimonyId: ref.id,
+        placeId: testimony.placeId,
+        fingerprint: missing.fingerprint,
+      });
+    }
     recordTestimonyTransition(
       firestore,
       tx,

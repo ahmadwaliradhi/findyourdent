@@ -270,6 +270,21 @@
           "possibleReuse": "Possibly a reused proof",
           "notChecked": "The automatic check failed, nothing was read"
         },
+        "reuse": {
+          "title": "Testimonies with a matching receipt",
+          "testimony": "Testimony by {{name}}",
+          "proofResult": {
+            "accepted": "proof accepted",
+            "pending": "proof awaiting a decision"
+          },
+          "matchedOn": "Matched on: {{kinds}}",
+          "kind": {
+            "fieldsKey": "same clinic name, date and total",
+            "fileHash": "same file",
+            "perceptualHash": "near-identical image"
+          },
+          "gone": "The Testimony with the matching receipt no longer exists, it was probably deleted."
+        },
         "expiryHint": "A proof not decided within 7 days is rejected automatically and its file deleted. The rejection reason is shown to the author."
       }
     }

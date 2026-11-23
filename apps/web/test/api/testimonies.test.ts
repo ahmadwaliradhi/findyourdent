@@ -1062,7 +1062,8 @@ describe("Proven Testimonies and aggregates (spec 09)", () => {
     moderateWith(proven ? ACCEPTED : PUBLISH);
     const stored = await createOk(submission(overrides), {
       cookie,
-      ...(proven ? { proof: { bytes: await photo(), type: "image/jpeg" } } : {}),
+      // Each Patient brings their own receipt: one file twice at a place is possible reuse.
+      ...(proven ? { proof: { bytes: Buffer.from(`%PDF-1.4\n% ${email}\n%%EOF\n`), type: "application/pdf" } } : {}),
     });
     expect(stored).toMatchObject({ status: "published", verifiedVisit: proven });
     return { ...stored, cookie };

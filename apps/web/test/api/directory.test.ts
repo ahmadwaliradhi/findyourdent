@@ -1,5 +1,4 @@
 import type { ModerationDecision } from "@findyourdent/contracts";
-import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonySubmission } from "../../app/lib/testimony.ts";
@@ -48,13 +47,8 @@ const ACCEPTED: ModerationDecision = {
   },
 };
 
-let receipt: Buffer | undefined;
-async function receiptPhoto(): Promise<Buffer> {
-  receipt ??= await sharp({ create: { width: 640, height: 480, channels: 3, background: "#f5f5dc" } })
-    .jpeg()
-    .toBuffer();
-  return receipt;
-}
+/** Each Patient's own receipt: one file twice at a place would be held as possible reuse. */
+const receiptOf = (patient: string) => Buffer.from(`%PDF-1.4\n% ${patient}\n%%EOF\n`);
 
 /**
  * Publishes a Testimony through the web API from a new Patient, with an accepted Proof of
@@ -75,7 +69,10 @@ async function publish(placeId: string, author: string, proven: boolean, rating:
   };
   const form = new FormData();
   form.set("testimony", JSON.stringify(testimony));
-  if (proven) form.set("proof", new File([new Uint8Array(await receiptPhoto())], "struk.jpg", { type: "image/jpeg" }));
+  if (proven) {
+    const receipt = receiptOf(`${placeId} ${author}`);
+    form.set("proof", new File([new Uint8Array(receipt)], "struk.pdf", { type: "application/pdf" }));
+  }
   const response = await fetch(new URL("/api/testimonies", server.baseUrl), {
     method: "POST",
     headers: { cookie, [APP_CHECK_HEADER]: server.appCheckToken() },

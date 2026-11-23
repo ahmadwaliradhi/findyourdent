@@ -31,6 +31,7 @@ export const COLLECTIONS = {
   adminActions: "adminActions",
   counters: "counters",
   rateLimits: "rateLimits",
+  proofFingerprints: "proofFingerprints",
 } as const;
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 
@@ -268,6 +269,25 @@ export interface TestimonyDoc extends TestimonyContent {
   publishedAt?: Timestamp;
   /** Set when the author deletes; text and photos are removed. */
   deletedAt?: Timestamp;
+}
+
+// proofFingerprints/{testimonyId} ---------------------------------------------
+
+/**
+ * What is kept of an accepted or pending Proof of Visit so one receipt cannot unlock
+ * several Testimonies (spec 09): no image, no patient name. Deleted when its Testimony
+ * is deleted or its proof is rejected. Queried by `placeId` for the reuse check.
+ */
+export interface ProofFingerprintDoc {
+  testimonyId: string;
+  placeId: PlaceId;
+  /** 64-bit perceptual hash of an image proof, 16 lowercase hex chars. */
+  perceptualHash?: string;
+  /** SHA-256 of a PDF proof, lowercase hex. */
+  fileSha256?: string;
+  /** From the normalised clinic name, proof date and total; absent unless all three were read. */
+  fieldsKey?: string;
+  createdAt: Timestamp;
 }
 
 // testimonyReports/{reportId} -------------------------------------------------

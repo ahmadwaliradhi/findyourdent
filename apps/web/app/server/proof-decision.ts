@@ -40,13 +40,16 @@ function isInFuture(proofDate: string, today: string): boolean {
  * Decides a Proof of Visit. `extraction` is absent when the agent's check did not run
  * (error, timeout, invalid answer): the file may be fine, so the admin looks (`notChecked`)
  * instead of the author being told it is unreadable.
- * `visitMonth` is `YYYY-MM`; `today` is `YYYY-MM-DD` in Asia/Jakarta.
+ * `visitMonth` is `YYYY-MM`; `today` is `YYYY-MM-DD` in Asia/Jakarta. `reuse`: the reuse
+ * check found another Testimony's matching Proof Fingerprint, which never rejects on its
+ * own because the other Testimony may be the reused one.
  */
 export function decideProof(
   extraction: ProofOfVisitExtraction | undefined,
-  { visitMonth, today }: { visitMonth: string; today: string },
+  { visitMonth, today, reuse }: { visitMonth: string; today: string; reuse: boolean },
 ): ProofDecision {
-  if (!extraction) return { result: "pending", reasons: ["notChecked"] };
+  const reuseReasons: ProofPendingReason[] = reuse ? ["possibleReuse"] : [];
+  if (!extraction) return { result: "pending", reasons: ["notChecked", ...reuseReasons] };
   if (!extraction.readable) return { result: "rejected", reason: "unreadable" };
   if (!extraction.isProofOfVisit) return { result: "rejected", reason: "notAProof" };
   const { proofDate } = extraction;
@@ -63,5 +66,6 @@ export function decideProof(
   ) {
     reasons.push("dateMismatch");
   }
+  reasons.push(...reuseReasons);
   return reasons.length > 0 ? { result: "pending", reasons } : { result: "accepted" };
 }
