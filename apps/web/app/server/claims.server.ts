@@ -55,7 +55,13 @@ import { flattenOwnerFacts, moderateOwnerContent, ownerDecisionDoc } from "./own
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
 import { isPlaceId } from "./provider.server.ts";
 import { regionValue } from "./testimonies.server.ts";
-import { decodes, deleteTestimonyMedia, sniffType, storePrivateDocument } from "./testimony-media.server.ts";
+import {
+  decodes,
+  deleteTestimonyMedia,
+  privateFileResponse,
+  sniffType,
+  storePrivateDocument,
+} from "./testimony-media.server.ts";
 
 const TESTIMONY_ID = /^[A-Za-z0-9_-]{1,64}$/;
 /** Spaces, dashes, dots, brackets and a leading plus around 7 to 15 digits. */
@@ -572,18 +578,7 @@ export async function permitResponse(context: AppLoadContext, claimId: string | 
   if (!firestore || !uploads || !claimId || !TESTIMONY_ID.test(claimId)) return new Response(null, { status: 404 });
   const path = (await claims(firestore).doc(claimId).get()).get("permitDocumentPath") as string | undefined;
   if (!path) return new Response(null, { status: 404 });
-  const file = uploads.file(path);
-  const [exists] = await file.exists();
-  if (!exists) return new Response(null, { status: 404 });
-  const [bytes] = await file.download();
-  return new Response(new Uint8Array(bytes), {
-    headers: {
-      "Content-Type": path.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
-      "Cache-Control": "private, no-store",
-      "Content-Disposition": "inline",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  return privateFileResponse(uploads, path);
 }
 
 /** Removes a Claim's permit file and field; call after the transaction that decided it. */

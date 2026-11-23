@@ -5,6 +5,8 @@ import type {
   ClaimDoc,
   ModerationDecisionDoc,
   ProcedureCode,
+  ProofOfVisitExtracted,
+  ProofPendingReason,
   ProviderType,
   RegionRef,
   ReportCategory,
@@ -17,11 +19,18 @@ export const SPOT_CHECK_RATE = 0.1;
 /** Every queue item has this long from when it entered the queue. */
 export const QUEUE_TARGET_HOURS = 24;
 
+/** A pending Proof of Visit has this long (spec 09); the 7-day expiry is the backstop. */
+export const PROOF_REVIEW_TARGET_HOURS = 72;
+
 export const ADMIN_REASON_MAX_CHARS = 1000;
 
 /** Actions on a Testimony, decided against the state machine (testimony-state.ts). */
 export const TESTIMONY_ACTIONS = ["publish", "reject", "sendBackToAuthor", "hide", "remove"] as const;
 export type TestimonyAction = (typeof TESTIMONY_ACTIONS)[number];
+
+/** Actions on a pending Proof of Visit (spec 09); `subjectId` is the Testimony id. */
+export const PROOF_ACTIONS = ["acceptProof", "rejectProof"] as const;
+export type ProofAction = (typeof PROOF_ACTIONS)[number];
 
 /** Actions on Claims, owner facts and replies (spec 05). */
 export const OWNER_ACTIONS = [
@@ -40,6 +49,7 @@ export const REASON_REQUIRED: ReadonlySet<AdminActionRequest["action"]> = new Se
   "reject",
   "sendBackToAuthor",
   "hide",
+  "rejectProof",
   "remove",
   "rejectClaim",
   "revokeClaim",
@@ -51,11 +61,12 @@ export const REASON_REQUIRED: ReadonlySet<AdminActionRequest["action"]> = new Se
  * POST /admin/api/actions. `subjectId` is the Testimony id for Testimony actions, the
  * report id for dismissReport, the correction id for name corrections, the
  * Moderation decision id for spotCheckConfirm, the Claim id for Claim actions, the
- * place id for owner facts and the Testimony id for replies.
+ * place id for owner facts and the Testimony id for replies and proof actions.
  */
 export interface AdminActionRequest {
   action:
     | TestimonyAction
+    | ProofAction
     | OwnerAction
     | "dismissReport"
     | "applyNameCorrection"
@@ -83,6 +94,7 @@ export type QueueItemKind =
   | "report"
   | "spotCheck"
   | "nameCorrection"
+  | "proofReview"
   | "claim"
   | "ownerFacts"
   | "reply";
@@ -143,6 +155,14 @@ export interface QueueNameCorrection {
   currentRegion: RegionRef;
   suggestedName?: string;
   suggestedRegion?: RegionRef;
+}
+
+/** A pending Proof of Visit for the admin: the private file, what was read off it and why it waits. */
+export interface QueueProof {
+  /** Admin-only route that streams the private proof file. */
+  fileUrl: string;
+  reasons: ProofPendingReason[];
+  extracted?: ProofOfVisitExtracted;
 }
 
 /** A submitted Claim: the admin opens the permit, then phones the Google listing number. */
@@ -207,12 +227,13 @@ export interface QueueItem {
   subjectId: string;
   /** When it entered the queue, ISO. */
   createdAt: string;
-  /** createdAt + 24 hours, ISO. */
+  /** createdAt + the target (24 hours; 72 for a proof review), ISO. */
   dueAt: string;
   overdue: boolean;
   testimony?: QueueTestimony;
   reports?: QueueReport[];
   correction?: QueueNameCorrection;
+  proof?: QueueProof;
   claim?: QueueClaim;
   ownerFacts?: QueueOwnerFacts;
   reply?: QueueReply;

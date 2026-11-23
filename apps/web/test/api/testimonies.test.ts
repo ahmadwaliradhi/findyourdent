@@ -318,12 +318,8 @@ describe("Moderation: publish", () => {
       claimStatus: "unclaimed",
       listedBy: "testimony",
       location: { lat: -6.1754, lng: 106.8272 },
-      aggregates: {
-        testimonyCount: 1,
-        verifiedVisitCount: 0,
-        averages: { service: 5, hygiene: 4, materialsEquipment: 3 },
-        procedurePrices: { scaling: { count: 1, medianRupiah: 300_000, minRupiah: 300_000, maxRupiah: 300_000 } },
-      },
+      // Without an accepted Proof of Visit it is counted but moves no score or price (spec 09).
+      aggregates: { testimonyCount: 1, verifiedVisitCount: 0, averages: null, procedurePrices: {} },
     });
     expect(listed?.location?.fetchedAt).toBeDefined();
     expect(await count(COLLECTIONS.providers)).toBe(1);
@@ -395,8 +391,8 @@ describe("Moderation: publish", () => {
     expect(listed?.aggregates).toEqual({
       testimonyCount: 2,
       verifiedVisitCount: 0,
-      averages: { service: 3.5, hygiene: 3.5, materialsEquipment: 3.5 },
-      procedurePrices: { scaling: { count: 2, medianRupiah: 200_000, minRupiah: 100_000, maxRupiah: 300_000 } },
+      averages: null,
+      procedurePrices: {},
     });
     expect(server.fakes.places.coordinatesCalls).toEqual([NEW_PLACE]);
     expect(await counter("testimoniesPublished")).toBe(2);
@@ -1048,6 +1044,82 @@ describe("POST /api/testimonies/:testimonyId/proof: attaching a Proof of Visit l
   });
 });
 
+describe("Proven Testimonies and aggregates (spec 09)", () => {
+  const ACCEPTED: ModerationDecision = {
+    ...PUBLISH,
+    proofOfVisit: {
+      readable: true,
+      isProofOfVisit: true,
+      clinicNameOnProof: "Klinik Gigi Ceria",
+      proofDate: "2026-09-12",
+      clinicNameMatches: true,
+    },
+  };
+
+  /** A published Testimony from a new Patient, Proven when `proven`. */
+  async function post(email: string, proven: boolean, overrides: Partial<TestimonySubmission> = {}) {
+    const { cookie } = await signIn(email);
+    moderateWith(proven ? ACCEPTED : PUBLISH);
+    const stored = await createOk(submission(overrides), {
+      cookie,
+      ...(proven ? { proof: { bytes: await photo(), type: "image/jpeg" } } : {}),
+    });
+    expect(stored).toMatchObject({ status: "published", verifiedVisit: proven });
+    return { ...stored, cookie };
+  }
+
+  it("shows averages only from the third Proven Testimony", async () => {
+    await post("a@example.com", true, { ratings: { service: 5, hygiene: 5, materialsEquipment: 5 } });
+    await post("b@example.com", true, { ratings: { service: 4, hygiene: 4, materialsEquipment: 4 } });
+    expect((await provider(NEW_PLACE))?.aggregates).toMatchObject({
+      testimonyCount: 2,
+      verifiedVisitCount: 2,
+      averages: null,
+    });
+
+    await post("c@example.com", true, { ratings: { service: 3, hygiene: 3, materialsEquipment: 3 } });
+    expect((await provider(NEW_PLACE))?.aggregates).toMatchObject({
+      testimonyCount: 3,
+      verifiedVisitCount: 3,
+      averages: { service: 4, hygiene: 4, materialsEquipment: 4 },
+    });
+  });
+
+  it("an unproven Testimony changes no average or price stat, only the count", async () => {
+    await post("a@example.com", true, { pricePaidRupiah: 300_000 });
+    await post("b@example.com", true, { pricePaidRupiah: 200_000 });
+    await post("c@example.com", true, { pricePaidRupiah: 100_000 });
+    const before = (await provider(NEW_PLACE))?.aggregates;
+    expect(before).toEqual({
+      testimonyCount: 3,
+      verifiedVisitCount: 3,
+      averages: { service: 5, hygiene: 4, materialsEquipment: 3 },
+      procedurePrices: { scaling: { count: 3, medianRupiah: 200_000, minRupiah: 100_000, maxRupiah: 300_000 } },
+    });
+
+    await post("buzzer@example.com", false, {
+      ratings: { service: 1, hygiene: 1, materialsEquipment: 1 },
+      pricePaidRupiah: 5_000_000,
+    });
+    expect((await provider(NEW_PLACE))?.aggregates).toEqual({ ...before, testimonyCount: 4 });
+  });
+
+  it("drops the averages when a Proven Testimony leaves published", async () => {
+    await post("a@example.com", true);
+    await post("b@example.com", true);
+    const third = await post("c@example.com", true);
+    expect((await provider(NEW_PLACE))?.aggregates.averages).not.toBeNull();
+
+    expect((await remove(third.testimonyId, { cookie: third.cookie })).status).toBe(200);
+    expect((await provider(NEW_PLACE))?.aggregates).toEqual({
+      testimonyCount: 2,
+      verifiedVisitCount: 2,
+      averages: null,
+      procedurePrices: { scaling: { count: 2, medianRupiah: 300_000, minRupiah: 300_000, maxRupiah: 300_000 } },
+    });
+  });
+});
+
 describe("one Testimony per Patient per Provider", () => {
   it("refuses a second Testimony for the same place and points to the existing one", async () => {
     const { cookie } = await signIn("pasien@example.com");
@@ -1153,7 +1225,7 @@ describe("editing", () => {
     expect((await provider(NEW_PLACE))?.aggregates).toEqual({
       testimonyCount: 1,
       verifiedVisitCount: 0,
-      averages: { service: 1, hygiene: 1, materialsEquipment: 1 },
+      averages: null,
       procedurePrices: {},
     });
     expect(await counter("testimoniesPublished")).toBe(1);

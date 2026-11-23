@@ -1,7 +1,6 @@
 import { Star } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
 
 interface Rating {
@@ -25,7 +24,7 @@ function TestimonyCard({
   providerName,
   href,
   meta,
-  verifiedLabel,
+  proofLabel,
   ratings,
   ratingsLabel,
   excerpt,
@@ -39,8 +38,8 @@ function TestimonyCard({
   href: string;
   /** Provider type and Region. */
   meta: string;
-  /** Present only for a verified visit. */
-  verifiedLabel?: string;
+  /** "Kunjungan terbukti" or "Belum terbukti" (spec 09). */
+  proofLabel?: ReactNode;
   ratings: Rating[];
   ratingsLabel: string;
   excerpt: string;
@@ -62,7 +61,7 @@ function TestimonyCard({
               {providerName}
             </Link>
           </h3>
-          {verifiedLabel && <Badge variant="success">{verifiedLabel}</Badge>}
+          {proofLabel}
         </div>
         <p className="text-sm text-muted-foreground">{meta}</p>
       </header>

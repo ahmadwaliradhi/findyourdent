@@ -2,6 +2,7 @@ import { type KeyboardEvent, useEffect, useEffectEvent, useId, useRef, useState 
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
+import { NotEnoughProven } from "~/components/proof-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ErrorNotice } from "~/components/ui/error-notice";
@@ -234,7 +235,7 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
             <p>
               {t("shortlist.testimoniesCount", { count: testimonies.count, verified: testimonies.verifiedVisitCount })}
             </p>
-            {testimonies.averages && (
+            {testimonies.averages ? (
               <p className="text-muted-foreground">
                 {t("shortlist.aspects", {
                   service: formatScore(testimonies.averages.service, language),
@@ -242,6 +243,8 @@ function ProviderCard({ provider, language }: { provider: ShortlistProvider; lan
                   materials: formatScore(testimonies.averages.materialsEquipment, language),
                 })}
               </p>
+            ) : (
+              <NotEnoughProven count={testimonies.verifiedVisitCount} />
             )}
           </>
         )}

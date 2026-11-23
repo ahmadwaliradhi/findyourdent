@@ -16,6 +16,7 @@ import {
   type QueueItem,
   type QueueModeration,
   type QueueOwnerFacts,
+  type QueueProof,
   type QueueTestimony,
   type QueueTestimonyContent,
   REASON_REQUIRED,
@@ -177,6 +178,7 @@ function QueueCard({ item }: { item: QueueItem }) {
         </section>
       )}
 
+      {item.proof && <ProofView proof={item.proof} />}
       {item.testimony && <TestimonyView testimony={item.testimony} />}
       {item.correction && (
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
@@ -263,6 +265,38 @@ function ClaimView({ claim }: { claim: QueueClaim }) {
         )}
       </dd>
       <dd className="col-span-2 text-xs text-muted-foreground">{t("admin.queue.claim.callHint")}</dd>
+    </dl>
+  );
+}
+
+/** The held proof: its private file, why the check sent it here and what was read off it. */
+function ProofView({ proof }: { proof: QueueProof }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const { extracted } = proof;
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      <dt className="text-muted-foreground">{t("admin.queue.proof.file")}</dt>
+      <dd>
+        <a href={proof.fileUrl} target="_blank" rel="noreferrer" className="font-semibold underline">
+          {t("admin.queue.proof.openFile")}
+        </a>
+      </dd>
+      <dt className="text-muted-foreground">{t("admin.queue.proof.reasons")}</dt>
+      <dd>{proof.reasons.map((reason) => t(`admin.queue.proof.reason.${reason}`)).join(" · ")}</dd>
+      <dt className="text-muted-foreground">{t("admin.queue.proof.extracted")}</dt>
+      <dd>
+        {extracted ? (
+          <>
+            {t("admin.queue.proof.clinicName")}: {extracted.clinicName ?? "-"} · {t("admin.queue.proof.proofDate")}:{" "}
+            {extracted.proofDate ?? "-"} · {t("admin.queue.proof.total")}:{" "}
+            {extracted.totalRupiah !== undefined ? formatRupiah(extracted.totalRupiah, language) : "-"}
+          </>
+        ) : (
+          t("admin.queue.proof.nothingRead")
+        )}
+      </dd>
+      <dd className="col-span-2 text-xs text-muted-foreground">{t("admin.queue.proof.expiryHint")}</dd>
     </dl>
   );
 }
@@ -407,6 +441,8 @@ function TestimonyView({ testimony }: { testimony: QueueTestimony }) {
 /** Testimony actions the item offers, in the order the admin usually needs them. */
 function testimonyActions(item: QueueItem): TestimonyAction[] {
   const status = item.testimony?.status;
+  // A proof review decides the proof only; the Testimony has its own queue items.
+  if (item.kind === "proofReview") return [];
   if (item.kind === "held" || item.kind === "revision") return ["publish", "reject", "sendBackToAuthor"];
   if (status === "hidden") return ["publish", "remove"];
   if (status === "published") return ["hide", "remove"];
@@ -421,6 +457,12 @@ function Actions({ item }: { item: QueueItem }) {
         {testimonyActions(item).map((action) => (
           <ActionButton key={action} request={{ action, subjectId: item.subjectId }} />
         ))}
+        {item.kind === "proofReview" && (
+          <>
+            <ActionButton request={{ action: "acceptProof", subjectId: item.subjectId }} />
+            <ActionButton request={{ action: "rejectProof", subjectId: item.subjectId }} />
+          </>
+        )}
         {item.kind === "spotCheck" && <ActionButton request={{ action: "spotCheckConfirm", subjectId: item.id }} />}
         {item.kind === "claim" && (
           <>
@@ -463,10 +505,18 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const label = t(`admin.queue.actions.${request.action}`);
-  const destructive = ["remove", "reject", "rejectClaim", "revokeClaim", "rejectOwnerFacts", "rejectReply"].includes(
+  const destructive = [
+    "remove",
+    "reject",
+    "rejectProof",
+    "rejectClaim",
+    "revokeClaim",
+    "rejectOwnerFacts",
+    "rejectReply",
+  ].includes(request.action);
+  const primary = ["publish", "acceptProof", "approveClaim", "publishOwnerFacts", "publishReply"].includes(
     request.action,
   );
-  const primary = ["publish", "approveClaim", "publishOwnerFacts", "publishReply"].includes(request.action);
 
   const send = async () => {
     setBusy(true);

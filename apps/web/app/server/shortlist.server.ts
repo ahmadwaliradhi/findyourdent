@@ -291,12 +291,13 @@ function templatedReason(ranked: RankedProvider, request: ShortlistRequest, lang
   if (referral && ranked.services.includes(referral)) {
     return t("shortlist.reason.listedService", { procedure: procedureLabel(referral, language) });
   }
-  const { count, averages } = ranked.testimonies;
-  if (count > 0 && averages) {
+  // The averages come from Proven Testimonies only (spec 09), so the reason names their count.
+  const { verifiedVisitCount, averages } = ranked.testimonies;
+  if (averages) {
     const score = overallAverage(averages);
     return t("shortlist.reason.testimonies", {
       score: score.toLocaleString(language === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1 }),
-      count,
+      count: verifiedVisitCount,
     });
   }
   if (distance) return t("shortlist.reason.distance", { distance });
