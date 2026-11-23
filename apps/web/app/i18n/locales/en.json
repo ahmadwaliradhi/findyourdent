@@ -676,10 +676,14 @@
       "not_found": "This Testimony was not found or has been deleted.",
       "forbidden": "Only the author can edit or delete this Testimony.",
       "not_editable": "This Testimony is under review by the team or was taken down, so it cannot be edited. You can still delete it.",
+      "proof_not_allowed": "A Proof of Visit can only be added to a published Testimony that is not yet marked Kunjungan terbukti.",
+      "proof_pending": "Your earlier Proof of Visit is still being checked by the FindYourDent team, so you cannot send another yet. Wait for the decision, usually within 72 hours.",
+      "proof_attempts_used": "You have sent a Proof of Visit 3 times for this Testimony, so you cannot send another. Wait for the team's decision, or delete this Testimony and write a new one.",
       "unavailable": "Testimonies are unavailable right now. Please try again shortly."
     },
     "fields": {
       "placeId": "Choose the practice from the search list.",
+      "proofRequired": "Choose a photo or PDF of your receipt, invoice or appointment card.",
       "providerName": "Type the place's name as on its signboard or as you know it (up to {{max}} characters).",
       "provinceCode": "Choose a province.",
       "regencyCode": "Choose a city or regency in this province.",
@@ -716,6 +720,14 @@
     }
   },
   "myTestimonies": {
+    "attachProof": {
+      "title": "Add a Proof of Visit",
+      "hint": "Only Testimonies with an accepted Proof of Visit count toward the score. Send a receipt, invoice or appointment card (image or PDF). Your Testimony's text is not checked again and stays published. The file is checked, then deleted.",
+      "attemptsLeft": "Proofs you can still send: {{count}}.",
+      "pick": "Choose and send a proof file",
+      "sending": "Sending the proof…",
+      "failed": "The proof was not sent. Check your connection and try again."
+    },
     "metaTitle": "My Testimonies",
     "title": "My Testimonies",
     "intro": "Every Testimony you wrote, its status and any reply from the practice.",

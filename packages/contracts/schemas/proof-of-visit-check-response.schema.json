@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/proof-of-visit-check-response.schema.json",
+  "title": "ProofOfVisitCheckResponse",
+  "description": "Agent service to web service: what Moderation in proof-only mode read off the Proof of Visit (spec 09). No decision: the web service decides accepted, pending or rejected, as for a proof sent with a Testimony.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "proofOfVisit": {
+      "description": "Facts only, never a judgment and never the patient's name. Absent when the check did not run (model error, timeout or invalid output); the web service then sends the proof to the admin.",
+      "title": "ProofOfVisitCheckExtraction",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readable", "isProofOfVisit", "clinicNameMatches"],
+      "properties": {
+        "readable": { "description": "The document could be read.", "type": "boolean" },
+        "isProofOfVisit": {
+          "description": "A receipt, invoice or appointment card from a dental Provider.",
+          "type": "boolean"
+        },
+        "clinicNameOnProof": { "description": "The clinic name as printed.", "type": "string", "minLength": 1 },
+        "proofDate": {
+          "description": "The date printed: YYYY-MM-DD, or YYYY-MM when only the month is printed.",
+          "type": "string",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$"
+        },
+        "totalRupiah": { "description": "The total, when printed.", "type": "integer", "minimum": 0 },
+        "clinicNameMatches": {
+          "description": "The model's fuzzy judgment that the clinic name on the proof is the typed name or Google's live name.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

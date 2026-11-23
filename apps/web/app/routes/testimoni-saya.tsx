@@ -1,4 +1,5 @@
 import type { TestimonyStatus } from "@findyourdent/contracts/firestore";
+import { Upload } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, redirect } from "react-router";
@@ -13,6 +14,8 @@ import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatVisitMonth } from "~/lib/format";
 import { testimonyPath } from "~/lib/paths";
 import { proofStatusKey } from "~/lib/proof-status";
+import { PROOF_MIME_TYPES, type TestimonyApiError, type TestimonyProofResponse } from "~/lib/testimony";
+import { checkPickedFile } from "~/lib/testimony-draft";
 import { testimonyStatusBadge } from "~/lib/testimony-status";
 import { cn } from "~/lib/utils";
 import { loadMyTestimonies, type MyTestimony } from "~/server/testimonies.server";
@@ -120,8 +123,10 @@ function StatusLegend() {
   );
 }
 
-function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: () => void }) {
+function MyTestimonyCard({ item: initial, onDeleted }: { item: MyTestimony; onDeleted: () => void }) {
   const { t, i18n } = useTranslation();
+  // Attaching a proof changes the proof status here without reloading the list.
+  const [item, setItem] = useState(initial);
   const language: Language = i18n.language === "en" ? "en" : "id";
   const firebase = useFirebaseConfig();
   const [confirming, setConfirming] = useState(false);
@@ -192,6 +197,21 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
           ) : null}
         </p>
       ) : null}
+      {item.canAttachProof ? (
+        <AttachProof
+          testimonyId={item.id}
+          attemptsLeft={item.proofAttemptsLeft}
+          onAttached={(response) =>
+            setItem((current) => ({
+              ...current,
+              verifiedVisit: response.verifiedVisit,
+              proof: response.proof,
+              proofAttemptsLeft: response.proofAttemptsLeft,
+              canAttachProof: response.canAttachProof,
+            }))
+          }
+        />
+      ) : null}
       <p className="line-clamp-4 whitespace-pre-line">{item.text}</p>
       {item.reply ? (
         <div className="flex flex-col gap-1 rounded-md border bg-muted px-4 py-3 text-sm">
@@ -247,5 +267,84 @@ function MyTestimonyCard({ item, onDeleted }: { item: MyTestimony; onDeleted: ()
         </div>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * Attach a Proof of Visit to a published Testimony (spec 09): the file is sent as soon as
+ * it is picked, and the answer (accepted, waiting for the team, or not accepted and why)
+ * replaces the proof status above. The Testimony's text is not checked again.
+ */
+function AttachProof({
+  testimonyId,
+  attemptsLeft,
+  onAttached,
+}: {
+  testimonyId: string;
+  attemptsLeft: number;
+  onAttached: (response: TestimonyProofResponse) => void;
+}) {
+  const { t } = useTranslation();
+  const firebase = useFirebaseConfig();
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputId = `attach-proof-${testimonyId}`;
+  const hintId = `${inputId}-hint`;
+
+  const send = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    const check = checkPickedFile(file, "proof");
+    if (check) return setError(t(`testimonyForm.${check.key}`, check.values));
+    setSending(true);
+    setError(null);
+    try {
+      const token = await getAppCheckToken(firebase);
+      const body = new FormData();
+      body.set("proof", file);
+      const response = await fetch(`/api/testimonies/${encodeURIComponent(testimonyId)}/proof`, {
+        method: "POST",
+        headers: token ? { [APP_CHECK_HEADER]: token } : {},
+        body,
+      });
+      if (response.ok) return onAttached((await response.json()) as TestimonyProofResponse);
+      const refused = (await response.json().catch(() => null)) as TestimonyApiError | null;
+      setError(refused?.fieldErrors?.proof ?? refused?.message ?? t("myTestimonies.attachProof.failed"));
+    } catch {
+      setError(t("myTestimonies.attachProof.failed"));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-info-line bg-info-soft px-4 py-3 text-sm">
+      <span className="font-semibold">{t("myTestimonies.attachProof.title")}</span>
+      <p id={hintId}>
+        {t("myTestimonies.attachProof.hint")} {t("myTestimonies.attachProof.attemptsLeft", { count: attemptsLeft })}
+      </p>
+      <label
+        htmlFor={inputId}
+        aria-disabled={sending}
+        className={cn(
+          "inline-flex min-h-touch w-fit cursor-pointer items-center gap-2 rounded-md border border-border-strong bg-card px-4 text-base font-semibold shadow-xs hover:border-foreground has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring",
+          sending && "pointer-events-none opacity-60",
+        )}
+      >
+        <Upload aria-hidden="true" strokeWidth={1.75} className="size-5" />
+        {sending ? t("myTestimonies.attachProof.sending") : t("myTestimonies.attachProof.pick")}
+        <input
+          id={inputId}
+          type="file"
+          accept={PROOF_MIME_TYPES.join(",")}
+          onChange={send}
+          disabled={sending}
+          aria-describedby={hintId}
+          className="sr-only"
+        />
+      </label>
+      {error ? <FieldError role="alert">{error}</FieldError> : null}
+    </div>
   );
 }
