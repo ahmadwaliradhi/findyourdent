@@ -384,13 +384,24 @@ export interface PriceListDoc {
 
 // moderationDecisions/{decisionId} ---------------------------------------------
 
+/**
+ * Detection triggers (spec 09 part 2), decided by the web service at submission, never
+ * by the agent, and shown to admins only. `D1`: velocity (a burst of Testimonies for one
+ * Provider).
+ */
+export type DetectionRuleCode = "D1";
+
 /** Every Moderation call's result. Never stores the moderated text or photos. */
 export interface ModerationDecisionDoc {
   subjectType: "testimony" | "testimonyRevision" | "reply" | "providerFacts";
   subjectId: string;
   placeId: PlaceId;
+  /** "hold" when detection held a Testimony Moderation would have published. */
   decision: ModerationDecision["decision"];
+  /** The agent's rule codes, as returned. */
   ruleCodes: ModerationRuleCode[];
+  /** Admin only: the detection triggers that turned Moderation's publish into this hold. */
+  detectionRuleCodes?: DetectionRuleCode[];
   /** Offsets and text of flagged spans, kept for the admin queue. */
   flaggedSpans: ModerationDecision["flaggedSpans"];
   flaggedPhotos?: ModerationDecision["flaggedPhotos"];

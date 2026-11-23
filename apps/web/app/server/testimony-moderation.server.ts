@@ -16,7 +16,7 @@ import {
   validateProofOfVisitCheckRequest,
   validateProofOfVisitCheckResponse,
 } from "@findyourdent/contracts";
-import type { ModerationDecisionDoc } from "@findyourdent/contracts/firestore";
+import type { DetectionRuleCode, ModerationDecisionDoc } from "@findyourdent/contracts/firestore";
 import { Timestamp } from "firebase-admin/firestore";
 import type { TFunction } from "i18next";
 import type { AppLoadContext } from "react-router";
@@ -52,6 +52,8 @@ export interface ModerationOutcome {
   decision: ModerationDecision;
   /** MODERATION_MODEL, or FALLBACK_MODEL when the result was unusable. */
   model: string;
+  /** Admin only: the detection triggers that turned Moderation's publish into hold. */
+  detectionRuleCodes?: DetectionRuleCode[];
 }
 
 /** Google's live name, in memory only. Without it Moderation runs on the typed name alone. */
@@ -165,6 +167,35 @@ export async function moderateTestimony(context: AppLoadContext, input: Moderati
   return { decision, model: MODERATION_MODEL };
 }
 
+/**
+ * Detection (spec 09 part 2) holds what Moderation published: the decision becomes hold,
+ * the agent's rule codes stay as returned, and the author reads the standard held
+ * message, which names no rule.
+ */
+export function heldByDetection(
+  t: TFunction,
+  outcome: ModerationOutcome,
+  detectionRuleCodes: DetectionRuleCode[],
+): ModerationOutcome {
+  if (outcome.decision.decision !== "publish") throw new Error("detection only holds a publish");
+  return {
+    ...outcome,
+    decision: { ...outcome.decision, decision: "hold", authorMessage: t("testimonyApi.moderation.held") },
+    detectionRuleCodes,
+  };
+}
+
+/**
+ * An author's edit of a Testimony detection held, while it is still held for the admin:
+ * the new decision keeps the triggers, so the queue still shows why it was held (spec 09
+ * part 2). Stored as hold whatever Moderation said of the edit; the author's message is
+ * left as it was and names no rule.
+ */
+export function keptDetection(outcome: ModerationOutcome, detectionRuleCodes: DetectionRuleCode[]): ModerationOutcome {
+  if (outcome.decision.decision === "authorFix") throw new Error("an authorFix is never stored");
+  return { ...outcome, decision: { ...outcome.decision, decision: "hold" }, detectionRuleCodes };
+}
+
 /** The status a stored decision leads to; an authorFix is never stored. */
 export function statusForDecision(decision: "publish" | "hold"): "published" | "held" {
   return decision === "publish" ? "published" : "held";
@@ -241,6 +272,7 @@ export function moderationDecisionDoc(
     ...subject,
     decision: decision.decision,
     ruleCodes: decision.ruleCodes,
+    ...(outcome.detectionRuleCodes?.length ? { detectionRuleCodes: outcome.detectionRuleCodes } : {}),
     flaggedSpans: decision.flaggedSpans,
     ...(decision.flaggedPhotos ? { flaggedPhotos: decision.flaggedPhotos } : {}),
     confidence: decision.confidence,

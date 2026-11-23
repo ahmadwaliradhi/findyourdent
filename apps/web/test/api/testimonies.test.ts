@@ -22,6 +22,7 @@ import type {
   TestimonySubmission,
 } from "../../app/lib/testimony.ts";
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
+import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -1056,7 +1057,11 @@ describe("Proven Testimonies and aggregates (spec 09)", () => {
     },
   };
 
-  /** A published Testimony from a new Patient, Proven when `proven`. */
+  /**
+   * A published Testimony from a new Patient, Proven when `proven`. Each is then dated a
+   * day past detection's lookback, as Testimonies that arrived over weeks, so its velocity
+   * rule (detection.test.ts) does not hold the third one posted here.
+   */
   async function post(email: string, proven: boolean, overrides: Partial<TestimonySubmission> = {}) {
     const { cookie } = await signIn(email);
     moderateWith(proven ? ACCEPTED : PUBLISH);
@@ -1066,6 +1071,7 @@ describe("Proven Testimonies and aggregates (spec 09)", () => {
       ...(proven ? { proof: { bytes: Buffer.from(`%PDF-1.4\n% ${email}\n%%EOF\n`), type: "application/pdf" } } : {}),
     });
     expect(stored).toMatchObject({ status: "published", verifiedVisit: proven });
+    await submittedBeforeDetectionWindow(server.firestore, stored.testimonyId);
     return { ...stored, cookie };
   }
 

@@ -8,6 +8,7 @@ import { shareToken } from "../../app/server/share.server.ts";
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
 import type { PlaceSummary } from "../../server/adapters/places.ts";
+import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -758,6 +759,7 @@ describe("POST /api/shortlist ranks on Proven Testimonies only (spec 09)", () =>
     if (response.status !== 201) throw new Error(`testimony failed: ${response.status} ${await response.text()}`);
     const stored = (await response.json()) as TestimonyStoredResponse;
     expect(stored).toMatchObject({ status: "published", verifiedVisit: proven });
+    await submittedBeforeDetectionWindow(server.firestore, stored.testimonyId);
   }
 
   const postMany = async (placeId: string, score: number, proven: boolean, times: number) => {

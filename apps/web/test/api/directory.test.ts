@@ -2,7 +2,7 @@ import type { ModerationDecision } from "@findyourdent/contracts";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonySubmission } from "../../app/lib/testimony.ts";
-import { seedProvider, seedTestimony } from "../support/fixtures.ts";
+import { seedProvider, seedTestimony, submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -79,7 +79,9 @@ async function publish(placeId: string, author: string, proven: boolean, rating:
     body: form,
   });
   expect(response.status).toBe(201);
-  expect(await response.json()).toMatchObject({ status: "published", verifiedVisit: proven });
+  const stored = (await response.json()) as { testimonyId: string };
+  expect(stored).toMatchObject({ status: "published", verifiedVisit: proven });
+  await submittedBeforeDetectionWindow(server.firestore, stored.testimonyId);
 }
 
 async function publishMany(

@@ -14,6 +14,7 @@ import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import { silentLogger } from "../../server/logger.ts";
 import { expirePendingProofs } from "../../server/proof-expiry.ts";
+import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -407,6 +408,7 @@ describe("freeing a fingerprint", () => {
         body: form,
       });
       const { testimonyId } = (await created.json()) as TestimonyStoredResponse;
+      await submittedBeforeDetectionWindow(server.firestore, testimonyId);
       server.fakes.agent.respondToProofCheckWith({ proofOfVisit: extraction });
       const attachForm = new FormData();
       attachForm.set("proof", new File([new Uint8Array(proof.bytes)], "struk", { type: proof.type }));

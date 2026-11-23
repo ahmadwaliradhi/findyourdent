@@ -169,6 +169,20 @@
       ]
     },
     {
+      "collectionGroup": "testimonies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "placeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "providers",
       "queryScope": "COLLECTION",
       "fields": [

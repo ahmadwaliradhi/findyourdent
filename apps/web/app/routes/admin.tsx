@@ -1,3 +1,4 @@
+import type { DetectionRuleCode } from "@findyourdent/contracts/firestore";
 import { Clock } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +14,7 @@ import {
   type AdminApiError,
   type ApprovedClaim,
   type QueueClaim,
+  type QueueDetection,
   type QueueItem,
   type QueueModeration,
   type QueueOwnerFacts,
@@ -179,6 +181,7 @@ function QueueCard({ item }: { item: QueueItem }) {
         </section>
       )}
 
+      {item.detection && <DetectionView detection={item.detection} />}
       {item.proof && <ProofView proof={item.proof} />}
       {item.testimony && <TestimonyView testimony={item.testimony} />}
       {item.correction && (
@@ -224,7 +227,57 @@ function ModerationLine({ moderation }: { moderation: QueueModeration | null }) 
       <span className="text-muted-foreground">{t("admin.queue.gemini")}</span> <strong>{moderation.decision}</strong>
       {moderation.ruleCodes.length > 0 && <> · {moderation.ruleCodes.join(", ")}</>} ·{" "}
       {t("admin.queue.confidence", { value: moderation.confidence.toFixed(2) })} · {moderation.model}
+      {moderation.detectionRuleCodes?.map((code) => (
+        <Badge key={code} variant="danger" className="ml-2">
+          {code}
+        </Badge>
+      ))}
     </p>
+  );
+}
+
+/** What each detection rule code means to the admin. */
+const DETECTION_RULE: Record<DetectionRuleCode, "velocity"> = { D1: "velocity" };
+
+/** Admin only: the Provider's other Testimonies behind a detection hold, and who wrote them. */
+function DetectionView({ detection }: { detection: QueueDetection }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const accountState = (elsewhere: boolean) =>
+    elsewhere ? t("admin.queue.detection.otherProviders") : t("admin.queue.detection.onlyThisProvider");
+  return (
+    <section aria-label={t("admin.queue.detection.title")} className="flex min-w-0 flex-col gap-2 text-sm">
+      <h3 className="flex flex-wrap items-center gap-2 font-medium">
+        {t("admin.queue.detection.title")}
+        {detection.ruleCodes.map((code) => (
+          <span key={code} className="flex flex-wrap items-center gap-2 font-normal">
+            <Badge variant="danger">{code}</Badge>
+            <span className="text-muted-foreground">{t(`admin.queue.detection.${DETECTION_RULE[code]}`)}</span>
+          </span>
+        ))}
+      </h3>
+      <p>
+        <span className="text-muted-foreground">{t("admin.queue.detection.author")}:</span>{" "}
+        <strong>{accountState(detection.authorWroteAboutOtherProviders)}</strong>
+      </p>
+      <p className="text-muted-foreground">{t("admin.queue.detection.linked", { count: detection.linked.length })}</p>
+      <ol className="flex flex-col gap-2">
+        {detection.linked.map((linked) => (
+          <li key={linked.id} className="flex min-w-0 flex-col gap-1 rounded-md bg-muted p-2">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <strong className="break-words">{linked.displayName}</strong>
+              <Badge {...testimonyStatusBadge(linked.status)}>{t(`admin.queue.status.${linked.status}`)}</Badge>
+              <span className="text-muted-foreground">{formatTime(linked.createdAt, language)}</span>
+              {linked.withinDay && <Badge variant="outline">{t("admin.queue.detection.withinDay")}</Badge>}
+            </span>
+            <span className={linked.wroteAboutOtherProviders ? "" : "font-semibold text-destructive"}>
+              {accountState(linked.wroteAboutOtherProviders)}
+            </span>
+            <span className="whitespace-pre-line break-words text-muted-foreground">{linked.textPreview}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

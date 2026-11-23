@@ -215,6 +215,16 @@
         "admin": "Admin"
       },
       "photo": "Foto {{number}}",
+      "detection": {
+        "title": "Deteksi",
+        "velocity": "banyak Testimoni untuk tempat ini dalam waktu singkat",
+        "author": "Penulis Testimoni ini",
+        "linked_one": "{{count}} Testimoni lain untuk tempat ini dalam jendela deteksi",
+        "linked_other": "{{count}} Testimoni lain untuk tempat ini dalam jendela deteksi",
+        "withinDay": "jendela pendek",
+        "onlyThisProvider": "hanya menulis tentang tempat ini",
+        "otherProviders": "juga menulis tentang tempat lain"
+      },
       "correction": {
         "current": "Sekarang",
         "suggested": "Usulan"
