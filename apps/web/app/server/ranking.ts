@@ -6,8 +6,9 @@ import { aspectPrior, type ScorePrior, shrunkAspectScore } from "~/lib/scores";
  * Deterministic, explainable Shortlist ranking (spec 02), computed after Places
  * results are joined with Firestore by place_id. Procedure fit comes first; among
  * Providers that fit equally, a weighted score of Testimony quality, price fit and
- * distance decides, and ties go to the lower place_id. Claim status is carried for display but never read here, and paid
- * placement does not exist.
+ * distance decides, and ties go to the lower place_id. Only Proven Testimonies move the
+ * Testimony score (spec 09): unproven ones are counted for display and never read here.
+ * Claim status is carried for display but never read here, and paid placement does not exist.
  */
 export interface RankingCandidate {
   placeId: string;
@@ -18,7 +19,14 @@ export interface RankingCandidate {
   services: ProcedureCode[];
   /** null when the Patient typed an area instead of sharing a location. */
   distanceMeters: number | null;
-  testimonies: { count: number; verifiedVisitCount: number; averages: AspectRatings | null };
+  testimonies: {
+    /** Every published Testimony: display only, ranking never reads it (spec 09). */
+    count: number;
+    /** Proven Testimonies: the weight of the Provider's own average in the shrinkage. */
+    verifiedVisitCount: number;
+    /** Over Proven Testimonies only; null below MIN_PROVEN_FOR_SCORE of them. */
+    averages: AspectRatings | null;
+  };
   /** One representative rupiah price per procedure: Testimony median, else Price List midpoint. */
   prices: Partial<Record<ProcedureCode, number>>;
 }
@@ -41,8 +49,6 @@ export const SHORTLIST_SIZE = 5;
 
 /** After fit: Testimonies weigh most, then price and distance equally. */
 const WEIGHTS = { testimonies: 0.6, price: 0.2, distance: 0.2 };
-const VERIFIED_BONUS_PER_VISIT = 0.02;
-const VERIFIED_BONUS_MAX = 0.1;
 /** Beyond this, distance stops counting against a Provider. */
 const DISTANCE_HORIZON_METERS = 10_000;
 /** Score for a factor with no data: neither helps nor hurts. */
@@ -83,13 +89,16 @@ function procedureFit(candidate: RankingCandidate, need: RankingNeed): { score: 
   return { score: total / relevant.length, fits };
 }
 
-/** The shrunk aspect score shared with the directory (lib/scores.ts), plus a small Kunjungan terbukti bonus. */
+/**
+ * The shrunk aspect score shared with the directory (lib/scores.ts), scaled to 0..1:
+ * proven-only averages shrunk toward the overall mean by verifiedVisitCount. There is
+ * no separate Kunjungan terbukti bonus, since proof is already the whole input (spec 09).
+ */
 function testimonyScore(candidate: RankingCandidate, prior: ScorePrior): number {
-  const { count, verifiedVisitCount, averages } = candidate.testimonies;
+  const { verifiedVisitCount, averages } = candidate.testimonies;
   // An unrated Provider sits at the overall mean: neither helped nor hurt.
-  const shrunk = shrunkAspectScore({ averages, testimonyCount: count }, prior) ?? prior.mean;
-  const bonus = Math.min(VERIFIED_BONUS_MAX, verifiedVisitCount * VERIFIED_BONUS_PER_VISIT);
-  return clamp01((shrunk - 1) / 4 + bonus);
+  const shrunk = shrunkAspectScore({ averages, verifiedVisitCount }, prior) ?? prior.mean;
+  return clamp01((shrunk - 1) / 4);
 }
 
 function priceScore(candidate: RankingCandidate, need: RankingNeed): number {
@@ -111,9 +120,12 @@ function distanceScore(candidate: RankingCandidate): number {
 /** The top five, best first. */
 export function rankProviders(candidates: RankingCandidate[], need: RankingNeed): RankedProvider[] {
   const pool = need.purpose === "emergency" ? candidates.filter((c) => c.providerType === "hospital") : candidates;
-  // The overall mean Testimonies shrink toward, over this pool of candidates.
+  // The overall mean Testimonies shrink toward, over this pool of candidates, weighted by Proven Testimonies.
   const prior = aspectPrior(
-    pool.map(({ testimonies }) => ({ averages: testimonies.averages, testimonyCount: testimonies.count })),
+    pool.map(({ testimonies }) => ({
+      averages: testimonies.averages,
+      verifiedVisitCount: testimonies.verifiedVisitCount,
+    })),
   );
   const scored = pool.map((candidate) => {
     const fit = procedureFit(candidate, need);
