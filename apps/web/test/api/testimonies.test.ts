@@ -17,6 +17,7 @@ import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type {
   TestimonyApiError,
   TestimonyAuthorFixResponse,
+  TestimonyProofResponse,
   TestimonyStoredResponse,
   TestimonySubmission,
 } from "../../app/lib/testimony.ts";
@@ -802,24 +803,22 @@ describe("Moderation: Proof of Visit", () => {
     expect((await testimony(testimonyId)).proofOfVisit).toBeUndefined();
   });
 
-  it("replaces a pending proof with the one sent in an edit, deleting the old file", async () => {
+  it("refuses a proof sent in an edit while the earlier one waits for the team, keeping the waiting file", async () => {
     const { cookie } = await signIn("pasien@example.com");
     const { testimonyId } = await withProof(cookie, { ...HOLD, proofOfVisit: read({ clinicNameMatches: false }) });
-    const [oldFile] = await storedObjects("proof-of-visit/");
+    const [waiting] = await storedObjects("proof-of-visit/");
+    const calls = server.fakes.agent.moderationCalls.length;
 
-    moderateWith({ ...PUBLISH, proofOfVisit: read({ proofDate: "2026-05-02" }) });
     const response = await edit(testimonyId, submission(), {
       cookie,
       proof: { bytes: await photo(), type: "image/jpeg" },
     });
-    expect(response.status).toBe(200);
-    expect(((await response.json()) as TestimonyStoredResponse).proof?.result).toBe("pending");
 
-    const stored = await testimony(testimonyId);
-    expect(stored.proofOfVisit).toMatchObject({ result: "pending", reasons: ["dateMismatch"] });
-    const files = await storedObjects("proof-of-visit/");
-    expect(files).toHaveLength(1);
-    expect(files).not.toContain(oldFile);
+    expect(response.status).toBe(409);
+    expect(((await response.json()) as TestimonyApiError).error).toBe("proof_pending");
+    expect(server.fakes.agent.moderationCalls).toHaveLength(calls);
+    expect((await testimony(testimonyId)).proofOfVisit).toMatchObject({ result: "pending", filePath: waiting });
+    expect(await storedObjects("proof-of-visit/")).toEqual([waiting]);
   });
 
   it("never replaces an accepted proof with a later one", async () => {
@@ -841,6 +840,211 @@ describe("Moderation: Proof of Visit", () => {
 
     expect(published).not.toHaveProperty("proof");
     expect((await testimony(published.testimonyId)).proofOfVisit).toBeUndefined();
+  });
+});
+
+describe("POST /api/testimonies/:testimonyId/proof: attaching a Proof of Visit later", () => {
+  /** What the agent read off a receipt from the right clinic, dated in the visit month (2026-09). */
+  const read = (overrides: Partial<ProofOfVisitExtraction> = {}): ProofOfVisitExtraction => ({
+    readable: true,
+    isProofOfVisit: true,
+    clinicNameOnProof: "Klinik Gigi Ceria",
+    proofDate: "2026-09-12",
+    clinicNameMatches: true,
+    ...overrides,
+  });
+  const checkWith = (response: unknown) => server.fakes.agent.respondToProofCheckWith(response);
+  const attach = async (id: string, options: SendOptions = {}) => {
+    const headers = new Headers();
+    if (options.cookie) headers.set("cookie", options.cookie);
+    if (options.appCheck !== false) headers.set(APP_CHECK_HEADER, server.appCheckToken());
+    const form = new FormData();
+    const proof = options.proof ?? { bytes: await photo(), type: "image/jpeg" };
+    form.set("proof", new File([new Uint8Array(proof.bytes)], "struk", { type: proof.type }));
+    return fetch(new URL(`/api/testimonies/${id}/proof`, server.baseUrl), { method: "POST", headers, body: form });
+  };
+  const publishedWithoutProof = async (cookie: string) => {
+    moderateWith(PUBLISH);
+    const published = await createOk(submission(), { cookie });
+    server.fakes.agent.moderationCalls.length = 0;
+    return published.testimonyId;
+  };
+
+  it("accepts a matching proof without screening the Testimony again: Kunjungan terbukti, aggregates and counter moved", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const testimonyId = await publishedWithoutProof(cookie);
+    const before = await testimony(testimonyId);
+    checkWith({ proofOfVisit: read() });
+
+    const response = await attach(testimonyId, { cookie });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as TestimonyProofResponse;
+    expect(body).toMatchObject({ testimonyId, verifiedVisit: true, proof: { result: "accepted" } });
+    expect(body.proof.message).toContain("Kunjungan terbukti");
+    expect(server.fakes.agent.moderationCalls).toEqual([]);
+    const [call] = server.fakes.agent.proofCheckCalls;
+    expect(call).toMatchObject({ language: "id", visitMonth: "2026-09", proofOfVisit: { mimeType: "image/jpeg" } });
+    expect(call).not.toHaveProperty("text");
+    const stored = await testimony(testimonyId);
+    expect(stored).toMatchObject({
+      status: "published",
+      text: before.text,
+      verifiedVisit: true,
+      proofAttempts: 1,
+      moderationDecisionId: before.moderationDecisionId,
+      proofOfVisit: { result: "accepted", extracted: { clinicName: "Klinik Gigi Ceria", proofDate: "2026-09-12" } },
+    });
+    expect(stored).not.toHaveProperty("pendingRevision");
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect((await provider(NEW_PLACE))?.aggregates.verifiedVisitCount).toBe(1);
+    expect(await counter("verifiedVisits")).toBe(1);
+  });
+
+  it("sends a doubtful proof to the team: still published as Belum terbukti, the file kept", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const testimonyId = await publishedWithoutProof(cookie);
+    checkWith({ proofOfVisit: read({ clinicNameMatches: false, clinicNameOnProof: "Klinik Lain" }) });
+
+    const response = await attach(testimonyId, { cookie });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as TestimonyProofResponse;
+    expect(body).toMatchObject({ verifiedVisit: false, proof: { result: "pending" }, proofAttemptsLeft: 2 });
+    expect(body.proof.message).toContain("tim FindYourDent");
+    const stored = await testimony(testimonyId);
+    expect(stored).toMatchObject({ status: "published", verifiedVisit: false, proofAttempts: 1 });
+    const kept = await storedObjects("proof-of-visit/");
+    expect(kept).toHaveLength(1);
+    expect(stored.proofOfVisit).toMatchObject({ result: "pending", reasons: ["nameMismatch"], filePath: kept[0] });
+    expect((await provider(NEW_PLACE))?.aggregates.verifiedVisitCount).toBe(0);
+    expect(await counter("verifiedVisits")).toBe(0);
+  });
+
+  it("refuses another proof while one waits for the team, so a held receipt is never wiped", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const testimonyId = await publishedWithoutProof(cookie);
+    checkWith({ proofOfVisit: read({ clinicNameMatches: false }) });
+    await attach(testimonyId, { cookie });
+    const [waiting] = await storedObjects("proof-of-visit/");
+
+    const response = await attach(testimonyId, { cookie });
+
+    expect(response.status).toBe(409);
+    const error = (await response.json()) as TestimonyApiError;
+    expect(error.error).toBe("proof_pending");
+    expect(error.message).toContain("tim FindYourDent");
+    expect(server.fakes.agent.proofCheckCalls).toHaveLength(1);
+    expect((await testimony(testimonyId)).proofOfVisit).toMatchObject({ result: "pending", filePath: waiting });
+    expect(await storedObjects("proof-of-visit/")).toEqual([waiting]);
+  });
+
+  it("sends the proof to the team unchecked when the agent fails, never telling the author it is unreadable", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const testimonyId = await publishedWithoutProof(cookie);
+    checkWith(new AgentUnavailableError("agent responded 503", 503));
+
+    const body = (await (await attach(testimonyId, { cookie })).json()) as TestimonyProofResponse;
+
+    expect(body.proof.result).toBe("pending");
+    expect((await testimony(testimonyId)).proofOfVisit).toMatchObject({ result: "pending", reasons: ["notChecked"] });
+  });
+
+  it("allows 3 proof attempts counting the one at submission, then refuses with a plain message", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    moderateWith({ ...PUBLISH, proofOfVisit: read({ readable: false, isProofOfVisit: false }) });
+    const { testimonyId } = await createOk(submission(), {
+      cookie,
+      proof: { bytes: await photo(), type: "image/jpeg" },
+    });
+    checkWith({ proofOfVisit: read({ isProofOfVisit: false }) });
+
+    const second = (await (await attach(testimonyId, { cookie })).json()) as TestimonyProofResponse;
+    expect(second).toMatchObject({ proof: { result: "rejected", reason: "notAProof" }, proofAttemptsLeft: 1 });
+    const third = (await (await attach(testimonyId, { cookie })).json()) as TestimonyProofResponse;
+    expect(third.proofAttemptsLeft).toBe(0);
+    const calls = server.fakes.agent.proofCheckCalls.length;
+
+    const fourth = await attach(testimonyId, { cookie });
+
+    expect(fourth.status).toBe(409);
+    const error = (await fourth.json()) as TestimonyApiError;
+    expect(error.error).toBe("proof_attempts_used");
+    expect(error.message).toContain("3 kali");
+    expect(server.fakes.agent.proofCheckCalls).toHaveLength(calls);
+    expect((await testimony(testimonyId)).proofAttempts).toBe(3);
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+  });
+
+  it("counts a proof sent in an edit, and refuses an edit's proof once every attempt is used", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const testimonyId = await publishedWithoutProof(cookie);
+    checkWith({ proofOfVisit: read({ isProofOfVisit: false }) });
+    await attach(testimonyId, { cookie });
+    await attach(testimonyId, { cookie });
+    moderateWith({ ...PUBLISH, proofOfVisit: read({ isProofOfVisit: false }) });
+    expect(
+      (await edit(testimonyId, submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } })).status,
+    ).toBe(200);
+    expect((await testimony(testimonyId)).proofAttempts).toBe(3);
+
+    const refused = await edit(testimonyId, submission(), {
+      cookie,
+      proof: { bytes: await photo(), type: "image/jpeg" },
+    });
+
+    expect(refused.status).toBe(409);
+    expect(((await refused.json()) as TestimonyApiError).error).toBe("proof_attempts_used");
+  });
+
+  it("refuses another account, and leaves the Testimony as it was", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const testimonyId = await publishedWithoutProof(cookie);
+    const other = await signIn("orang-lain@example.com");
+
+    const response = await attach(testimonyId, { cookie: other.cookie });
+
+    expect(response.status).toBe(403);
+    expect(((await response.json()) as TestimonyApiError).error).toBe("forbidden");
+    expect(server.fakes.agent.proofCheckCalls).toEqual([]);
+    expect((await testimony(testimonyId)).proofOfVisit).toBeUndefined();
+    expect(await storedObjects("proof-of-visit/")).toEqual([]);
+    expect((await attach(testimonyId)).status).toBe(401);
+  });
+
+  it("refuses a Testimony that is not published or already Kunjungan terbukti", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    moderateWith({ ...PUBLISH, proofOfVisit: read() });
+    const proven = await createOk(submission(), { cookie, proof: { bytes: await photo(), type: "image/jpeg" } });
+    moderateWith(HOLD);
+    const held = await createOk(submission({ placeId: "ChIJ-another-place" }), { cookie });
+
+    for (const id of [proven.testimonyId, held.testimonyId]) {
+      const response = await attach(id, { cookie });
+      expect(response.status).toBe(409);
+      expect(((await response.json()) as TestimonyApiError).error).toBe("proof_not_allowed");
+    }
+    expect(server.fakes.agent.proofCheckCalls).toEqual([]);
+  });
+
+  it("refuses a request without a proof file", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const testimonyId = await publishedWithoutProof(cookie);
+
+    const response = await attach(testimonyId, { cookie, proof: { bytes: Buffer.from("hello"), type: "text/plain" } });
+
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as TestimonyApiError).fieldErrors?.proof).toBeDefined();
+    expect((await testimony(testimonyId)).proofAttempts).toBeUndefined();
+  });
+
+  it("offers attaching a proof on Testimoni saya", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    await publishedWithoutProof(cookie);
+
+    const page = await fetch(new URL("/testimoni-saya", server.baseUrl), { headers: { cookie } });
+
+    expect(await page.text()).toContain("Tambahkan bukti kunjungan");
   });
 });
 

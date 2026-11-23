@@ -17,6 +17,10 @@ import priceListExtractionResponseSchema from "../schemas/price-list-extraction-
   type: "json",
 };
 import proceduresSchema from "../schemas/procedures.schema.json" with { type: "json" };
+import proofOfVisitCheckRequestSchema from "../schemas/proof-of-visit-check-request.schema.json" with { type: "json" };
+import proofOfVisitCheckResponseSchema from "../schemas/proof-of-visit-check-response.schema.json" with {
+  type: "json",
+};
 import regionsSchema from "../schemas/regions.schema.json" with { type: "json" };
 import shortlistReasonsRequestSchema from "../schemas/shortlist-reasons-request.schema.json" with { type: "json" };
 import shortlistReasonsResponseSchema from "../schemas/shortlist-reasons-response.schema.json" with { type: "json" };
@@ -30,6 +34,8 @@ import type {
   PriceListExtractionResponse,
   Procedure,
   ProcedureList,
+  ProofOfVisitCheckRequest,
+  ProofOfVisitCheckResponse,
   RegionList,
   ShortlistReasonsRequest,
   ShortlistReasonsResponse,
@@ -48,6 +54,8 @@ export const SCHEMAS = {
   "price-list-extraction-request": priceListExtractionRequestSchema,
   "price-list-extraction-response": priceListExtractionResponseSchema,
   procedures: proceduresSchema,
+  "proof-of-visit-check-request": proofOfVisitCheckRequestSchema,
+  "proof-of-visit-check-response": proofOfVisitCheckResponseSchema,
   regions: regionsSchema,
   "shortlist-reasons-request": shortlistReasonsRequestSchema,
   "shortlist-reasons-response": shortlistReasonsResponseSchema,
@@ -74,6 +82,8 @@ export const validatePriceListExtractionRequest = compile<PriceListExtractionReq
 export const validatePriceListExtractionResponse = compile<PriceListExtractionResponse>(
   priceListExtractionResponseSchema,
 );
+export const validateProofOfVisitCheckRequest = compile<ProofOfVisitCheckRequest>(proofOfVisitCheckRequestSchema);
+export const validateProofOfVisitCheckResponse = compile<ProofOfVisitCheckResponse>(proofOfVisitCheckResponseSchema);
 export const validateProcedureList = compile<ProcedureList>(proceduresSchema);
 export const validateRegionList = compile<RegionList>(regionsSchema);
 export const validateDistrictList = compile<DistrictList>(districtsSchema);

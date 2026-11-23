@@ -19,13 +19,15 @@ from .contracts.moderation_decision import ModerationDecision
 from .contracts.moderation_request import ModerationRequest
 from .contracts.price_list_extraction_request import PriceListExtractionRequest
 from .contracts.price_list_extraction_response import PriceListExtractionResponse
+from .contracts.proof_of_visit_check_request import ProofOfVisitCheckRequest
+from .contracts.proof_of_visit_check_response import ProofOfVisitCheckResponse
 from .contracts.shortlist_reasons_request import ShortlistReasonsRequest
 from .contracts.shortlist_reasons_response import ShortlistReasonsResponse
 from .data import procedure_codes
 from .escalation import default_matcher
 from .guidance import InvalidAudioError, NoSpeechError, answer_turn
 from .knowledge import bpjs_coverage, cost_estimates, guidance_safety
-from .moderation import InvalidAttachmentError, moderate
+from .moderation import InvalidAttachmentError, check_proof, moderate
 from .price_list import InvalidDocumentError, extract_price_list
 from .shortlist import write_reasons
 
@@ -162,6 +164,25 @@ def create_app(adapters: Adapters | None = None, settings: Settings | None = Non
             return JSONResponse(status_code=422, content={"detail": [detail]})
         request.state.outcome = result.outcome
         return result.decision
+
+    @app.post(
+        "/v1/moderation/proof-of-visit",
+        response_model=ProofOfVisitCheckResponse,
+        response_model_exclude_none=True,
+    )
+    async def proof_of_visit_check(
+        body: ProofOfVisitCheckRequest, request: Request
+    ) -> ProofOfVisitCheckResponse | JSONResponse:
+        # Moderation in proof-only mode (spec 09): the proof and what was read off it are
+        # never logged.
+        try:
+            result = await check_proof(body, adapters.gemini, settings)
+        except InvalidAttachmentError:
+            request.state.outcome = "invalid_request"
+            detail = {"type": "invalid_base64", "loc": ["body"], "msg": "attachment is not base64"}
+            return JSONResponse(status_code=422, content={"detail": [detail]})
+        request.state.outcome = result.outcome
+        return result.response
 
     @app.post(
         "/v1/price-list-extraction",

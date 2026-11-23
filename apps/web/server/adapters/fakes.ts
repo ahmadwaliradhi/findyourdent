@@ -4,6 +4,8 @@ import type {
   ModerationRequest,
   PriceListExtractionRequest,
   PriceListExtractionResponse,
+  ProofOfVisitCheckRequest,
+  ProofOfVisitCheckResponse,
   ProofOfVisitExtraction,
   ShortlistReasonsRequest,
   ShortlistReasonsResponse,
@@ -122,7 +124,9 @@ export function stubModeration(request: ModerationRequest): ModerationDecision {
 }
 
 /** A readable receipt from the clinic the author named, dated in the stated visit month. */
-function stubProofExtraction(request: ModerationRequest): ProofOfVisitExtraction {
+function stubProofExtraction(
+  request: Pick<ModerationRequest, "googleDisplayName" | "typedProviderName" | "visitMonth">,
+): ProofOfVisitExtraction {
   const clinicName = request.googleDisplayName ?? request.typedProviderName;
   return {
     readable: true,
@@ -131,6 +135,11 @@ function stubProofExtraction(request: ModerationRequest): ProofOfVisitExtraction
     ...(request.visitMonth ? { proofDate: request.visitMonth } : {}),
     clinicNameMatches: true,
   };
+}
+
+/** Moderation in proof-only mode: the same readable receipt from the right clinic. */
+export function stubProofCheck(request: ProofOfVisitCheckRequest): ProofOfVisitCheckResponse {
+  return { proofOfVisit: stubProofExtraction(request) };
 }
 
 function stubOwnerModeration(request: ModerationRequest, en: boolean): ModerationDecision {
@@ -191,6 +200,12 @@ export interface FakeAgentAdapter extends AgentAdapter {
    * the default is `stubModeration`.
    */
   respondToModerationWith(response: unknown): void;
+  readonly proofCheckCalls: ProofOfVisitCheckRequest[];
+  /**
+   * Next value returned (or thrown, if an Error) by requestProofCheck, until changed;
+   * the default is `stubProofCheck`.
+   */
+  respondToProofCheckWith(response: unknown): void;
   readonly extractionCalls: PriceListExtractionRequest[];
   /**
    * Next value returned (or thrown, if an Error) by requestPriceListExtraction, until
@@ -207,6 +222,8 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
   let next: unknown = initial;
   let nextReasons: unknown;
   let nextModeration: unknown;
+  let nextProofCheck: unknown;
+  const proofCheckCalls: ProofOfVisitCheckRequest[] = [];
   let nextExtraction: unknown = STUB_PRICE_LIST_EXTRACTION;
   const extractionCalls: PriceListExtractionRequest[] = [];
   const calls: GuidanceRequest[] = [];
@@ -216,6 +233,7 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
     calls,
     reasonsCalls,
     moderationCalls,
+    proofCheckCalls,
     extractionCalls,
     respondToExtractionWith(response) {
       nextExtraction = response;
@@ -232,6 +250,14 @@ export function createFakeAgentAdapter(initial: unknown = STUB_GUIDANCE_RESPONSE
       moderationCalls.push(structuredClone(request));
       if (nextModeration instanceof Error) throw nextModeration;
       return nextModeration === undefined ? stubModeration(request) : structuredClone(nextModeration);
+    },
+    respondToProofCheckWith(response) {
+      nextProofCheck = response;
+    },
+    async requestProofCheck(request) {
+      proofCheckCalls.push(structuredClone(request));
+      if (nextProofCheck instanceof Error) throw nextProofCheck;
+      return nextProofCheck === undefined ? stubProofCheck(request) : structuredClone(nextProofCheck);
     },
     respondWith(response) {
       next = response;

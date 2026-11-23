@@ -188,6 +188,21 @@ describe("HTTP agent adapter for Moderation", () => {
   });
 });
 
+describe("HTTP agent adapter for Moderation in proof-only mode", () => {
+  it("posts the proof to the agent's proof-only Moderation endpoint with the request id", async () => {
+    const agent = fakeAgent();
+    const adapter = createHttpAgentAdapter({ baseUrl: "https://agent.example", fetch: agent.fetch });
+
+    await adapter.requestProofCheck(
+      { language: "id", visitMonth: "2026-09", proofOfVisit: { mimeType: "application/pdf", dataBase64: "JVBERi0=" } },
+      { requestId: "proof-check-request" },
+    );
+
+    expect(agent.seen[0]?.url).toBe("https://agent.example/v1/moderation/proof-of-visit");
+    expect(agent.seen[0]?.headers.get("x-request-id")).toBe("proof-check-request");
+  });
+});
+
 describe("HTTP agent adapter for Price List extraction", () => {
   it("posts the documents to the agent's extraction endpoint and returns its body for validation", async () => {
     const agent = fakeAgent();
