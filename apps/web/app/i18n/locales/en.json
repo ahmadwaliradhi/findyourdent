@@ -372,7 +372,7 @@
     "searchPlaceholder": "For example: Klinik Gigi Sehat",
     "sortLabel": "Sort by",
     "sort": {
-      "testimoni": "Most Testimonies",
+      "testimoni": "Most Proven Testimonies",
       "skor": "Highest score",
       "jarak": "Nearest"
     },
@@ -396,8 +396,8 @@
     "distance": "{{km}} km",
     "noLocation": "Distance unavailable",
     "locating": "Finding your location...",
-    "locationDenied": "Your location could not be used, so the list is sorted by number of Testimonies. Allow location access in your browser to sort by distance.",
-    "locationUnsupported": "This browser cannot share your location, so the list is sorted by number of Testimonies.",
+    "locationDenied": "Your location could not be used, so the list is sorted by number of Proven Testimonies. Allow location access in your browser to sort by distance.",
+    "locationUnsupported": "This browser cannot share your location, so the list is sorted by number of Proven Testimonies.",
     "locationReady": "Sorted from nearest to your location.",
     "emptyTitle": "No matching places yet",
     "emptyBody": "No Patient has written about a place matching these filters yet. Be the first.",

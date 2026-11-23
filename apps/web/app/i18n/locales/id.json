@@ -372,7 +372,7 @@
     "searchPlaceholder": "Misalnya: Klinik Gigi Sehat",
     "sortLabel": "Urutkan",
     "sort": {
-      "testimoni": "Testimoni terbanyak",
+      "testimoni": "Testimoni terbukti terbanyak",
       "skor": "Skor tertinggi",
       "jarak": "Jarak terdekat"
     },
@@ -396,8 +396,8 @@
     "distance": "{{km}} km",
     "noLocation": "Jarak tidak tersedia",
     "locating": "Mencari lokasimu...",
-    "locationDenied": "Lokasimu tidak bisa dipakai, jadi daftar diurutkan menurut jumlah testimoni. Izinkan akses lokasi di browser untuk mengurutkan menurut jarak.",
-    "locationUnsupported": "Browser ini tidak bisa membagikan lokasi, jadi daftar diurutkan menurut jumlah testimoni.",
+    "locationDenied": "Lokasimu tidak bisa dipakai, jadi daftar diurutkan menurut jumlah testimoni terbukti. Izinkan akses lokasi di browser untuk mengurutkan menurut jarak.",
+    "locationUnsupported": "Browser ini tidak bisa membagikan lokasi, jadi daftar diurutkan menurut jumlah testimoni terbukti.",
     "locationReady": "Diurutkan dari yang terdekat dengan lokasimu.",
     "emptyTitle": "Belum ada tempat yang cocok",
     "emptyBody": "Belum ada pasien yang menulis tentang tempat dengan filter ini. Jadilah yang pertama.",
