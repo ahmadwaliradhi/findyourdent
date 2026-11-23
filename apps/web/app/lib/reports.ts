@@ -7,6 +7,7 @@ export const REPORT_CATEGORIES: readonly ReportCategory[] = [
   "falseClaim",
   "spam",
   "conflictOfInterest",
+  "incentive",
   "other",
 ];
 
