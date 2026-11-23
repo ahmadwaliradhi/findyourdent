@@ -55,7 +55,7 @@ Indexes: `status` + `publishedAt desc` (feed), plus `region.*`, `procedureCode`,
 
 ### `testimonyReports`
 
-Reports from anyone (category `personalData`, `threat`, `falseClaim`, `spam`, `conflictOfInterest`, `other`; spec 09 part 2 adds `incentive`, which does not hide). `personalData` and `threat` set the Testimony to `hidden` immediately (`hidTestimony: true`). Every report goes to the admin queue with a 24-hour target. Type `TestimonyReportDoc`.
+Reports from anyone (category `personalData`, `threat`, `falseClaim`, `spam`, `conflictOfInterest`, `incentive`, `other`; `incentive` is spec 09's report of a clinic rewarding Testimonies). `personalData` and `threat` set the Testimony to `hidden` immediately (`hidTestimony: true`). Every report goes to the admin queue with a 24-hour target. Type `TestimonyReportDoc`.
 
 ### `claims`
 

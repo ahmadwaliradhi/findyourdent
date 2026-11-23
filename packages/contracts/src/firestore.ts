@@ -272,7 +272,14 @@ export interface TestimonyDoc extends TestimonyContent {
 
 // testimonyReports/{reportId} -------------------------------------------------
 
-export type ReportCategory = "personalData" | "threat" | "falseClaim" | "spam" | "conflictOfInterest" | "other";
+export type ReportCategory =
+  | "personalData"
+  | "threat"
+  | "falseClaim"
+  | "spam"
+  | "conflictOfInterest"
+  | "incentive"
+  | "other";
 
 export interface TestimonyReportDoc {
   testimonyId: string;

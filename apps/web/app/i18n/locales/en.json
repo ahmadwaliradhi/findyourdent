@@ -799,6 +799,7 @@
       "falseClaim": "False claim",
       "spam": "Spam or advertising",
       "conflictOfInterest": "Written by the owner, staff or a competitor",
+      "incentive": "The clinic offers a reward for testimonies",
       "other": "Other"
     },
     "hidesAtOnce": "The Testimony is hidden at once until the team reviews it.",
