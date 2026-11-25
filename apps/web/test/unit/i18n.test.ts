@@ -18,4 +18,12 @@ describe("locales", () => {
     expect(empty(id)).toEqual([]);
     expect(empty(en)).toEqual([]);
   });
+
+  it("never says a Provider accepts BPJS (spec 07): a Payment Method is the author's own visit", () => {
+    const values = (obj: unknown): string[] =>
+      typeof obj === "string" ? [obj] : Object.values(obj as object).flatMap(values);
+    const claim = /menerima BPJS|terima BPJS|accepts? BPJS/i;
+    expect(values(id).filter((v) => claim.test(v))).toEqual([]);
+    expect(values(en).filter((v) => claim.test(v))).toEqual([]);
+  });
 });

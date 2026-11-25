@@ -50,6 +50,7 @@ describe("aggregates recompute job", () => {
       verifiedVisitCount: 0,
       averages: null,
       procedurePrices: {},
+      paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
     });
     expect(summary).toEqual({ providers: 1, changed: 1 });
   });
@@ -74,6 +75,7 @@ describe("aggregates recompute job", () => {
       verifiedVisitCount: 3,
       averages: { service: 4, hygiene: 4, materialsEquipment: 4 },
       procedurePrices: {},
+      paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
     });
   });
 

@@ -4,6 +4,7 @@
 // Pure; the Firestore side is in testimonies.server.ts.
 
 import type {
+  PaymentMethodCounts,
   ProcedurePriceAggregate,
   ProviderAggregates,
   TestimonyContent,
@@ -11,7 +12,7 @@ import type {
 } from "@findyourdent/contracts/firestore";
 import { MIN_PROVEN_FOR_SCORE } from "../lib/scores.ts";
 
-export type AggregateInput = Pick<TestimonyContent, "ratings" | "procedureCode" | "pricePaidRupiah"> &
+export type AggregateInput = Pick<TestimonyContent, "ratings" | "procedureCode" | "pricePaidRupiah" | "paymentMethod"> &
   Pick<TestimonyDoc, "verifiedVisit">;
 
 const twoDecimals = (value: number) => Math.round(value * 100) / 100;
@@ -30,8 +31,15 @@ function median(sorted: readonly number[]): number {
 export function computeAggregates(published: readonly AggregateInput[]): ProviderAggregates {
   const sum = { service: 0, hygiene: 0, materialsEquipment: 0 };
   const prices = new Map<string, number[]>();
+  const paymentMethodCounts: PaymentMethodCounts = { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} };
   let verifiedVisitCount = 0;
   for (const testimony of published) {
+    const payment = testimony.paymentMethod;
+    if (payment?.method === "pribadi" || payment?.method === "bpjs") paymentMethodCounts[payment.method] += 1;
+    else if (payment?.method === "asuransi") {
+      paymentMethodCounts.asuransi += 1;
+      paymentMethodCounts.insurers[payment.insurer] = (paymentMethodCounts.insurers[payment.insurer] ?? 0) + 1;
+    }
     if (!testimony.verifiedVisit) continue;
     verifiedVisitCount += 1;
     sum.service += testimony.ratings.service;
@@ -67,5 +75,6 @@ export function computeAggregates(published: readonly AggregateInput[]): Provide
             materialsEquipment: twoDecimals(sum.materialsEquipment / verifiedVisitCount),
           },
     procedurePrices,
+    paymentMethodCounts,
   };
 }

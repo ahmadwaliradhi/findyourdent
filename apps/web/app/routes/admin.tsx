@@ -28,6 +28,7 @@ import {
 import { ASPECTS } from "~/lib/aspects";
 import { formatRupiah, formatVisitMonth } from "~/lib/format";
 import { providerPath } from "~/lib/paths";
+import { paymentMethodText } from "~/lib/payment-method";
 import { procedureLabel } from "~/lib/procedures";
 import { regionLabel } from "~/lib/regions";
 import { testimonyStatusBadge } from "~/lib/testimony-status";
@@ -466,6 +467,11 @@ function ContentView({ content, moderation }: { content: QueueTestimonyContent; 
         {content.procedureCode && <> · {procedureLabel(content.procedureCode, language)}</>}
         {content.pricePaidRupiah !== undefined && <> · {formatRupiah(content.pricePaidRupiah, language)}</>}
       </p>
+      {content.paymentMethod && (
+        <p className="text-sm text-muted-foreground" data-testid="admin-payment-method">
+          {t("paymentMethod.adminLine", { method: paymentMethodText(content.paymentMethod, t, language) })}
+        </p>
+      )}
       <dl className="flex flex-wrap gap-x-4 text-sm">
         {ASPECTS.map((aspect) => (
           <div key={aspect} className="flex gap-1">

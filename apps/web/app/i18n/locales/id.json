@@ -480,7 +480,23 @@
     "priceListConfirmed": "Dikonfirmasi pemilik {{date}}",
     "possiblyOutdated": "mungkin sudah berubah",
     "address": "Alamat",
-    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit."
+    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit.",
+    "payment": {
+      "title": "Cara bayar pasien",
+      "note": "Dari testimoni yang terbit. Ini cara bayar pasien itu sendiri, bukan jaminan tempat ini melayani pembayaran tertentu.",
+      "empty": "Belum ada pasien yang menyebutkan cara bayar.",
+      "pribadi_one": "{{count}} pasien bayar sendiri",
+      "pribadi": "{{count}} pasien bayar sendiri",
+      "bpjs_one": "{{count}} pasien bayar pakai BPJS",
+      "bpjs": "{{count}} pasien bayar pakai BPJS",
+      "asuransi_one": "{{count}} pasien bayar pakai asuransi swasta",
+      "asuransi": "{{count}} pasien bayar pakai asuransi swasta",
+      "insurersLabel": "Asuransi yang disebut",
+      "insurer_one": "{{name}}: {{count}} pasien",
+      "insurer": "{{name}}: {{count}} pasien",
+      "fktpNote": "Perawatan gigi yang ditanggung BPJS dilakukan di FKTP tempat peserta terdaftar, atau lewat rujukan. Laporan BPJS di sini tidak berarti semua peserta bisa langsung datang.",
+      "fktpLink": "Baca penjelasan BPJS dan FKTP di Panduan"
+    }
   },
   "shortlist": {
     "reason": {
@@ -594,7 +610,8 @@
       "providerName": "Isi nama tempat sesuai papan nama atau yang Anda kenal.",
       "region": "Pilih provinsi dan kota/kabupaten.",
       "listingChecking": "Tunggu sebentar, tempat sedang diperiksa.",
-      "listingFailed": "Tekan Coba lagi untuk memeriksa tempat."
+      "listingFailed": "Tekan Coba lagi untuk memeriksa tempat.",
+      "paymentInsurer": "Pilih asuransi Anda, atau pilih cara bayar lain."
     },
     "fileErrors": {
       "photoType": "Foto harus berupa JPG, PNG, atau WebP.",
@@ -646,7 +663,13 @@
       "account": "Akun Google Anda tidak pernah ditampilkan.",
       "proof": "Bukti kunjungan disimpan privat dan tidak pernah tayang.",
       "edit": "Anda bisa mengubah atau menghapus Testimoni kapan saja."
-    }
+    },
+    "paymentLegend": "Bagaimana Anda membayar kunjungan ini? (opsional)",
+    "paymentHint": "Ini tentang kunjungan Anda sendiri. Boleh dilewati.",
+    "paymentInsurerLabel": "Asuransi Anda",
+    "paymentInsurerPlaceholder": "Pilih asuransi",
+    "paymentInsurerHint": "Kartu AdMedika, Owlexa atau Fullerton? Pilih asuransi yang tertera di kartu.",
+    "paymentClear": "Hapus pilihan"
   },
   "providerFields": {
     "pickerLabel": "Tempat praktik",
@@ -719,6 +742,7 @@
       "visitMonth": "Pilih bulan dan tahun kunjungan.",
       "visitMonthFuture": "Bulan kunjungan tidak boleh di masa depan.",
       "procedureCode": "Pilih tindakan dari daftar, atau kosongkan.",
+      "paymentMethod": "Pilih cara bayar dari daftar, atau lewati pertanyaan ini.",
       "pricePaidRupiah": "Tulis biaya dalam rupiah tanpa titik atau koma, atau kosongkan.",
       "displayName": "Tulis nama yang ditampilkan (maksimal {{max}} karakter).",
       "consent": "Centang kedua pernyataan sebelum mengirim.",
@@ -1334,5 +1358,14 @@
         ]
       }
     ]
+  },
+  "paymentMethod": {
+    "kind": {
+      "pribadi": "Pribadi (bayar sendiri)",
+      "bpjs": "BPJS",
+      "asuransi": "Asuransi swasta",
+      "tidakDisebut": "Tidak ingat / tidak mau sebut"
+    },
+    "adminLine": "Cara bayar: {{method}}"
   }
 }

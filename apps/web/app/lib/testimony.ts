@@ -1,7 +1,7 @@
 // Shared by the posting form (browser) and the Testimony web API (server), spec 03.
 // Plain types and limits only, so it stays light in the browser bundle.
 import type { FlaggedSpan, ModerationRuleCode } from "@findyourdent/contracts";
-import type { AspectRatings, RegionRef, YearMonth } from "@findyourdent/contracts/firestore";
+import type { AspectRatings, PaymentMethod, RegionRef, YearMonth } from "@findyourdent/contracts/firestore";
 import type { AuthorProofFeedback } from "./proof-status";
 
 export const TESTIMONY_LIMITS = {
@@ -47,6 +47,11 @@ export interface TestimonySubmission {
   visitMonth: YearMonth;
   procedureCode?: string;
   pricePaidRupiah?: number;
+  /**
+   * Spec 07: how the author paid for this visit. Omit (or null) to skip the question.
+   * `asuransi` carries a curated insurer slug.
+   */
+  paymentMethod?: PaymentMethod | null;
   /** Public name; the form proposes first name plus initial. */
   displayName: string;
   /** Both must be true. */

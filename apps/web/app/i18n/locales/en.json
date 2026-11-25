@@ -480,7 +480,23 @@
     "priceListConfirmed": "Confirmed by the owner on {{date}}",
     "possiblyOutdated": "may have changed",
     "address": "Address",
-    "scoreScale": "Scale of 1 to 5, from published Testimonies."
+    "scoreScale": "Scale of 1 to 5, from published Testimonies.",
+    "payment": {
+      "title": "How patients paid",
+      "note": "From published Testimonies. This is how those patients paid for their own visit, not a promise that this place handles a given payment.",
+      "empty": "No patient has said how they paid yet.",
+      "pribadi_one": "{{count}} patient paid out of pocket",
+      "pribadi": "{{count}} patients paid out of pocket",
+      "bpjs_one": "{{count}} patient paid with BPJS",
+      "bpjs": "{{count}} patients paid with BPJS",
+      "asuransi_one": "{{count}} patient paid with private insurance",
+      "asuransi": "{{count}} patients paid with private insurance",
+      "insurersLabel": "Insurers mentioned",
+      "insurer_one": "{{name}}: {{count}} patient",
+      "insurer": "{{name}}: {{count}} patients",
+      "fktpNote": "BPJS-covered dental care happens at the FKTP the member is registered with, or by referral. A BPJS report here does not mean any member can walk in.",
+      "fktpLink": "Read the BPJS and FKTP explanation in Guidance"
+    }
   },
   "shortlist": {
     "reason": {
@@ -594,7 +610,8 @@
       "providerName": "Enter the place's name as on its signboard or as you know it.",
       "region": "Choose the province and city/regency.",
       "listingChecking": "Wait a moment, the place is being checked.",
-      "listingFailed": "Press Try again to check the place."
+      "listingFailed": "Press Try again to check the place.",
+      "paymentInsurer": "Pick your insurer, or choose another way of paying."
     },
     "fileErrors": {
       "photoType": "Photos must be JPG, PNG or WebP.",
@@ -646,7 +663,13 @@
       "account": "Your Google account is never shown.",
       "proof": "Proof of visit stays private and is never published.",
       "edit": "You can edit or delete your Testimony at any time."
-    }
+    },
+    "paymentLegend": "How did you pay for this visit? (optional)",
+    "paymentHint": "This is about your own visit. You can skip it.",
+    "paymentInsurerLabel": "Your insurer",
+    "paymentInsurerPlaceholder": "Choose an insurer",
+    "paymentInsurerHint": "Does your card say AdMedika, Owlexa or Fullerton? Pick the insurer printed on the card.",
+    "paymentClear": "Clear choice"
   },
   "providerFields": {
     "pickerLabel": "Place of care",
@@ -719,6 +742,7 @@
       "visitMonth": "Choose the month and year of your visit.",
       "visitMonthFuture": "The visit month cannot be in the future.",
       "procedureCode": "Choose a procedure from the list, or leave it empty.",
+      "paymentMethod": "Choose how you paid from the list, or skip the question.",
       "pricePaidRupiah": "Enter the price in rupiah without dots or commas, or leave it empty.",
       "displayName": "Enter the name to show (up to {{max}} characters).",
       "consent": "Tick both statements before sending.",
@@ -1334,5 +1358,14 @@
         ]
       }
     ]
+  },
+  "paymentMethod": {
+    "kind": {
+      "pribadi": "Pribadi (out of pocket)",
+      "bpjs": "BPJS",
+      "asuransi": "Private insurance",
+      "tidakDisebut": "Don't remember / prefer not to say"
+    },
+    "adminLine": "Paid by: {{method}}"
   }
 }

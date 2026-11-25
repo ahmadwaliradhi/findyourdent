@@ -1,0 +1,33 @@
+{
+  "$schema": "../schemas/insurers.schema.json",
+  "version": "2026-11-25",
+  "insurers": [
+    { "slug": "aia", "name": { "id": "AIA", "en": "AIA" } },
+    { "slug": "allianz", "name": { "id": "Allianz", "en": "Allianz" } },
+    {
+      "slug": "asuransi-astra",
+      "name": { "id": "Asuransi Astra (Garda Medika)", "en": "Asuransi Astra (Garda Medika)" }
+    },
+    { "slug": "avrist", "name": { "id": "Avrist Assurance", "en": "Avrist Assurance" } },
+    { "slug": "axa-mandiri", "name": { "id": "AXA Mandiri", "en": "AXA Mandiri" } },
+    { "slug": "bni-life", "name": { "id": "BNI Life", "en": "BNI Life" } },
+    { "slug": "bri-life", "name": { "id": "BRI Life", "en": "BRI Life" } },
+    { "slug": "chubb-life", "name": { "id": "Chubb Life", "en": "Chubb Life" } },
+    { "slug": "equity-life", "name": { "id": "Equity Life", "en": "Equity Life" } },
+    { "slug": "fwd", "name": { "id": "FWD", "en": "FWD" } },
+    { "slug": "generali", "name": { "id": "Generali", "en": "Generali" } },
+    { "slug": "great-eastern", "name": { "id": "Great Eastern Life", "en": "Great Eastern Life" } },
+    {
+      "slug": "inhealth",
+      "name": { "id": "Inhealth (dulu Mandiri Inhealth)", "en": "Inhealth (formerly Mandiri Inhealth)" }
+    },
+    { "slug": "manulife", "name": { "id": "Manulife", "en": "Manulife" } },
+    {
+      "slug": "msig-life",
+      "name": { "id": "MSIG Life (dulu Sinarmas MSIG Life)", "en": "MSIG Life (formerly Sinarmas MSIG Life)" }
+    },
+    { "slug": "prudential", "name": { "id": "Prudential", "en": "Prudential" } },
+    { "slug": "sequis", "name": { "id": "Sequis", "en": "Sequis" } },
+    { "slug": "zurich", "name": { "id": "Zurich", "en": "Zurich" } }
+  ]
+}

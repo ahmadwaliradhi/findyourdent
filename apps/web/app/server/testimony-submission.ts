@@ -1,8 +1,8 @@
 // Checks the JSON part of a Testimony submit body (TestimonySubmission, spec 03).
 // Pure: the caller says whether the place is already a Listed Provider and passes
 // the translator for the Patient's language.
-import { isProcedureCode } from "@findyourdent/contracts";
-import type { AspectRatings, RegionRef } from "@findyourdent/contracts/firestore";
+import { isInsurerSlug, isProcedureCode } from "@findyourdent/contracts";
+import type { AspectRatings, PaymentMethod, RegionRef } from "@findyourdent/contracts/firestore";
 import type { TFunction } from "i18next";
 import { isValidRegion, PROVINCES } from "~/lib/regions";
 import { TESTIMONY_LIMITS } from "~/lib/testimony";
@@ -28,6 +28,7 @@ export interface CheckedSubmission {
   visitMonth: string;
   procedureCode?: string;
   pricePaidRupiah?: number;
+  paymentMethod?: PaymentMethod;
   displayName: string;
   keepPhotoPaths: string[];
 }
@@ -41,6 +42,22 @@ const ASPECTS = ["service", "hygiene", "materialsEquipment"] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const PAYMENT_METHODS = ["pribadi", "bpjs", "asuransi", "tidakDisebut"] as const;
+
+/** A clean PaymentMethod, or null when the value is not exactly one (unknown keys, bad insurer). */
+function parsePaymentMethod(value: unknown): PaymentMethod | null {
+  if (!isRecord(value)) return null;
+  const method = value.method;
+  const keys = Object.keys(value);
+  if (method === "asuransi") {
+    if (keys.length !== 2 || typeof value.insurer !== "string" || !isInsurerSlug(value.insurer)) return null;
+    return { method, insurer: value.insurer };
+  }
+  if (typeof method !== "string" || !(PAYMENT_METHODS as readonly string[]).includes(method)) return null;
+  if (keys.length !== 1) return null;
+  return { method } as PaymentMethod;
+}
 
 const trimmed = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
@@ -144,6 +161,13 @@ export function checkSubmission(
     }
   }
 
+  let paymentMethod: PaymentMethod | undefined;
+  if (input.paymentMethod !== undefined && input.paymentMethod !== null) {
+    const parsed = parsePaymentMethod(input.paymentMethod);
+    if (parsed) paymentMethod = parsed;
+    else errors.paymentMethod = t("testimonyApi.fields.paymentMethod");
+  }
+
   const displayName = trimmed(input.displayName);
   if (displayName.length < 1 || displayName.length > TESTIMONY_LIMITS.displayNameMaxChars) {
     errors.displayName = t("testimonyApi.fields.displayName", { max: TESTIMONY_LIMITS.displayNameMaxChars });
@@ -172,6 +196,7 @@ export function checkSubmission(
       visitMonth,
       ...(procedureCode ? { procedureCode } : {}),
       ...(pricePaidRupiah !== undefined ? { pricePaidRupiah } : {}),
+      ...(paymentMethod ? { paymentMethod } : {}),
       displayName,
       keepPhotoPaths: [...new Set(keepPhotoPaths)],
     },

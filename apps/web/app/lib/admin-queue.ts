@@ -5,6 +5,7 @@ import type {
   ClaimDoc,
   DetectionRuleCode,
   ModerationDecisionDoc,
+  PaymentMethod,
   ProcedureCode,
   ProofOfVisitExtracted,
   ProofPendingReason,
@@ -149,6 +150,7 @@ export interface QueueTestimonyContent {
   visitMonth: string;
   procedureCode?: string;
   pricePaidRupiah?: number;
+  paymentMethod?: PaymentMethod;
   displayName: string;
   photoUrls: string[];
 }

@@ -3,11 +3,13 @@
 // (draft 2020-12 + formats), and the shared data files are typed here.
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import addFormatsModule from "ajv-formats";
+import insurerListJson from "../data/insurers.json" with { type: "json" };
 import procedureListJson from "../data/procedures.json" with { type: "json" };
 import regionListJson from "../data/regions.json" with { type: "json" };
 import districtsSchema from "../schemas/districts.schema.json" with { type: "json" };
 import guidanceRequestSchema from "../schemas/guidance-request.schema.json" with { type: "json" };
 import guidanceResponseSchema from "../schemas/guidance-response.schema.json" with { type: "json" };
+import insurersSchema from "../schemas/insurers.schema.json" with { type: "json" };
 import moderationDecisionSchema from "../schemas/moderation-decision.schema.json" with { type: "json" };
 import moderationRequestSchema from "../schemas/moderation-request.schema.json" with { type: "json" };
 import priceListExtractionRequestSchema from "../schemas/price-list-extraction-request.schema.json" with {
@@ -28,6 +30,9 @@ import type {
   DistrictList,
   GuidanceRequest,
   GuidanceResponse,
+  Insurer,
+  InsurerList,
+  InsurerSlug,
   ModerationDecision,
   ModerationRequest,
   PriceListExtractionRequest,
@@ -49,6 +54,7 @@ export const SCHEMAS = {
   districts: districtsSchema,
   "guidance-request": guidanceRequestSchema,
   "guidance-response": guidanceResponseSchema,
+  insurers: insurersSchema,
   "moderation-decision": moderationDecisionSchema,
   "moderation-request": moderationRequestSchema,
   "price-list-extraction-request": priceListExtractionRequestSchema,
@@ -85,6 +91,7 @@ export const validatePriceListExtractionResponse = compile<PriceListExtractionRe
 export const validateProofOfVisitCheckRequest = compile<ProofOfVisitCheckRequest>(proofOfVisitCheckRequestSchema);
 export const validateProofOfVisitCheckResponse = compile<ProofOfVisitCheckResponse>(proofOfVisitCheckResponseSchema);
 export const validateProcedureList = compile<ProcedureList>(proceduresSchema);
+export const validateInsurerList = compile<InsurerList>(insurersSchema);
 export const validateRegionList = compile<RegionList>(regionsSchema);
 export const validateDistrictList = compile<DistrictList>(districtsSchema);
 
@@ -100,6 +107,24 @@ export const PROCEDURES: readonly Procedure[] = PROCEDURE_LIST.procedures;
 export const PROCEDURE_CODES: ReadonlySet<string> = new Set(PROCEDURES.map((p) => p.code));
 export function isProcedureCode(code: string): boolean {
   return PROCEDURE_CODES.has(code);
+}
+
+/**
+ * The curated private-insurer list (data/insurers.json), in picker order (spec 07). TPAs
+ * (AdMedika, Owlexa, Fullerton Health) are deliberately not entries: they administer
+ * claims for insurers, and counting them would split one insurer's count.
+ */
+export const INSURER_LIST: InsurerList = insurerListJson as InsurerList;
+export const INSURERS: readonly Insurer[] = INSURER_LIST.insurers;
+const INSURERS_BY_SLUG: ReadonlyMap<string, Insurer> = new Map(INSURERS.map((i) => [i.slug, i]));
+export function isInsurerSlug(value: unknown): value is InsurerSlug {
+  return typeof value === "string" && INSURERS_BY_SLUG.has(value);
+}
+/** Display name of a curated insurer. */
+export function insurerName(slug: InsurerSlug, lang: "id" | "en"): string {
+  const insurer = INSURERS_BY_SLUG.get(slug);
+  if (!insurer) throw new Error(`Unknown insurer slug: ${slug}`);
+  return insurer.name[lang];
 }
 
 /**

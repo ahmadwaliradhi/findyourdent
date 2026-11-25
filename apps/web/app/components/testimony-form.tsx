@@ -1,6 +1,7 @@
 // The Testimony posting form (spec 03, user stories 9 to 23): mobile first, a draft
 // kept in the browser, Google sign-in only when the Patient presses Kirim, and the
 // fix-before-submit loop when Moderation flags something the author can fix.
+import { INSURERS } from "@findyourdent/contracts";
 import procedureList from "@findyourdent/contracts/data/procedures.json";
 import { Check, FileCheck, Plus, TriangleAlert, Upload } from "lucide-react";
 import type * as React from "react";
@@ -42,6 +43,7 @@ import {
   hasContent,
   isFutureMonth,
   type ListingCheck,
+  PAYMENT_METHOD_KINDS,
   parseDraft,
   serializeDraft,
   stateFromInitial,
@@ -558,6 +560,73 @@ export function TestimonyForm({ mode, testimonyId, initial, provider }: Testimon
             <p id={id("visit-hint")} className="text-sm text-muted-foreground">
               {t("testimonyForm.visitHint")}
             </p>
+          </fieldset>
+
+          <fieldset
+            className="flex min-w-0 flex-col gap-2"
+            data-testid="payment-method"
+            {...fieldProps("paymentMethod", id("payment-hint"))}
+          >
+            <legend className={cn(labelClass, "pb-2")}>{t("testimonyForm.paymentLegend")}</legend>
+            <div className="grid gap-2 desktop:grid-cols-2">
+              {PAYMENT_METHOD_KINDS.map((kind) => (
+                <label
+                  key={kind}
+                  className="flex min-h-touch cursor-pointer items-center gap-3 rounded-md border border-border-strong bg-card px-3 py-2 text-base has-aria-invalid:border-destructive has-checked:border-primary has-checked:bg-muted has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring has-disabled:cursor-not-allowed has-disabled:opacity-50"
+                >
+                  <input
+                    type="radio"
+                    name={id("payment-method")}
+                    value={kind}
+                    checked={state.paymentMethod === kind}
+                    onChange={() => update({ paymentMethod: kind })}
+                    className="size-4 shrink-0 accent-primary"
+                    aria-invalid={errors.paymentMethod ? true : undefined}
+                  />
+                  <span>{t(`paymentMethod.kind.${kind}`)}</span>
+                </label>
+              ))}
+            </div>
+            {state.paymentMethod === "asuransi" && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor={id("insurer")} className={labelClass}>
+                  {t("testimonyForm.paymentInsurerLabel")}
+                </label>
+                <select
+                  id={id("insurer")}
+                  value={state.insurer}
+                  onChange={(event) => update({ insurer: event.currentTarget.value })}
+                  className={fieldClassName}
+                  aria-invalid={errors.paymentMethod ? true : undefined}
+                  aria-describedby={id("insurer-hint")}
+                >
+                  <option value="">{t("testimonyForm.paymentInsurerPlaceholder")}</option>
+                  {INSURERS.map((insurer) => (
+                    <option key={insurer.slug} value={insurer.slug}>
+                      {insurer.name[language]}
+                    </option>
+                  ))}
+                </select>
+                <p id={id("insurer-hint")} className="text-sm text-muted-foreground">
+                  {t("testimonyForm.paymentInsurerHint")}
+                </p>
+              </div>
+            )}
+            {fieldError("paymentMethod")}
+            <p id={id("payment-hint")} className="text-sm text-muted-foreground">
+              {t("testimonyForm.paymentHint")}
+            </p>
+            {state.paymentMethod && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="self-start"
+                onClick={() => update({ paymentMethod: "", insurer: "" })}
+              >
+                {t("testimonyForm.paymentClear")}
+              </Button>
+            )}
           </fieldset>
         </Card>
 
