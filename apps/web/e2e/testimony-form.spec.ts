@@ -141,6 +141,57 @@ test("fix before submit: shows the flagged sentence and reason, then sends the f
   expect(sentTexts).toEqual(["phone", "fixed"]);
 });
 
+test("Payment Method: optional, Asuransi needs an insurer, and the choice goes with the submission", async ({
+  page,
+}) => {
+  const bodies: string[] = [];
+  await page.route("**/api/testimonies", async (route) => {
+    bodies.push(route.request().postDataBuffer()?.toString("latin1") ?? "");
+    await route.fulfill({
+      status: 201,
+      json: { testimonyId: "t-3", status: "published", message: "Terima kasih!", verifiedVisit: false },
+    });
+  });
+
+  await fillForm(page, "Dokternya sabar dan ruangannya bersih.");
+  const question = page.getByRole("group", { name: "Bagaimana Anda membayar kunjungan ini? (opsional)" });
+  await expect(question.getByRole("radio", { checked: true })).toHaveCount(0);
+
+  // Asuransi swasta without an insurer is stopped in the browser.
+  await question.getByRole("radio", { name: "Asuransi swasta" }).check();
+  await expect(question.getByText(/Kartu AdMedika, Owlexa atau Fullerton/)).toBeVisible();
+  await page.getByRole("button", { name: "Kirim" }).click();
+  await expect(question.getByText("Pilih asuransi Anda, atau pilih cara bayar lain.")).toBeVisible();
+  expect(bodies).toEqual([]);
+
+  await question.getByLabel("Asuransi Anda").selectOption({ label: "Prudential" });
+  await page.getByRole("button", { name: "Kirim" }).click();
+  await expect(page.getByRole("heading", { name: "Testimoni Anda sudah terbit" })).toBeVisible();
+  expect(bodies).toHaveLength(1);
+  expect(bodies[0]).toContain('"paymentMethod":{"method":"asuransi","insurer":"prudential"}');
+});
+
+test("Payment Method: a choice can be cleared, and a skipped question sends nothing", async ({ page }) => {
+  const bodies: string[] = [];
+  await page.route("**/api/testimonies", async (route) => {
+    bodies.push(route.request().postDataBuffer()?.toString("latin1") ?? "");
+    await route.fulfill({
+      status: 201,
+      json: { testimonyId: "t-4", status: "published", message: "Terima kasih!", verifiedVisit: false },
+    });
+  });
+
+  await fillForm(page, "Dokternya sabar dan ruangannya bersih.");
+  const question = page.getByRole("group", { name: "Bagaimana Anda membayar kunjungan ini? (opsional)" });
+  await question.getByRole("radio", { name: "BPJS" }).check();
+  await question.getByRole("button", { name: "Hapus pilihan" }).click();
+  await expect(question.getByRole("radio", { checked: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Kirim" }).click();
+  await expect(page.getByRole("heading", { name: "Testimoni Anda sudah terbit" })).toBeVisible();
+  expect(bodies[0]).not.toContain("paymentMethod");
+});
+
 test("held: shows the plain reason and the 24-hour target", async ({ page }) => {
   await page.route("**/api/testimonies", (route) =>
     route.fulfill({

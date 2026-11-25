@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router";
 import type { Language } from "~/i18n/config";
-import { TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
+import { BPJS_PAGE_PATH, TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
 import { BUSINESS_EMAIL } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import { LanguageToggle } from "./language-toggle";
@@ -124,6 +124,9 @@ export function SiteFooter() {
           </NavLink>
           <NavLink to={TRANSPARENCY_PAGE_PATH} className={linkClass}>
             {t("footer.transparency")}
+          </NavLink>
+          <NavLink to={BPJS_PAGE_PATH} className={linkClass}>
+            {t("footer.bpjs")}
           </NavLink>
         </nav>
       </div>

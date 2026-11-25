@@ -1,3 +1,5 @@
+import { INSURERS } from "@findyourdent/contracts";
+import type { PaymentMethodCounts } from "@findyourdent/contracts/firestore";
 import type { TFunction } from "i18next";
 import { Check, ChevronLeft, Clock, Info, MapPin, MessageCircle, Phone, Star } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useState } from "react";
@@ -15,7 +17,7 @@ import { ASPECTS } from "~/lib/aspects";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatDate, formatRupiah, formatScore, formatVisitMonth } from "~/lib/format";
 import { fetchGoogleRoute } from "~/lib/google-routes";
-import { providerPath } from "~/lib/paths";
+import { BPJS_FKTP_PATH, providerPath } from "~/lib/paths";
 import type { PublicPriceList } from "~/lib/price-lists";
 import { procedureLabel } from "~/lib/procedures";
 import type { GoogleBlockResponse, ProviderGoogleBlock } from "~/lib/provider";
@@ -179,6 +181,8 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
             <Prices signals={provider.priceSignals} list={provider.priceList} language={language} />
           )}
 
+          {provider && <PaymentMethods counts={provider.paymentMethodCounts} language={language} />}
+
           <section aria-labelledby="testimonies-title" className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id="testimonies-title" className={SECTION_TITLE}>
@@ -290,6 +294,59 @@ function Aspects({ provider, language }: { provider: ProviderSummary; language: 
       ) : (
         <p className="text-muted-foreground">{t("provider.noScores")}</p>
       )}
+    </Card>
+  );
+}
+
+/**
+ * Spec 07: how many published Testimonies said each Payment Method, from N=1. It is the
+ * authors' own visits, never a claim that the Provider "accepts" a method; BPJS comes
+ * with the FKTP note, which links to the BPJS page (`/bpjs#fktp`).
+ */
+function PaymentMethods({ counts, language }: { counts: PaymentMethodCounts; language: Language }) {
+  const { t } = useTranslation();
+  const rows = (["pribadi", "bpjs", "asuransi"] as const).filter((method) => counts[method] > 0);
+  const insurers = INSURERS.filter((insurer) => (counts.insurers[insurer.slug] ?? 0) > 0);
+  return (
+    <Card labelledBy="payment-title" className="desktop:p-6" data-testid="payment-counts">
+      <h2 id="payment-title" className={SECTION_TITLE}>
+        {t("provider.payment.title")}
+      </h2>
+      {rows.length === 0 ? (
+        <p className="text-muted-foreground">{t("provider.payment.empty")}</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-1">
+            {rows.map((method) => (
+              <li key={method} data-testid={`payment-${method}`}>
+                {t(`provider.payment.${method}`, { count: counts[method] })}
+              </li>
+            ))}
+          </ul>
+          {insurers.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold">{t("provider.payment.insurersLabel")}</h3>
+              <ul className="flex flex-col gap-1">
+                {insurers.map((insurer) => (
+                  <li key={insurer.slug} data-testid={`payment-insurer-${insurer.slug}`}>
+                    {t("provider.payment.insurer", {
+                      name: insurer.name[language],
+                      count: counts.insurers[insurer.slug],
+                    })}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="text-xs font-medium text-muted-foreground">{t("provider.payment.note")}</p>
+        </div>
+      )}
+      <div className="flex flex-col gap-1 rounded-md bg-muted px-4 py-3 text-sm" data-testid="fktp-note">
+        <p>{t("provider.payment.fktpNote")}</p>
+        <Link to={BPJS_FKTP_PATH} className="inline-flex min-h-touch items-center self-start font-semibold">
+          {t("provider.payment.fktpLink")}
+        </Link>
+      </div>
     </Card>
   );
 }

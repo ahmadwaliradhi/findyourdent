@@ -91,7 +91,7 @@ The first-level health facility a BPJS Kesehatan member is registered with; the 
 _Avoid_: BPJS clinic, faskes (unqualified)
 
 **Payment Method**:
-How a Patient paid for the visit a Testimony describes: Pribadi (out of pocket), BPJS, or Asuransi swasta with the insurer named. It is a fact about that visit, never a claim about what a Provider accepts; dental plafon belongs to the Patient's policy and is never shown.
+How a Patient paid for the visit a Testimony describes: Pribadi (out of pocket), BPJS, or Asuransi swasta with the insurer picked from the curated list in the contracts package (TPAs such as AdMedika or Owlexa are not on it; the Patient picks the insurer printed on the card). Optional: the author may skip it or answer "tidak ingat / tidak mau sebut". It is a fact about that visit, never a claim about what a Provider accepts. The Provider page counts each method and insurer over all published Testimonies, Proven or not; skipped and "tidak mau sebut" are not counted. Dental plafon belongs to the Patient's policy and is never shown.
 _Avoid_: Accepts BPJS, menerima BPJS, insurance partner, plafon (as a Provider fact)
 
 ## Dental terms

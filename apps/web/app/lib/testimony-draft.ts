@@ -1,8 +1,14 @@
 // The posting form's state, its browser draft and its own checks (spec 03, user stories
 // 9 to 20). Pure, so the form and the unit tests share it.
 
+import { isInsurerSlug } from "@findyourdent/contracts";
 import procedureList from "@findyourdent/contracts/data/procedures.json";
-import type { AspectRatings } from "@findyourdent/contracts/firestore";
+import {
+  type AspectRatings,
+  isPaymentMethodKind,
+  type PaymentMethod,
+  type PaymentMethodKind,
+} from "@findyourdent/contracts/firestore";
 import type id from "../i18n/locales/id.json";
 import { ASPECTS } from "./aspects";
 import {
@@ -16,6 +22,8 @@ import {
 
 export type Aspect = (typeof ASPECTS)[number];
 
+/** The Payment Method choices, in the order the form shows them. "" is the skipped question. */
+
 /** Everything typed into the form. Files are kept apart: they cannot go into a draft. */
 export interface TestimonyFormState {
   provider: ProviderFieldsValue;
@@ -28,6 +36,10 @@ export interface TestimonyFormState {
   visitYear: string;
   /** "09" */
   visitMonth: string;
+  /** Spec 07. "" = the question was skipped. */
+  paymentMethod: PaymentMethodKind | "";
+  /** Curated insurer slug; only used while paymentMethod is "asuransi". */
+  insurer: string;
   displayName: string;
   consentHonest: boolean;
   consentNoOthers: boolean;
@@ -41,6 +53,8 @@ export const EMPTY_FORM_STATE: TestimonyFormState = {
   price: "",
   visitYear: "",
   visitMonth: "",
+  paymentMethod: "",
+  insurer: "",
   displayName: "",
   consentHonest: false,
   consentNoOthers: false,
@@ -107,6 +121,8 @@ export function parseDraft(raw: string | null): TestimonyFormState | null {
     price: isString(d.price) ? d.price.replace(/\D/g, "").slice(0, 10) : "",
     visitYear: isString(d.visitYear) && /^\d{4}$/.test(d.visitYear) ? d.visitYear : "",
     visitMonth: isString(d.visitMonth) && /^(0[1-9]|1[0-2])$/.test(d.visitMonth) ? d.visitMonth : "",
+    paymentMethod: isPaymentMethodKind(d.paymentMethod) ? d.paymentMethod : "",
+    insurer: d.paymentMethod === "asuransi" && isInsurerSlug(d.insurer) ? d.insurer : "",
     displayName: isString(d.displayName) ? d.displayName.slice(0, TESTIMONY_LIMITS.displayNameMaxChars) : "",
     consentHonest: d.consentHonest === true,
     consentNoOthers: d.consentNoOthers === true,
@@ -191,6 +207,9 @@ export function validateForm(
       errors.pricePaidRupiah = { key: "errors.price" };
     }
   }
+  if (state.paymentMethod === "asuransi" && !isInsurerSlug(state.insurer)) {
+    errors.paymentMethod = { key: "errors.paymentInsurer" };
+  }
   if (!state.displayName.trim()) errors.displayName = { key: "errors.displayName" };
   else if (state.displayName.trim().length > TESTIMONY_LIMITS.displayNameMaxChars) {
     errors.displayName = { key: "errors.displayNameTooLong", values: { max: TESTIMONY_LIMITS.displayNameMaxChars } };
@@ -210,6 +229,14 @@ export function checkPickedFile(file: File, kind: "photo" | "proof"): FormError 
   return null;
 }
 
+/** The stored Payment Method of a form state; null when the question was skipped. */
+export function paymentMethodOf(state: Pick<TestimonyFormState, "paymentMethod" | "insurer">): PaymentMethod | null {
+  if (state.paymentMethod === "asuransi") {
+    return isInsurerSlug(state.insurer) ? { method: "asuransi", insurer: state.insurer } : null;
+  }
+  return state.paymentMethod ? { method: state.paymentMethod } : null;
+}
+
 /** The JSON part of the submit body. Call only once validateForm finds nothing. */
 export function toSubmission(
   state: TestimonyFormState,
@@ -218,6 +245,7 @@ export function toSubmission(
   const ratings = state.ratings as AspectRatings;
   const { provider } = state;
   const notListed = !provider.listed;
+  const paymentMethod = paymentMethodOf(state);
   return {
     placeId: options.placeId,
     ...(notListed && provider.providerName.trim() ? { providerName: provider.providerName.trim() } : {}),
@@ -235,6 +263,7 @@ export function toSubmission(
     visitMonth: `${state.visitYear}-${state.visitMonth}`,
     ...(state.procedureCode ? { procedureCode: state.procedureCode } : {}),
     ...(state.price ? { pricePaidRupiah: Number(state.price) } : {}),
+    ...(paymentMethod ? { paymentMethod } : {}),
     displayName: state.displayName.trim(),
     consent: { honestExperience: state.consentHonest, noOthersPersonalData: state.consentNoOthers },
     ...(options.keepPhotoPaths ? { keepPhotoPaths: options.keepPhotoPaths } : {}),
@@ -258,6 +287,8 @@ export function stateFromInitial(initial: Partial<TestimonySubmission> | undefin
     price: initial.pricePaidRupiah ? String(initial.pricePaidRupiah) : "",
     visitYear,
     visitMonth,
+    paymentMethod: initial.paymentMethod?.method ?? "",
+    insurer: initial.paymentMethod?.method === "asuransi" ? initial.paymentMethod.insurer : "",
     displayName: initial.displayName ?? "",
     consentHonest: initial.consent?.honestExperience ?? false,
     consentNoOthers: initial.consent?.noOthersPersonalData ?? false,

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://findyourdent.com/schemas/insurers.schema.json",
+  "title": "InsurerList",
+  "description": "Shape of data/insurers.json: the curated private-insurer list behind a Testimony's Payment Method (spec 07). TPAs (AdMedika, Owlexa, Fullerton Health) are not entries. Order is the order the picker shows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "insurers"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "insurers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Insurer"
+      }
+    }
+  },
+  "$defs": {
+    "Insurer": {
+      "title": "Insurer",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slug", "name"],
+      "properties": {
+        "slug": {
+          "$ref": "#/$defs/InsurerSlug"
+        },
+        "name": {
+          "$ref": "#/$defs/InsurerName"
+        }
+      }
+    },
+    "InsurerSlug": {
+      "title": "InsurerSlug",
+      "description": "Stable kebab-case id; stored on Testimonies, so never renamed.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "InsurerName": {
+      "title": "InsurerName",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "en"],
+      "properties": {
+        "id": {
+          "description": "Bahasa Indonesia.",
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "description": "English.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

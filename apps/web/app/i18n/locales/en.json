@@ -345,7 +345,8 @@
     "links": "Footer",
     "privacy": "Privacy policy",
     "terms": "Terms of use",
-    "transparency": "How we verify Testimonies"
+    "transparency": "How we verify Testimonies",
+    "bpjs": "BPJS and dental care"
   },
   "shared": {
     "title": "Shared guidance",
@@ -521,7 +522,23 @@
     "priceListConfirmed": "Confirmed by the owner on {{date}}",
     "possiblyOutdated": "may have changed",
     "address": "Address",
-    "scoreScale": "Scale of 1 to 5, from published Testimonies."
+    "scoreScale": "Scale of 1 to 5, from published Testimonies.",
+    "payment": {
+      "title": "How patients paid",
+      "note": "From published Testimonies. This is how those patients paid for their own visit, not a promise that this place handles a given payment.",
+      "empty": "No patient has said how they paid yet.",
+      "pribadi_one": "{{count}} patient paid out of pocket",
+      "pribadi": "{{count}} patients paid out of pocket",
+      "bpjs_one": "{{count}} patient paid with BPJS",
+      "bpjs": "{{count}} patients paid with BPJS",
+      "asuransi_one": "{{count}} patient paid with private insurance",
+      "asuransi": "{{count}} patients paid with private insurance",
+      "insurersLabel": "Insurers mentioned",
+      "insurer_one": "{{name}}: {{count}} patient",
+      "insurer": "{{name}}: {{count}} patients",
+      "fktpNote": "BPJS-covered dental care happens at the FKTP the member is registered with, or by referral. A BPJS report here does not mean any member can walk in.",
+      "fktpLink": "Read the BPJS and FKTP explanation"
+    }
   },
   "shortlist": {
     "reason": {
@@ -635,7 +652,8 @@
       "providerName": "Enter the place's name as on its signboard or as you know it.",
       "region": "Choose the province and city/regency.",
       "listingChecking": "Wait a moment, the place is being checked.",
-      "listingFailed": "Press Try again to check the place."
+      "listingFailed": "Press Try again to check the place.",
+      "paymentInsurer": "Pick your insurer, or choose another way of paying."
     },
     "fileErrors": {
       "photoType": "Photos must be JPG, PNG or WebP.",
@@ -687,7 +705,13 @@
       "account": "Your Google account is never shown.",
       "proof": "Proof of visit stays private and is never published.",
       "edit": "You can edit or delete your Testimony at any time."
-    }
+    },
+    "paymentLegend": "How did you pay for this visit? (optional)",
+    "paymentHint": "This is about your own visit. You can skip it.",
+    "paymentInsurerLabel": "Your insurer",
+    "paymentInsurerPlaceholder": "Choose an insurer",
+    "paymentInsurerHint": "Does your card say AdMedika, Owlexa or Fullerton? Pick the insurer printed on the card.",
+    "paymentClear": "Clear choice"
   },
   "providerFields": {
     "pickerLabel": "Place of care",
@@ -760,6 +784,7 @@
       "visitMonth": "Choose the month and year of your visit.",
       "visitMonthFuture": "The visit month cannot be in the future.",
       "procedureCode": "Choose a procedure from the list, or leave it empty.",
+      "paymentMethod": "Choose how you paid from the list, or skip the question.",
       "pricePaidRupiah": "Enter the price in rupiah without dots or commas, or leave it empty.",
       "displayName": "Enter the name to show (up to {{max}} characters).",
       "consent": "Tick both statements before sending.",
@@ -1394,6 +1419,107 @@
         "title": "What we do not publish",
         "blocks": [
           "We will also watch for suspicious patterns, such as many similar Testimonies in a short time. Those will be held for an admin to review, never removed automatically. We deliberately do not publish how detection works, so it cannot be gamed."
+        ]
+      }
+    ]
+  },
+  "paymentMethod": {
+    "kind": {
+      "pribadi": "Pribadi (out of pocket)",
+      "bpjs": "BPJS",
+      "asuransi": "Private insurance",
+      "tidakDisebut": "Don't remember / prefer not to say"
+    },
+    "adminLine": "Paid by: {{method}}"
+  },
+  "bpjsPage": {
+    "metaTitle": "BPJS Kesehatan and dental care",
+    "title": "BPJS Kesehatan and dental care",
+    "lead": "What BPJS Kesehatan covers for teeth, where that care happens, and how to read \"How patients paid\" on a place's page.",
+    "metaDescription": "Which dental care BPJS Kesehatan covers, why a BPJS card does not work at any clinic, and how to check or change your FKTP.",
+    "effective": "Effective from: 25 November 2026",
+    "updated": "Last updated: 25 November 2026",
+    "seeAlso": "Start from Guidance",
+    "sections": [
+      {
+        "title": "What is covered at the FKTP",
+        "blocks": [
+          "The FKTP is the first-level health facility you are registered with as a BPJS Kesehatan member (a puskesmas, a clinic or an individual doctor's practice). Under Permenkes 3/2023 Article 3(2), the dental package at an FKTP covers:",
+          [
+            "examination, treatment and consultation;",
+            "premedication;",
+            "oro-dental emergencies;",
+            "extraction of primary teeth;",
+            "extraction of permanent teeth without complications, and medication after extraction;",
+            "fillings;",
+            "scaling for acute gingivitis."
+          ],
+          "Scaling depends on the medical indication. Official sources disagree on how often it is allowed, so we do not promise a frequency: ask your FKTP.",
+          "Dentures are claimed separately by the facility. At an FKTP the cap is Rp1,000,000 for both jaws or Rp500,000 for one jaw, and the same jaw can be redone at the earliest every 2 years, on medical indication (Permenkes 3/2023 Article 24)."
+        ]
+      },
+      {
+        "title": "What needs a referral",
+        "blocks": [
+          "Specialist care happens at a hospital (FKRTL) and only by referral on medical indication. A dental referral comes from a dentist, unless your puskesmas or clinic has no dentist.",
+          "Root canal treatment is not on the FKTP dental package list, so under JKN it generally has to be referred to a specialist dentist at a hospital."
+        ]
+      },
+      {
+        "title": "What is not covered",
+        "blocks": [
+          [
+            "aesthetic treatment;",
+            "orthodontics (braces);",
+            "care at a facility that is not a BPJS partner, except in an emergency."
+          ]
+        ]
+      },
+      {
+        "anchor": "fktp",
+        "title": "Dental care is tied to your FKTP",
+        "blocks": [
+          "Walking into any clinic with a BPJS card does not mean you are covered. Covered dental care happens at the FKTP you are registered with or its partner dentist, or by referral.",
+          [
+            "<b>Registered at a puskesmas or clinic</b>: you are served by the dentist there or its network dentist. You cannot choose another independent dentist. If the place has no dentist, you are referred to a hospital.",
+            "<b>Registered at an individual doctor's practice</b>: you choose and register one independent dentist separately. In Mobile JKN this shows as \"fasilitas kesehatan gigi\", and you can only use that dentist.",
+            "<b>Outside your area, or in an emergency</b>: first-level outpatient care at another FKTP is allowed for up to 3 visits within 1 month, at the same FKTP (Perpres 82/2018 Article 55). A medical emergency can be treated at any facility."
+          ],
+          "These network rules come from a BPJS guide older than Perpres 59/2024, so check again in Mobile JKN before relying on them."
+        ]
+      },
+      {
+        "title": "Check or change your FKTP",
+        "blocks": [
+          "In the Mobile JKN app you can see your FKTP and dental facility, and media reports say the app has an \"Info Lokasi Faskes\" menu for nearby facilities. A change can also be made through Care Center 165.",
+          [
+            "An FKTP can be changed only after 3 months registered (Perpres 59/2024 Article 7).",
+            "Earlier only for a move of residence or official duty/training, with a supporting letter.",
+            "The change takes effect on the 1st of the following month."
+          ],
+          "FindYourDent cannot check your FKTP. A place in the Directory that patients say they paid at with BPJS is only an option to consider if you plan to switch FKTP."
+        ]
+      },
+      {
+        "title": "Reading \"How patients paid\"",
+        "blocks": [
+          "On a place's page, \"How patients paid\" counts how patients paid for their own visit: out of pocket, BPJS, or private insurance. It is the patients' story, not what the place accepts.",
+          "So a BPJS count there does not mean you can walk in with your BPJS card. See \"Dental care is tied to your FKTP\" above."
+        ]
+      },
+      {
+        "title": "Sources",
+        "blocks": [
+          [
+            "<a href=\"https://peraturan.bpk.go.id/Details/275518/permenkes-no-3-tahun-2023\">Permenkes 3/2023</a>, Articles 3, 4, 11 and 24.",
+            "<a href=\"https://peraturan.bpk.go.id/Details/94711\">Perpres 82/2018</a>, Articles 52 and 55.",
+            "<a href=\"https://api-law.crpg.info/peraturan/perpres/59/2024/pasal/7\">Perpres 59/2024</a>, Article 7 (official text at peraturan.bpk.go.id).",
+            "<a href=\"https://dental.id/wp-content/uploads/2023/09/Panduan-Praktis-Pelayanan-Gigi-Prothesa-Gigi-Bagi-Peserta-JKN.pdf\">Panduan Praktis Pelayanan Gigi & Prothesa Gigi Bagi Peserta JKN</a>, BPJS Kesehatan (undated; third-party copy).",
+            "<a href=\"https://www.kompas.tv/info-publik/624432/cara-cek-lokasi-faskes-terdekat-melalui-aplikasi-mobile-jkn\">Cara cek lokasi faskes terdekat lewat Mobile JKN</a>, Kompas TV."
+          ],
+          {
+            "box": "This page is educational information, not a diagnosis, not legal advice, and not a guarantee that a treatment is covered. Rules change: confirm with your FKTP or BPJS Kesehatan (Care Center 165)."
+          }
         ]
       }
     ]

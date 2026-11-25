@@ -460,6 +460,94 @@ describe("admin actions on a held edit of a published Testimony", () => {
   });
 });
 
+describe("Payment Method (spec 07)", () => {
+  type Method = TestimonySubmission["paymentMethod"];
+  const counts = async () => (await provider())?.aggregates.paymentMethodCounts;
+  const EMPTY = { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} };
+
+  /** Publishes a Testimony paid with `method`, then sends a held edit that changes it to `next`. */
+  async function publishedWithHeldEdit(method: Method, next: Method) {
+    moderateWith(PUBLISH);
+    const id = await postTestimony("pasien@example.com", { paymentMethod: method });
+    moderateWith(HOLD);
+    const cookie = await server.signInWithGoogle("pasien@example.com");
+    const form = new FormData();
+    form.set("testimony", JSON.stringify(submission({ paymentMethod: next })));
+    const edited = await fetch(new URL(`/api/testimonies/${id}`, server.baseUrl), {
+      method: "POST",
+      headers: { cookie, [APP_CHECK_HEADER]: server.appCheckToken() },
+      body: form,
+    });
+    expect(edited.status).toBe(200);
+    expect((await testimony(id)).pendingRevision?.status).toBe("held");
+    return id;
+  }
+
+  it("applies a held edit that changes the method, and moves the Provider's counts", async () => {
+    const id = await publishedWithHeldEdit({ method: "bpjs" }, { method: "asuransi", insurer: "prudential" });
+    expect(await counts()).toEqual({ ...EMPTY, bpjs: 1 });
+
+    expect((await act(await adminCookie(), { action: "publish", subjectId: id })).status).toBe(200);
+
+    const stored = await testimony(id);
+    expect(stored.paymentMethod).toEqual({ method: "asuransi", insurer: "prudential" });
+    expect(stored.pendingRevision).toBeUndefined();
+    expect(await counts()).toEqual({ pribadi: 0, bpjs: 0, asuransi: 1, insurers: { prudential: 1 } });
+  });
+
+  it("applies a held edit that adds a method to a Testimony that had none", async () => {
+    const id = await publishedWithHeldEdit(undefined, { method: "pribadi" });
+    expect(await counts()).toEqual(EMPTY);
+    await act(await adminCookie(), { action: "publish", subjectId: id });
+    expect((await testimony(id)).paymentMethod).toEqual({ method: "pribadi" });
+    expect(await counts()).toEqual({ ...EMPTY, pribadi: 1 });
+  });
+
+  it("deletes the method when the approved edit removes it", async () => {
+    const id = await publishedWithHeldEdit({ method: "bpjs" }, undefined);
+    await act(await adminCookie(), { action: "publish", subjectId: id });
+
+    const stored = await testimony(id);
+    expect(stored.pendingRevision).toBeUndefined();
+    expect(stored.paymentMethod).toBeUndefined();
+    expect("paymentMethod" in stored).toBe(false);
+    expect(await counts()).toEqual(EMPTY);
+  });
+
+  it("keeps the public method and counts when the edit is rejected", async () => {
+    const id = await publishedWithHeldEdit({ method: "bpjs" }, { method: "asuransi", insurer: "prudential" });
+    const response = await act(await adminCookie(), { action: "reject", subjectId: id, reason: "Tidak sesuai." });
+    expect(response.status).toBe(200);
+
+    const stored = await testimony(id);
+    expect(stored.paymentMethod).toEqual({ method: "bpjs" });
+    expect(stored.pendingRevision).toBeUndefined();
+    expect(await counts()).toEqual({ ...EMPTY, bpjs: 1 });
+  });
+
+  it("shows the pending method on the queue item, next to the public one", async () => {
+    const id = await publishedWithHeldEdit({ method: "bpjs" }, { method: "asuransi", insurer: "allianz" });
+    const [item] = (await queue(await adminCookie())).items;
+    expect(item).toMatchObject({ kind: "revision", subjectId: id });
+    expect(item?.testimony?.revision?.paymentMethod).toEqual({ method: "asuransi", insurer: "allianz" });
+    expect(item?.testimony?.paymentMethod).toEqual({ method: "bpjs" });
+  });
+
+  it("publishes a held new Testimony with its method, and counts it", async () => {
+    moderateWith(HOLD);
+    const id = await postTestimony("pasien@example.com", {
+      paymentMethod: { method: "asuransi", insurer: "prudential" },
+    });
+    const [item] = (await queue(await adminCookie())).items;
+    expect(item?.testimony?.paymentMethod).toEqual({ method: "asuransi", insurer: "prudential" });
+    expect(await provider()).toBeUndefined();
+
+    expect((await act(await adminCookie(), { action: "publish", subjectId: id })).status).toBe(200);
+    expect((await testimony(id)).paymentMethod).toEqual({ method: "asuransi", insurer: "prudential" });
+    expect(await counts()).toEqual({ pribadi: 0, bpjs: 0, asuransi: 1, insurers: { prudential: 1 } });
+  });
+});
+
 describe("name corrections", () => {
   it("applies a suggested name to the Listed Provider", async () => {
     await postTestimony("pasien@example.com");

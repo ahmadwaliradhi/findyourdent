@@ -5,7 +5,13 @@
 // (indefinitely) and coordinates with their fetch date (at most 30 days).
 // Never add a Google name, address, phone, rating, type list or review here.
 
-import type { ModerationDecision, ModerationRuleCode, PriceUnit, ProcedureCode } from "./generated/index.js";
+import type {
+  InsurerSlug,
+  ModerationDecision,
+  ModerationRuleCode,
+  PriceUnit,
+  ProcedureCode,
+} from "./generated/index.js";
 
 export type { ProcedureCode };
 
@@ -102,6 +108,39 @@ export interface ProcedurePriceAggregate {
 }
 
 /**
+ * How the author paid for the visit a Testimony describes (spec 07). A fact about that
+ * visit, never about what the Provider accepts. #86 will add a free-text "lainnya"
+ * insurer variant to `asuransi`; it is not modelled yet.
+ */
+export type PaymentMethod =
+  | { method: "pribadi" }
+  | { method: "bpjs" }
+  | { method: "asuransi"; insurer: InsurerSlug }
+  | { method: "tidakDisebut" };
+export type PaymentMethodKind = PaymentMethod["method"];
+/** Every PaymentMethodKind, in the order the form offers them. */
+export const PAYMENT_METHOD_KINDS = [
+  "pribadi",
+  "bpjs",
+  "asuransi",
+  "tidakDisebut",
+] as const satisfies readonly PaymentMethodKind[];
+export const isPaymentMethodKind = (value: unknown): value is PaymentMethodKind =>
+  (PAYMENT_METHOD_KINDS as readonly unknown[]).includes(value);
+
+/** Published Testimonies per reported Payment Method; `tidakDisebut` and absent are not counted. */
+export interface PaymentMethodCounts {
+  pribadi: number;
+  bpjs: number;
+  asuransi: number;
+  /** Per insurer within asuransi; only insurers with count >= 1. */
+  insurers: Partial<Record<InsurerSlug, number>>;
+}
+
+/** Counts with nothing reported: what aggregates computed before spec 07 read as. */
+export const emptyPaymentMethodCounts = (): PaymentMethodCounts => ({ pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} });
+
+/**
  * Recomputed whenever a Testimony enters or leaves `published` or its proof result
  * changes. Only Proven Testimonies (spec 09) move the averages and price stats.
  */
@@ -114,6 +153,11 @@ export interface ProviderAggregates {
   averages: AspectRatings | null;
   /** From Proven Testimonies only, keyed by procedure code; the median is shown only when count >= 2. */
   procedurePrices: Record<ProcedureCode, ProcedurePriceAggregate>;
+  /**
+   * Spec 07: over ALL published Testimonies, Proven or not (not ADR-0011's proven-only rule).
+   * `tidakDisebut` and absent are not counted. Absent on aggregates computed before spec 07.
+   */
+  paymentMethodCounts?: PaymentMethodCounts;
 }
 
 /** A Listed Provider. Document id = placeId. */
@@ -164,6 +208,8 @@ export interface TestimonyContent {
   visitMonth: YearMonth;
   procedureCode?: ProcedureCode;
   pricePaidRupiah?: number;
+  /** Spec 07. Absent on Testimonies written before it; no backfill. */
+  paymentMethod?: PaymentMethod;
   /** Cloud Storage object paths, EXIF stripped, at most four. */
   photoPaths: string[];
 }

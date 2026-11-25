@@ -20,6 +20,28 @@ describe("computeAggregates", () => {
       verifiedVisitCount: 0,
       averages: null,
       procedurePrices: {},
+      paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
+    });
+  });
+
+  it("counts Payment Methods over all published Testimonies, Proven or not", () => {
+    const base = { ratings: ratings(3, 3, 3) };
+    const aggregates = computeAggregates([
+      { ...base, verifiedVisit: true, paymentMethod: { method: "pribadi" } },
+      { ...base, verifiedVisit: false, paymentMethod: { method: "pribadi" } },
+      { ...base, verifiedVisit: false, paymentMethod: { method: "bpjs" } },
+      { ...base, verifiedVisit: true, paymentMethod: { method: "asuransi", insurer: "prudential" } },
+      { ...base, verifiedVisit: false, paymentMethod: { method: "asuransi", insurer: "prudential" } },
+      { ...base, verifiedVisit: false, paymentMethod: { method: "asuransi", insurer: "allianz" } },
+      { ...base, verifiedVisit: true, paymentMethod: { method: "tidakDisebut" } },
+      { ...base, verifiedVisit: true },
+    ]);
+    expect(aggregates.testimonyCount).toBe(8);
+    expect(aggregates.paymentMethodCounts).toEqual({
+      pribadi: 2,
+      bpjs: 1,
+      asuransi: 3,
+      insurers: { prudential: 2, allianz: 1 },
     });
   });
 

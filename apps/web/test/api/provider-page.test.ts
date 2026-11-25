@@ -43,6 +43,40 @@ async function seedSurabayaClinic() {
   });
 }
 
+describe("Listed Provider page: Payment Method counts", () => {
+  it("hands the page the counts per method and insurer from the Provider's aggregates", async () => {
+    const provider = await seedProvider(server.firestore, {
+      placeId: "ChIJ-bayar-counts",
+      aggregates: {
+        testimonyCount: 3,
+        verifiedVisitCount: 0,
+        averages: null,
+        procedurePrices: {} as never,
+        paymentMethodCounts: { pribadi: 1, bpjs: 0, asuransi: 2, insurers: { prudential: 2 } },
+      },
+    });
+    await seedTestimony(server.firestore, provider);
+
+    const { status, html } = await page(provider.placeId);
+
+    expect(status).toBe(200);
+    expect(html).toContain("paymentMethodCounts");
+    expect(html).toContain("prudential");
+  });
+
+  it("falls back to zero counts for a Provider whose aggregates predate Payment Method", async () => {
+    const provider = await seedProvider(server.firestore, {
+      placeId: "ChIJ-bayar-lama",
+      aggregates: { testimonyCount: 0, verifiedVisitCount: 0, averages: null, procedurePrices: {} },
+    });
+
+    const { status, html } = await page(provider.placeId);
+
+    expect(status).toBe(200);
+    expect(html).toContain("paymentMethodCounts");
+  });
+});
+
 describe("Listed Provider page", () => {
   it("server-renders the first-party name, Region, type and published Testimonies in full, newest first", async () => {
     const provider = await seedSurabayaClinic();

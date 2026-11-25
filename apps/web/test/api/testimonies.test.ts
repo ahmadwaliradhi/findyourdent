@@ -396,6 +396,7 @@ describe("Moderation: publish", () => {
       verifiedVisitCount: 0,
       averages: null,
       procedurePrices: {},
+      paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
     });
     expect(server.fakes.places.coordinatesCalls).toEqual([NEW_PLACE]);
     expect(await counter("testimoniesPublished")).toBe(2);
@@ -1108,6 +1109,7 @@ describe("Proven Testimonies and aggregates (spec 09)", () => {
       verifiedVisitCount: 3,
       averages: { service: 5, hygiene: 4, materialsEquipment: 3 },
       procedurePrices: { scaling: { count: 3, medianRupiah: 200_000, minRupiah: 100_000, maxRupiah: 300_000 } },
+      paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
     });
 
     await post("buzzer@example.com", false, {
@@ -1129,7 +1131,137 @@ describe("Proven Testimonies and aggregates (spec 09)", () => {
       verifiedVisitCount: 2,
       averages: null,
       procedurePrices: { scaling: { count: 2, medianRupiah: 300_000, minRupiah: 300_000, maxRupiah: 300_000 } },
+      paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
     });
+  });
+});
+
+describe("Payment Method (spec 07)", () => {
+  const countsOf = async () => (await provider(NEW_PLACE))?.aggregates.paymentMethodCounts;
+  let rejections = 0;
+  const rejected = async (paymentMethod: unknown) => {
+    // A refused submission still counts toward the account's daily limit.
+    rejections += 1;
+    const { cookie } = await signIn(`pasien${rejections}@example.com`);
+    const response = await create(submission({ paymentMethod: paymentMethod as never }), { cookie });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as TestimonyApiError;
+    expect(body.fieldErrors?.paymentMethod).toBeTruthy();
+    expect(await count(COLLECTIONS.testimonies)).toBe(0);
+  };
+
+  it.each([
+    [{ method: "pribadi" }],
+    [{ method: "bpjs" }],
+    [{ method: "asuransi", insurer: "prudential" }],
+    [{ method: "tidakDisebut" }],
+  ] as const)("publishes a Testimony paid with %j and stores it", async (paymentMethod) => {
+    const { cookie } = await signIn("pasien@example.com");
+    const stored = await createOk(submission({ paymentMethod }), { cookie });
+    expect(stored.status).toBe("published");
+    expect((await testimony(stored.testimonyId)).paymentMethod).toEqual(paymentMethod);
+  });
+
+  it("stays valid without a Payment Method, and stores none", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const stored = await createOk(submission(), { cookie });
+    expect((await testimony(stored.testimonyId)).paymentMethod).toBeUndefined();
+    expect(await countsOf()).toEqual({ pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} });
+  });
+
+  it("treats a null Payment Method as skipped", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    const stored = await createOk(submission({ paymentMethod: null }), { cookie });
+    expect((await testimony(stored.testimonyId)).paymentMethod).toBeUndefined();
+  });
+
+  it("rejects an unknown insurer, a missing insurer, an insurer on another method, and stray fields", async () => {
+    await rejected({ method: "asuransi", insurer: "not-an-insurer" });
+    await rejected({ method: "asuransi" });
+    await rejected({ method: "bpjs", insurer: "prudential" });
+    await rejected({ method: "pribadi", note: "x" });
+    await rejected({ method: "kartuKredit" });
+    await rejected("bpjs");
+    await rejected({});
+  });
+
+  let paid = 0;
+
+  async function post(email: string, paymentMethod?: TestimonySubmission["paymentMethod"]) {
+    const { cookie } = await signIn(email);
+    moderateWith(PUBLISH);
+    paid += 1;
+    // Each with a text of its own: the same text twice at one place is held as templated (D2).
+    const text = distinctTestimonyText(paid);
+    const stored = await createOk(submission({ text, paymentMethod }), { cookie });
+    await submittedBeforeDetectionWindow(server.firestore, stored.testimonyId);
+    return { ...stored, cookie, text };
+  }
+
+  it("counts per method and per insurer, unproven Testimonies included, and drops them on delete", async () => {
+    await post("a@example.com", { method: "pribadi" });
+    await post("b@example.com", { method: "bpjs" });
+    await post("c@example.com", { method: "asuransi", insurer: "prudential" });
+    const d = await post("d@example.com", { method: "asuransi", insurer: "prudential" });
+    await post("e@example.com", { method: "asuransi", insurer: "allianz" });
+    await post("f@example.com", { method: "tidakDisebut" });
+    await post("g@example.com");
+    expect((await provider(NEW_PLACE))?.aggregates).toMatchObject({ testimonyCount: 7, verifiedVisitCount: 0 });
+    expect(await countsOf()).toEqual({
+      pribadi: 1,
+      bpjs: 1,
+      asuransi: 3,
+      insurers: { prudential: 2, allianz: 1 },
+    });
+
+    expect((await remove(d.testimonyId, { cookie: d.cookie })).status).toBe(200);
+    expect(await countsOf()).toEqual({ pribadi: 1, bpjs: 1, asuransi: 2, insurers: { prudential: 1, allianz: 1 } });
+  });
+
+  it("recounts when a published Testimony is edited to another method, or to none", async () => {
+    const first = await post("a@example.com", { method: "asuransi", insurer: "prudential" });
+    await post("b@example.com", { method: "bpjs" });
+
+    moderateWith(PUBLISH);
+    expect(
+      (
+        await edit(first.testimonyId, submission({ text: first.text, paymentMethod: { method: "pribadi" } }), {
+          cookie: first.cookie,
+        })
+      ).status,
+    ).toBe(200);
+    expect(await countsOf()).toEqual({ pribadi: 1, bpjs: 1, asuransi: 0, insurers: {} });
+    expect((await testimony(first.testimonyId)).paymentMethod).toEqual({ method: "pribadi" });
+
+    moderateWith(PUBLISH);
+    await edit(first.testimonyId, submission({ text: first.text }), { cookie: first.cookie });
+    expect(await countsOf()).toEqual({ pribadi: 0, bpjs: 1, asuransi: 0, insurers: {} });
+    expect((await testimony(first.testimonyId)).paymentMethod).toBeUndefined();
+  });
+
+  it("keeps the public Payment Method until a held edit of it is approved", async () => {
+    const first = await post("a@example.com", { method: "bpjs" });
+    moderateWith(HOLD);
+    await edit(first.testimonyId, submission({ text: first.text, paymentMethod: { method: "pribadi" } }), {
+      cookie: first.cookie,
+    });
+    const stored = await testimony(first.testimonyId);
+    expect(stored.paymentMethod).toEqual({ method: "bpjs" });
+    expect(stored.pendingRevision?.paymentMethod).toEqual({ method: "pribadi" });
+    expect(await countsOf()).toEqual({ pribadi: 0, bpjs: 1, asuransi: 0, insurers: {} });
+  });
+
+  it("counts a held Testimony only once published, and gives the edit page its Payment Method", async () => {
+    const { cookie } = await signIn("pasien@example.com");
+    moderateWith(HOLD);
+    const held = await createOk(submission({ paymentMethod: { method: "bpjs" } }), { cookie });
+    expect(held.status).toBe("held");
+    expect(await provider(NEW_PLACE)).toBeUndefined();
+    const page = await fetch(new URL(`/testimoni-saya/${held.testimonyId}/ubah`, server.baseUrl), {
+      headers: { cookie },
+    });
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("bpjs");
   });
 });
 
@@ -1240,6 +1372,7 @@ describe("editing", () => {
       verifiedVisitCount: 0,
       averages: null,
       procedurePrices: {},
+      paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
     });
     expect(await counter("testimoniesPublished")).toBe(1);
   });
@@ -1337,6 +1470,7 @@ describe("author delete", () => {
         verifiedVisitCount: 0,
         averages: null,
         procedurePrices: {},
+        paymentMethodCounts: { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
       });
     }
     // Gone for good: a second delete finds nothing.

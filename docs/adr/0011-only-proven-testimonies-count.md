@@ -10,3 +10,4 @@ Instead only a Proven Testimony (one with an accepted Proof of Visit) feeds aspe
 - A fake Testimony that counts now costs a real visit, not a few thousand rupiah.
 - A doubtful proof goes to an admin and its file is kept up to 7 days for that, amending spec 03's immediate deletion; the Testimony itself stays published as "Belum terbukti".
 - Phone and email verification of authors is permanently out of scope; revisit only with new evidence of account farming that proof cannot stop.
+- Plain counts are not scores and stay over every published Testimony: `testimonyCount` and the Payment Method counts of spec 07 (a Payment Method is a fact about a visit, decided in triage on 2026-10-18).

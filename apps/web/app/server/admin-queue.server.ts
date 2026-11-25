@@ -80,6 +80,7 @@ function contentView(testimonyId: string, content: TestimonyContent, displayName
     visitMonth: content.visitMonth,
     ...(content.procedureCode ? { procedureCode: content.procedureCode } : {}),
     ...(content.pricePaidRupiah !== undefined ? { pricePaidRupiah: content.pricePaidRupiah } : {}),
+    ...(content.paymentMethod ? { paymentMethod: content.paymentMethod } : {}),
     displayName,
     photoUrls: content.photoPaths.map((path) => testimonyPhotoUrl(testimonyId, path)),
   };
@@ -659,6 +660,7 @@ async function revisionAction(
       visitMonth: content.visitMonth,
       procedureCode: content.procedureCode ?? FieldValue.delete(),
       pricePaidRupiah: content.pricePaidRupiah ?? FieldValue.delete(),
+      paymentMethod: content.paymentMethod ?? FieldValue.delete(),
       photoPaths: content.photoPaths,
       displayName: revision.displayName ?? testimony.displayName,
       ...(revision.moderationDecisionId ? { moderationDecisionId: revision.moderationDecisionId } : {}),

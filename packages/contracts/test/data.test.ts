@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 import districtList from "../data/districts.json" with { type: "json" };
+import insurerList from "../data/insurers.json" with { type: "json" };
 import procedureList from "../data/procedures.json" with { type: "json" };
 import regionList from "../data/regions.json" with { type: "json" };
 import {
   type DistrictList,
+  INSURERS,
+  insurerName,
+  isInsurerSlug,
   isProcedureCode,
   PROCEDURE_CODES,
   PROCEDURES,
   REGIONS,
   validateDistrictList,
+  validateInsurerList,
   validateProcedureList,
   validateRegionList,
 } from "../src/index.js";
@@ -148,5 +153,44 @@ describe("data/districts.json", () => {
   it("has no two kecamatan with the same name inside one kota/kabupaten", () => {
     const keys = DISTRICTS.districts.map((d) => `${d.regencyCode} ${d.name.toLowerCase()}`);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe("data/insurers.json", () => {
+  it("validates against its schema", () => {
+    expect(validateInsurerList(insurerList), JSON.stringify(validateInsurerList.errors)).toBe(true);
+  });
+
+  it("has unique kebab-case slugs and non-empty names in both languages", () => {
+    expect(new Set(INSURERS.map((i) => i.slug)).size).toBe(INSURERS.length);
+    for (const i of INSURERS) {
+      expect(i.slug, i.slug).toMatch(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
+      expect(i.name.id.trim(), i.slug).not.toBe("");
+      expect(i.name.en.trim(), i.slug).not.toBe("");
+    }
+  });
+
+  it("is listed alphabetically by Indonesian name, the order the picker shows", () => {
+    const names = INSURERS.map((i) => i.name.id);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "id", { sensitivity: "base" })));
+  });
+
+  it("recognises curated slugs and rejects anything else", () => {
+    expect(isInsurerSlug("prudential")).toBe(true);
+    expect(isInsurerSlug("axa-mandiri")).toBe(true);
+    expect(isInsurerSlug("admedika")).toBe(false); // a TPA, not an insurer
+    expect(isInsurerSlug("Prudential")).toBe(false);
+    expect(isInsurerSlug(42)).toBe(false);
+    expect(isInsurerSlug(undefined)).toBe(false);
+    expect(isInsurerSlug(null)).toBe(false);
+  });
+
+  it("looks up a display name by slug and language", () => {
+    expect(insurerName("axa-mandiri", "id")).toBe("AXA Mandiri");
+    expect(insurerName("axa-mandiri", "en")).toBe("AXA Mandiri");
+    for (const i of INSURERS) {
+      expect(insurerName(i.slug, "id")).toBe(i.name.id);
+      expect(insurerName(i.slug, "en")).toBe(i.name.en);
+    }
   });
 });

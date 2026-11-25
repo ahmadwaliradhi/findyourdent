@@ -4,6 +4,8 @@
 import {
   type AspectRatings,
   COLLECTIONS,
+  emptyPaymentMethodCounts,
+  type PaymentMethodCounts,
   type ProcedureCode,
   type ProviderDoc,
   type ProviderType,
@@ -34,6 +36,11 @@ export interface ProviderSummary {
   testimonyCount: number;
   verifiedVisitCount: number;
   averages: AspectRatings | null;
+  /**
+   * Spec 07 "Cara bayar pasien": over all published Testimonies, Proven or not. All zeros
+   * (and no insurers) when nothing is reported or the aggregates predate spec 07.
+   */
+  paymentMethodCounts: PaymentMethodCounts;
   /** Median price paid (two or more), with its source and date. */
   priceSignals: PriceSignal[];
   /** The owner's confirmed Price List, every row, second to prices paid (spec 05). */
@@ -137,6 +144,7 @@ export async function loadProviderPage(
       testimonyCount: doc.aggregates.testimonyCount,
       verifiedVisitCount: doc.aggregates.verifiedVisitCount,
       averages: doc.aggregates.averages,
+      paymentMethodCounts: doc.aggregates.paymentMethodCounts ?? emptyPaymentMethodCounts(),
       priceSignals: priceSignals(doc),
       ...(priceList ? { priceList: publicPriceList(priceList) } : {}),
       ...(owner ? { owner } : {}),

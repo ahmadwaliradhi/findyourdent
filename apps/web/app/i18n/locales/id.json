@@ -345,7 +345,8 @@
     "links": "Tautan kaki",
     "privacy": "Kebijakan privasi",
     "terms": "Syarat penggunaan",
-    "transparency": "Cara kami memverifikasi testimoni"
+    "transparency": "Cara kami memverifikasi testimoni",
+    "bpjs": "BPJS dan gigi"
   },
   "shared": {
     "title": "Panduan yang dibagikan",
@@ -521,7 +522,23 @@
     "priceListConfirmed": "Dikonfirmasi pemilik {{date}}",
     "possiblyOutdated": "mungkin sudah berubah",
     "address": "Alamat",
-    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit."
+    "scoreScale": "Skala 1 sampai 5, dari Testimoni yang sudah terbit.",
+    "payment": {
+      "title": "Cara bayar pasien",
+      "note": "Dari testimoni yang terbit. Ini cara bayar pasien itu sendiri, bukan jaminan tempat ini melayani pembayaran tertentu.",
+      "empty": "Belum ada pasien yang menyebutkan cara bayar.",
+      "pribadi_one": "{{count}} pasien bayar sendiri",
+      "pribadi": "{{count}} pasien bayar sendiri",
+      "bpjs_one": "{{count}} pasien bayar pakai BPJS",
+      "bpjs": "{{count}} pasien bayar pakai BPJS",
+      "asuransi_one": "{{count}} pasien bayar pakai asuransi swasta",
+      "asuransi": "{{count}} pasien bayar pakai asuransi swasta",
+      "insurersLabel": "Asuransi yang disebut",
+      "insurer_one": "{{name}}: {{count}} pasien",
+      "insurer": "{{name}}: {{count}} pasien",
+      "fktpNote": "Perawatan gigi yang ditanggung BPJS dilakukan di FKTP tempat peserta terdaftar, atau lewat rujukan. Laporan BPJS di sini tidak berarti semua peserta bisa langsung datang.",
+      "fktpLink": "Baca penjelasan BPJS dan FKTP"
+    }
   },
   "shortlist": {
     "reason": {
@@ -635,7 +652,8 @@
       "providerName": "Isi nama tempat sesuai papan nama atau yang Anda kenal.",
       "region": "Pilih provinsi dan kota/kabupaten.",
       "listingChecking": "Tunggu sebentar, tempat sedang diperiksa.",
-      "listingFailed": "Tekan Coba lagi untuk memeriksa tempat."
+      "listingFailed": "Tekan Coba lagi untuk memeriksa tempat.",
+      "paymentInsurer": "Pilih asuransi Anda, atau pilih cara bayar lain."
     },
     "fileErrors": {
       "photoType": "Foto harus berupa JPG, PNG, atau WebP.",
@@ -687,7 +705,13 @@
       "account": "Akun Google Anda tidak pernah ditampilkan.",
       "proof": "Bukti kunjungan disimpan privat dan tidak pernah tayang.",
       "edit": "Anda bisa mengubah atau menghapus Testimoni kapan saja."
-    }
+    },
+    "paymentLegend": "Bagaimana Anda membayar kunjungan ini? (opsional)",
+    "paymentHint": "Ini tentang kunjungan Anda sendiri. Boleh dilewati.",
+    "paymentInsurerLabel": "Asuransi Anda",
+    "paymentInsurerPlaceholder": "Pilih asuransi",
+    "paymentInsurerHint": "Kartu AdMedika, Owlexa atau Fullerton? Pilih asuransi yang tertera di kartu.",
+    "paymentClear": "Hapus pilihan"
   },
   "providerFields": {
     "pickerLabel": "Tempat praktik",
@@ -760,6 +784,7 @@
       "visitMonth": "Pilih bulan dan tahun kunjungan.",
       "visitMonthFuture": "Bulan kunjungan tidak boleh di masa depan.",
       "procedureCode": "Pilih tindakan dari daftar, atau kosongkan.",
+      "paymentMethod": "Pilih cara bayar dari daftar, atau lewati pertanyaan ini.",
       "pricePaidRupiah": "Tulis biaya dalam rupiah tanpa titik atau koma, atau kosongkan.",
       "displayName": "Tulis nama yang ditampilkan (maksimal {{max}} karakter).",
       "consent": "Centang kedua pernyataan sebelum mengirim.",
@@ -1394,6 +1419,107 @@
         "title": "Yang tidak kami umumkan",
         "blocks": [
           "Kami juga akan memantau pola yang mencurigakan, seperti banyak Testimoni serupa dalam waktu singkat. Testimoni seperti itu akan ditahan untuk diperiksa admin, tidak pernah dihapus otomatis. Detail cara deteksinya sengaja tidak kami umumkan agar tidak bisa diakali."
+        ]
+      }
+    ]
+  },
+  "paymentMethod": {
+    "kind": {
+      "pribadi": "Pribadi (bayar sendiri)",
+      "bpjs": "BPJS",
+      "asuransi": "Asuransi swasta",
+      "tidakDisebut": "Tidak ingat / tidak mau sebut"
+    },
+    "adminLine": "Cara bayar: {{method}}"
+  },
+  "bpjsPage": {
+    "metaTitle": "BPJS Kesehatan dan perawatan gigi",
+    "title": "BPJS Kesehatan dan perawatan gigi",
+    "lead": "Apa yang ditanggung BPJS Kesehatan untuk gigi, di mana perawatannya dilakukan, dan cara membaca \"Cara bayar pasien\" di halaman tempat praktik.",
+    "metaDescription": "Perawatan gigi apa yang ditanggung BPJS Kesehatan, mengapa kartu BPJS tidak berlaku di klinik mana pun, dan cara mengecek atau mengganti FKTP Anda.",
+    "effective": "Berlaku sejak: 25 November 2026",
+    "updated": "Terakhir diperbarui: 25 November 2026",
+    "seeAlso": "Mulai dari Panduan",
+    "sections": [
+      {
+        "title": "Yang ditanggung di FKTP",
+        "blocks": [
+          "FKTP adalah fasilitas kesehatan tingkat pertama tempat Anda terdaftar sebagai peserta BPJS Kesehatan (puskesmas, klinik, atau dokter praktik perorangan). Menurut Permenkes 3/2023 Pasal 3 ayat (2), paket gigi di FKTP mencakup:",
+          [
+            "pemeriksaan, pengobatan, dan konsultasi;",
+            "premedikasi;",
+            "kegawatdaruratan oro-dental;",
+            "pencabutan gigi sulung;",
+            "pencabutan gigi tetap tanpa komplikasi, dan obat setelah pencabutan;",
+            "tumpatan (tambal gigi);",
+            "scaling untuk gingivitis akut."
+          ],
+          "Scaling ditentukan oleh indikasi medis. Sumber-sumber resmi berbeda soal seberapa sering boleh dilakukan, jadi kami tidak menjanjikan frekuensi: tanyakan ke FKTP Anda.",
+          "Gigi tiruan (protesa) diklaim terpisah oleh fasilitas. Di FKTP batasnya Rp1.000.000 untuk dua rahang atau Rp500.000 untuk satu rahang, dan rahang yang sama baru bisa dibuat ulang paling cepat 2 tahun sekali atas indikasi medis (Permenkes 3/2023 Pasal 24)."
+        ]
+      },
+      {
+        "title": "Yang perlu rujukan",
+        "blocks": [
+          "Perawatan spesialistik dilakukan di rumah sakit (FKRTL) dan hanya lewat rujukan atas indikasi medis. Rujukan gigi berasal dari dokter gigi, kecuali puskesmas atau klinik Anda tidak punya dokter gigi.",
+          "Perawatan saluran akar (PSA) tidak ada di daftar paket gigi FKTP, jadi lewat JKN umumnya harus dirujuk ke dokter gigi spesialis di rumah sakit."
+        ]
+      },
+      {
+        "title": "Yang tidak ditanggung",
+        "blocks": [
+          [
+            "perawatan estetik;",
+            "perawatan ortodonti (kawat gigi);",
+            "perawatan di fasilitas yang bukan mitra BPJS, kecuali dalam keadaan darurat."
+          ]
+        ]
+      },
+      {
+        "anchor": "fktp",
+        "title": "Perawatan gigi terikat pada FKTP Anda",
+        "blocks": [
+          "Datang ke klinik mana pun dengan kartu BPJS tidak berarti ditanggung. Perawatan gigi yang ditanggung dilakukan di FKTP tempat Anda terdaftar atau di dokter gigi mitranya, atau lewat rujukan.",
+          [
+            "<b>Terdaftar di puskesmas atau klinik</b>: Anda dilayani dokter gigi di sana atau dokter gigi jejaringnya. Anda tidak bisa memilih dokter gigi praktik mandiri lain. Jika tempat itu tidak punya dokter gigi, Anda dirujuk ke rumah sakit.",
+            "<b>Terdaftar di dokter praktik perorangan</b>: Anda memilih dan mendaftarkan satu dokter gigi praktik mandiri secara terpisah. Di Mobile JKN ini tampil sebagai \"fasilitas kesehatan gigi\", dan hanya dokter gigi itu yang bisa Anda pakai.",
+            "<b>Di luar daerah atau dalam keadaan darurat</b>: rawat jalan tingkat pertama di FKTP lain dibolehkan sampai 3 kali kunjungan dalam 1 bulan, di FKTP yang sama (Perpres 82/2018 Pasal 55). Keadaan darurat medis boleh ditangani di fasilitas mana pun."
+          ],
+          "Rincian aturan jejaring ini bersumber dari panduan BPJS yang lebih tua daripada Perpres 59/2024, jadi cek lagi di Mobile JKN sebelum mengandalkannya."
+        ]
+      },
+      {
+        "title": "Cek atau ganti FKTP",
+        "blocks": [
+          "Di aplikasi Mobile JKN Anda bisa melihat FKTP dan fasilitas kesehatan gigi Anda, dan menurut laporan media aplikasi itu punya menu \"Info Lokasi Faskes\" untuk faskes terdekat. Penggantian juga bisa lewat Care Center 165.",
+          [
+            "FKTP baru bisa diganti setelah 3 bulan terdaftar (Perpres 59/2024 Pasal 7).",
+            "Lebih awal hanya jika pindah tempat tinggal atau tugas/pendidikan, dengan surat keterangan.",
+            "Perubahan berlaku mulai tanggal 1 bulan berikutnya."
+          ],
+          "FindYourDent tidak bisa memeriksa FKTP Anda. Tempat praktik di Direktori yang disebut pasien memakai BPJS hanyalah pilihan untuk dipertimbangkan jika Anda berencana pindah FKTP."
+        ]
+      },
+      {
+        "title": "Membaca \"Cara bayar pasien\"",
+        "blocks": [
+          "Di halaman tempat praktik, \"Cara bayar pasien\" menghitung bagaimana pasien membayar kunjungan mereka sendiri: bayar sendiri, BPJS, atau asuransi swasta. Itu cerita kunjungan pasien, bukan apa yang diterima tempat itu.",
+          "Jadi angka BPJS di sana tidak berarti Anda bisa datang langsung dengan kartu BPJS. Lihat lagi bagian \"Perawatan gigi terikat pada FKTP Anda\" di atas."
+        ]
+      },
+      {
+        "title": "Sumber",
+        "blocks": [
+          [
+            "<a href=\"https://peraturan.bpk.go.id/Details/275518/permenkes-no-3-tahun-2023\">Permenkes 3/2023</a>, Pasal 3, 4, 11 dan 24.",
+            "<a href=\"https://peraturan.bpk.go.id/Details/94711\">Perpres 82/2018</a>, Pasal 52 dan 55.",
+            "<a href=\"https://api-law.crpg.info/peraturan/perpres/59/2024/pasal/7\">Perpres 59/2024</a>, Pasal 7 (naskah resmi di peraturan.bpk.go.id).",
+            "<a href=\"https://dental.id/wp-content/uploads/2023/09/Panduan-Praktis-Pelayanan-Gigi-Prothesa-Gigi-Bagi-Peserta-JKN.pdf\">Panduan Praktis Pelayanan Gigi & Prothesa Gigi Bagi Peserta JKN</a>, BPJS Kesehatan (tanpa tahun; salinan pihak ketiga).",
+            "<a href=\"https://www.kompas.tv/info-publik/624432/cara-cek-lokasi-faskes-terdekat-melalui-aplikasi-mobile-jkn\">Cara cek lokasi faskes terdekat lewat Mobile JKN</a>, Kompas TV."
+          ],
+          {
+            "box": "Halaman ini informasi edukasi, bukan diagnosis, bukan nasihat hukum, dan bukan jaminan bahwa suatu perawatan ditanggung. Aturan bisa berubah: pastikan ke FKTP Anda atau BPJS Kesehatan (Care Center 165)."
+          }
         ]
       }
     ]

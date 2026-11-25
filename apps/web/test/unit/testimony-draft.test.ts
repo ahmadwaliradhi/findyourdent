@@ -27,6 +27,8 @@ const filled: TestimonyFormState = {
   visitYear: "2026",
   visitMonth: "09",
   displayName: "Siti R.",
+  paymentMethod: "",
+  insurer: "",
   consentHonest: true,
   consentNoOthers: true,
 };
@@ -187,5 +189,69 @@ describe("form helpers", () => {
   it("shows prices with Indonesian thousands separators", () => {
     expect(formatPriceInput("1500000")).toBe("1.500.000");
     expect(formatPriceInput("")).toBe("");
+  });
+});
+
+describe("Payment Method (spec 07)", () => {
+  const listed = { ...filled, provider: EMPTY_FORM_STATE.provider };
+
+  it("is skipped by default and left out of the submission", () => {
+    expect(EMPTY_FORM_STATE.paymentMethod).toBe("");
+    expect(toSubmission(listed, { placeId: "ChIJ-baru" })).not.toHaveProperty("paymentMethod");
+    expect(validateForm(filled, { mode: "create", now: NOW })).toEqual({});
+  });
+
+  it.each([
+    ["pribadi", { method: "pribadi" }],
+    ["bpjs", { method: "bpjs" }],
+    ["tidakDisebut", { method: "tidakDisebut" }],
+  ] as const)("sends %s without an insurer, even when one was picked before", (method, expected) => {
+    const submission = toSubmission({ ...listed, paymentMethod: method, insurer: "prudential" }, { placeId: "p" });
+    expect(submission.paymentMethod).toEqual(expected);
+  });
+
+  it("sends asuransi with the picked insurer", () => {
+    const submission = toSubmission({ ...listed, paymentMethod: "asuransi", insurer: "prudential" }, { placeId: "p" });
+    expect(submission.paymentMethod).toEqual({ method: "asuransi", insurer: "prudential" });
+  });
+
+  it("refuses asuransi without an insurer, keyed like the server's fieldErrors", () => {
+    const errors = validateForm({ ...filled, paymentMethod: "asuransi" }, { mode: "create", now: NOW });
+    expect(errors.paymentMethod?.key).toBe("errors.paymentInsurer");
+    const picked = { ...filled, paymentMethod: "asuransi", insurer: "prudential" } as const;
+    expect(validateForm(picked, { mode: "create", now: NOW })).toEqual({});
+  });
+
+  it("round-trips through the stored content the edit page passes in", () => {
+    for (const state of [
+      { ...listed, paymentMethod: "bpjs", insurer: "" },
+      { ...listed, paymentMethod: "asuransi", insurer: "prudential" },
+      { ...listed, paymentMethod: "tidakDisebut", insurer: "" },
+    ] as const) {
+      const submission = toSubmission(state, { placeId: "ChIJ-baru" });
+      expect(stateFromInitial(submission)).toMatchObject({
+        paymentMethod: state.paymentMethod,
+        insurer: state.insurer,
+      });
+    }
+  });
+
+  it("loads a stored Testimony without a Payment Method (or with null) as skipped", () => {
+    expect(stateFromInitial({ placeId: "p" }).paymentMethod).toBe("");
+    expect(stateFromInitial({ placeId: "p", paymentMethod: null })).toMatchObject({ paymentMethod: "", insurer: "" });
+  });
+
+  it("keeps the choice in the browser draft and drops a method or insurer it does not know", () => {
+    const draft = { ...filled, paymentMethod: "asuransi", insurer: "prudential" } as const;
+    expect(parseDraft(serializeDraft(draft))).toEqual(draft);
+    const tampered = JSON.stringify({ v: 1, state: { ...filled, paymentMethod: "kredit", insurer: "admedika" } });
+    expect(parseDraft(tampered)).toMatchObject({ paymentMethod: "", insurer: "" });
+    const badInsurer = JSON.stringify({ v: 1, state: { ...filled, paymentMethod: "asuransi", insurer: "admedika" } });
+    expect(parseDraft(badInsurer)).toMatchObject({ paymentMethod: "asuransi", insurer: "" });
+  });
+
+  it("drops a stored insurer when the method is not asuransi", () => {
+    const stale = JSON.stringify({ v: 1, state: { ...filled, paymentMethod: "pribadi", insurer: "prudential" } });
+    expect(parseDraft(stale)).toMatchObject({ paymentMethod: "pribadi", insurer: "" });
   });
 });

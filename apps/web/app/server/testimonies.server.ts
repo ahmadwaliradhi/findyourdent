@@ -182,6 +182,7 @@ function contentOf(value: CheckedSubmission, photoPaths: string[]): TestimonyCon
     visitMonth: value.visitMonth,
     ...(value.procedureCode ? { procedureCode: value.procedureCode } : {}),
     ...(value.pricePaidRupiah !== undefined ? { pricePaidRupiah: value.pricePaidRupiah } : {}),
+    ...(value.paymentMethod ? { paymentMethod: value.paymentMethod } : {}),
     photoPaths,
   };
 }
@@ -194,6 +195,7 @@ function contentUpdate(content: TestimonyContent): Record<string, unknown> {
     visitMonth: content.visitMonth,
     procedureCode: content.procedureCode ?? FieldValue.delete(),
     pricePaidRupiah: content.pricePaidRupiah ?? FieldValue.delete(),
+    paymentMethod: content.paymentMethod ?? FieldValue.delete(),
     photoPaths: content.photoPaths,
   };
 }
@@ -1313,6 +1315,7 @@ export async function loadTestimonyForEdit(
       visitMonth: content.visitMonth,
       ...(content.procedureCode ? { procedureCode: content.procedureCode } : {}),
       ...(content.pricePaidRupiah !== undefined ? { pricePaidRupiah: content.pricePaidRupiah } : {}),
+      ...(content.paymentMethod ? { paymentMethod: content.paymentMethod } : {}),
       displayName: testimony.pendingRevision?.displayName ?? testimony.displayName,
       photos: content.photoPaths.map((path) => ({ path, url: testimonyPhotoUrl(testimonyId, path) })),
     },
