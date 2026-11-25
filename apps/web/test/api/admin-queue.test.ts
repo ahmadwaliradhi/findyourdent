@@ -535,7 +535,9 @@ describe("Payment Method (spec 07)", () => {
 
   it("publishes a held new Testimony with its method, and counts it", async () => {
     moderateWith(HOLD);
-    const id = await postTestimony("pasien@example.com", { paymentMethod: { method: "asuransi", insurer: "prudential" } });
+    const id = await postTestimony("pasien@example.com", {
+      paymentMethod: { method: "asuransi", insurer: "prudential" },
+    });
     const [item] = (await queue(await adminCookie())).items;
     expect(item?.testimony?.paymentMethod).toEqual({ method: "asuransi", insurer: "prudential" });
     expect(await provider()).toBeUndefined();

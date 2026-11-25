@@ -1223,7 +1223,13 @@ describe("Payment Method (spec 07)", () => {
     await post("b@example.com", { method: "bpjs" });
 
     moderateWith(PUBLISH);
-    expect((await edit(first.testimonyId, submission({ text: first.text, paymentMethod: { method: "pribadi" } }), { cookie: first.cookie })).status).toBe(200);
+    expect(
+      (
+        await edit(first.testimonyId, submission({ text: first.text, paymentMethod: { method: "pribadi" } }), {
+          cookie: first.cookie,
+        })
+      ).status,
+    ).toBe(200);
     expect(await countsOf()).toEqual({ pribadi: 1, bpjs: 1, asuransi: 0, insurers: {} });
     expect((await testimony(first.testimonyId)).paymentMethod).toEqual({ method: "pribadi" });
 
@@ -1236,7 +1242,9 @@ describe("Payment Method (spec 07)", () => {
   it("keeps the public Payment Method until a held edit of it is approved", async () => {
     const first = await post("a@example.com", { method: "bpjs" });
     moderateWith(HOLD);
-    await edit(first.testimonyId, submission({ text: first.text, paymentMethod: { method: "pribadi" } }), { cookie: first.cookie });
+    await edit(first.testimonyId, submission({ text: first.text, paymentMethod: { method: "pribadi" } }), {
+      cookie: first.cookie,
+    });
     const stored = await testimony(first.testimonyId);
     expect(stored.paymentMethod).toEqual({ method: "bpjs" });
     expect(stored.pendingRevision?.paymentMethod).toEqual({ method: "pribadi" });

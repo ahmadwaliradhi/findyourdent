@@ -141,7 +141,9 @@ test("fix before submit: shows the flagged sentence and reason, then sends the f
   expect(sentTexts).toEqual(["phone", "fixed"]);
 });
 
-test("Payment Method: optional, Asuransi needs an insurer, and the choice goes with the submission", async ({ page }) => {
+test("Payment Method: optional, Asuransi needs an insurer, and the choice goes with the submission", async ({
+  page,
+}) => {
   const bodies: string[] = [];
   await page.route("**/api/testimonies", async (route) => {
     bodies.push(route.request().postDataBuffer()?.toString("latin1") ?? "");

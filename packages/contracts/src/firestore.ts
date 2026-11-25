@@ -119,7 +119,12 @@ export type PaymentMethod =
   | { method: "tidakDisebut" };
 export type PaymentMethodKind = PaymentMethod["method"];
 /** Every PaymentMethodKind, in the order the form offers them. */
-export const PAYMENT_METHOD_KINDS = ["pribadi", "bpjs", "asuransi", "tidakDisebut"] as const satisfies readonly PaymentMethodKind[];
+export const PAYMENT_METHOD_KINDS = [
+  "pribadi",
+  "bpjs",
+  "asuransi",
+  "tidakDisebut",
+] as const satisfies readonly PaymentMethodKind[];
 export const isPaymentMethodKind = (value: unknown): value is PaymentMethodKind =>
   (PAYMENT_METHOD_KINDS as readonly unknown[]).includes(value);
 

@@ -42,7 +42,10 @@ test("the FKTP link opens the BPJS page at its FKTP section", async ({ page, fir
   const provider = await seedProvider(firestore, { placeId: `bayar-fktp-${unique}`, name: `Klinik FKTP ${unique}` });
 
   await page.goto(`/tempat/${provider.placeId}`);
-  await page.getByTestId("fktp-note").getByRole("link", { name: /penjelasan BPJS dan FKTP/ }).click();
+  await page
+    .getByTestId("fktp-note")
+    .getByRole("link", { name: /penjelasan BPJS dan FKTP/ })
+    .click();
 
   await expect(page).toHaveURL(/\/bpjs#fktp$/);
   await expect(page.getByRole("heading", { level: 1, name: "BPJS Kesehatan dan perawatan gigi" })).toBeVisible();
@@ -76,7 +79,10 @@ test("a Provider nobody has reported on says so, with the FKTP note still there"
   firestore,
   unique,
 }) => {
-  const provider = await seedProvider(firestore, { placeId: `bayar-kosong-${unique}`, name: `Klinik Kosong ${unique}` });
+  const provider = await seedProvider(firestore, {
+    placeId: `bayar-kosong-${unique}`,
+    name: `Klinik Kosong ${unique}`,
+  });
 
   await page.goto(`/tempat/${provider.placeId}`);
 
