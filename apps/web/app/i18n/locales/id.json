@@ -187,7 +187,8 @@
         "claim": "Klaim halaman",
         "ownerFacts": "Data pemilik ditahan",
         "reply": "Balasan ditahan",
-        "proofReview": "Bukti kunjungan"
+        "proofReview": "Bukti kunjungan",
+        "policyViolation": "Kasus dugaan pelanggaran kebijakan"
       },
       "status": {
         "submitted": "Diperiksa",
@@ -247,7 +248,11 @@
         "publishReply": "Tayangkan balasan",
         "rejectReply": "Tolak balasan",
         "acceptProof": "Terima bukti",
-        "rejectProof": "Tolak bukti"
+        "rejectProof": "Tolak bukti",
+        "openViolation": "Buka kasus",
+        "notifyViolation": "Tandai sudah diberi tahu",
+        "confirmViolation": "Konfirmasi pelanggaran",
+        "dismissViolation": "Tutup tanpa pelanggaran"
       },
       "reasonFor": "Alasan untuk \"{{action}}\" (dicatat; penulis melihatnya kecuali saat disembunyikan)",
       "logged": "Setiap tindakan dicatat dengan nama admin, waktu dan alasan.",
@@ -296,6 +301,39 @@
           "gone": "Testimoni yang buktinya cocok sudah tidak ada, mungkin sudah dihapus."
         },
         "expiryHint": "Bukti yang belum diputuskan dalam 7 hari ditolak otomatis dan filenya dihapus. Alasan penolakan ditampilkan ke penulis."
+      },
+      "violation": {
+        "provider": "Penyedia",
+        "claimed": "sudah diklaim",
+        "unclaimed": "belum diklaim",
+        "status": "Status",
+        "statusValue": {
+          "open": "Terbuka",
+          "providerNotified": "Penyedia diberi tahu"
+        },
+        "period": "Periode dicurigai",
+        "evidence": "Bukti",
+        "reports": "Laporan: {{count}}",
+        "holds": "Testimoni ditahan deteksi: {{count}}",
+        "privateFiles": "Berkas bukti privat: {{count}}",
+        "phoneHint": "Penyedia belum diklaim. Telepon nomor di Google, lalu catat kontaknya di alasan.",
+        "notifiedVia": "Diberi tahu lewat",
+        "via": {
+          "ownerPages": "halaman pemilik",
+          "phone": "telepon"
+        },
+        "responseDue": "Batas tanggapan",
+        "windowOver": "sudah lewat",
+        "windowOpen": "masih berjalan",
+        "response": "Tanggapan Penyedia",
+        "noResponse": "Belum ada tanggapan.",
+        "phoneReasonLabel": "Catat kontak telepon (siapa, kapan, apa yang disampaikan)",
+        "confirmWait": "Bisa dikonfirmasi setelah batas tanggapan lewat.",
+        "open": "Buka kasus dugaan pelanggaran",
+        "openTitle": "Kasus dugaan pelanggaran baru",
+        "periodFrom": "Dari",
+        "periodTo": "Sampai",
+        "notes": "Catatan (opsional)"
       }
     }
   },
@@ -843,6 +881,8 @@
       "invalid_file": "Unggah satu foto atau PDF SIP atau izin praktik, maksimal 10 MB.",
       "invalid_facts": "Ada data praktik yang perlu diperbaiki. Periksa nama, jenis, wilayah, nomor telepon, dan layanan.",
       "invalid_reply": "Tulis balasan, maksimal 2.000 karakter.",
+      "invalid_response": "Tulis tanggapan, maksimal 2.000 karakter.",
+      "violation_closed": "Kasus ini sudah diputuskan tim FindYourDent, jadi tanggapan tidak bisa diubah lagi.",
       "claim_exists": "Halaman ini sudah diklaim atau sedang diperiksa untuk klaim lain.",
       "not_owner": "Hanya pemilik yang klaimnya sudah disetujui yang bisa melakukan ini.",
       "not_found": "Halaman atau Testimoni ini tidak ditemukan.",
@@ -853,12 +893,32 @@
       "published": "Data praktik Anda sudah tayang.",
       "held": "Data praktik Anda sedang ditinjau tim FindYourDent, biasanya dalam 24 jam. Sampai saat itu halaman menampilkan data sebelumnya."
     },
+    "violationResponse": {
+      "saved": "Tanggapan Anda sudah kami simpan. Tim FindYourDent membacanya sebelum memutuskan."
+    },
     "reply": {
       "published": "Balasan Anda sudah tayang di bawah Testimoni.",
       "held": "Balasan Anda sedang ditinjau tim FindYourDent, biasanya dalam 24 jam."
     }
   },
   "claim": {
+    "violation": {
+      "title": "Kasus dugaan pelanggaran kebijakan testimoni",
+      "intro": "Tim FindYourDent menduga ada Testimoni yang ditulis dengan imbalan atau hanya dari pasien pilihan. Anda punya 7 hari untuk menanggapi. Setelah itu tim memutuskan dan menuliskan alasannya di sini. Tanggapan Anda hanya dibaca tim, tidak tampil di halaman publik.",
+      "status": {
+        "providerNotified": "Menunggu tanggapan Anda",
+        "confirmed": "Dinyatakan terbukti",
+        "dismissed": "Ditutup, tidak terbukti"
+      },
+      "period": "Dugaan terjadi {{from}} sampai {{to}}",
+      "respondBy": "Tanggapi sebelum {{date}}",
+      "windowOver": "Batas tanggapan sudah lewat. Tim akan segera memutuskan, dan tanggapan Anda masih dibaca selama kasus belum diputuskan.",
+      "responseLabel": "Tanggapan Anda",
+      "responseEdit": "Ubah tanggapan",
+      "send": "Kirim tanggapan",
+      "yourResponse": "Tanggapan Anda ({{date}})",
+      "decision": "Keputusan tim"
+    },
     "title": "Klaim halaman ini",
     "manageTitle": "Kelola halaman tempat praktik",
     "back": "Kembali ke halaman tempat",

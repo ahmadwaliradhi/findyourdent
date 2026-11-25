@@ -18,6 +18,7 @@ import {
   type QueueItem,
   type QueueModeration,
   type QueueOwnerFacts,
+  type QueuePolicyViolation,
   type QueueProof,
   type QueueProofMatch,
   type QueueTestimony,
@@ -145,6 +146,9 @@ function QueueCard({ item }: { item: QueueItem }) {
           {item.claim && <span className="font-normal"> · {item.claim.providerName}</span>}
           {item.reply && <span className="font-normal"> · {item.reply.providerName}</span>}
           {item.ownerFacts && <span className="font-normal"> · {item.ownerFacts.currentName}</span>}
+          {item.violation && (
+            <span className="font-normal"> · {item.violation.providerName || item.violation.placeId}</span>
+          )}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {item.testimony && (
@@ -172,9 +176,18 @@ function QueueCard({ item }: { item: QueueItem }) {
                   {formatTime(report.createdAt, language)}
                   {report.details && <span className="block whitespace-pre-line">{report.details}</span>}
                 </span>
-                {item.testimony?.status !== "hidden" && (
-                  <ActionButton request={{ action: "dismissReport", subjectId: report.id }} />
-                )}
+                <span className="flex flex-wrap items-start gap-2">
+                  {item.testimony?.status !== "hidden" && (
+                    <ActionButton request={{ action: "dismissReport", subjectId: report.id }} />
+                  )}
+                  {report.category === "incentive" && item.testimony && (
+                    <OpenViolation
+                      placeId={item.testimony.placeId}
+                      since={item.createdAt}
+                      evidence={{ reportIds: [report.id] }}
+                    />
+                  )}
+                </span>
               </li>
             ))}
           </ul>
@@ -202,6 +215,7 @@ function QueueCard({ item }: { item: QueueItem }) {
       )}
 
       {item.claim && <ClaimView claim={item.claim} />}
+      {item.violation && <ViolationView violation={item.violation} />}
       {item.ownerFacts && <OwnerFactsView ownerFacts={item.ownerFacts} />}
       {item.reply && (
         <div className="flex flex-col gap-2 text-sm">
@@ -582,6 +596,14 @@ function Actions({ item }: { item: QueueItem }) {
             <ActionButton request={{ action: "rejectReply", subjectId: item.subjectId }} />
           </>
         )}
+        {item.testimony && item.kind === "held" && (item.testimony.moderation?.detectionRuleCodes?.length ?? 0) > 0 && (
+          <OpenViolation
+            placeId={item.testimony.placeId}
+            since={item.createdAt}
+            evidence={{ detectionHoldIds: [item.testimony.id] }}
+          />
+        )}
+        {item.violation && <ViolationActions id={item.subjectId} violation={item.violation} />}
         {item.kind === "nameCorrection" && (
           <>
             <ActionButton request={{ action: "applyNameCorrection", subjectId: item.id }} />
@@ -595,7 +617,16 @@ function Actions({ item }: { item: QueueItem }) {
 }
 
 /** One admin action. Actions that need a reason open a reason field first. */
-function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason"> }) {
+function ActionButton({
+  request,
+  reasonLabel,
+  disabled = false,
+}: {
+  request: Omit<AdminActionRequest, "reason">;
+  /** Replaces the default reason prompt, e.g. to ask for the phone contact. */
+  reasonLabel?: string;
+  disabled?: boolean;
+}) {
   const { t } = useTranslation();
   const revalidator = useRevalidator();
   const id = useId();
@@ -646,7 +677,7 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
     return (
       <div className="flex w-full flex-col gap-2 rounded-md border p-2">
         <label htmlFor={id} className="text-sm font-medium">
-          {t("admin.queue.reasonFor", { action: label })}
+          {reasonLabel ?? t("admin.queue.reasonFor", { action: label })}
         </label>
         <Textarea
           id={id}
@@ -677,12 +708,275 @@ function ActionButton({ request }: { request: Omit<AdminActionRequest, "reason">
       <Button
         size="sm"
         variant={destructive ? "danger" : primary ? "primary" : "outline"}
-        disabled={busy}
+        disabled={busy || disabled}
         onClick={needsReason ? () => setAsking(true) : send}
       >
         {label}
       </Button>
       {error && <FieldError role="alert">{error}</FieldError>}
     </span>
+  );
+}
+
+/** The Testimony Policy Violation case: evidence, notice, the Provider's response and the window. */
+function ViolationView({ violation }: { violation: QueuePolicyViolation }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const { evidence, suspectedPeriod } = violation;
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      <dt className="text-muted-foreground">{t("admin.queue.violation.provider")}</dt>
+      <dd>
+        <a href={providerPath(violation.placeId)} className="underline">
+          {violation.providerName || violation.placeId}
+        </a>{" "}
+        · {violation.claimed ? t("admin.queue.violation.claimed") : t("admin.queue.violation.unclaimed")}
+      </dd>
+      <dt className="text-muted-foreground">{t("admin.queue.violation.status")}</dt>
+      <dd>
+        <Badge variant={violation.status === "open" ? "outline" : "warning"}>
+          {t(`admin.queue.violation.statusValue.${violation.status}`)}
+        </Badge>
+      </dd>
+      <dt className="text-muted-foreground">{t("admin.queue.violation.period")}</dt>
+      <dd>
+        {suspectedPeriod.from} - {suspectedPeriod.to}
+      </dd>
+      <dt className="text-muted-foreground">{t("admin.queue.violation.evidence")}</dt>
+      <dd className="flex min-w-0 flex-col gap-1">
+        <span>
+          {t("admin.queue.violation.reports", { count: evidence.reportIds.length })}
+          {evidence.reportIds.length > 0 && <IdList ids={evidence.reportIds} />}
+        </span>
+        <span>
+          {t("admin.queue.violation.holds", { count: evidence.detectionHoldIds.length })}
+          {evidence.detectionHoldIds.length > 0 && <IdList ids={evidence.detectionHoldIds} />}
+        </span>
+        <span>{t("admin.queue.violation.privateFiles", { count: evidence.privateEvidenceCount })}</span>
+        {evidence.notes && <span className="whitespace-pre-line break-words">{evidence.notes}</span>}
+      </dd>
+      {!violation.claimed && (
+        <>
+          <dt className="text-muted-foreground">{t("admin.queue.claim.googlePhone")}</dt>
+          <dd>
+            {violation.googlePhone ? (
+              <a href={`tel:${violation.googlePhone.replace(/[^\d+]/g, "")}`} className="font-semibold underline">
+                {violation.googlePhone}
+              </a>
+            ) : (
+              t("admin.queue.claim.noGooglePhone")
+            )}
+            {violation.googleDisplayName && (
+              <span className="text-muted-foreground"> · {violation.googleDisplayName}</span>
+            )}
+          </dd>
+          <dd className="col-span-2 text-xs text-muted-foreground">{t("admin.queue.violation.phoneHint")}</dd>
+        </>
+      )}
+      {violation.notifiedVia && (
+        <>
+          <dt className="text-muted-foreground">{t("admin.queue.violation.notifiedVia")}</dt>
+          <dd>
+            {t(`admin.queue.violation.via.${violation.notifiedVia}`)}
+            {violation.phoneContactNote && (
+              <span className="block whitespace-pre-line break-words text-muted-foreground">
+                {violation.phoneContactNote}
+              </span>
+            )}
+          </dd>
+        </>
+      )}
+      {violation.responseDueAt && (
+        <>
+          <dt className="text-muted-foreground">{t("admin.queue.violation.responseDue")}</dt>
+          <dd>
+            {formatTime(violation.responseDueAt, language)} ·{" "}
+            <strong className={violation.windowOver ? "text-destructive" : ""}>
+              {violation.windowOver ? t("admin.queue.violation.windowOver") : t("admin.queue.violation.windowOpen")}
+            </strong>
+          </dd>
+        </>
+      )}
+      <dt className="text-muted-foreground">{t("admin.queue.violation.response")}</dt>
+      <dd>
+        {violation.providerResponse ? (
+          <>
+            <span className="block whitespace-pre-line break-words">{violation.providerResponse.text}</span>
+            <span className="text-muted-foreground">
+              {formatTime(violation.providerResponse.respondedAt, language)}
+            </span>
+          </>
+        ) : (
+          t("admin.queue.violation.noResponse")
+        )}
+      </dd>
+    </dl>
+  );
+}
+
+function IdList({ ids }: { ids: string[] }) {
+  return <span className="block break-all font-mono text-xs text-muted-foreground">{ids.join(", ")}</span>;
+}
+
+/** Notify and dismiss while `open`; confirm (after the window) and dismiss once notified. */
+function ViolationActions({ id, violation }: { id: string; violation: QueuePolicyViolation }) {
+  const { t } = useTranslation();
+  if (violation.status === "open") {
+    return (
+      <>
+        <ActionButton
+          request={{ action: "notifyViolation", subjectId: id }}
+          reasonLabel={violation.claimed ? undefined : t("admin.queue.violation.phoneReasonLabel")}
+        />
+        <ActionButton request={{ action: "dismissViolation", subjectId: id }} />
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="flex flex-col gap-1">
+        <ActionButton request={{ action: "confirmViolation", subjectId: id }} disabled={!violation.windowOver} />
+        {!violation.windowOver && (
+          <span className="text-xs text-muted-foreground">{t("admin.queue.violation.confirmWait")}</span>
+        )}
+      </span>
+      <ActionButton request={{ action: "dismissViolation", subjectId: id }} />
+    </>
+  );
+}
+
+/** Jakarta calendar date `YYYY-MM-DD` of a time. */
+function jakartaDate(ms: number) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(ms));
+}
+
+const SUSPECTED_PERIOD_DEFAULT_DAYS = 30;
+const DATE_INPUT =
+  "h-10 w-full rounded-md border border-input bg-card px-3 text-base text-foreground shadow-xs focus-visible:border-primary";
+
+/** Opens a case for a place from a report or a detection hold, with that evidence prefilled. */
+function OpenViolation({
+  placeId,
+  since,
+  evidence,
+}: {
+  placeId: string;
+  /** The item's createdAt; the period starts 30 days before it. */
+  since: string;
+  evidence: { reportIds?: string[]; detectionHoldIds?: string[] };
+}) {
+  const { t } = useTranslation();
+  const revalidator = useRevalidator();
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState(() =>
+    jakartaDate(new Date(since).getTime() - SUSPECTED_PERIOD_DEFAULT_DAYS * 86_400_000),
+  );
+  const [to, setTo] = useState(() => jakartaDate(Date.now()));
+  const [notes, setNotes] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const body: AdminActionRequest = {
+        action: "openViolation",
+        subjectId: placeId,
+        reason: reason.trim(),
+        violation: {
+          reportIds: [],
+          detectionHoldIds: [],
+          ...evidence,
+          suspectedFrom: from,
+          suspectedTo: to,
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+        },
+      };
+      const response = await fetch("/admin/api/actions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.ok) {
+        setOpen(false);
+        await revalidator.revalidate();
+        return;
+      }
+      const failure = (await response.json().catch(() => null)) as AdminApiError | null;
+      setError(failure?.message ?? t("admin.queue.failed"));
+    } catch {
+      setError(t("admin.queue.failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+        {t("admin.queue.violation.open")}
+      </Button>
+    );
+  }
+  return (
+    <div className="flex w-full flex-col gap-2 rounded-md border p-2">
+      <p className="text-sm font-medium">{t("admin.queue.violation.openTitle")}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <label htmlFor={`${id}-from`} className="flex flex-col gap-1 text-sm">
+          {t("admin.queue.violation.periodFrom")}
+          <input
+            className={DATE_INPUT}
+            id={`${id}-from`}
+            type="date"
+            value={from}
+            max={to}
+            onChange={(event) => setFrom(event.target.value)}
+          />
+        </label>
+        <label htmlFor={`${id}-to`} className="flex flex-col gap-1 text-sm">
+          {t("admin.queue.violation.periodTo")}
+          <input
+            className={DATE_INPUT}
+            id={`${id}-to`}
+            type="date"
+            value={to}
+            min={from}
+            onChange={(event) => setTo(event.target.value)}
+          />
+        </label>
+      </div>
+      <label htmlFor={`${id}-notes`} className="text-sm font-medium">
+        {t("admin.queue.violation.notes")}
+      </label>
+      <Textarea
+        id={`${id}-notes`}
+        value={notes}
+        maxLength={ADMIN_REASON_MAX_CHARS}
+        onChange={(event) => setNotes(event.target.value)}
+        className="min-h-16"
+      />
+      <label htmlFor={`${id}-reason`} className="text-sm font-medium">
+        {t("admin.queue.reasonFor", { action: t("admin.queue.actions.openViolation") })}
+      </label>
+      <Textarea
+        id={`${id}-reason`}
+        value={reason}
+        maxLength={ADMIN_REASON_MAX_CHARS}
+        onChange={(event) => setReason(event.target.value)}
+        className="min-h-16"
+      />
+      <div className="flex gap-2">
+        <Button size="sm" variant="primary" disabled={busy || !reason.trim() || !from || !to} onClick={send}>
+          {t("admin.queue.actions.openViolation")}
+        </Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => setOpen(false)}>
+          {t("report.cancel")}
+        </Button>
+      </div>
+      {error && <FieldError role="alert">{error}</FieldError>}
+    </div>
   );
 }

@@ -81,9 +81,11 @@ One per Testimony with an `accepted` or `pending` Proof of Visit; the document i
 
 One per Testimony submission or edit: `testimonyId`, `placeId`, `authorUid`, `ipHash` and `browserIdHash` (salted SHA-256), `expiresAt` 90 days later (Firestore TTL). Queried by `placeId` for detection. No raw IP or id.
 
-### `policyViolations` (spec 09 part 2, not yet in contracts)
+### `policyViolations` (spec 09 part 2)
 
-Testimony Policy Violation cases: `placeId`, evidence (report ids, detection holds, notes, private evidence paths), suspected period, status `open`, `providerNotified` (`responseDueAt`), `confirmed` (`badgeUntil`, 6 months) or `dismissed`; every move recorded in `adminActions`.
+Testimony Policy Violation cases, admin only (type `PolicyViolationDoc`): `placeId`; `evidence` (`reportIds` of `testimonyReports`, `detectionHoldIds` of Testimonies held by detection, `notes`, `privateEvidencePaths` in the private uploads bucket, none yet); `suspectedPeriod` (`from`, `to`: Jakarta dates `YYYY-MM-DD`, `from` <= `to`); `status`; `openedBy` (admin uid); `createdAt`, `updatedAt`. Reports and Testimonies cited as evidence must belong to the same `placeId`. At most one case per place is `open` or `providerNotified`.
+
+States: `open` -> `providerNotified` -> `confirmed` or `dismissed`; an admin may also dismiss from `open`, and confirm only from `providerNotified` once `responseDueAt` has passed. Notifying sets `notifiedAt`, `responseDueAt` (7 days later, `VIOLATION_RESPONSE_DAYS`) and `notifiedVia`: `ownerPages` when the Provider has an approved Claim at that moment, else `phone`, with `phoneContactNote` (the admin's note on the call to the live Google listing number, which is shown in the queue and never stored). `providerResponse` (`text`, `respondedAt`, `responderUid`) is written by the approved claimant from its owner pages, while the case is `providerNotified`; a later response replaces the earlier one. The Provider sees a case on its owner pages only once it was notified (`notifiedAt` set), so a case dismissed straight from `open` stays admin-only; the evidence is never shown to it. Confirming or dismissing sets `decisionReason`, `decidedBy` and `decidedAt`. The public badge (`badgeUntil`) and the exclusion of Testimonies from scores are a later issue and add their own fields.
 
 ### `nameCorrections`
 
@@ -91,7 +93,7 @@ Testimony Policy Violation cases: `placeId`, evidence (report ids, detection hol
 
 ### `adminActions`
 
-Append-only audit log of every admin action (publish, reject, send back to the author, hide, remove, dismiss report, approve, reject or revoke a Claim, apply or dismiss a name correction, confirm a spot check, accept or reject a pending Proof of Visit), with the admin's email and uid, subject, reason and status change (`proof.pending` to `proof.accepted` or `proof.rejected` for proofs). Reasons are required to reject, send back, hide, remove or reject a proof; the author sees the reason on reject, send back, remove and a rejected proof. The 7-day proof expiry is a scheduled job, not an admin, so it is not logged here. Type `AdminActionDoc`.
+Append-only audit log of every admin action (publish, reject, send back to the author, hide, remove, dismiss report, approve, reject or revoke a Claim, apply or dismiss a name correction, confirm a spot check, accept or reject a pending Proof of Visit, open, notify, confirm or dismiss a Testimony Policy Violation case), with the admin's email and uid, subject, reason and status change (`proof.pending` to `proof.accepted` or `proof.rejected` for proofs; `subjectType` `policyViolation` with the case id as `subjectId` and `open`, `providerNotified`, `confirmed` or `dismissed` as statuses for violation cases, where `openViolation` has only a `toStatus`). Reasons are required to reject, send back, hide, remove or reject a proof, and for every violation action (for `notifyViolation` to an unclaimed Provider the reason is also kept as `phoneContactNote`); the author sees the reason on reject, send back, remove and a rejected proof. The 7-day proof expiry is a scheduled job, not an admin, so it is not logged here. Type `AdminActionDoc`.
 
 ### `counters`
 
