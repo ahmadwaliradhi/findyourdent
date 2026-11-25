@@ -342,18 +342,20 @@ gcloud run jobs deploy "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --region "
   --tasks=1 --max-retries=1 --task-timeout=10m --cpu=1 --memory=512Mi \
   --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
   --quiet >/dev/null
-gcloud run jobs add-iam-policy-binding "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --region "$REGION" \
-  --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
-verb=create
-if gcloud scheduler jobs describe "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
-  verb=update
+if [[ "$PROVISION" == 1 ]]; then
+  gcloud run jobs add-iam-policy-binding "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --region "$REGION" \
+    --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
+  verb=create
+  if gcloud scheduler jobs describe "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+    verb=update
+  fi
+  gcloud scheduler jobs "$verb" http "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --location "$REGION" \
+    --schedule="45 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
+    --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${VIOLATION_BADGE_JOB}:run" \
+    --oauth-service-account-email="$SCHEDULER_SA" \
+    --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+  echo "    ${VIOLATION_BADGE_JOB}: 45 3 * * * (Asia/Jakarta)"
 fi
-gcloud scheduler jobs "$verb" http "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --location "$REGION" \
-  --schedule="45 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
-  --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${VIOLATION_BADGE_JOB}:run" \
-  --oauth-service-account-email="$SCHEDULER_SA" \
-  --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
-echo "    ${VIOLATION_BADGE_JOB}: 45 3 * * * (Asia/Jakarta)"
 
 # Aggregates recompute (spec 09, ADR-0011): a one-off Cloud Run Job on the web image
 # that recomputes every Listed Provider's aggregates so only Proven Testimonies count.
