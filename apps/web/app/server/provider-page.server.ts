@@ -12,6 +12,7 @@ import {
   type TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
+import { badgeShowing } from "~/lib/policy-violations";
 import type { PublicPriceList } from "~/lib/price-lists";
 import type { OwnerFacts } from "~/lib/provider";
 import { regionLabel } from "~/lib/regions";
@@ -33,6 +34,8 @@ export interface ProviderSummary {
   providerType: ProviderType;
   providerTypeInferred: boolean;
   claimed: boolean;
+  /** ISO end of a confirmed Testimony Policy Violation badge still showing; absent otherwise. */
+  violationBadgeUntil?: string;
   testimonyCount: number;
   verifiedVisitCount: number;
   averages: AspectRatings | null;
@@ -60,6 +63,8 @@ export interface PublicTestimony {
   procedureCode?: ProcedureCode;
   pricePaidRupiah?: number;
   verifiedVisit: boolean;
+  /** Published in a confirmed Testimony Policy Violation period: readable, labelled, not counted. */
+  excludedByViolation: boolean;
   /** The claimed Provider's published reply. */
   reply?: string;
 }
@@ -99,6 +104,7 @@ function priceSignals(doc: ProviderDoc): PriceSignal[] {
 export async function loadProviderPage(
   firestore: Firestore,
   placeId: string,
+  nowMs: number = Date.now(),
 ): Promise<{ provider: ProviderSummary; testimonies: PublicTestimony[] } | null> {
   const [providerSnapshot, testimonySnapshot] = await Promise.all([
     firestore.collection(COLLECTIONS.providers).doc(placeId).get(),
@@ -125,6 +131,7 @@ export async function loadProviderPage(
       procedureCode: t.procedureCode,
       pricePaidRupiah: t.pricePaidRupiah,
       verifiedVisit: t.verifiedVisit === true,
+      excludedByViolation: Boolean(t.excludedByViolation),
       // Only the current claimant's reply: a revoked Claim's replies stop showing.
       ...(t.reply?.status === "published" && doc.claimStatus === "claimed" && t.reply.claimId === doc.claimId
         ? { reply: t.reply.text }
@@ -141,6 +148,9 @@ export async function loadProviderPage(
       providerType: doc.providerType,
       providerTypeInferred: doc.providerTypeSource === "inferred",
       claimed: doc.claimStatus === "claimed",
+      ...(doc.violationBadge && badgeShowing(doc.violationBadge, nowMs)
+        ? { violationBadgeUntil: doc.violationBadge.badgeUntil.toDate().toISOString() }
+        : {}),
       testimonyCount: doc.aggregates.testimonyCount,
       verifiedVisitCount: doc.aggregates.verifiedVisitCount,
       averages: doc.aggregates.averages,

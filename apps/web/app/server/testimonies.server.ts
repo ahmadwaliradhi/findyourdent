@@ -446,12 +446,20 @@ export function proposedProviderType(name: string, essentials: PlaceEssentials):
   return inferProviderType({ displayName: name, types: essentials.types });
 }
 
-/** Aggregates over a place's published Testimonies read in the transaction, with one replaced or left out. */
+/**
+ * Aggregates over a place's published Testimonies read in the transaction, with one replaced or left out.
+ * A replaced one keeps its stored `excludedByViolation` mark (issue #138): callers build `self` from
+ * the edited content, which never carries it.
+ */
 function aggregatesWith(published: QuerySnapshot, testimonyId: string, self: AggregateInput | null) {
-  const list: AggregateInput[] = published.docs
-    .filter((doc) => doc.id !== testimonyId)
-    .map((doc) => doc.data() as TestimonyDoc);
-  if (self) list.push(self);
+  let storedMark: string | undefined;
+  const list: AggregateInput[] = [];
+  for (const doc of published.docs) {
+    const data = doc.data() as TestimonyDoc;
+    if (doc.id === testimonyId) storedMark = data.excludedByViolation;
+    else list.push(data);
+  }
+  if (self) list.push({ ...self, excludedByViolation: self.excludedByViolation ?? storedMark });
   return computeAggregates(list);
 }
 
@@ -1022,7 +1030,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
               provider,
               published,
               testimonyId,
-              self: { ...content, verifiedVisit },
+              self: { ...content, verifiedVisit, excludedByViolation: before.excludedByViolation },
               proposal: proposedName ? { name: proposedName, region, essentials } : null,
             }));
             update.proposedProviderName = FieldValue.delete();

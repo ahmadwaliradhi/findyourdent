@@ -1239,6 +1239,29 @@ describe("Payment Method (spec 07)", () => {
     expect((await testimony(first.testimonyId)).paymentMethod).toBeUndefined();
   });
 
+  it("keeps a Testimony excluded by a violation out of the Proven count when it is edited", async () => {
+    const first = await post("a@example.com", { method: "bpjs" });
+    // Proven, then marked by a confirmed Testimony Policy Violation (issue #138).
+    await server.firestore
+      .collection(COLLECTIONS.testimonies)
+      .doc(first.testimonyId)
+      .update({ verifiedVisit: true, excludedByViolation: "v1" });
+
+    moderateWith(PUBLISH);
+    expect(
+      (
+        await edit(first.testimonyId, submission({ text: first.text, paymentMethod: { method: "pribadi" } }), {
+          cookie: first.cookie,
+        })
+      ).status,
+    ).toBe(200);
+
+    const aggregates = (await provider(NEW_PLACE))?.aggregates;
+    expect(aggregates?.testimonyCount).toBe(1);
+    expect(aggregates?.verifiedVisitCount).toBe(0);
+    expect((await testimony(first.testimonyId)).excludedByViolation).toBe("v1");
+  });
+
   it("keeps the public Payment Method until a held edit of it is approved", async () => {
     const first = await post("a@example.com", { method: "bpjs" });
     moderateWith(HOLD);

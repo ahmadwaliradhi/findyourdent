@@ -122,6 +122,7 @@ function toFeedItem(id: string, testimony: TestimonyDoc, provider: ProviderDoc):
     excerpt: excerpt(testimony.text),
     visitMonth: testimony.visitMonth,
     verifiedVisit: testimony.verifiedVisit === true,
+    excludedByViolation: Boolean(testimony.excludedByViolation),
     displayName: testimony.displayName,
   };
   if (testimony.procedureCode) item.procedureCode = testimony.procedureCode;

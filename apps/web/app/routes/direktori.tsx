@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { FilterSection } from "~/components/filter-section";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
-import { NotEnoughProven } from "~/components/proof-label";
+import { NotEnoughProven, ViolationBadge } from "~/components/proof-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { fieldClassName } from "~/components/ui/field";
@@ -310,6 +310,7 @@ function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: stri
               {t("directory.claimed")}
             </Badge>
           )}
+          {row.violationBadgeUntil && <ViolationBadge until={row.violationBadgeUntil} />}
         </div>
 
         <p className="text-sm text-muted-foreground">{regionLabel(row.region)}</p>

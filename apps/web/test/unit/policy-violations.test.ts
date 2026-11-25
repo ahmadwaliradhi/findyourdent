@@ -1,7 +1,10 @@
 import type { PolicyViolationStatus } from "@findyourdent/contracts/firestore";
 import { describe, expect, it } from "vitest";
 import {
+  badgeShowing,
+  badgeUntilMs,
   nextViolationStatus,
+  VIOLATION_BADGE_MONTHS,
   VIOLATION_MOVES,
   VIOLATION_RESPONSE_DAYS,
   type ViolationMove,
@@ -45,5 +48,23 @@ describe("violation moves", () => {
       "confirmed",
     );
     expect(nextViolationStatus("confirmViolation", "providerNotified", { nowMs: NOW })).toBeNull();
+  });
+});
+
+describe("violation badge length", () => {
+  it("lasts 6 calendar months from the decision", () => {
+    expect(VIOLATION_BADGE_MONTHS).toBe(6);
+    expect(badgeUntilMs(Date.parse("2026-11-10T08:30:00Z"))).toBe(Date.parse("2027-05-10T08:30:00Z"));
+    expect(badgeUntilMs(Date.parse("2026-08-31T00:00:00Z"))).toBe(Date.parse("2027-02-28T00:00:00Z"));
+    expect(badgeUntilMs(Date.parse("2023-08-31T12:00:00Z"))).toBe(Date.parse("2024-02-29T12:00:00Z"));
+    expect(badgeUntilMs(Date.parse("2026-12-15T00:00:00Z"))).toBe(Date.parse("2027-06-15T00:00:00Z"));
+  });
+
+  it("shows only while now is before badgeUntil", () => {
+    const until = Date.parse("2027-05-10T00:00:00Z");
+    const badge = { badgeUntil: { toMillis: () => until } };
+    expect(badgeShowing(badge, until - 1)).toBe(true);
+    expect(badgeShowing(badge, until)).toBe(false);
+    expect(badgeShowing(undefined, until)).toBe(false);
   });
 });

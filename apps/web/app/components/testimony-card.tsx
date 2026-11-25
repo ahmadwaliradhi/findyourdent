@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ProofLabel } from "~/components/proof-label";
+import { ExcludedLabel, ProofLabel } from "~/components/proof-label";
 import { TestimonyCard as TestimonyCardView } from "~/components/ui/testimony-card";
 import { isLanguage } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
@@ -28,7 +28,12 @@ export function TestimonyCard({ item }: { item: FeedItem }) {
       providerName={item.providerName}
       href={providerPath(item.placeId)}
       meta={`${t(`filters.providerTypes.${item.providerType}`)} · ${regionLabel(item.region)}`}
-      proofLabel={<ProofLabel verifiedVisit={item.verifiedVisit} />}
+      proofLabel={
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <ProofLabel verifiedVisit={item.verifiedVisit} />
+          <ExcludedLabel excluded={item.excludedByViolation} />
+        </span>
+      }
       ratingsLabel={t("feed.card.ratingsLabel")}
       ratings={ASPECTS.map((aspect) => ({
         label: t(`feed.card.aspects.${aspect}`),

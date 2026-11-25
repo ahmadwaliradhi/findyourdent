@@ -7,6 +7,25 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 /** A Provider has this many days to respond after being notified, before an admin may confirm. */
 export const VIOLATION_RESPONSE_DAYS = 7;
 
+/** A confirmed case puts a public badge on the Provider for this many calendar months. */
+export const VIOLATION_BADGE_MONTHS = 6;
+
+/** The end of the badge: `decidedMs` plus 6 calendar months (UTC), clamping a day the month lacks (31 Aug -> 28 Feb). */
+export function badgeUntilMs(decidedMs: number): number {
+  const decided = new Date(decidedMs);
+  const target = new Date(decidedMs);
+  target.setUTCDate(1);
+  target.setUTCMonth(decided.getUTCMonth() + VIOLATION_BADGE_MONTHS);
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(decided.getUTCDate(), lastDay));
+  return target.getTime();
+}
+
+/** Whether a Provider's violation badge still shows at `nowMs`. */
+export function badgeShowing(badge: { badgeUntil: { toMillis(): number } } | undefined, nowMs: number): boolean {
+  return badge !== undefined && nowMs < badge.badgeUntil.toMillis();
+}
+
 export const VIOLATION_MOVES = ["notifyViolation", "confirmViolation", "dismissViolation"] as const;
 export type ViolationMove = (typeof VIOLATION_MOVES)[number];
 

@@ -5,6 +5,7 @@ import type { Firestore, Query } from "firebase-admin/firestore";
 import { DIRECTORY_ROW_LIMIT, type DirectoryRow, type DirectorySort } from "~/lib/directory";
 import type { ListingFilters } from "~/lib/listing-filters";
 import { normalizeName } from "~/lib/normalize-name";
+import { badgeShowing } from "~/lib/policy-violations";
 import { aspectPrior, shrunkAspectScore } from "~/lib/scores";
 
 /**
@@ -20,6 +21,8 @@ export interface DirectoryInput {
   /** Name search as typed; matched as a normalised prefix. */
   q: string;
   sort: DirectorySort;
+  /** Epoch milliseconds the violation badge is judged at; defaults to now. */
+  nowMs?: number;
 }
 
 function offersProcedure(provider: ProviderDoc, code: string): boolean {
@@ -28,7 +31,7 @@ function offersProcedure(provider: ProviderDoc, code: string): boolean {
   return facts?.moderationStatus === "published" && (facts.services ?? []).includes(code);
 }
 
-function toRow(provider: ProviderDoc, score: number | null): DirectoryRow {
+function toRow(provider: ProviderDoc, score: number | null, nowMs: number): DirectoryRow {
   const { provinceCode, regencyCode, districtCode } = provider.region;
   return {
     placeId: provider.placeId,
@@ -40,6 +43,9 @@ function toRow(provider: ProviderDoc, score: number | null): DirectoryRow {
     testimonyCount: provider.aggregates.testimonyCount,
     verifiedVisitCount: provider.aggregates.verifiedVisitCount,
     claimed: provider.claimStatus === "claimed",
+    violationBadgeUntil: badgeShowing(provider.violationBadge, nowMs)
+      ? (provider.violationBadge as NonNullable<ProviderDoc["violationBadge"]>).badgeUntil.toDate().toISOString()
+      : null,
     score,
     location: provider.location ? { lat: provider.location.lat, lng: provider.location.lng } : null,
   };
@@ -69,7 +75,7 @@ const byScore = (a: Ranked, b: Ranked) => b.rank - a.rank || byProven(a, b);
  */
 export async function loadDirectory(
   firestore: Firestore,
-  { filters, q, sort }: DirectoryInput,
+  { filters, q, sort, nowMs = Date.now() }: DirectoryInput,
 ): Promise<DirectoryRow[]> {
   let query: Query = firestore.collection(COLLECTIONS.providers);
   if (filters.provinceCode) query = query.where("region.provinceCode", "==", filters.provinceCode);
@@ -91,7 +97,7 @@ export async function loadDirectory(
     .filter((p) => !filters.procedureCode || offersProcedure(p, filters.procedureCode))
     .map((p): Ranked => {
       const score = shrunkAspectScore(p.aggregates, prior);
-      return { row: toRow(p, score), rank: Math.round((score ?? prior.mean) * 1e9) / 1e9 };
+      return { row: toRow(p, score, nowMs), rank: Math.round((score ?? prior.mean) * 1e9) / 1e9 };
     });
 
   ranked.sort(sort === "skor" ? byScore : byProven);

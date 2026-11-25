@@ -651,7 +651,7 @@ async function revisionAction(
       provider,
       published,
       testimonyId: ref.id,
-      self: { ...content, verifiedVisit: testimony.verifiedVisit },
+      self: { ...content, verifiedVisit: testimony.verifiedVisit, excludedByViolation: testimony.excludedByViolation },
       proposal: null,
     });
     tx.update(ref, {

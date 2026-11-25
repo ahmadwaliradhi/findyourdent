@@ -6,7 +6,7 @@ import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
-import { NotEnoughProven, ProofLabel } from "~/components/proof-label";
+import { ExcludedLabel, NotEnoughProven, ProofLabel, ViolationBadge } from "~/components/proof-label";
 import { ReportButton } from "~/components/report-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -17,7 +17,7 @@ import { ASPECTS } from "~/lib/aspects";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatDate, formatRupiah, formatScore, formatVisitMonth } from "~/lib/format";
 import { fetchGoogleRoute } from "~/lib/google-routes";
-import { BPJS_FKTP_PATH, providerPath } from "~/lib/paths";
+import { BPJS_FKTP_PATH, providerPath, TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
 import type { PublicPriceList } from "~/lib/price-lists";
 import { procedureLabel } from "~/lib/procedures";
 import type { GoogleBlockResponse, ProviderGoogleBlock } from "~/lib/provider";
@@ -142,6 +142,17 @@ export default function ProviderPage({ loaderData }: Route.ComponentProps) {
           </div>
         )}
         <h1 className="text-[28px] leading-[34px] font-bold tracking-[-.015em]">{name}</h1>
+        {provider?.violationBadgeUntil && (
+          <div className="flex flex-col items-start gap-1.5">
+            <ViolationBadge until={provider.violationBadgeUntil} />
+            <p className="text-sm text-muted-foreground">
+              {t("violation.explanation")}{" "}
+              <Link to={TRANSPARENCY_PAGE_PATH} className="font-semibold text-foreground underline underline-offset-4">
+                {t("violation.learnMore")}
+              </Link>
+            </p>
+          </div>
+        )}
         {provider && (
           <p className="flex items-center gap-1.5 text-muted-foreground">
             <MapPin aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
@@ -528,7 +539,10 @@ function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; la
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-semibold">{testimony.displayName}</span>
-          <ProofLabel verifiedVisit={testimony.verifiedVisit} />
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <ProofLabel verifiedVisit={testimony.verifiedVisit} />
+            <ExcludedLabel excluded={testimony.excludedByViolation} />
+          </span>
         </div>
         <p className="text-sm text-muted-foreground">
           {t("provider.visitMonth", { month: formatVisitMonth(testimony.visitMonth, language) })}

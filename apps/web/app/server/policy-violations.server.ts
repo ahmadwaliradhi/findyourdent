@@ -1,9 +1,11 @@
 // Testimony Policy Violation cases (spec 09 part 2, issue #137): the admin opens a case
 // on a Provider with its evidence, notifies the Provider, and after the 7-day window
 // confirms or dismisses it. Every move is logged in `adminActions` in the transaction
-// that applies it (`logAction`). Nothing here is public: the badge and the exclusion of
-// Testimonies from scores come with a later issue. The pure move rule is in
-// lib/policy-violations.ts.
+// that applies it (`logAction`). Confirming (issue #138) also, in that transaction, marks
+// the place's Testimonies published in the suspected period `excludedByViolation`,
+// recomputes the Provider's aggregates without them and puts the 6-month badge on the
+// Provider; the badge end job is server/violation-badge-expiry.ts. The pure move rule is
+// in lib/policy-violations.ts.
 import {
   COLLECTIONS,
   type PolicyViolationDoc,
@@ -11,7 +13,13 @@ import {
   type TestimonyDoc,
   type TestimonyReportDoc,
 } from "@findyourdent/contracts/firestore";
-import { type DocumentSnapshot, type Firestore, Timestamp, type Transaction } from "firebase-admin/firestore";
+import {
+  type DocumentSnapshot,
+  type Firestore,
+  type QueryDocumentSnapshot,
+  Timestamp,
+  type Transaction,
+} from "firebase-admin/firestore";
 import type { AppLoadContext } from "react-router";
 import {
   ADMIN_REASON_MAX_CHARS,
@@ -21,8 +29,10 @@ import {
   VIOLATION_EVIDENCE_MAX_IDS,
   type ViolationAction,
 } from "~/lib/admin-queue";
-import { DAY_MS, nextViolationStatus, VIOLATION_RESPONSE_DAYS } from "~/lib/policy-violations";
+import { badgeUntilMs, DAY_MS, nextViolationStatus, VIOLATION_RESPONSE_DAYS } from "~/lib/policy-violations";
+import { jakartaDate } from "../../server/quota.ts";
 import { type Acting, AdminRefusal, logAction, queueItem, SUBJECT_ID } from "./admin-common.server.ts";
+import { computeAggregates } from "./aggregates.ts";
 import { hasApprovedClaim } from "./claims.server.ts";
 
 const JAKARTA_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -152,7 +162,28 @@ async function moveViolation(
   if (!to) throw new AdminRefusal(409, "not_allowed");
 
   const reason = acting.request.reason as string;
-  if (action === "notifyViolation") {
+  // Every read of a confirm comes before its first write.
+  const confirmation = action === "confirmViolation" ? await readConfirmation(tx, acting.firestore, violation) : null;
+  if (confirmation) {
+    const badgeUntil = Timestamp.fromMillis(badgeUntilMs(now.toMillis()));
+    for (const doc of confirmation.excluded) tx.update(doc.ref, { excludedByViolation: ref.id, updatedAt: now });
+    if (confirmation.provider) {
+      tx.update(confirmation.provider.ref, {
+        aggregates: computeAggregates(confirmation.publishedAfter(ref.id)),
+        violationBadge: { violationId: ref.id, badgeUntil },
+        updatedAt: now,
+      });
+    }
+    tx.update(ref, {
+      status: to,
+      decisionReason: reason,
+      decidedBy: acting.admin.uid,
+      decidedAt: now,
+      badgeUntil,
+      excludedTestimonyIds: confirmation.excluded.map((doc) => doc.id),
+      updatedAt: now,
+    });
+  } else if (action === "notifyViolation") {
     const provider = (await tx.get(col(acting.firestore, "providers").doc(violation.placeId))).data() as
       | ProviderDoc
       | undefined;
@@ -183,6 +214,38 @@ async function moveViolation(
     fromStatus: violation.status,
     toStatus: to,
   });
+}
+
+/**
+ * What a confirm reads: the place's Testimonies (any status), those published inside the
+ * suspected period (Jakarta dates, both ends inclusive) to mark, and the Provider document
+ * when there is one.
+ */
+async function readConfirmation(tx: Transaction, firestore: Firestore, violation: PolicyViolationDoc) {
+  const [testimonies, provider] = await Promise.all([
+    tx.get(col(firestore, "testimonies").where("placeId", "==", violation.placeId)),
+    tx.get(col(firestore, "providers").doc(violation.placeId)),
+  ]);
+  const { from, to } = violation.suspectedPeriod;
+  const inPeriod = (doc: QueryDocumentSnapshot) => {
+    const { publishedAt, excludedByViolation } = doc.data() as TestimonyDoc;
+    // One already excluded by an earlier case keeps that mark.
+    if (!publishedAt || excludedByViolation) return false;
+    const day = jakartaDate(publishedAt.toMillis());
+    return day >= from && day <= to;
+  };
+  const excluded = testimonies.docs.filter(inPeriod);
+  const excludedIds = new Set(excluded.map((doc) => doc.id));
+  return {
+    excluded,
+    provider: provider.exists ? provider : null,
+    /** The published Testimonies as they are once the period's ones carry the mark. */
+    publishedAfter: (violationId: string) =>
+      testimonies.docs
+        .map((doc) => ({ doc, data: doc.data() as TestimonyDoc }))
+        .filter(({ data }) => data.status === "published")
+        .map(({ doc, data }) => (excludedIds.has(doc.id) ? { ...data, excludedByViolation: violationId } : data)),
+  };
 }
 
 /** Cases waiting on an admin: `open` ones (24-hour target) and notified ones (due when the window ends). */

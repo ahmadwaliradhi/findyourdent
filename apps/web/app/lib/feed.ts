@@ -17,6 +17,8 @@ export interface FeedItem {
   pricePaidRupiah?: number;
   /** Kunjungan terbukti. */
   verifiedVisit: boolean;
+  /** Published in a confirmed Testimony Policy Violation period: readable, labelled, not counted. */
+  excludedByViolation: boolean;
   displayName: string;
 }
 
