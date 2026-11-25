@@ -46,6 +46,10 @@ _Avoid_: Receipt copy, proof hash (alone)
 A confirmed finding that a Provider offered something in exchange for Testimonies or asked only selected Patients to write them; shown on the Provider page for six months as "Pelanggaran kebijakan testimoni", and the Testimonies from that period stop counting.
 _Avoid_: Ban, penalty, review fraud
 
+**Violation case**:
+An admin-only case on a Provider suspected of a Testimony Policy Violation; it ends as a confirmed Testimony Policy Violation or is dismissed. The Provider sees it only once the team has notified it, and never sees the evidence.
+_Avoid_: Violation (alone, for an unconfirmed case), accusation
+
 **Moderation**:
 The screening every Testimony passes: Gemini publishes clean ones and holds doubtful ones, and the FindYourDent team makes every decision on held or reported Testimonies and every removal.
 _Avoid_: Review (as a verb), filtering

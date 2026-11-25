@@ -57,3 +57,18 @@ export function formatDistance(meters: number, language: Language): string {
   if (meters < 1000) return `${Math.round(meters / 10) * 10} m`;
   return `${formatKm(meters / 1000, language)} km`;
 }
+
+/**
+ * "1 Agustus 2026" from a Jakarta date `YYYY-MM-DD` or from an ISO instant (read in Jakarta time).
+ */
+export function formatDay(value: string, language: Language): string {
+  const plain = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const date = new Date(plain ? `${value}T00:00:00Z` : value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale(language), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: plain ? "UTC" : "Asia/Jakarta",
+  }).format(date);
+}

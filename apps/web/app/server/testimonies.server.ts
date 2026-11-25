@@ -73,7 +73,12 @@ import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import { type AggregateInput, computeAggregates } from "./aggregates.ts";
-import { DETECTION_LOOKBACK_MS, type DetectionRuleCode, detectionRuleCodes } from "./detection.ts";
+import {
+  DETECTION_LOOKBACK_MS,
+  type DetectionRuleCode,
+  detectionRuleCodes,
+  SIMILARITY_COMPARED_STATUSES,
+} from "./detection.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { decideProof } from "./proof-decision.ts";
 import { fingerprintOf, type ProofFingerprint } from "./proof-fingerprint.ts";
@@ -529,30 +534,42 @@ async function activeTestimonyId(firestore: Firestore, uid: string, placeId: str
 
 /**
  * Detection for a new Testimony (spec 09 part 2): the triggers it fires. D1 from when the
- * Provider's other Testimonies that are not deleted were submitted; D3 from the device
- * signals of every submission for the Provider (a deleted Testimony's included, and the
- * author's own never count). Read in the transaction that creates it, so a concurrent
- * create makes one of them retry and see the other; a burst sent at once cannot all slip through.
+ * Provider's other Testimonies that are not deleted were submitted; D2 from the text of its
+ * published and held ones; D3 from the device signals of every submission for the Provider
+ * (a deleted Testimony's included, and the author's own never count). Read in the
+ * transaction that creates it, so a concurrent create makes one of them retry and see the
+ * other; a burst, a template or a shared device sent at once cannot all slip through.
  */
 async function detectOnCreate(
   tx: Transaction,
   firestore: Firestore,
   placeId: string,
+  text: string,
   submitter: { authorUid: string; device: SubmissionDevice },
 ): Promise<DetectionRuleCode[]> {
   const nowMs = Date.now();
-  const recent = await tx.get(
-    testimonies(firestore)
-      .where("placeId", "==", placeId)
-      .where("createdAt", ">=", Timestamp.fromMillis(nowMs - DETECTION_LOOKBACK_MS)),
-  );
+  const [recent, comparable] = await Promise.all([
+    tx.get(
+      testimonies(firestore)
+        .where("placeId", "==", placeId)
+        .where("createdAt", ">=", Timestamp.fromMillis(nowMs - DETECTION_LOOKBACK_MS)),
+    ),
+    tx.get(
+      testimonies(firestore)
+        .where("placeId", "==", placeId)
+        .where("status", "in", [...SIMILARITY_COMPARED_STATUSES]),
+    ),
+  ]);
   const otherSubmittedAtMs = recent.docs
     .filter((doc) => doc.get("status") !== "deleted")
     .map((doc) => (doc.get("createdAt") as Timestamp).toMillis());
+  const comparableTexts = comparable.docs.map((doc) => doc.get("text") as string);
   const others = await readPlaceSignals(tx, firestore, placeId);
   return detectionRuleCodes({
     otherSubmittedAtMs,
     nowMs,
+    text,
+    comparableTexts,
     sharedDevice: { mine: submitter.device.hashes, others, authorUid: submitter.authorUid },
   });
 }
@@ -651,7 +668,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         // Detection only ever turns Moderation's publish into hold. A failed read fails the request.
         const detected =
           moderatedDecision === "publish"
-            ? await detectOnCreate(tx, firestore, value.placeId, { authorUid: user.uid, device })
+            ? await detectOnCreate(tx, firestore, value.placeId, value.text, { authorUid: user.uid, device })
             : [];
         const attemptOutcome = detected.length > 0 ? heldByDetection(t, moderated, detected) : moderated;
         const status = detected.length > 0 ? "held" : statusForDecision(moderatedDecision);

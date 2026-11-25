@@ -5,6 +5,8 @@ import type {
   ClaimDoc,
   DetectionRuleCode,
   ModerationDecisionDoc,
+  PolicyViolationDoc,
+  PolicyViolationStatus,
   ProcedureCode,
   ProofOfVisitExtracted,
   ProofPendingReason,
@@ -45,6 +47,13 @@ export const OWNER_ACTIONS = [
 ] as const;
 export type OwnerAction = (typeof OWNER_ACTIONS)[number];
 
+/**
+ * Actions on Testimony Policy Violation cases (spec 09 part 2). `openViolation` takes the
+ * place id as `subjectId` and the evidence in `violation`; the others take the violation id.
+ */
+export const VIOLATION_ACTIONS = ["openViolation", "notifyViolation", "confirmViolation", "dismissViolation"] as const;
+export type ViolationAction = (typeof VIOLATION_ACTIONS)[number];
+
 /** Actions that need a reason: it is shown to the author or claimant, or kept for disputes. */
 export const REASON_REQUIRED: ReadonlySet<AdminActionRequest["action"]> = new Set([
   "reject",
@@ -56,30 +65,51 @@ export const REASON_REQUIRED: ReadonlySet<AdminActionRequest["action"]> = new Se
   "revokeClaim",
   "rejectOwnerFacts",
   "rejectReply",
+  ...VIOLATION_ACTIONS,
 ]);
+
+/** What an admin gives when opening a violation case; `suspectedFrom` and `suspectedTo` are Jakarta dates `YYYY-MM-DD`. */
+export interface OpenViolationInput {
+  /** `testimonyReports` ids for the place (at most VIOLATION_EVIDENCE_MAX_IDS); the server parser fills a missing list with none. */
+  reportIds: string[];
+  /** Testimony ids for the place that detection held (at most VIOLATION_EVIDENCE_MAX_IDS). */
+  detectionHoldIds: string[];
+  notes?: string;
+  suspectedFrom: string;
+  suspectedTo: string;
+}
+
+/** Most report ids, and most detection-hold ids, one case may cite. */
+export const VIOLATION_EVIDENCE_MAX_IDS = 50;
 
 /**
  * POST /admin/api/actions. `subjectId` is the Testimony id for Testimony actions, the
  * report id for dismissReport, the correction id for name corrections, the
  * Moderation decision id for spotCheckConfirm, the Claim id for Claim actions, the
- * place id for owner facts and the Testimony id for replies and proof actions.
+ * place id for owner facts and the Testimony id for replies and proof actions; for
+ * violation cases the place id (openViolation) or the violation id (the rest).
  */
 export interface AdminActionRequest {
   action:
     | TestimonyAction
     | ProofAction
     | OwnerAction
+    | ViolationAction
     | "dismissReport"
     | "applyNameCorrection"
     | "dismissNameCorrection"
     | "spotCheckConfirm";
   subjectId: string;
   reason?: string;
+  /** Only for openViolation. */
+  violation?: OpenViolationInput;
 }
 
 export interface AdminActionResponse {
   ok: true;
   actionId: string;
+  /** The new case, for openViolation. */
+  violationId?: string;
 }
 
 export interface AdminApiError {
@@ -98,7 +128,8 @@ export type QueueItemKind =
   | "proofReview"
   | "claim"
   | "ownerFacts"
-  | "reply";
+  | "reply"
+  | "policyViolation";
 
 export interface QueueHistoryEntry {
   /** ISO time. */
@@ -132,6 +163,8 @@ export interface QueueLinkedTestimony {
   textPreview: string;
   /** Its author has a Testimony, not deleted, for any other Provider. */
   wroteAboutOtherProviders: boolean;
+  /** D2 character-trigram Jaccard similarity of its text to the held one, 0 to 1. */
+  similarity: number;
 }
 
 /** Another account that used this device for the same Provider (D3), without any hash. */
@@ -148,15 +181,20 @@ export interface QueueSharedDeviceAccount {
   wroteAboutOtherProviders: boolean;
 }
 
+/** The published or held Testimony for the same Provider most similar to a D2 hold. */
+export type QueueSimilarTestimony = Omit<QueueLinkedTestimony, "withinDay">;
+
 /** Admin only: why detection held a Testimony Moderation would have published. */
 export interface QueueDetection {
   ruleCodes: DetectionRuleCode[];
   /** The held Testimony's own author has written about any other Provider. */
   authorWroteAboutOtherProviders: boolean;
-  /** D1 holds only (else empty): the Provider's other Testimonies (not deleted) in the 7 days up to the held one, oldest first. */
+  /** D1 and D2 holds only (else empty): the Provider's other Testimonies (not deleted) in the 7 days up to the held one, oldest first. */
   linked: QueueLinkedTestimony[];
   /** D3 holds only: other accounts that shared this submission's device, oldest signal first. */
   sharedDevice?: QueueSharedDeviceAccount[];
+  /** On a D2 hold: the Provider's published or held Testimony most similar to it now, if any. */
+  similar?: QueueSimilarTestimony;
 }
 
 export interface QueueTestimonyContent {
@@ -279,6 +317,37 @@ export interface ApprovedClaim {
   reviewedAt: string;
 }
 
+/**
+ * A Testimony Policy Violation case waiting on an admin: `open` (to notify or dismiss) or
+ * `providerNotified` (to confirm after the window, or dismiss). Admin only.
+ */
+export interface QueuePolicyViolation {
+  placeId: string;
+  /** The Listed name; empty when the place is not Listed. */
+  providerName: string;
+  /** The Provider has an approved Claim, so it is notified and responds in its owner pages. */
+  claimed: boolean;
+  status: Extract<PolicyViolationStatus, "open" | "providerNotified">;
+  evidence: {
+    reportIds: string[];
+    detectionHoldIds: string[];
+    notes?: string;
+    /** How many private evidence files are held; the paths stay server side. */
+    privateEvidenceCount: number;
+  };
+  suspectedPeriod: PolicyViolationDoc["suspectedPeriod"];
+  notifiedVia?: PolicyViolationDoc["notifiedVia"];
+  phoneContactNote?: string;
+  /** ISO. */
+  responseDueAt?: string;
+  /** The response window is over: an admin may confirm. */
+  windowOver: boolean;
+  providerResponse?: { text: string; respondedAt: string };
+  /** For an unclaimed place: live from the Google listing for this check, never stored; null when Places had no answer. */
+  googlePhone?: string | null;
+  googleDisplayName?: string | null;
+}
+
 export interface QueueItem {
   /** Unique in the queue: the Testimony, correction, Moderation decision, Claim or place id. */
   id: string;
@@ -299,6 +368,7 @@ export interface QueueItem {
   claim?: QueueClaim;
   ownerFacts?: QueueOwnerFacts;
   reply?: QueueReply;
+  violation?: QueuePolicyViolation;
 }
 
 /** GET /admin/api/queue: hidden Testimonies first, then oldest first. */

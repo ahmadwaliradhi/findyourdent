@@ -2,7 +2,12 @@ import type { ModerationDecision } from "@findyourdent/contracts";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonySubmission } from "../../app/lib/testimony.ts";
-import { seedProvider, seedTestimony, submittedBeforeDetectionWindow } from "../support/fixtures.ts";
+import {
+  distinctTestimonyText,
+  seedProvider,
+  seedTestimony,
+  submittedBeforeDetectionWindow,
+} from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -54,7 +59,10 @@ const receiptOf = (patient: string) => Buffer.from(`%PDF-1.4\n% ${patient}\n%%EO
  * Publishes a Testimony through the web API from a new Patient, with an accepted Proof of
  * Visit when `proven`, so the Provider's aggregates are recomputed as in production.
  */
+let published = 0;
+
 async function publish(placeId: string, author: string, proven: boolean, rating: [number, number, number]) {
+  published += 1;
   server.fakes.agent.respondToModerationWith(proven ? ACCEPTED : PUBLISH);
   const cookie = await server.signInWithGoogle(`${author}@example.com`);
   const testimony: TestimonySubmission = {
@@ -62,7 +70,8 @@ async function publish(placeId: string, author: string, proven: boolean, rating:
     providerName: `Klinik Gigi ${placeId}`,
     region: { provinceCode: "31", regencyCode: "31.71" },
     ratings: { service: rating[0], hygiene: rating[1], materialsEquipment: rating[2] },
-    text: "Dokternya sabar menjelaskan pilihan tambalan dan ruangannya bersih.",
+    // A text of its own: one text twice at a place is held as templated (D2).
+    text: distinctTestimonyText(published),
     visitMonth: "2026-09",
     displayName: "Pasien",
     consent: { honestExperience: true, noOthersPersonalData: true },

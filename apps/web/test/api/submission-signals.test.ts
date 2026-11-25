@@ -15,7 +15,7 @@ import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
 import { SUBMISSION_SIGNAL_TTL_MS } from "../../app/server/submission-signals.ts";
 import { readBrowserState, writeBrowserState } from "../../server/browser-state.ts";
-import { seedProvider } from "../support/fixtures.ts";
+import { distinctTestimonyText, seedProvider } from "../support/fixtures.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -52,11 +52,15 @@ const HOLD: ModerationDecision = {
 
 const PHONE_TEXT = "Dokternya sabar. Hubungi saja 0812-3456-7890 untuk janji. Ruangannya bersih.";
 
+let submissions = 0;
+
+/** A submission whose text, unless given, is no near-duplicate of the previous ones (D2). */
 function submission(placeId: string, overrides: Partial<TestimonySubmission> = {}): TestimonySubmission {
+  submissions += 1;
   return {
     placeId,
     ratings: { service: 5, hygiene: 4, materialsEquipment: 3 },
-    text: "Dokternya sabar menjelaskan pilihan tambalan dan ruangannya bersih.",
+    text: distinctTestimonyText(submissions),
     visitMonth: "2026-09",
     displayName: "Siti R.",
     consent: { honestExperience: true, noOthersPersonalData: true },

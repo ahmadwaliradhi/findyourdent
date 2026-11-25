@@ -5,6 +5,9 @@ import { type DocumentReference, type Firestore, Timestamp, type Transaction } f
 import { type AdminActionRequest, type AdminApiError, QUEUE_TARGET_HOURS, type QueueItem } from "~/lib/admin-queue";
 import type { SignedInUser } from "../../server/auth.ts";
 
+/** A Firestore document id as an admin action or owner route carries it. */
+export const SUBJECT_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
 const HOUR_MS = 60 * 60 * 1000;
 
 export const iso = (time: StoredTimestamp | undefined) =>

@@ -33,6 +33,7 @@ export const COLLECTIONS = {
   rateLimits: "rateLimits",
   proofFingerprints: "proofFingerprints",
   submissionSignals: "submissionSignals",
+  policyViolations: "policyViolations",
 } as const;
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 
@@ -410,10 +411,11 @@ export interface PriceListDoc {
 /**
  * Detection triggers (spec 09 part 2), decided by the web service at submission, never
  * by the agent, and shown to admins only. `D1`: velocity (a burst of Testimonies for one
- * Provider). `D3`: sharedDevice (another account's submission for the same Provider shares
- * the IP hash or the browser-id hash).
+ * Provider). `D2`: similarity (text copied from one template for one Provider). `D3`:
+ * sharedDevice (another account's submission for the same Provider shares the IP hash or
+ * the browser-id hash).
  */
-export type DetectionRuleCode = "D1" | "D3";
+export type DetectionRuleCode = "D1" | "D2" | "D3";
 
 /** Every Moderation call's result. Never stores the moderated text or photos. */
 export interface ModerationDecisionDoc {
@@ -460,6 +462,51 @@ export interface NameCorrectionDoc {
   createdAt: Timestamp;
 }
 
+// policyViolations/{violationId} ------------------------------------------------
+
+export type PolicyViolationStatus = "open" | "providerNotified" | "confirmed" | "dismissed";
+
+/**
+ * A Testimony Policy Violation case on a Provider (spec 09 part 2): suspected incentives
+ * for Testimonies or asking only selected Patients to write one. Admin only; nothing
+ * here is public until a later issue adds the badge. `open` -> `providerNotified` ->
+ * `confirmed` | `dismissed` (an admin may also dismiss from `open`); every move is
+ * logged in `adminActions` with a reason. One `open` or `providerNotified` case per place.
+ */
+export interface PolicyViolationDoc {
+  placeId: PlaceId;
+  evidence: {
+    /** `testimonyReports` ids for this place. */
+    reportIds: string[];
+    /** Testimony ids that detection held (spec 09 part 2) for this place. */
+    detectionHoldIds: string[];
+    notes?: string;
+    /** Screenshots and notes in the private uploads bucket; admin only, never public. */
+    privateEvidencePaths: string[];
+  };
+  /** Jakarta dates `YYYY-MM-DD`, `from` <= `to`. */
+  suspectedPeriod: { from: string; to: string };
+  status: PolicyViolationStatus;
+  /** Admin uid who opened the case. */
+  openedBy: Uid;
+  notifiedAt?: Timestamp;
+  /** `notifiedAt` + 7 days: the Provider's response window; the admin may confirm only after it. */
+  responseDueAt?: Timestamp;
+  /** `ownerPages` when the Provider had an approved Claim at notify time, else `phone` (live Google listing). */
+  notifiedVia?: "ownerPages" | "phone";
+  /** What the admin recorded about the phone call; required when `notifiedVia` is `phone`. */
+  phoneContactNote?: string;
+  /** The Provider's reply, written from the owner pages. */
+  providerResponse?: { text: string; respondedAt: Timestamp; responderUid: Uid };
+  /** The admin's reason for confirming or dismissing. */
+  decisionReason?: string;
+  /** Admin uid who confirmed or dismissed. */
+  decidedBy?: Uid;
+  decidedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 // adminActions/{actionId} -------------------------------------------------------
 
 export type AdminActionType =
@@ -476,7 +523,11 @@ export type AdminActionType =
   | "dismissNameCorrection"
   | "spotCheckConfirm"
   | "acceptProof"
-  | "rejectProof";
+  | "rejectProof"
+  | "openViolation"
+  | "notifyViolation"
+  | "confirmViolation"
+  | "dismissViolation";
 
 /** Append-only audit log of every admin decision. */
 export interface AdminActionDoc {
@@ -489,7 +540,8 @@ export interface AdminActionDoc {
     | "provider"
     | "providerFacts"
     | "nameCorrection"
-    | "moderationDecision";
+    | "moderationDecision"
+    | "policyViolation";
   subjectId: string;
   placeId?: PlaceId;
   /** Allowlisted admin email. */
