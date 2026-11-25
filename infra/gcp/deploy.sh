@@ -28,6 +28,11 @@ SCHEDULER_SA="${SCHEDULER_SA_ID}@${PROJECT_ID}.iam.gserviceaccount.com"
 WARM_FROM="2026-10-19"
 WARM_UNTIL="2026-11-08"
 
+# 1 (default): also create or update service accounts, IAM bindings and Cloud Scheduler
+# jobs, which needs project-level rights. The GitHub Actions deploy sets PROVISION=0 and
+# only builds and deploys (infra/gcp/setup-cicd.sh, ADR-0012).
+PROVISION="${PROVISION:-1}"
+
 SERVICE="${1:-}"
 case "$SERVICE" in
   web | agent) ;;
@@ -133,64 +138,69 @@ if [[ "$SERVICE" == agent ]]; then
   log "Only fyd-web may call ${AGENT_SERVICE}"
   grant_invoker "$AGENT_SERVICE" "serviceAccount:${WEB_SA}"
 
-  # Warm instance: a service-level minimum takes effect without a new revision.
-  # Cloud Scheduler flips it at the window edges; this sets the value for today
-  # so a deploy never undoes the schedule.
-  log "Warm instance schedule"
-  ensure_scheduler_sa
-  gcloud run services add-iam-policy-binding "$AGENT_SERVICE" --project "$PROJECT_ID" \
-    --region "$REGION" --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.developer >/dev/null
-  # Updating a service checks actAs on the service account it runs as.
-  gcloud iam service-accounts add-iam-policy-binding "$AGENT_SA" --project "$PROJECT_ID" \
-    --member="serviceAccount:${SCHEDULER_SA}" --role=roles/iam.serviceAccountUser >/dev/null
+  # CI deploys (PROVISION=0) leave service accounts, IAM and Scheduler alone: the
+  # deploy identity has no rights to them. Run this script by hand to change them.
+  if [[ "$PROVISION" == 1 ]]; then
+    # Warm instance: a service-level minimum takes effect without a new revision.
+    # Cloud Scheduler flips it at the window edges; this sets the value for today
+    # so a deploy never undoes the schedule.
+    log "Warm instance schedule"
+    ensure_scheduler_sa
+    gcloud run services add-iam-policy-binding "$AGENT_SERVICE" --project "$PROJECT_ID" \
+      --region "$REGION" --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.developer >/dev/null
+    # Updating a service checks actAs on the service account it runs as.
+    gcloud iam service-accounts add-iam-policy-binding "$AGENT_SA" --project "$PROJECT_ID" \
+      --member="serviceAccount:${SCHEDULER_SA}" --role=roles/iam.serviceAccountUser >/dev/null
 
-  # Cloud Scheduler cannot send PATCH; Google APIs accept POST with this override
-  # (checked against run.googleapis.com on 17 October 2026).
-  SERVICE_API="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/services/${AGENT_SERVICE}?updateMask=scaling.minInstanceCount"
-  # warm_job <name> <cron in Asia/Jakarta> <min instances>
-  warm_job() {
-    local verb=create headers=--headers
-    if gcloud scheduler jobs describe "$1" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+    # Cloud Scheduler cannot send PATCH; Google APIs accept POST with this override
+    # (checked against run.googleapis.com on 17 October 2026).
+    SERVICE_API="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/services/${AGENT_SERVICE}?updateMask=scaling.minInstanceCount"
+    # warm_job <name> <cron in Asia/Jakarta> <min instances>
+    warm_job() {
+      local verb=create headers=--headers
+      if gcloud scheduler jobs describe "$1" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+        verb=update headers=--update-headers
+      fi
+      gcloud scheduler jobs "$verb" http "$1" --project "$PROJECT_ID" --location "$REGION" \
+        --schedule="$2" --time-zone=Asia/Jakarta --http-method=POST --uri="$SERVICE_API" \
+        "${headers}=Content-Type=application/json,X-HTTP-Method-Override=PATCH" \
+        --message-body="$(jq -nc --argjson n "$3" '{scaling: {minInstanceCount: $n}}')" \
+        --oauth-service-account-email="$SCHEDULER_SA" \
+        --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+      printf '    %s: %s -> min %s\n' "$1" "$2" "$3"
+    }
+    warm_job agent-warm-on "0 0 19 10 *" 1
+    warm_job agent-warm-off "0 0 8 11 *" 0
+
+    # Cron has no year, so both jobs would fire again every October. At 02:00 on
+    # 8 November, after agent-warm-off, agent-warm-cleanup runs the
+    # scheduler-cleanup workflow once; it deletes both jobs and agent-warm-cleanup
+    # itself. The services are untouched and keep running at minimum 0.
+    log "Warm schedule cleanup after judging"
+    gcloud services enable workflows.googleapis.com --project "$PROJECT_ID"
+    for role in roles/cloudscheduler.admin roles/workflows.invoker; do
+      gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:${SCHEDULER_SA}" \
+        --role="$role" --condition=None --quiet >/dev/null
+    done
+    gcloud workflows deploy scheduler-cleanup --project "$PROJECT_ID" --location "$REGION" \
+      --source infra/gcp/scheduler-cleanup.workflow.yaml --service-account "$SCHEDULER_SA" --quiet >/dev/null
+    jobs_base="projects/${PROJECT_ID}/locations/${REGION}/jobs"
+    cleanup_arg=$(jq -nc --arg b "$jobs_base" \
+      '{jobs: [$b + "/agent-warm-on", $b + "/agent-warm-off", $b + "/agent-warm-cleanup"]}')
+    verb=create headers=--headers
+    if gcloud scheduler jobs describe agent-warm-cleanup --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
       verb=update headers=--update-headers
     fi
-    gcloud scheduler jobs "$verb" http "$1" --project "$PROJECT_ID" --location "$REGION" \
-      --schedule="$2" --time-zone=Asia/Jakarta --http-method=POST --uri="$SERVICE_API" \
-      "${headers}=Content-Type=application/json,X-HTTP-Method-Override=PATCH" \
-      --message-body="$(jq -nc --argjson n "$3" '{scaling: {minInstanceCount: $n}}')" \
+    gcloud scheduler jobs "$verb" http agent-warm-cleanup --project "$PROJECT_ID" --location "$REGION" \
+      --schedule="0 2 8 11 *" --time-zone=Asia/Jakarta --http-method=POST \
+      --uri="https://workflowexecutions.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/workflows/scheduler-cleanup/executions" \
+      "${headers}=Content-Type=application/json" \
+      --message-body="$(jq -nc --arg a "$cleanup_arg" '{argument: $a}')" \
       --oauth-service-account-email="$SCHEDULER_SA" \
       --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
-    printf '    %s: %s -> min %s\n' "$1" "$2" "$3"
-  }
-  warm_job agent-warm-on "0 0 19 10 *" 1
-  warm_job agent-warm-off "0 0 8 11 *" 0
-
-  # Cron has no year, so both jobs would fire again every October. At 02:00 on
-  # 8 November, after agent-warm-off, agent-warm-cleanup runs the
-  # scheduler-cleanup workflow once; it deletes both jobs and agent-warm-cleanup
-  # itself. The services are untouched and keep running at minimum 0.
-  log "Warm schedule cleanup after judging"
-  gcloud services enable workflows.googleapis.com --project "$PROJECT_ID"
-  for role in roles/cloudscheduler.admin roles/workflows.invoker; do
-    gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:${SCHEDULER_SA}" \
-      --role="$role" --condition=None --quiet >/dev/null
-  done
-  gcloud workflows deploy scheduler-cleanup --project "$PROJECT_ID" --location "$REGION" \
-    --source infra/gcp/scheduler-cleanup.workflow.yaml --service-account "$SCHEDULER_SA" --quiet >/dev/null
-  jobs_base="projects/${PROJECT_ID}/locations/${REGION}/jobs"
-  cleanup_arg=$(jq -nc --arg b "$jobs_base" \
-    '{jobs: [$b + "/agent-warm-on", $b + "/agent-warm-off", $b + "/agent-warm-cleanup"]}')
-  verb=create headers=--headers
-  if gcloud scheduler jobs describe agent-warm-cleanup --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
-    verb=update headers=--update-headers
+    echo "    agent-warm-cleanup: 0 2 8 11 * -> delete the warm jobs and itself"
   fi
-  gcloud scheduler jobs "$verb" http agent-warm-cleanup --project "$PROJECT_ID" --location "$REGION" \
-    --schedule="0 2 8 11 *" --time-zone=Asia/Jakarta --http-method=POST \
-    --uri="https://workflowexecutions.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/workflows/scheduler-cleanup/executions" \
-    "${headers}=Content-Type=application/json" \
-    --message-body="$(jq -nc --arg a "$cleanup_arg" '{argument: $a}')" \
-    --oauth-service-account-email="$SCHEDULER_SA" \
-    --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
-  echo "    agent-warm-cleanup: 0 2 8 11 * -> delete the warm jobs and itself"
+
 
   today=$(TZ=Asia/Jakarta date +%F)
   if [[ ! "$today" < "$WARM_FROM" && "$today" < "$WARM_UNTIL" ]]; then min=1; else min=0; fi
@@ -276,22 +286,24 @@ gcloud run jobs deploy "$COORDINATES_JOB" --project "$PROJECT_ID" --region "$REG
   --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
   --set-secrets="PLACES_API_KEY=places-api-key:latest" \
   --quiet >/dev/null
-ensure_scheduler_sa
-# roles/run.invoker carries run.jobs.run, and Scheduler starts a job with POST to the
-# v2 `:run` method (checked against docs.cloud.google.com/run/docs/execute/jobs-on-schedule
-# and /run/docs/reference/iam/roles on 17 October 2026).
-gcloud run jobs add-iam-policy-binding "$COORDINATES_JOB" --project "$PROJECT_ID" --region "$REGION" \
-  --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
-verb=create
-if gcloud scheduler jobs describe "$COORDINATES_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
-  verb=update
+if [[ "$PROVISION" == 1 ]]; then
+  ensure_scheduler_sa
+  # roles/run.invoker carries run.jobs.run, and Scheduler starts a job with POST to the
+  # v2 `:run` method (checked against docs.cloud.google.com/run/docs/execute/jobs-on-schedule
+  # and /run/docs/reference/iam/roles on 17 October 2026).
+  gcloud run jobs add-iam-policy-binding "$COORDINATES_JOB" --project "$PROJECT_ID" --region "$REGION" \
+    --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
+  verb=create
+  if gcloud scheduler jobs describe "$COORDINATES_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+    verb=update
+  fi
+  gcloud scheduler jobs "$verb" http "$COORDINATES_JOB" --project "$PROJECT_ID" --location "$REGION" \
+    --schedule="0 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
+    --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${COORDINATES_JOB}:run" \
+    --oauth-service-account-email="$SCHEDULER_SA" \
+    --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+  echo "    ${COORDINATES_JOB}: 0 3 * * * (Asia/Jakarta)"
 fi
-gcloud scheduler jobs "$verb" http "$COORDINATES_JOB" --project "$PROJECT_ID" --location "$REGION" \
-  --schedule="0 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
-  --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${COORDINATES_JOB}:run" \
-  --oauth-service-account-email="$SCHEDULER_SA" \
-  --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
-echo "    ${COORDINATES_JOB}: 0 3 * * * (Asia/Jakarta)"
 
 # Proof expiry (spec 09, ADR-0011): a Proof of Visit nobody decided within 7 days is
 # rejected as expired and its file deleted (apps/web/server/proof-expiry.ts), never
@@ -304,18 +316,20 @@ gcloud run jobs deploy "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --region "$RE
   --tasks=1 --max-retries=1 --task-timeout=10m --cpu=1 --memory=512Mi \
   --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
   --quiet >/dev/null
-gcloud run jobs add-iam-policy-binding "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --region "$REGION" \
-  --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
-verb=create
-if gcloud scheduler jobs describe "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
-  verb=update
+if [[ "$PROVISION" == 1 ]]; then
+  gcloud run jobs add-iam-policy-binding "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --region "$REGION" \
+    --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
+  verb=create
+  if gcloud scheduler jobs describe "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+    verb=update
+  fi
+  gcloud scheduler jobs "$verb" http "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" \
+    --schedule="30 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
+    --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${PROOF_EXPIRY_JOB}:run" \
+    --oauth-service-account-email="$SCHEDULER_SA" \
+    --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+  echo "    ${PROOF_EXPIRY_JOB}: 30 3 * * * (Asia/Jakarta)"
 fi
-gcloud scheduler jobs "$verb" http "$PROOF_EXPIRY_JOB" --project "$PROJECT_ID" --location "$REGION" \
-  --schedule="30 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
-  --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${PROOF_EXPIRY_JOB}:run" \
-  --oauth-service-account-email="$SCHEDULER_SA" \
-  --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
-echo "    ${PROOF_EXPIRY_JOB}: 30 3 * * * (Asia/Jakarta)"
 
 # Aggregates recompute (spec 09, ADR-0011): a one-off Cloud Run Job on the web image
 # that recomputes every Listed Provider's aggregates so only Proven Testimonies count.

@@ -59,8 +59,16 @@ check "toggle switches the page to English" grep -q '<html[^>]*lang="en"' <<<"$e
 anonymous=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "${AGENT_URL}/health" || true)
 check "agent refuses anonymous calls (got ${anonymous})" test "$anonymous" = 403
 
-# The token goes in through stdin so it never shows up in `ps`.
-agent_health=$(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-identity-token)" \
+# A federated CI identity cannot mint an identity token for itself; the GitHub Actions
+# deploy sets SMOKE_IMPERSONATE_SA to the deploy service account instead.
+id_token_args=()
+if [[ -n "${SMOKE_IMPERSONATE_SA:-}" ]]; then
+  id_token_args=(--impersonate-service-account="$SMOKE_IMPERSONATE_SA" --audiences="$AGENT_URL" --include-email)
+fi
+# The token goes in through stdin so it never shows up in `ps`. The ${arr+...} form keeps
+# an empty array from tripping `set -u` on bash 3.2.
+agent_health=$(printf 'Authorization: Bearer %s\n' \
+  "$(gcloud auth print-identity-token ${id_token_args[@]+"${id_token_args[@]}"})" \
   | curl -sS --max-time 30 -H @- "${AGENT_URL}/health" || true)
 check "agent /health with an identity token" health_ok "$agent_health"
 
