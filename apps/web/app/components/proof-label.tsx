@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { isLanguage } from "~/i18n/config";
-import { formatDate } from "~/lib/format";
+import { formatDay } from "~/lib/format";
 import { TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
 
 /**
@@ -49,7 +49,7 @@ export function ViolationBadge({ until }: { until: string }) {
   const language = isLanguage(i18n.language) ? i18n.language : "id";
   return (
     <Badge variant="danger" data-testid="violation-badge">
-      {t("violation.badge")} · {t("violation.until", { date: formatDate(until.slice(0, 10), language) })}
+      {t("violation.badge")} · {t("violation.until", { date: formatDay(until, language) })}
     </Badge>
   );
 }
