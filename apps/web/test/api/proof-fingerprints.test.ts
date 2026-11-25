@@ -14,7 +14,7 @@ import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import { silentLogger } from "../../server/logger.ts";
 import { expirePendingProofs } from "../../server/proof-expiry.ts";
-import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
+import { distinctTestimonyText, submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -34,13 +34,17 @@ beforeEach(async () => {
 const PLACE = "ChIJ-klinik-ceria";
 const OTHER_PLACE = "ChIJ-klinik-senyum";
 
+let submissions = 0;
+
+/** Each with a text of its own: one text twice at a place is held as templated (D2). */
 function submission(placeId = PLACE): TestimonySubmission {
+  submissions += 1;
   return {
     placeId,
     providerName: placeId === PLACE ? "Klinik Gigi Ceria" : "Klinik Gigi Senyum",
     region: { provinceCode: "31", regencyCode: "31.71" },
     ratings: { service: 5, hygiene: 4, materialsEquipment: 3 },
-    text: "Dokternya sabar menjelaskan pilihan tambalan dan ruangannya bersih.",
+    text: distinctTestimonyText(submissions),
     visitMonth: "2026-09",
     displayName: "Siti R.",
     consent: { honestExperience: true, noOthersPersonalData: true },

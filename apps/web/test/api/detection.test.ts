@@ -1,6 +1,7 @@
 // Detection at submission (spec 09 part 2) through the web API: D1 velocity holds a
-// burst of Testimonies for one Provider. Detection only turns Moderation's publish into
-// hold, the author reads the standard held message, and the rule code is admin-only.
+// burst of Testimonies for one Provider; D2 similarity holds one copied from a template.
+// Detection only turns Moderation's publish into hold, the author reads the standard held
+// message, and the rule codes are admin-only.
 import type { ModerationDecision } from "@findyourdent/contracts";
 import {
   COLLECTIONS,
@@ -17,8 +18,14 @@ import {
 } from "../../app/lib/admin-queue.ts";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
-import { VELOCITY_DAY_THRESHOLD } from "../../app/server/detection.ts";
-import { type ProviderFixture, seedProvider, seedTestimony, type TestimonyFixture } from "../support/fixtures.ts";
+import { SIMILARITY_THRESHOLD, VELOCITY_DAY_THRESHOLD } from "../../app/server/detection.ts";
+import {
+  distinctTestimonyText,
+  type ProviderFixture,
+  seedProvider,
+  seedTestimony,
+  type TestimonyFixture,
+} from "../support/fixtures.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -42,7 +49,7 @@ const HELD_MESSAGE = "Terima kasih! Testimoni Anda sedang ditinjau tim FindYourD
  * The rule code as a word. A bare substring check would also match a random Firestore
  * id (testimonyId, links) that happens to contain "D1".
  */
-const RULE_CODE = /\bD1\b/;
+const RULE_CODE = /\bD[12]\b/;
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -58,11 +65,15 @@ const HOLD: ModerationDecision = {
 
 const PHONE_TEXT = "Dokternya sabar. Hubungi saja 0812-3456-7890 untuk janji. Ruangannya bersih.";
 
+let submissions = 0;
+
+/** A submission whose text, unless given, is no near-duplicate of the previous ones (D2). */
 function submission(placeId: string, overrides: Partial<TestimonySubmission> = {}): TestimonySubmission {
+  submissions += 1;
   return {
     placeId,
     ratings: { service: 5, hygiene: 4, materialsEquipment: 3 },
-    text: "Dokternya sabar menjelaskan pilihan tambalan dan ruangannya bersih.",
+    text: distinctTestimonyText(submissions),
     visitMonth: "2026-09",
     displayName: "Siti R.",
     consent: { honestExperience: true, noOthersPersonalData: true },
@@ -534,5 +545,176 @@ describe("D1 hold: the author edits", () => {
     const response = await edit(testimonyId, submission(provider.placeId), cookie);
     expect(response.status).toBe(200);
     expect(await decisionOf(testimonyId)).not.toHaveProperty("detectionRuleCodes");
+  });
+});
+
+// D2 similarity ------------------------------------------------------------------------
+
+/** One template, as a campaign would hand it out. */
+const TEMPLATE =
+  "Pelayanan di klinik ini luar biasa, dokternya ramah dan profesional, harga terjangkau. Sangat direkomendasikan untuk keluarga!";
+/** The template with one word swapped: what a second buzzer account posts. */
+const TEMPLATED_COPY =
+  "Pelayanan di klinik ini luar biasa, dokternya ramah dan profesional, harga terjangkau. Sangat direkomendasikan untuk anak-anak!";
+
+/** Seeds one Testimony for the Provider with this text, submitted long before the D1 window. */
+function seedText(provider: ProviderFixture, text: string, overrides: Partial<TestimonyFixture> = {}) {
+  const at = ago(60 * DAY);
+  return seedTestimony(server.firestore, provider, {
+    text,
+    createdAt: at,
+    updatedAt: at,
+    publishedAt: at,
+    ...overrides,
+  });
+}
+
+describe("D2 similarity: a templated Testimony", () => {
+  it("holds a near-duplicate of a published Testimony for the same Provider, with an admin-only D2", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedText(provider, TEMPLATE);
+    const before = await aggregates(provider.placeId);
+
+    const response = await post(submission(provider.placeId, { text: TEMPLATED_COPY }));
+    expect(response.status).toBe(201);
+    const raw = await response.text();
+    const body = JSON.parse(raw) as TestimonyStoredResponse;
+    expect(body.status).toBe("held");
+    expect(body.message).toBe(HELD_MESSAGE);
+    expect(raw).not.toMatch(RULE_CODE);
+    expect(raw).not.toContain(String(SIMILARITY_THRESHOLD));
+
+    const decision = await decisionOf(body.testimonyId);
+    expect(decision.decision).toBe("hold");
+    expect(decision.ruleCodes).toEqual([]);
+    expect(decision.detectionRuleCodes).toEqual(["D2"]);
+    expect(decision.spotCheck).toBe(false);
+    expect((await testimony(body.testimonyId)).status).toBe("held");
+    expect(await aggregates(provider.placeId)).toEqual(before);
+  });
+
+  it("holds a near-duplicate of a held Testimony", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedText(provider, TEMPLATE, { status: "held" });
+    const body = await postOk(submission(provider.placeId, { text: TEMPLATED_COPY }));
+    expect(body.status).toBe("held");
+    expect((await decisionOf(body.testimonyId)).detectionRuleCodes).toEqual(["D2"]);
+  });
+
+  it("holds the second of two copies posted through the API", async () => {
+    const provider = await seedProvider(server.firestore);
+    expect((await postOk(submission(provider.placeId, { text: TEMPLATE }))).status).toBe("published");
+    const second = await postOk(submission(provider.placeId, { text: TEMPLATED_COPY }));
+    expect(second.status).toBe("held");
+    expect((await decisionOf(second.testimonyId)).detectionRuleCodes).toEqual(["D2"]);
+  });
+
+  it("publishes a different text for the same Provider", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedText(provider, TEMPLATE);
+    const body = await postOk(submission(provider.placeId));
+    expect(body.status).toBe("published");
+    expect((await decisionOf(body.testimonyId)).detectionRuleCodes).toBeUndefined();
+  });
+
+  it("does not compare with the same text for another Provider", async () => {
+    const provider = await seedProvider(server.firestore);
+    const other = await seedProvider(server.firestore);
+    await seedText(other, TEMPLATE);
+    const body = await postOk(submission(provider.placeId, { text: TEMPLATE }));
+    expect(body.status).toBe("published");
+    expect((await decisionOf(body.testimonyId)).detectionRuleCodes).toBeUndefined();
+  });
+
+  it("does not compare with rejected or deleted Testimonies", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedText(provider, TEMPLATE, { status: "rejected" });
+    await seedText(provider, TEMPLATE, { status: "deleted" });
+    const body = await postOk(submission(provider.placeId, { text: TEMPLATE }));
+    expect(body.status).toBe("published");
+  });
+
+  it("names D1 and D2 when a burst is also templated", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedSubmitted(provider, [HOUR, 2 * HOUR], { text: TEMPLATE });
+    const body = await postOk(submission(provider.placeId, { text: TEMPLATED_COPY }));
+    expect(body.status).toBe("held");
+    expect((await decisionOf(body.testimonyId)).detectionRuleCodes).toEqual(["D1", "D2"]);
+  });
+
+  it("leaves a Moderation hold as Moderation decided, without D2", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedText(provider, TEMPLATE);
+    server.fakes.agent.respondToModerationWith(HOLD);
+    const body = await postOk(submission(provider.placeId, { text: TEMPLATED_COPY }));
+    expect(body.status).toBe("held");
+    const decision = await decisionOf(body.testimonyId);
+    expect(decision.ruleCodes).toEqual(["r2_accusation_as_fact"]);
+    expect(decision.detectionRuleCodes).toBeUndefined();
+  });
+
+  it("holds one of two copies sent at once", async () => {
+    const provider = await seedProvider(server.firestore);
+    const cookies = await Promise.all([newPatient(), newPatient()]);
+    server.fakes.agent.answerModerationTogether(2);
+    const responses = await Promise.all(
+      [TEMPLATE, TEMPLATED_COPY].map((text, i) => post(submission(provider.placeId, { text }), cookies[i])),
+    );
+    const bodies = (await Promise.all(responses.map((response) => response.json()))) as TestimonyStoredResponse[];
+    expect(bodies.map((body) => body.status).sort()).toEqual(["held", "published"]);
+  });
+});
+
+describe("admin queue: a D2 hold", () => {
+  it("shows the similar Testimony and the score", async () => {
+    const provider = await seedProvider(server.firestore);
+    const other = await seedProvider(server.firestore);
+    const original = await seedText(provider, TEMPLATE, { authorUid: "uid-original" });
+    await seedText(other, TEMPLATE, { authorUid: "uid-original" });
+    await seedText(provider, distinctTestimonyText(3));
+
+    const body = await postOk(submission(provider.placeId, { text: TEMPLATED_COPY }));
+    expect(body.status).toBe("held");
+
+    const detection = (await queueItemOf(body.testimonyId))?.detection;
+    expect(detection?.ruleCodes).toEqual(["D2"]);
+    expect(detection?.similar).toEqual(
+      expect.objectContaining({
+        id: original.id,
+        displayName: original.displayName,
+        status: "published",
+        textPreview: TEMPLATE,
+        wroteAboutOtherProviders: true,
+      }),
+    );
+    expect(detection?.similar?.similarity).toBeGreaterThanOrEqual(SIMILARITY_THRESHOLD);
+    expect(detection?.similar?.similarity).toBeLessThan(1);
+    expect(detection?.similar?.createdAt).toMatch(/^\d{4}-\d\d-\d\dT/);
+  });
+
+  it("shows D2 to the admin on the decision and in the history", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedText(provider, TEMPLATE);
+    const body = await postOk(submission(provider.placeId, { text: TEMPLATED_COPY }));
+    const item = await queueItemOf(body.testimonyId);
+    expect(item?.testimony?.moderation).toMatchObject({ decision: "hold", detectionRuleCodes: ["D2"] });
+    expect(item?.testimony?.history).toEqual([
+      expect.objectContaining({ kind: "moderation", label: "hold", detail: "D2" }),
+    ]);
+  });
+
+  it("gives each linked Testimony of a D1 hold its similarity", async () => {
+    const provider = await seedProvider(server.firestore);
+    await seedSubmitted(provider, [HOUR], { text: TEMPLATE });
+    await seedSubmitted(provider, [2 * HOUR], { text: distinctTestimonyText(4) });
+    const body = await postOk(submission(provider.placeId, { text: distinctTestimonyText(5) }));
+    const detection = (await queueItemOf(body.testimonyId))?.detection;
+    expect(detection?.ruleCodes).toEqual(["D1"]);
+    expect(detection?.similar).toBeUndefined();
+    for (const linked of detection?.linked ?? []) {
+      expect(linked.similarity).toBeGreaterThanOrEqual(0);
+      expect(linked.similarity).toBeLessThan(SIMILARITY_THRESHOLD);
+    }
+    expect(detection?.linked).toHaveLength(2);
   });
 });

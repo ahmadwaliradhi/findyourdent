@@ -218,6 +218,9 @@
       "detection": {
         "title": "Deteksi",
         "velocity": "banyak Testimoni untuk tempat ini dalam waktu singkat",
+        "similarity": "hampir sama dengan Testimoni lain untuk tempat ini",
+        "similar": "Testimoni paling mirip",
+        "score": "{{value}}% mirip",
         "author": "Penulis Testimoni ini",
         "linked_one": "{{count}} Testimoni lain untuk tempat ini dalam jendela deteksi",
         "linked_other": "{{count}} Testimoni lain untuk tempat ini dalam jendela deteksi",

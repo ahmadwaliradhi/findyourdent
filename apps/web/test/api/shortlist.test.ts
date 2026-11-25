@@ -8,7 +8,7 @@ import { shareToken } from "../../app/server/share.server.ts";
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
 import { STUB_GUIDANCE_RESPONSE } from "../../server/adapters/fakes.ts";
 import type { PlaceSummary } from "../../server/adapters/places.ts";
-import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
+import { distinctTestimonyText, submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -739,7 +739,8 @@ describe("POST /api/shortlist ranks on Proven Testimonies only (spec 09)", () =>
       providerName: TYPED_NAME[placeId],
       region: { provinceCode: "35", regencyCode: "35.78" },
       ratings,
-      text: `Pengalaman pasien ${patients}: dokternya menjelaskan perawatan dan biayanya dengan jelas.`,
+      // A text of its own: near-identical texts at one place are held as templated (D2).
+      text: distinctTestimonyText(patients),
       visitMonth: "2026-09",
       displayName: `Pasien ${patients}`,
       consent: { honestExperience: true, noOthersPersonalData: true },

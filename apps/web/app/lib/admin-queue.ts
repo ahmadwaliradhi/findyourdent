@@ -132,7 +132,12 @@ export interface QueueLinkedTestimony {
   textPreview: string;
   /** Its author has a Testimony, not deleted, for any other Provider. */
   wroteAboutOtherProviders: boolean;
+  /** D2 character-trigram Jaccard similarity of its text to the held one, 0 to 1. */
+  similarity: number;
 }
+
+/** The published or held Testimony for the same Provider most similar to a D2 hold. */
+export type QueueSimilarTestimony = Omit<QueueLinkedTestimony, "withinDay">;
 
 /** Admin only: why detection held a Testimony Moderation would have published. */
 export interface QueueDetection {
@@ -141,6 +146,8 @@ export interface QueueDetection {
   authorWroteAboutOtherProviders: boolean;
   /** The Provider's other Testimonies (not deleted) in the 7 days up to the held one, oldest first. */
   linked: QueueLinkedTestimony[];
+  /** On a D2 hold: the Provider's published or held Testimony most similar to it now, if any. */
+  similar?: QueueSimilarTestimony;
 }
 
 export interface QueueTestimonyContent {

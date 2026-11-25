@@ -71,7 +71,12 @@ import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
 import { jakartaDate } from "../../server/quota.ts";
 import { type AggregateInput, computeAggregates } from "./aggregates.ts";
-import { DETECTION_LOOKBACK_MS, type DetectionRuleCode, detectionRuleCodes } from "./detection.ts";
+import {
+  DETECTION_LOOKBACK_MS,
+  type DetectionRuleCode,
+  detectionRuleCodes,
+  SIMILARITY_COMPARED_STATUSES,
+} from "./detection.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { decideProof } from "./proof-decision.ts";
 import { fingerprintOf, type ProofFingerprint } from "./proof-fingerprint.ts";
@@ -508,21 +513,35 @@ async function activeTestimonyId(firestore: Firestore, uid: string, placeId: str
 
 /**
  * Detection for a new Testimony (spec 09 part 2): the triggers it fires, from when the
- * Provider's other Testimonies that are not deleted were submitted. Read in the
- * transaction that creates it, so a concurrent create in the same window makes one of
- * them retry and see the other; a burst sent at once cannot all slip through.
+ * Provider's other Testimonies that are not deleted were submitted (D1) and the text of
+ * its published and held ones (D2). Read in the transaction that creates it, so a
+ * concurrent create makes one of them retry and see the other; a burst or a template
+ * sent at once cannot all slip through.
  */
-async function detectOnCreate(tx: Transaction, firestore: Firestore, placeId: string): Promise<DetectionRuleCode[]> {
+async function detectOnCreate(
+  tx: Transaction,
+  firestore: Firestore,
+  placeId: string,
+  text: string,
+): Promise<DetectionRuleCode[]> {
   const nowMs = Date.now();
-  const recent = await tx.get(
-    testimonies(firestore)
-      .where("placeId", "==", placeId)
-      .where("createdAt", ">=", Timestamp.fromMillis(nowMs - DETECTION_LOOKBACK_MS)),
-  );
+  const [recent, comparable] = await Promise.all([
+    tx.get(
+      testimonies(firestore)
+        .where("placeId", "==", placeId)
+        .where("createdAt", ">=", Timestamp.fromMillis(nowMs - DETECTION_LOOKBACK_MS)),
+    ),
+    tx.get(
+      testimonies(firestore)
+        .where("placeId", "==", placeId)
+        .where("status", "in", [...SIMILARITY_COMPARED_STATUSES]),
+    ),
+  ]);
   const otherSubmittedAtMs = recent.docs
     .filter((doc) => doc.get("status") !== "deleted")
     .map((doc) => (doc.get("createdAt") as Timestamp).toMillis());
-  return detectionRuleCodes({ otherSubmittedAtMs, nowMs });
+  const comparableTexts = comparable.docs.map((doc) => doc.get("text") as string);
+  return detectionRuleCodes({ otherSubmittedAtMs, nowMs, text, comparableTexts });
 }
 
 async function refusalResponse(request: Request, error: unknown): Promise<Response> {
@@ -617,7 +636,8 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         const active = mine.docs.find((doc) => doc.get("status") !== "deleted");
         if (active) throw new TestimonyRefusal(409, "already_posted", active.id);
         // Detection only ever turns Moderation's publish into hold. A failed read fails the request.
-        const detected = moderatedDecision === "publish" ? await detectOnCreate(tx, firestore, value.placeId) : [];
+        const detected =
+          moderatedDecision === "publish" ? await detectOnCreate(tx, firestore, value.placeId, value.text) : [];
         const attemptOutcome = detected.length > 0 ? heldByDetection(t, moderated, detected) : moderated;
         const status = detected.length > 0 ? "held" : statusForDecision(moderatedDecision);
         const provider = await tx.get(providers(firestore).doc(value.placeId));
