@@ -1,7 +1,7 @@
 # Detection evaluation, 2026-11-25
 
 - Detection under test: `apps/web/app/server/detection.ts` (D1 velocity, D2 similarity, D3 sharedDevice)
-- Labels: agent-drafted by Claude, not reviewed by the team yet
+- Labels: agent-drafted by Claude, reviewed 2026-11-25
 - Cases: 34 (17 campaign, 17 genuine)
 - Constants: `VELOCITY_DAY_THRESHOLD` 3, `VELOCITY_DAY_WINDOW_HOURS` 24, `VELOCITY_WEEK_THRESHOLD` 5, `VELOCITY_WEEK_WINDOW_HOURS` 168, `SIMILARITY_THRESHOLD` 0.75
 
