@@ -1,4 +1,4 @@
-import { saveViolationResponse } from "~/server/claims.server";
+import { saveViolationResponse } from "~/server/policy-violations-owner.server";
 import type { Route } from "./+types/api.providers.$placeId.policy-violations.$violationId.response";
 
 const notAllowed = () => Response.json({ error: "method_not_allowed" }, { status: 405, headers: { Allow: "POST" } });

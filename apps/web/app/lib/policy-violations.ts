@@ -2,6 +2,8 @@
 // pure move rule. Plain, so the server and the admin page share one source.
 import type { PolicyViolationStatus } from "@findyourdent/contracts/firestore";
 
+export const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** A Provider has this many days to respond after being notified, before an admin may confirm. */
 export const VIOLATION_RESPONSE_DAYS = 7;
 

@@ -21,11 +21,10 @@ import {
   VIOLATION_EVIDENCE_MAX_IDS,
   type ViolationAction,
 } from "~/lib/admin-queue";
-import { nextViolationStatus, VIOLATION_RESPONSE_DAYS } from "~/lib/policy-violations";
-import { type Acting, AdminRefusal, logAction, queueItem } from "./admin-common.server.ts";
+import { DAY_MS, nextViolationStatus, VIOLATION_RESPONSE_DAYS } from "~/lib/policy-violations";
+import { type Acting, AdminRefusal, logAction, queueItem, SUBJECT_ID } from "./admin-common.server.ts";
+import { hasApprovedClaim } from "./claims.server.ts";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const JAKARTA_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const col = (firestore: Firestore, name: keyof typeof COLLECTIONS) => firestore.collection(COLLECTIONS[name]);
@@ -43,7 +42,7 @@ function isJakartaDate(value: unknown): value is string {
 function idList(value: unknown): string[] | null {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.length > VIOLATION_EVIDENCE_MAX_IDS) return null;
-  if (!value.every((id) => typeof id === "string" && ID.test(id))) return null;
+  if (!value.every((id) => typeof id === "string" && SUBJECT_ID.test(id))) return null;
   return [...new Set(value as string[])];
 }
 
@@ -90,8 +89,7 @@ export async function violationAction(acting: Acting, action: ViolationAction): 
 async function openViolation(tx: Transaction, acting: Acting, input: OpenViolationInput) {
   const { firestore } = acting;
   const placeId = acting.request.subjectId;
-  const reportIds = input.reportIds ?? [];
-  const holdIds = input.detectionHoldIds ?? [];
+  const { reportIds, detectionHoldIds: holdIds } = input;
 
   // A place is known when it has a Provider document or at least one Testimony.
   const [provider, anyTestimony, active, reports, holds] = await Promise.all([
@@ -158,8 +156,9 @@ async function moveViolation(
     const provider = (await tx.get(col(acting.firestore, "providers").doc(violation.placeId))).data() as
       | ProviderDoc
       | undefined;
-    // A claimed Provider is told in its owner pages; an unclaimed one by phone through its Google listing.
-    const claimed = provider?.claimStatus === "claimed";
+    // A claimed Provider (an approved Claim, as the owner pages check it) is told in its owner pages;
+    // an unclaimed one by phone through its Google listing.
+    const claimed = await hasApprovedClaim(acting.firestore, provider?.claimId, tx);
     tx.update(ref, {
       status: to,
       notifiedAt: now,
@@ -208,7 +207,7 @@ export async function loadViolationQueue(
     cases.docs.map(async (doc) => {
       const violation = doc.data() as PolicyViolationDoc;
       const provider = providers.get(violation.placeId);
-      const claimed = provider?.claimStatus === "claimed";
+      const claimed = await hasApprovedClaim(firestore, provider?.claimId);
       const status = violation.status as "open" | "providerNotified";
       const windowOver = violation.responseDueAt ? nowMs >= violation.responseDueAt.toMillis() : false;
 

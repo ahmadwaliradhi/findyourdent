@@ -188,7 +188,7 @@
         "ownerFacts": "Data pemilik ditahan",
         "reply": "Balasan ditahan",
         "proofReview": "Bukti kunjungan",
-        "policyViolation": "Kasus pelanggaran kebijakan"
+        "policyViolation": "Kasus dugaan pelanggaran kebijakan"
       },
       "status": {
         "submitted": "Diperiksa",
@@ -329,8 +329,8 @@
         "noResponse": "Belum ada tanggapan.",
         "phoneReasonLabel": "Catat kontak telepon (siapa, kapan, apa yang disampaikan)",
         "confirmWait": "Bisa dikonfirmasi setelah batas tanggapan lewat.",
-        "open": "Buka kasus pelanggaran",
-        "openTitle": "Kasus pelanggaran baru",
+        "open": "Buka kasus dugaan pelanggaran",
+        "openTitle": "Kasus dugaan pelanggaran baru",
         "periodFrom": "Dari",
         "periodTo": "Sampai",
         "notes": "Catatan (opsional)"
@@ -903,7 +903,7 @@
   },
   "claim": {
     "violation": {
-      "title": "Kasus pelanggaran kebijakan testimoni",
+      "title": "Kasus dugaan pelanggaran kebijakan testimoni",
       "intro": "Tim FindYourDent menduga ada Testimoni yang ditulis dengan imbalan atau hanya dari pasien pilihan. Anda punya 7 hari untuk menanggapi. Setelah itu tim memutuskan dan menuliskan alasannya di sini. Tanggapan Anda hanya dibaca tim, tidak tampil di halaman publik.",
       "status": {
         "providerNotified": "Menunggu tanggapan Anda",

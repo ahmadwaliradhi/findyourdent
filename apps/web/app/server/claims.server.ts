@@ -14,7 +14,6 @@ import { isProcedureCode, type ModerationRequest } from "@findyourdent/contracts
 import {
   type ClaimDoc,
   COLLECTIONS,
-  type PolicyViolationDoc,
   type ProcedureCode,
   type ProviderDoc,
   type ProviderOwnerFacts,
@@ -49,15 +48,12 @@ import {
   PROVIDER_TYPES,
 } from "~/lib/claims";
 import { normalizeName } from "~/lib/normalize-name";
-import {
-  type OwnerViolation,
-  VIOLATION_RESPONSE_MAX_CHARS,
-  type ViolationResponseResult,
-} from "~/lib/policy-violations";
+import type { OwnerViolation } from "~/lib/policy-violations";
 import { isValidRegion } from "~/lib/regions";
 import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
 import { flattenOwnerFacts, moderateOwnerContent, ownerDecisionDoc } from "./owner-moderation.server.ts";
+import { violationsOf } from "./policy-violations-owner.server.ts";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
 import { isPlaceId } from "./provider.server.ts";
 import { regionValue } from "./testimonies.server.ts";
@@ -81,7 +77,7 @@ export type OwnerFactsValues = Pick<
 
 type ErrorCode = Exclude<ClaimApiError["error"], "app_check_required" | "rate_limited">;
 
-class ClaimRefusal extends Error {
+export class ClaimRefusal extends Error {
   readonly status: number;
   readonly code: ErrorCode;
 
@@ -92,14 +88,14 @@ class ClaimRefusal extends Error {
   }
 }
 
-async function errorResponse(request: Request, status: number, error: ErrorCode): Promise<Response> {
+export async function errorResponse(request: Request, status: number, error: ErrorCode): Promise<Response> {
   const language = await detectLanguage(request);
   const message = getI18n(language).getFixedT(language)(`claimApi.errors.${error}`);
   const body: ClaimApiError = { error, message };
   return Response.json(body, { status });
 }
 
-async function refusalResponse(request: Request, error: unknown): Promise<Response> {
+export async function refusalResponse(request: Request, error: unknown): Promise<Response> {
   if (!(error instanceof ClaimRefusal)) throw error;
   return errorResponse(request, error.status, error.code);
 }
@@ -111,10 +107,10 @@ const testimonies = (firestore: Firestore) => firestore.collection(COLLECTIONS.t
 export const activeClaimsOf = (firestore: Firestore, placeId: string) =>
   claims(firestore).where("placeId", "==", placeId).where("status", "in", ["submitted", "approved"]);
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const trimmed = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+export const trimmed = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
 function parseRegion(value: unknown): RegionRef | null {
   if (!isRecord(value)) return null;
@@ -126,7 +122,7 @@ function parseRegion(value: unknown): RegionRef | null {
 }
 
 /** Signed in first (so the claimant learns to sign in), then App Check and the per-account limit. */
-async function gate(
+export async function gate(
   context: AppLoadContext,
   request: Request,
 ): Promise<{ firestore: Firestore; uploads: Bucket; user: SignedInUser; language: Language } | Response> {
@@ -155,6 +151,21 @@ export async function approvedClaimOf(
   if (!provider.exists || provider.get("claimStatus") !== "claimed" || !claimId) return null;
   const claim = (await read(claims(firestore).doc(claimId))).data() as ClaimDoc | undefined;
   return claim?.status === "approved" && claim.claimantUid === uid ? { claimId, provider } : null;
+}
+
+/**
+ * True when the Claim named by a Provider's `claimId` is approved. Reads the Claim itself,
+ * not the Provider's `claimStatus` mirror, so it agrees with `approvedClaimOf`.
+ */
+export async function hasApprovedClaim(
+  firestore: Firestore,
+  claimId: string | undefined,
+  tx?: Transaction,
+): Promise<boolean> {
+  if (!claimId) return false;
+  const ref = claims(firestore).doc(claimId);
+  const claim = (await (tx ? tx.get(ref) : ref.get())).data() as ClaimDoc | undefined;
+  return claim?.status === "approved";
 }
 
 // Submitting a Claim ---------------------------------------------------------------
@@ -466,95 +477,6 @@ export async function saveReplyResponse(context: AppLoadContext, request: Reques
   }
 
   return Response.json(ownerContentBody(language, "reply", status));
-}
-
-// Testimony Policy Violation cases -----------------------------------------------------
-
-const VIOLATION_ID = /^[A-Za-z0-9_-]{1,64}$/;
-const iso = (timestamp: { toDate(): Date }) => timestamp.toDate().toISOString();
-
-/** The cases the Provider may see: notified or decided, newest first. Evidence never leaves this function. */
-async function violationsOf(firestore: Firestore, placeId: string): Promise<OwnerViolation[]> {
-  const snapshot = await firestore
-    .collection(COLLECTIONS.policyViolations)
-    .where("placeId", "==", placeId)
-    .where("status", "in", ["providerNotified", "confirmed", "dismissed"])
-    .get();
-  return snapshot.docs
-    .map((doc) => ({ id: doc.id, violation: doc.data() as PolicyViolationDoc }))
-    .sort((a, b) => b.violation.createdAt.toMillis() - a.violation.createdAt.toMillis())
-    .map(({ id, violation }) => ({
-      id,
-      status: violation.status as OwnerViolation["status"],
-      suspectedPeriod: violation.suspectedPeriod,
-      ...(violation.notifiedAt ? { notifiedAt: iso(violation.notifiedAt) } : {}),
-      ...(violation.responseDueAt ? { responseDueAt: iso(violation.responseDueAt) } : {}),
-      canRespond: violation.status === "providerNotified",
-      ...(violation.providerResponse
-        ? {
-            providerResponse: {
-              text: violation.providerResponse.text,
-              respondedAt: iso(violation.providerResponse.respondedAt),
-            },
-          }
-        : {}),
-      ...(violation.decisionReason ? { decisionReason: violation.decisionReason } : {}),
-    }));
-}
-
-/**
- * POST /api/providers/:placeId/policy-violations/:violationId/response: the claimant's
- * response to a notified case. Not moderated and not public: only admins read it. A later
- * response replaces the earlier one while the case is still `providerNotified`.
- */
-export async function saveViolationResponse(
-  context: AppLoadContext,
-  request: Request,
-  placeId: string | undefined,
-  violationId: string | undefined,
-) {
-  if (!isPlaceId(placeId) || !violationId || !VIOLATION_ID.test(violationId)) {
-    return errorResponse(request, 404, "not_found");
-  }
-  const gated = await gate(context, request);
-  if (gated instanceof Response) return gated;
-  const { firestore, user, language } = gated;
-
-  let text = "";
-  try {
-    const body: unknown = await request.json();
-    text = isRecord(body) ? trimmed(body.text) : "";
-  } catch {
-    text = "";
-  }
-  if (!text || text.length > VIOLATION_RESPONSE_MAX_CHARS) return errorResponse(request, 400, "invalid_response");
-
-  const ref = firestore.collection(COLLECTIONS.policyViolations).doc(violationId);
-  let respondedAt: Timestamp;
-  try {
-    respondedAt = await firestore.runTransaction(async (tx) => {
-      // Not the claimant of this place: 403 before anything about its cases is revealed.
-      if (!(await approvedClaimOf(firestore, placeId, user.uid, tx))) throw new ClaimRefusal(403, "not_owner");
-      const violation = (await tx.get(ref)).data() as PolicyViolationDoc | undefined;
-      // Another place's case looks the same as a missing one.
-      if (!violation || violation.placeId !== placeId) throw new ClaimRefusal(404, "not_found");
-      if (violation.status !== "providerNotified") throw new ClaimRefusal(409, "violation_closed");
-      const now = Timestamp.now();
-      tx.update(ref, { providerResponse: { text, respondedAt: now, responderUid: user.uid }, updatedAt: now });
-      return now;
-    });
-  } catch (error) {
-    return refusalResponse(request, error);
-  }
-
-  context.logger.info("violation_response", { outcome: "saved" });
-  const t = getI18n(language).getFixedT(language);
-  const body: ViolationResponseResult = {
-    status: "saved",
-    respondedAt: respondedAt.toDate().toISOString(),
-    message: t("claimApi.violationResponse.saved"),
-  };
-  return Response.json(body);
 }
 
 // The Claim page -------------------------------------------------------------------

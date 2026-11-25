@@ -887,6 +887,8 @@ function OpenViolation({
         subjectId: placeId,
         reason: reason.trim(),
         violation: {
+          reportIds: [],
+          detectionHoldIds: [],
           ...evidence,
           suspectedFrom: from,
           suspectedTo: to,

@@ -188,7 +188,7 @@
         "ownerFacts": "Owner details held",
         "reply": "Reply held",
         "proofReview": "Proof of visit",
-        "policyViolation": "Policy violation case"
+        "policyViolation": "Suspected policy violation case"
       },
       "status": {
         "submitted": "Being checked",
@@ -329,8 +329,8 @@
         "noResponse": "No response yet.",
         "phoneReasonLabel": "Record the phone contact (who, when, what was said)",
         "confirmWait": "Can be confirmed once the response window is over.",
-        "open": "Open a violation case",
-        "openTitle": "New violation case",
+        "open": "Open a suspected violation case",
+        "openTitle": "New suspected violation case",
         "periodFrom": "From",
         "periodTo": "To",
         "notes": "Notes (optional)"
@@ -903,7 +903,7 @@
   },
   "claim": {
     "violation": {
-      "title": "Testimony policy violation cases",
+      "title": "Suspected testimony policy violation cases",
       "intro": "The FindYourDent team suspects some Testimonies were written in return for a reward, or only by selected Patients. You have 7 days to respond. After that the team decides and writes its reason here. Only the team reads your response; it is not shown on the public page.",
       "status": {
         "providerNotified": "Waiting for your response",

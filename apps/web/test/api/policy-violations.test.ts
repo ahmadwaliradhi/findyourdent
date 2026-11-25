@@ -3,6 +3,7 @@
 // Every move is logged in `adminActions`; only allowlisted admins reach any of it.
 import {
   type AdminActionDoc,
+  type ClaimDoc,
   COLLECTIONS,
   type PolicyViolationDoc,
   type TestimonyReportDoc,
@@ -50,6 +51,31 @@ async function adminActions(): Promise<AdminActionDoc[]> {
   return snapshot.docs.map((doc) => doc.data() as AdminActionDoc);
 }
 
+/** A Claim document for `placeId` in the given status, as the Provider's `claimId` points at. */
+async function seedClaim(placeId: string, status: ClaimDoc["status"]): Promise<string> {
+  const now = new Date();
+  const ref = await server.firestore.collection(COLLECTIONS.claims).add({
+    placeId,
+    claimantUid: "claimant-uid",
+    role: "owner",
+    contactPhone: "0812-1111-2222",
+    status,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+async function claimedPlace(claimStatus: ClaimDoc["status"] = "approved") {
+  const provider = await seedProvider(server.firestore);
+  const claimId = await seedClaim(provider.placeId, claimStatus);
+  await server.firestore
+    .collection(COLLECTIONS.providers)
+    .doc(provider.placeId)
+    .update({ claimStatus: "claimed", claimId });
+  return provider;
+}
+
 async function seedReport(placeId: string, testimonyId: string): Promise<string> {
   const doc: Omit<TestimonyReportDoc, "createdAt"> & { createdAt: Date } = {
     testimonyId,
@@ -71,7 +97,7 @@ async function unclaimedPlace() {
   return { provider, testimony, reportId };
 }
 
-const PERIOD = { suspectedFrom: "2026-08-01", suspectedTo: "2026-10-31" };
+const PERIOD = { reportIds: [], detectionHoldIds: [], suspectedFrom: "2026-08-01", suspectedTo: "2026-10-31" };
 
 async function open(
   cookie: string,
@@ -226,7 +252,7 @@ describe("violation case: notify, confirm, dismiss", () => {
   });
 
   it("notifies a claimed Provider in its owner pages, with no phone note", async () => {
-    const provider = await seedProvider(server.firestore, { claimStatus: "claimed", claimId: "claim-1" });
+    const provider = await claimedPlace();
     await seedTestimony(server.firestore, provider);
     const admin = await adminCookie();
     const id = await opened(admin, provider.placeId);
@@ -237,6 +263,18 @@ describe("violation case: notify, confirm, dismiss", () => {
     const doc = await violation(id);
     expect(doc.notifiedVia).toBe("ownerPages");
     expect(doc.phoneContactNote).toBeUndefined();
+  });
+
+  it("notifies by phone when the Provider says claimed but its Claim is no longer approved", async () => {
+    const provider = await claimedPlace("rejected");
+    await seedTestimony(server.firestore, provider);
+    const admin = await adminCookie();
+    const id = await opened(admin, provider.placeId);
+
+    expect(
+      (await act(admin, { action: "notifyViolation", subjectId: id, reason: "Menelepon resepsionis." })).status,
+    ).toBe(200);
+    expect(await violation(id)).toMatchObject({ notifiedVia: "phone", phoneContactNote: "Menelepon resepsionis." });
   });
 
   it("refuses to notify twice, or after a decision", async () => {
@@ -442,7 +480,7 @@ describe("admin queue: violation cases", () => {
   });
 
   it("shows a claimed place without a Google phone, and drops decided cases", async () => {
-    const provider = await seedProvider(server.firestore, { claimStatus: "claimed", claimId: "claim-1" });
+    const provider = await claimedPlace();
     await seedTestimony(server.firestore, provider);
     const admin = await adminCookie();
     const id = await opened(admin, provider.placeId);

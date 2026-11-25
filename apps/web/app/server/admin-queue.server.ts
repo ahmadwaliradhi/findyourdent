@@ -50,7 +50,7 @@ import {
 import { normalizeName } from "~/lib/normalize-name";
 import { testimonyPath } from "~/lib/paths";
 import { testimonyPhotoUrl } from "~/lib/testimony-photos";
-import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
+import { type Acting, AdminRefusal, iso, logAction, queueItem, SUBJECT_ID } from "./admin-common.server.ts";
 import { type DetectionHold, loadDetectionViews } from "./admin-detection.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
@@ -68,8 +68,6 @@ import {
 } from "./testimonies.server.ts";
 import { deleteTestimonyMedia } from "./testimony-media.server.ts";
 import { canTransition } from "./testimony-state.ts";
-
-const SUBJECT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 const col = (firestore: Firestore, name: keyof typeof COLLECTIONS) => firestore.collection(COLLECTIONS[name]);
 

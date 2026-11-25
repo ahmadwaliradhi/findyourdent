@@ -106,7 +106,7 @@ describe("the owner's view of Testimony Policy Violation cases", () => {
 
     const html = await ownerPage(cookie, listed.placeId);
 
-    expect(html).toContain("Kasus pelanggaran kebijakan testimoni");
+    expect(html).toContain("Kasus dugaan pelanggaran kebijakan testimoni");
     expect(html).toContain("1 Agustus 2026");
     for (const secret of [SECRET_NOTE, SECRET_REPORT, SECRET_HOLD, SECRET_PATH]) {
       expect(html).not.toContain(secret);
@@ -117,7 +117,20 @@ describe("the owner's view of Testimony Policy Violation cases", () => {
     const { listed, cookie } = await claimedProvider();
     await seedViolation({ placeId: listed.placeId, status: "open" });
 
-    expect(await ownerPage(cookie, listed.placeId)).not.toContain("Kasus pelanggaran kebijakan testimoni");
+    expect(await ownerPage(cookie, listed.placeId)).not.toContain("Kasus dugaan pelanggaran kebijakan testimoni");
+  });
+  it("never shows a case that was dismissed straight from open, without a notification", async () => {
+    const { listed, cookie } = await claimedProvider();
+    const id = await seedViolation({ placeId: listed.placeId, status: "open" });
+    const dismiss: AdminActionRequest = { action: "dismissViolation", subjectId: id, reason: "Salah paham." };
+    expect(
+      (await server.post("/admin/api/actions", dismiss, { headers: { cookie: await adminCookie() } })).status,
+    ).toBe(200);
+
+    const html = await ownerPage(cookie, listed.placeId);
+
+    expect(html).not.toContain("Kasus dugaan pelanggaran kebijakan testimoni");
+    expect(html).not.toContain("Salah paham.");
   });
 });
 
@@ -143,7 +156,7 @@ describe("the owner's view across places", () => {
     const other = await seedProvider(server.firestore);
     await seedViolation({ placeId: other.placeId });
 
-    expect(await ownerPage(cookie, listed.placeId)).not.toContain("Kasus pelanggaran kebijakan testimoni");
+    expect(await ownerPage(cookie, listed.placeId)).not.toContain("Kasus dugaan pelanggaran kebijakan testimoni");
   });
 });
 

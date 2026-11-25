@@ -70,10 +70,10 @@ export const REASON_REQUIRED: ReadonlySet<AdminActionRequest["action"]> = new Se
 
 /** What an admin gives when opening a violation case; `suspectedFrom` and `suspectedTo` are Jakarta dates `YYYY-MM-DD`. */
 export interface OpenViolationInput {
-  /** `testimonyReports` ids for the place (at most VIOLATION_EVIDENCE_MAX_IDS). */
-  reportIds?: string[];
+  /** `testimonyReports` ids for the place (at most VIOLATION_EVIDENCE_MAX_IDS); the server parser fills a missing list with none. */
+  reportIds: string[];
   /** Testimony ids for the place that detection held (at most VIOLATION_EVIDENCE_MAX_IDS). */
-  detectionHoldIds?: string[];
+  detectionHoldIds: string[];
   notes?: string;
   suspectedFrom: string;
   suspectedTo: string;
