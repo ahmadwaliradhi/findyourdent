@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SUBMISSION_SIGNAL_TTL_MS,
   signalExpiresAtMs,
+  signalIsLive,
   submissionSignalHashes,
 } from "../../app/server/submission-signals.ts";
 
@@ -53,5 +54,13 @@ describe("signal expiry", () => {
     expect(SUBMISSION_SIGNAL_TTL_MS).toBe(90 * 24 * 60 * 60 * 1000);
     const now = Date.UTC(2026, 10, 25);
     expect(signalExpiresAtMs(now)).toBe(Date.UTC(2027, 1, 23));
+  });
+});
+
+describe("signalIsLive", () => {
+  it("is live until its expiry and not at or after it", () => {
+    expect(signalIsLive(1001, 1000)).toBe(true);
+    expect(signalIsLive(1000, 1000)).toBe(false);
+    expect(signalIsLive(999, 1000)).toBe(false);
   });
 });

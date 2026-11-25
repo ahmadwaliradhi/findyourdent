@@ -2,11 +2,16 @@
 // submission or edit, written in the transaction that stores it and read by detection (D3).
 // The hashing is in submission-signals.ts; only hashes are stored or logged.
 import { COLLECTIONS, type SubmissionSignalDoc } from "@findyourdent/contracts/firestore";
-import { type Firestore, Timestamp, type Transaction } from "firebase-admin/firestore";
+import { type Firestore, type QueryDocumentSnapshot, Timestamp, type Transaction } from "firebase-admin/firestore";
 import type { AppLoadContext } from "react-router";
 import { newBrowserId, readBrowserState, updateBrowserState } from "../../server/browser-state.ts";
 import type { OtherSignal } from "./detection.ts";
-import { type SubmissionSignalHashes, signalExpiresAtMs, submissionSignalHashes } from "./submission-signals.ts";
+import {
+  type SubmissionSignalHashes,
+  signalExpiresAtMs,
+  signalIsLive,
+  submissionSignalHashes,
+} from "./submission-signals.ts";
 
 /** The device behind one request: its hashes, and a Set-Cookie when its browser id is new. */
 export interface SubmissionDevice {
@@ -35,20 +40,31 @@ export async function submissionDevice(context: AppLoadContext, request: Request
 const signals = (firestore: Firestore) => firestore.collection(COLLECTIONS.submissionSignals);
 
 /**
- * Every signal for the Provider, as a transaction read (so before any write). Signals of
+ * The stored signals that still count. Firestore TTL deletes lazily (it can lag a day or
+ * more), so a signal past its `expiresAt` may still be stored and must be ignored.
+ */
+export function liveSignals(docs: readonly QueryDocumentSnapshot[], nowMs: number): SubmissionSignalDoc[] {
+  return docs
+    .map((doc) => doc.data() as SubmissionSignalDoc)
+    .filter((signal) => signalIsLive(signal.expiresAt.toMillis(), nowMs));
+}
+
+/**
+ * Every live signal for the Provider, as a transaction read (so before any write). Signals of
  * deleted Testimonies count too: a buzzer may delete. The TTL bounds the set.
  */
 export async function readPlaceSignals(tx: Transaction, firestore: Firestore, placeId: string): Promise<OtherSignal[]> {
   const snapshot = await tx.get(signals(firestore).where("placeId", "==", placeId));
-  return snapshot.docs.map((doc) => {
-    const { authorUid, ipHash, browserIdHash } = doc.data() as SubmissionSignalDoc;
-    return { authorUid, ipHash, browserIdHash };
-  });
+  return liveSignals(snapshot.docs, Date.now()).map(({ authorUid, ipHash, browserIdHash }) => ({
+    authorUid,
+    ipHash,
+    browserIdHash,
+  }));
 }
 
 /**
- * Writes the signal for a stored submission or edit, keyed by Testimony: an edit
- * overwrites it with the edit's device and a fresh 90 days.
+ * Writes the signal for a stored submission or edit: a new document each time (auto id), so
+ * an edit never overwrites the device of the submission. Each has its own 90 days.
  */
 export function writeSubmissionSignal(
   tx: Transaction,
@@ -69,5 +85,5 @@ export function writeSubmissionSignal(
     createdAt: Timestamp.fromMillis(nowMs),
     expiresAt: Timestamp.fromMillis(signalExpiresAtMs(nowMs)),
   };
-  tx.set(signals(firestore).doc(input.testimonyId), doc);
+  tx.create(signals(firestore).doc(), doc);
 }

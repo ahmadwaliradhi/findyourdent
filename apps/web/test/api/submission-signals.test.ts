@@ -8,6 +8,7 @@ import {
   type SubmissionSignalDoc,
   type TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AdminQueueResponse, QueueItem } from "../../app/lib/admin-queue.ts";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
@@ -119,10 +120,19 @@ async function created(body: TestimonySubmission, cookie: string, ip?: string): 
   return (await response.json()) as TestimonyStoredResponse;
 }
 
-const signalOf = async (testimonyId: string) =>
-  (await server.firestore.collection(COLLECTIONS.submissionSignals).doc(testimonyId).get()).data() as
-    | SubmissionSignalDoc
-    | undefined;
+/** Every signal of a Testimony (its submission and each stored edit), oldest first. */
+async function signalsOf(testimonyId: string): Promise<SubmissionSignalDoc[]> {
+  const snapshot = await server.firestore
+    .collection(COLLECTIONS.submissionSignals)
+    .where("testimonyId", "==", testimonyId)
+    .get();
+  return snapshot.docs
+    .map((doc) => doc.data() as SubmissionSignalDoc)
+    .sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
+}
+
+/** The signal of a Testimony's submission. */
+const signalOf = async (testimonyId: string) => (await signalsOf(testimonyId))[0];
 
 async function testimony(id: string): Promise<TestimonyDoc> {
   return (await server.firestore.collection(COLLECTIONS.testimonies).doc(id).get()).data() as TestimonyDoc;
@@ -261,7 +271,27 @@ describe("the browser id", () => {
   });
 });
 
+/** Marks every signal of a Testimony as expired, as if its TTL had passed but the delete had not run. */
+async function expireSignalsOf(testimonyId: string): Promise<void> {
+  const snapshot = await server.firestore
+    .collection(COLLECTIONS.submissionSignals)
+    .where("testimonyId", "==", testimonyId)
+    .get();
+  expect(snapshot.size).toBeGreaterThan(0);
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.update({ expiresAt: Timestamp.fromMillis(Date.now() - 1000) })));
+}
+
 describe("D3 sharedDevice", () => {
+  it("does not count another account's signal that has expired but is not deleted yet", async () => {
+    const provider = await seedProvider(server.firestore);
+    const first = await created(submission(provider.placeId), await newPatient(), IP_A);
+    await expireSignalsOf(first.testimonyId);
+
+    const body = await created(submission(provider.placeId), await newPatient(), IP_A);
+    expect(body.status).toBe("published");
+    expect((await decisionOf(body.testimonyId)).detectionRuleCodes).toBeUndefined();
+  });
+
   it("holds another account on the same IP from a different browser", async () => {
     const provider = await seedProvider(server.firestore);
     const first = await created(submission(provider.placeId), await newPatient(), IP_A);
@@ -358,11 +388,11 @@ describe("D3 sharedDevice", () => {
 });
 
 describe("the same account", () => {
-  it("is not held for editing from the same device, and the edit refreshes the signal", async () => {
+  it("is not held for editing from the same device, and the edit adds a second signal", async () => {
     const provider = await seedProvider(server.firestore);
     const cookie = await newPatient();
     const first = await created(submission(provider.placeId), cookie, IP_A);
-    const before = await signalOf(first.testimonyId);
+    const [before] = await signalsOf(first.testimonyId);
 
     const response = await edit(
       first.testimonyId,
@@ -377,29 +407,43 @@ describe("the same account", () => {
     expect(body.status).toBe("published");
     expect((await decisionOf(first.testimonyId)).detectionRuleCodes).toBeUndefined();
 
-    const after = await signalOf(first.testimonyId);
-    expect(after?.ipHash).toBe(before?.ipHash);
-    expect(after?.browserIdHash).toBe(before?.browserIdHash);
-    expect(after?.expiresAt.toMillis()).toBeGreaterThanOrEqual(before?.expiresAt.toMillis() ?? 0);
-    const count = await server.firestore
-      .collection(COLLECTIONS.submissionSignals)
-      .where("placeId", "==", provider.placeId)
-      .count()
-      .get();
-    expect(count.data().count).toBe(1);
+    const signals = await signalsOf(first.testimonyId);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]).toEqual(before);
+    expect(signals[1]?.ipHash).toBe(before?.ipHash);
+    expect(signals[1]?.browserIdHash).toBe(before?.browserIdHash);
+    expect(signals[1]?.expiresAt.toMillis()).toBeGreaterThanOrEqual(before?.expiresAt.toMillis() ?? 0);
   });
 
-  it("overwrites the signal with the device of the edit", async () => {
+  it("keeps the submission's signal when an edit comes from another device", async () => {
     const provider = await seedProvider(server.firestore);
     const cookie = await newPatient();
     const first = await created(submission(provider.placeId), cookie, IP_A);
-    const before = await signalOf(first.testimonyId);
+    const [before] = await signalsOf(first.testimonyId);
 
     const response = await edit(first.testimonyId, submission(provider.placeId), cookie, IP_C);
     expect(response.status).toBe(200);
-    const after = await signalOf(first.testimonyId);
-    expect(after?.ipHash).not.toBe(before?.ipHash);
-    expect(after?.browserIdHash).toBe(before?.browserIdHash);
+    const signals = await signalsOf(first.testimonyId);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]).toEqual(before);
+    expect(signals[1]?.ipHash).not.toBe(before?.ipHash);
+    expect(signals[1]?.browserIdHash).toBe(before?.browserIdHash);
+  });
+
+  it("cannot erase the match by editing from a new device", async () => {
+    const provider = await seedProvider(server.firestore);
+    const cookieA = await newPatient();
+    const first = await created(submission(provider.placeId, { displayName: "Budi S." }), cookieA, IP_A);
+    expect((await edit(first.testimonyId, submission(provider.placeId), cookieA, IP_C)).status).toBe(200);
+
+    // Another account on the device A first used is still held.
+    const held = await created(submission(provider.placeId), await newPatient(), IP_A);
+    expect(held.status).toBe("held");
+    expect((await decisionOf(held.testimonyId)).detectionRuleCodes).toEqual(["D3"]);
+
+    // The queue lists A once, with the network of the submission.
+    const links = (await queueItemOf(held.testimonyId))?.detection?.sharedDevice;
+    expect(links).toEqual([expect.objectContaining({ testimonyId: first.testimonyId, sharedIp: true })]);
   });
 
   it("mints and sets a browser id when an edit comes from a cookie that has none", async () => {
@@ -422,7 +466,7 @@ describe("the same account", () => {
     const response = await edit(first.testimonyId, submission(provider.placeId, { text: PHONE_TEXT }), cookie, IP_C);
     expect(response.status).toBe(200);
     expect(((await response.json()) as { status: string }).status).toBe("needsAuthorFix");
-    expect(await signalOf(first.testimonyId)).toEqual(before);
+    expect(await signalsOf(first.testimonyId)).toEqual([before]);
   });
 });
 
@@ -547,11 +591,54 @@ describe("admin queue: a D3 hold", () => {
     const provider = await seedProvider(server.firestore);
     await created(submission(provider.placeId), await newPatient(), IP_A);
     const held = await created(submission(provider.placeId), await newPatient(), IP_A);
-    await server.firestore.collection(COLLECTIONS.submissionSignals).doc(held.testimonyId).delete();
+    const own = await server.firestore
+      .collection(COLLECTIONS.submissionSignals)
+      .where("testimonyId", "==", held.testimonyId)
+      .get();
+    await Promise.all(own.docs.map((doc) => doc.ref.delete()));
 
     const detection = (await queueItemOf(held.testimonyId))?.detection;
     expect(detection?.ruleCodes).toEqual(["D3"]);
     expect(detection?.sharedDevice).toEqual([]);
+  });
+
+  it("does not list a linked account whose signals have expired but are not deleted yet", async () => {
+    const provider = await seedProvider(server.firestore);
+    const first = await created(submission(provider.placeId), await newPatient(), IP_A);
+    const held = await created(submission(provider.placeId), await newPatient(), IP_A);
+    expect((await queueItemOf(held.testimonyId))?.detection?.sharedDevice).toHaveLength(1);
+
+    await expireSignalsOf(first.testimonyId);
+    expect((await queueItemOf(held.testimonyId))?.detection?.sharedDevice).toEqual([]);
+  });
+
+  it("lists linked accounts by when they first submitted, one row each, even after an edit", async () => {
+    const provider = await seedProvider(server.firestore);
+    const cookieA = await newPatient();
+    const first = await created(submission(provider.placeId, { displayName: "Budi S." }), cookieA, IP_A);
+    const second = await created(submission(provider.placeId, { displayName: "Citra W." }), await newPatient(), IP_A);
+    expect(second.status).toBe("held");
+    // A edits last, from the same network: A still came first.
+    expect((await edit(first.testimonyId, submission(provider.placeId), cookieA, IP_A)).status).toBe(200);
+    const held = await created(submission(provider.placeId), await newPatient(), IP_A);
+
+    const links = (await queueItemOf(held.testimonyId))?.detection?.sharedDevice ?? [];
+    expect(links.map((link) => link.testimonyId)).toEqual([first.testimonyId, second.testimonyId]);
+  });
+
+  it("matches a linked account through any signal of the held Testimony", async () => {
+    const provider = await seedProvider(server.firestore);
+    const first = await created(submission(provider.placeId, { displayName: "Budi S." }), await newPatient(), IP_A);
+    // The held one's submission shares nothing with A, but its author later edits from A's network.
+    const second = await created(submission(provider.placeId), await newPatient(), IP_B);
+    const cookie = await newPatient();
+    const held = await created(submission(provider.placeId, { displayName: "Citra W." }), cookie, IP_A);
+    expect(second.status).toBe("published");
+    expect(held.status).toBe("held");
+    expect((await edit(held.testimonyId, submission(provider.placeId), cookie, IP_B)).status).toBe(200);
+
+    const links = (await queueItemOf(held.testimonyId))?.detection?.sharedDevice ?? [];
+    expect(links.map((link) => link.testimonyId).sort()).toEqual([first.testimonyId, second.testimonyId].sort());
   });
 
   it("shows the velocity list and the linked accounts when D1 and D3 both hold", async () => {

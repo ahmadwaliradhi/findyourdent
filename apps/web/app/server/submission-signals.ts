@@ -11,11 +11,15 @@ export const SUBMISSION_SIGNAL_TTL_MS = SUBMISSION_SIGNAL_TTL_DAYS * DAY_MS;
 
 export const signalExpiresAtMs = (nowMs: number) => nowMs + SUBMISSION_SIGNAL_TTL_MS;
 
+/** Firestore TTL deletes lazily, so an expired signal may still be stored: it must not count. */
+export const signalIsLive = (expiresAtMs: number, nowMs: number) => expiresAtMs > nowMs;
+
 /** Domain-separated, so an IP and a browser id with the same text never hash alike. */
 function hashSignal(salt: string, kind: "ip" | "browser", value: string): string {
   return createHash("sha256").update(`${salt}:signal:${kind}:${value}`).digest("hex");
 }
 
+/** The hashes of one submission's device (`SubmissionSignalDoc`). */
 export interface SubmissionSignalHashes {
   ipHash: string;
   browserIdHash: string;

@@ -1,16 +1,12 @@
 // The admin's view of a detection hold (spec 09 part 2): the Provider's other Testimonies
 // in the D1 window and whether each account has written about any other Provider.
 // Admin only: nothing here may reach an author's or the public's response.
-import {
-  COLLECTIONS,
-  type DetectionRuleCode,
-  type SubmissionSignalDoc,
-  type TestimonyDoc,
-} from "@findyourdent/contracts/firestore";
+import { COLLECTIONS, type DetectionRuleCode, type TestimonyDoc } from "@findyourdent/contracts/firestore";
 import { type Firestore, Timestamp } from "firebase-admin/firestore";
 import { LINKED_TEXT_PREVIEW_CHARS, type QueueDetection, type QueueSharedDeviceAccount } from "~/lib/admin-queue";
 import { iso } from "./admin-common.server.ts";
 import { DETECTION_LOOKBACK_MS, sharedDeviceLinks, VELOCITY_DAY_WINDOW_MS } from "./detection.ts";
+import { liveSignals } from "./submission-signals.server.ts";
 
 export interface DetectionHold {
   id: string;
@@ -63,28 +59,26 @@ export async function loadDetectionViews(
   };
 
   /**
-   * D3: the other accounts' signals at the Provider that share the held Testimony's IP or
-   * browser hash, oldest first. Nothing when the held Testimony's signal is gone (its TTL).
+   * D3: the other accounts' Testimonies at the Provider with a live signal that shares the IP
+   * or browser hash with any live signal of the held Testimony (its submission and edits), one
+   * row each, by when that Testimony was first submitted. Nothing when the held Testimony's
+   * signals are gone (their TTL).
    */
   const sharedDevice = async (id: string, testimony: TestimonyDoc): Promise<QueueSharedDeviceAccount[]> => {
-    const signals = firestore.collection(COLLECTIONS.submissionSignals);
-    const [held, place] = await Promise.all([
-      signals.doc(id).get(),
-      signals.where("placeId", "==", testimony.placeId).get(),
-    ]);
-    if (!held.exists) return [];
-    const mine = held.data() as SubmissionSignalDoc;
-    const byTestimony = new Map(place.docs.map((doc) => [doc.id, doc.data() as SubmissionSignalDoc] as const));
-    const links = sharedDeviceLinks(
-      mine,
-      place.docs
-        .filter((doc) => doc.id !== id)
-        .map((doc) => ({ ...(doc.data() as SubmissionSignalDoc), testimonyId: doc.id })),
-      mine.authorUid,
-    ).sort(
-      (a, b) =>
-        (byTestimony.get(a.testimonyId)?.createdAt.toMillis() ?? 0) -
-        (byTestimony.get(b.testimonyId)?.createdAt.toMillis() ?? 0),
+    const place = await firestore
+      .collection(COLLECTIONS.submissionSignals)
+      .where("placeId", "==", testimony.placeId)
+      .get();
+    const live = liveSignals(place.docs, Date.now());
+    const mine = live.filter((signal) => signal.testimonyId === id);
+    if (mine.length === 0) return [];
+    const others = live.filter((signal) => signal.testimonyId !== id);
+    const firstSubmittedMs = new Map<string, number>();
+    for (const { testimonyId, createdAt } of others) {
+      firstSubmittedMs.set(testimonyId, Math.min(firstSubmittedMs.get(testimonyId) ?? Infinity, createdAt.toMillis()));
+    }
+    const links = sharedDeviceLinks(mine, others, testimony.authorUid).sort(
+      (a, b) => (firstSubmittedMs.get(a.testimonyId) ?? 0) - (firstSubmittedMs.get(b.testimonyId) ?? 0),
     );
     return Promise.all(
       links.map(async (link): Promise<QueueSharedDeviceAccount> => {

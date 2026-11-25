@@ -15,7 +15,7 @@
 //   hospital, "drg. Nama" → privateDentist, anything else → klinik; `providerTypeSource`
 //   "inferred". Without that call's answer, the typed name alone decides.
 // - Each stored submission and edit writes a `submissionSignals` document (salted hashes of
-//   the client IP and browser id, keyed by Testimony); detection D3 reads them.
+//   the client IP and browser id; a new document each time, never overwritten); detection D3 reads them.
 // - Fix before submit: an authorFix decision is answered with the flagged spans and
 //   stores nothing (no Testimony, no decision, no photos); only the round count is kept,
 //   per Patient and place (`authorFixCounterId`), until a submission is stored.
@@ -1019,7 +1019,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
           );
         }
         tx.update(ref, update);
-        // The edit's device replaces the earlier one (D3 reads it; detection itself does not run on edits).
+        // The edit's device is kept beside the earlier ones (D3 reads them all; detection itself does not run on edits).
         writeSubmissionSignal(tx, firestore, {
           testimonyId,
           placeId: before.placeId,

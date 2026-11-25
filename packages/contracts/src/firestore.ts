@@ -291,13 +291,14 @@ export interface ProofFingerprintDoc {
   createdAt: Timestamp;
 }
 
-// submissionSignals/{testimonyId} ---------------------------------------------
+// submissionSignals/{autoId} --------------------------------------------------
 
 /**
  * What is kept of the device behind a Testimony submission or edit, for detection D3
- * (spec 09 part 2). The document id is the Testimony id; an edit overwrites it with the
- * edit's device. No raw IP address and no raw browser id: both are salted SHA-256 (hex).
- * Queried by `placeId`; Firestore TTL deletes it at `expiresAt`, 90 days after `createdAt`.
+ * (spec 09 part 2). One per stored submission or edit (auto id), with `testimonyId`; an
+ * edit never overwrites the submission's. No raw IP address and no raw browser id: both
+ * are salted SHA-256 (hex). Queried by `placeId`; Firestore TTL deletes it at `expiresAt`,
+ * 90 days after `createdAt` (lazily, so readers also ignore a signal past `expiresAt`).
  * Outlives a deleted Testimony on purpose, as a buzzer may delete.
  */
 export interface SubmissionSignalDoc {
