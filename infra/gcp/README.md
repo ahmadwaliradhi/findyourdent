@@ -116,6 +116,18 @@ The warm instance is a service-level minimum, which changes without a new revisi
 
 Request bodies never reach Cloud Logging. Cloud Run's request log has only the method, URL, status, latency and sizes. Both services write one JSON line per request with the request id (Cloud Run's trace id, passed to the agent as `X-Request-Id`), path, status and outcome code, and never a body, header or query string.
 
+## Automatic deploys (ADR-0012)
+
+A push to `main` runs CI and then the `deploy` job in `.github/workflows/ci.yml`, which runs `deploy.sh agent` and `deploy.sh web` with `PROVISION=0`. It waits for approval of the `production` environment first, and signs in through Workload Identity Federation as `fyd-deployer`, which cannot change IAM or Cloud Scheduler. Pushes that only change `docs/**` or Markdown are skipped.
+
+One-time setup, as a project owner, after the first manual deploy:
+
+```bash
+infra/gcp/setup-cicd.sh
+```
+
+It prints two `gh variable set` commands (`GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`); run them, then create the `production` environment under Settings, Environments, with yourself as required reviewer. Run `deploy.sh` by hand (default `PROVISION=1`) when a change touches service accounts, IAM or Scheduler jobs. To roll back, send traffic to the previous revision: `gcloud run services update-traffic fyd-web --region asia-southeast2 --to-revisions=<revision>=100`.
+
 ## Manual steps
 
 These have no API that works without upgrading to Identity Platform:

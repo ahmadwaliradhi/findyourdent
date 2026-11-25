@@ -3,11 +3,16 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main]
+    # Nothing here reaches production, so it neither needs CI nor a deploy.
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a run on main: it may be halfway through a deploy.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -90,3 +95,57 @@ jobs:
       # shellcheck is preinstalled on ubuntu-latest.
       - name: shellcheck
         run: git ls-files -z '*.sh' | xargs -0 --no-run-if-empty shellcheck
+
+  # Production deploy (ADR-0012). Only after every job above is green, only for a push
+  # to main, and only once someone approves the `production` environment. Authenticates
+  # with Workload Identity Federation (no keys) as fyd-deployer, which can build and
+  # deploy but not change IAM or Cloud Scheduler: PROVISION=0 skips those steps of
+  # infra/gcp/deploy.sh. Set up once with infra/gcp/setup-cicd.sh.
+  deploy:
+    name: Deploy to production (Cloud Run, Firebase)
+    needs: [web, agent, infra]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: production
+      url: https://findyourdent.com
+    permissions:
+      contents: read
+      id-token: write
+    # A newer push waits for a running deploy instead of cancelling it.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      PROJECT_ID: findyourdent
+      PROVISION: "0"
+      # smoke.sh mints the agent identity token as the deploy service account.
+      SMOKE_IMPERSONATE_SA: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # deploy.sh runs the Firebase CLI from apps/web.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      # The agent first: the web service reads its URL.
+      - name: Deploy agent
+        run: infra/gcp/deploy.sh agent
+
+      - name: Deploy web, rules, indexes, Hosting and smoke test
+        run: infra/gcp/deploy.sh web
