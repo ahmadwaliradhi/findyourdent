@@ -14,6 +14,7 @@ import { isProcedureCode, type ModerationRequest } from "@findyourdent/contracts
 import {
   type ClaimDoc,
   COLLECTIONS,
+  type PolicyViolationDoc,
   type ProcedureCode,
   type ProviderDoc,
   type ProviderOwnerFacts,
@@ -48,6 +49,11 @@ import {
   PROVIDER_TYPES,
 } from "~/lib/claims";
 import { normalizeName } from "~/lib/normalize-name";
+import {
+  type OwnerViolation,
+  VIOLATION_RESPONSE_MAX_CHARS,
+  type ViolationResponseResult,
+} from "~/lib/policy-violations";
 import { isValidRegion } from "~/lib/regions";
 import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
@@ -462,6 +468,95 @@ export async function saveReplyResponse(context: AppLoadContext, request: Reques
   return Response.json(ownerContentBody(language, "reply", status));
 }
 
+// Testimony Policy Violation cases -----------------------------------------------------
+
+const VIOLATION_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const iso = (timestamp: { toDate(): Date }) => timestamp.toDate().toISOString();
+
+/** The cases the Provider may see: notified or decided, newest first. Evidence never leaves this function. */
+async function violationsOf(firestore: Firestore, placeId: string): Promise<OwnerViolation[]> {
+  const snapshot = await firestore
+    .collection(COLLECTIONS.policyViolations)
+    .where("placeId", "==", placeId)
+    .where("status", "in", ["providerNotified", "confirmed", "dismissed"])
+    .get();
+  return snapshot.docs
+    .map((doc) => ({ id: doc.id, violation: doc.data() as PolicyViolationDoc }))
+    .sort((a, b) => b.violation.createdAt.toMillis() - a.violation.createdAt.toMillis())
+    .map(({ id, violation }) => ({
+      id,
+      status: violation.status as OwnerViolation["status"],
+      suspectedPeriod: violation.suspectedPeriod,
+      ...(violation.notifiedAt ? { notifiedAt: iso(violation.notifiedAt) } : {}),
+      ...(violation.responseDueAt ? { responseDueAt: iso(violation.responseDueAt) } : {}),
+      canRespond: violation.status === "providerNotified",
+      ...(violation.providerResponse
+        ? {
+            providerResponse: {
+              text: violation.providerResponse.text,
+              respondedAt: iso(violation.providerResponse.respondedAt),
+            },
+          }
+        : {}),
+      ...(violation.decisionReason ? { decisionReason: violation.decisionReason } : {}),
+    }));
+}
+
+/**
+ * POST /api/providers/:placeId/policy-violations/:violationId/response: the claimant's
+ * response to a notified case. Not moderated and not public: only admins read it. A later
+ * response replaces the earlier one while the case is still `providerNotified`.
+ */
+export async function saveViolationResponse(
+  context: AppLoadContext,
+  request: Request,
+  placeId: string | undefined,
+  violationId: string | undefined,
+) {
+  if (!isPlaceId(placeId) || !violationId || !VIOLATION_ID.test(violationId)) {
+    return errorResponse(request, 404, "not_found");
+  }
+  const gated = await gate(context, request);
+  if (gated instanceof Response) return gated;
+  const { firestore, user, language } = gated;
+
+  let text = "";
+  try {
+    const body: unknown = await request.json();
+    text = isRecord(body) ? trimmed(body.text) : "";
+  } catch {
+    text = "";
+  }
+  if (!text || text.length > VIOLATION_RESPONSE_MAX_CHARS) return errorResponse(request, 400, "invalid_response");
+
+  const ref = firestore.collection(COLLECTIONS.policyViolations).doc(violationId);
+  let respondedAt: Timestamp;
+  try {
+    respondedAt = await firestore.runTransaction(async (tx) => {
+      // Not the claimant of this place: 403 before anything about its cases is revealed.
+      if (!(await approvedClaimOf(firestore, placeId, user.uid, tx))) throw new ClaimRefusal(403, "not_owner");
+      const violation = (await tx.get(ref)).data() as PolicyViolationDoc | undefined;
+      // Another place's case looks the same as a missing one.
+      if (!violation || violation.placeId !== placeId) throw new ClaimRefusal(404, "not_found");
+      if (violation.status !== "providerNotified") throw new ClaimRefusal(409, "violation_closed");
+      const now = Timestamp.now();
+      tx.update(ref, { providerResponse: { text, respondedAt: now, responderUid: user.uid }, updatedAt: now });
+      return now;
+    });
+  } catch (error) {
+    return refusalResponse(request, error);
+  }
+
+  context.logger.info("violation_response", { outcome: "saved" });
+  const t = getI18n(language).getFixedT(language);
+  const body: ViolationResponseResult = {
+    status: "saved",
+    respondedAt: respondedAt.toDate().toISOString(),
+    message: t("claimApi.violationResponse.saved"),
+  };
+  return Response.json(body);
+}
+
 // The Claim page -------------------------------------------------------------------
 
 export interface OwnerTestimony {
@@ -487,6 +582,8 @@ export interface ClaimPageData {
     facts: OwnerFactsValues;
     factsStatus: "published" | "held" | "none";
     testimonies: OwnerTestimony[];
+    /** Cases on this place that the team has notified or decided; never the evidence. */
+    violations: OwnerViolation[];
   } | null;
 }
 
@@ -531,12 +628,15 @@ export async function loadClaimPage(
   const isOwner = provider && myClaim?.status === "approved" && provider.claimId === myClaim.claimId;
   if (!isOwner) return { ...base, myClaim, claimedByOther };
 
-  const published = await testimonies(firestore)
-    .where("placeId", "==", placeId)
-    .where("status", "==", "published")
-    .orderBy("publishedAt", "desc")
-    .limit(100)
-    .get();
+  const [published, cases] = await Promise.all([
+    testimonies(firestore)
+      .where("placeId", "==", placeId)
+      .where("status", "==", "published")
+      .orderBy("publishedAt", "desc")
+      .limit(100)
+      .get(),
+    violationsOf(firestore, placeId),
+  ]);
   // The owner edits their latest version: a held edit if there is one.
   const facts = provider.pendingOwnerFacts ?? provider.ownerFacts;
   return {
@@ -565,6 +665,7 @@ export async function loadClaimPage(
           ...(reply ? { reply: { text: reply.text, status: reply.status } } : {}),
         };
       }),
+      violations: cases,
     },
   };
 }

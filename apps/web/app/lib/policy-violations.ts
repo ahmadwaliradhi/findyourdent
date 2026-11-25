@@ -35,3 +35,38 @@ export function nextViolationStatus(
   }
   return TARGET[move];
 }
+
+/** The longest response a Provider may write to a case, in characters. */
+export const VIOLATION_RESPONSE_MAX_CHARS = 2000;
+
+/**
+ * A case as its Provider sees it on the owner pages. Nothing of the evidence is here
+ * (report ids, detection holds, notes, private files): detection rules stay secret
+ * (spec 09). `open` cases are not shown, the Provider has not been notified yet.
+ */
+export interface OwnerViolation {
+  id: string;
+  status: Exclude<PolicyViolationStatus, "open">;
+  /** Jakarta dates `YYYY-MM-DD`. */
+  suspectedPeriod: { from: string; to: string };
+  notifiedAt?: string;
+  /** End of the 7-day response window, ISO. */
+  responseDueAt?: string;
+  /** Only while the case is `providerNotified`. */
+  canRespond: boolean;
+  providerResponse?: { text: string; respondedAt: string };
+  /** The team's reason, once the case is confirmed or dismissed. */
+  decisionReason?: string;
+}
+
+/** POST /api/providers/:placeId/policy-violations/:violationId/response, JSON. A later response replaces the earlier one. */
+export interface ViolationResponseSubmission {
+  text: string;
+}
+
+/** 200 body of a saved response. */
+export interface ViolationResponseResult {
+  status: "saved";
+  respondedAt: string;
+  message: string;
+}
