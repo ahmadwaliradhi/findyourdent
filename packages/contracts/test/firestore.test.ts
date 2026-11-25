@@ -20,6 +20,7 @@ describe("Firestore model", () => {
         "counters",
         "moderationDecisions",
         "nameCorrections",
+        "policyViolations",
         "priceLists",
         "proofFingerprints",
         "providers",

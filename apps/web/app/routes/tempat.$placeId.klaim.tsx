@@ -26,9 +26,14 @@ import {
   PROVIDER_TYPES,
 } from "~/lib/claims";
 import { useFirebaseConfig } from "~/lib/firebase-config";
-import { formatVisitMonth } from "~/lib/format";
+import { formatDay, formatVisitMonth } from "~/lib/format";
 import { sendOwnerRequest as send } from "~/lib/owner-request";
 import { providerPath } from "~/lib/paths";
+import {
+  type OwnerViolation,
+  VIOLATION_RESPONSE_MAX_CHARS,
+  type ViolationResponseResult,
+} from "~/lib/policy-violations";
 import { SITE_NAME } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import { type ClaimPageData, loadClaimPage, type OwnerTestimony } from "~/server/claims.server";
@@ -367,6 +372,7 @@ function OwnerTools({ page }: { page: ClaimPageData }) {
     <Split
       main={
         <div className="flex flex-col gap-8">
+          {owner.violations.length > 0 && <ViolationCases placeId={page.placeId} cases={owner.violations} />}
           <OwnerFactsForm placeId={page.placeId} owner={owner} />
           <section aria-labelledby="replies-title" className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
@@ -406,6 +412,120 @@ function OwnerTools({ page }: { page: ClaimPageData }) {
         </Card>
       }
     />
+  );
+}
+
+const VIOLATION_BADGE = { providerNotified: "warning", confirmed: "danger", dismissed: "success" } as const;
+
+/** Testimony Policy Violation cases the team has notified or decided (spec 09 part 2). No evidence is ever shown. */
+function ViolationCases({ placeId, cases }: { placeId: string; cases: OwnerViolation[] }) {
+  const { t } = useTranslation();
+  return (
+    <section aria-labelledby="violations-title" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2 id="violations-title" className="text-[22px] leading-7 font-bold tracking-[-.01em]">
+          {t("claim.violation.title")}
+        </h2>
+        <p className="text-sm text-muted-foreground">{t("claim.violation.intro")}</p>
+      </div>
+      <ol className="flex flex-col gap-4">
+        {cases.map((violation) => (
+          <li key={violation.id}>
+            <ViolationCard placeId={placeId} violation={violation} />
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function ViolationCard({ placeId, violation }: { placeId: string; violation: OwnerViolation }) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.language as Language;
+  const firebase = useFirebaseConfig();
+  const revalidator = useRevalidator();
+  const id = useId();
+  const [text, setText] = useState(violation.providerResponse?.text ?? "");
+  const [state, setState] = useState<Sending>({ phase: "idle" });
+  const sending = state.phase === "sending";
+  const windowOver = violation.responseDueAt ? Date.parse(violation.responseDueAt) <= Date.now() : false;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setState({ phase: "sending" });
+    const result = await send(
+      firebase,
+      `/api/providers/${encodeURIComponent(placeId)}/policy-violations/${encodeURIComponent(violation.id)}/response`,
+      { text },
+    );
+    if (result.ok) {
+      setState({ phase: "done", message: (result.body as ViolationResponseResult).message });
+      await revalidator.revalidate();
+    } else {
+      setState({ phase: "error", message: result.message ?? t("claim.failed") });
+    }
+  };
+
+  return (
+    <Card labelledBy={`${id}-status`}>
+      <CardHeader>
+        <CardTitle id={`${id}-status`} className="flex flex-wrap items-center gap-2 text-base leading-6">
+          <Badge variant={VIOLATION_BADGE[violation.status]}>{t(`claim.violation.status.${violation.status}`)}</Badge>
+        </CardTitle>
+        <CardDescription>
+          {t("claim.violation.period", {
+            from: formatDay(violation.suspectedPeriod.from, language),
+            to: formatDay(violation.suspectedPeriod.to, language),
+          })}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {violation.canRespond && violation.responseDueAt && (
+          <p className="font-semibold">
+            {t("claim.violation.respondBy", { date: formatDay(violation.responseDueAt, language) })}
+          </p>
+        )}
+        {violation.canRespond && windowOver && <Notice tone="info">{t("claim.violation.windowOver")}</Notice>}
+        {violation.decisionReason && (
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm leading-5 font-semibold">{t("claim.violation.decision")}</h3>
+            <p className="whitespace-pre-line break-words">{violation.decisionReason}</p>
+          </div>
+        )}
+        {violation.providerResponse && !violation.canRespond && (
+          <div className="flex flex-col gap-1 border-l-2 border-secondary pl-3">
+            <h3 className="text-sm leading-5 font-semibold">
+              {t("claim.violation.yourResponse", {
+                date: formatDay(violation.providerResponse.respondedAt, language),
+              })}
+            </h3>
+            <p className="whitespace-pre-line break-words">{violation.providerResponse.text}</p>
+          </div>
+        )}
+        {violation.canRespond && (
+          <form onSubmit={submit} className="flex flex-col gap-2 border-l-2 border-secondary pl-3">
+            <label htmlFor={`${id}-response`} className="text-sm leading-5 font-semibold">
+              {violation.providerResponse ? t("claim.violation.responseEdit") : t("claim.violation.responseLabel")}
+            </label>
+            <Textarea
+              id={`${id}-response`}
+              required
+              maxLength={VIOLATION_RESPONSE_MAX_CHARS}
+              value={text}
+              disabled={sending}
+              onChange={(event) => setText(event.target.value)}
+              className="min-h-24"
+            />
+            <Button type="submit" size="sm" className="self-start" loading={sending} disabled={!text.trim()}>
+              {sending ? t("claim.sending") : t("claim.violation.send")}
+            </Button>
+            <div aria-live="polite" className="text-sm">
+              <Feedback state={state} />
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -94,3 +94,32 @@ export async function submittedBeforeDetectionWindow(firestore: Firestore, testi
     .doc(testimonyId)
     .update({ createdAt: new Date(Date.now() - DETECTION_LOOKBACK_MS - DAY_MS) });
 }
+
+/**
+ * Testimony texts no two of which are near-duplicates under D2 similarity (spec 09 part 2).
+ * For tests that post several Testimonies for one Provider through the API and are not
+ * about templates: the same text twice would be held.
+ */
+export const DISTINCT_TESTIMONY_TEXTS = [
+  "Dokternya sabar menjelaskan pilihan tambalan dan ruangannya bersih.",
+  "Antrean cukup lama, tapi perawatnya ramah dan biaya dijelaskan di awal.",
+  "Scaling di sini cepat; gusi saya tidak berdarah lagi setelah dua minggu.",
+  "Parkir sempit sekali. Untung resepsionis membantu mengatur jadwal ulang.",
+  "Anak saya takut ke dokter gigi, namun drg. yang menangani pandai membujuk.",
+  "Harga cabut geraham bungsu wajar, kontrol pascaoperasi pun gratis.",
+  "Kursi periksa nyaman, alat tampak steril, ada TV kecil di langit-langit.",
+  "Pemasangan behel rapi; tiap bulan kawat diganti tanpa biaya tambahan.",
+] as const;
+
+/** Each sentence alone, then each pair: 36 texts, none above 0.6 similar to another. */
+const DISTINCT_TEXTS: readonly string[] = [
+  ...DISTINCT_TESTIMONY_TEXTS,
+  ...DISTINCT_TESTIMONY_TEXTS.flatMap((first, i) =>
+    DISTINCT_TESTIMONY_TEXTS.slice(i + 1).map((second) => `${first} ${second}`),
+  ),
+];
+
+/** The nth distinct text, cycling after 36: keep a test's posts for one Provider below that. */
+export function distinctTestimonyText(n: number): string {
+  return DISTINCT_TEXTS[n % DISTINCT_TEXTS.length] as string;
+}

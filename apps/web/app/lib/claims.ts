@@ -76,6 +76,8 @@ export interface ClaimApiError {
     | "invalid_file"
     | "invalid_facts"
     | "invalid_reply"
+    | "invalid_response"
+    | "violation_closed"
     | "claim_exists"
     | "not_owner"
     | "not_found"

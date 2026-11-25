@@ -44,14 +44,17 @@ import {
   REASON_REQUIRED,
   TESTIMONY_ACTIONS,
   type TestimonyAction,
+  VIOLATION_ACTIONS,
+  type ViolationAction,
 } from "~/lib/admin-queue";
 import { normalizeName } from "~/lib/normalize-name";
 import { testimonyPath } from "~/lib/paths";
 import { testimonyPhotoUrl } from "~/lib/testimony-photos";
-import { type Acting, AdminRefusal, iso, logAction, queueItem } from "./admin-common.server.ts";
+import { type Acting, AdminRefusal, iso, logAction, queueItem, SUBJECT_ID } from "./admin-common.server.ts";
 import { type DetectionHold, loadDetectionViews } from "./admin-detection.server.ts";
 import { recordTestimonyTransition } from "./impact.server.ts";
 import { loadOwnerQueue, ownerAction } from "./owner-admin.server.ts";
+import { loadViolationQueue, parseOpenViolation, violationAction } from "./policy-violations.server.ts";
 import { storedReuseMatches } from "./proof-fingerprints.server.ts";
 import { proofAction, proofFileUrl } from "./proof-review.server.ts";
 import {
@@ -65,8 +68,6 @@ import {
 } from "./testimonies.server.ts";
 import { deleteTestimonyMedia } from "./testimony-media.server.ts";
 import { canTransition } from "./testimony-state.ts";
-
-const SUBJECT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 const col = (firestore: Firestore, name: keyof typeof COLLECTIONS) => firestore.collection(COLLECTIONS[name]);
 
@@ -181,6 +182,7 @@ export async function loadAdminQueue(
   nowMs = Date.now(),
 ): Promise<AdminQueueResponse> {
   const owner = loadOwnerQueue(context, firestore, nowMs);
+  const violations = loadViolationQueue(context, firestore, nowMs);
   const [held, hidden, revisions, reports, corrections, spotChecks, pendingProofs] = await Promise.all([
     col(firestore, "testimonies").where("status", "==", "held").get(),
     col(firestore, "testimonies").where("status", "==", "hidden").get(),
@@ -402,7 +404,7 @@ export async function loadAdminQueue(
   }
 
   const { items: ownerItems, approvedClaims } = await owner;
-  const resolved = [...(await Promise.all(items)), ...ownerItems];
+  const resolved = [...(await Promise.all(items)), ...ownerItems, ...(await violations)];
   const hiddenFirst = (i: QueueItem) => (i.testimony?.status === "hidden" ? 0 : 1);
   resolved.sort((a, b) => hiddenFirst(a) - hiddenFirst(b) || Date.parse(a.createdAt) - Date.parse(b.createdAt));
   return { items: resolved, approvedClaims };
@@ -425,17 +427,28 @@ const ACTIONS: ReadonlySet<string> = new Set<AdminActionRequest["action"]>([
   "dismissNameCorrection",
   "spotCheckConfirm",
   ...OWNER_ACTIONS,
+  ...VIOLATION_ACTIONS,
 ]);
 
 function parseAction(body: unknown): AdminActionRequest | null {
   if (!body || typeof body !== "object") return null;
-  const { action, subjectId, reason } = body as Record<string, unknown>;
+  const { action, subjectId, reason, violation } = body as Record<string, unknown>;
   if (typeof action !== "string" || !ACTIONS.has(action)) return null;
   if (typeof subjectId !== "string" || !SUBJECT_ID.test(subjectId)) return null;
   if (reason !== undefined && typeof reason !== "string") return null;
   const trimmed = reason?.trim() ?? "";
   if (trimmed.length > ADMIN_REASON_MAX_CHARS) return null;
-  return { action: action as AdminActionRequest["action"], subjectId, ...(trimmed ? { reason: trimmed } : {}) };
+  const request: AdminActionRequest = {
+    action: action as AdminActionRequest["action"],
+    subjectId,
+    ...(trimmed ? { reason: trimmed } : {}),
+  };
+  if (action === "openViolation") {
+    const input = parseOpenViolation(violation);
+    if (!input) return null;
+    request.violation = input;
+  }
+  return request;
 }
 
 /** GET /admin/api/queue. */
@@ -460,6 +473,7 @@ export async function adminActionResponse(context: AppLoadContext, request: Requ
   if (REASON_REQUIRED.has(parsed.action) && !parsed.reason) return errorResponse(request, 400, "reason_required");
 
   const acting: Acting = { firestore, admin, request: parsed, actionRef: col(firestore, "adminActions").doc() };
+  let violationId: string | undefined;
   try {
     switch (parsed.action) {
       case "dismissReport":
@@ -485,6 +499,12 @@ export async function adminActionResponse(context: AppLoadContext, request: Requ
       case "rejectReply":
         await ownerAction(context, acting, parsed.action);
         break;
+      case "openViolation":
+      case "notifyViolation":
+      case "confirmViolation":
+      case "dismissViolation":
+        violationId = (await violationAction(acting, parsed.action as ViolationAction)).violationId;
+        break;
       default: {
         const orphaned = await testimonyAction(context, acting, parsed.action);
         if (context.uploads) await deleteTestimonyMedia(context.uploads, orphaned);
@@ -496,7 +516,11 @@ export async function adminActionResponse(context: AppLoadContext, request: Requ
   }
 
   context.logger.info("admin_action", { action: parsed.action });
-  const body: AdminActionResponse = { ok: true, actionId: acting.actionRef.id };
+  const body: AdminActionResponse = {
+    ok: true,
+    actionId: acting.actionRef.id,
+    ...(parsed.action === "openViolation" && violationId ? { violationId } : {}),
+  };
   return Response.json(body);
 }
 

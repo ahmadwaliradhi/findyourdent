@@ -187,7 +187,8 @@
         "claim": "Page claim",
         "ownerFacts": "Owner details held",
         "reply": "Reply held",
-        "proofReview": "Proof of visit"
+        "proofReview": "Proof of visit",
+        "policyViolation": "Suspected policy violation case"
       },
       "status": {
         "submitted": "Being checked",
@@ -218,6 +219,9 @@
       "detection": {
         "title": "Detection",
         "velocity": "many Testimonies for this Provider in a short time",
+        "similarity": "near-copy of another Testimony for this Provider",
+        "similar": "Most similar Testimony",
+        "score": "{{value}}% similar",
         "author": "Author of this Testimony",
         "linked_one": "{{count}} other Testimony for this Provider in the detection window",
         "linked_other": "{{count}} other Testimonies for this Provider in the detection window",
@@ -247,7 +251,11 @@
         "publishReply": "Publish reply",
         "rejectReply": "Reject reply",
         "acceptProof": "Accept proof",
-        "rejectProof": "Reject proof"
+        "rejectProof": "Reject proof",
+        "openViolation": "Open case",
+        "notifyViolation": "Mark as notified",
+        "confirmViolation": "Confirm violation",
+        "dismissViolation": "Close without violation"
       },
       "reasonFor": "Reason for \"{{action}}\" (logged; the author sees it except for hide)",
       "logged": "Every action is logged with the admin, time and reason.",
@@ -296,6 +304,39 @@
           "gone": "The Testimony with the matching receipt no longer exists, it was probably deleted."
         },
         "expiryHint": "A proof not decided within 7 days is rejected automatically and its file deleted. The rejection reason is shown to the author."
+      },
+      "violation": {
+        "provider": "Provider",
+        "claimed": "claimed",
+        "unclaimed": "not claimed",
+        "status": "Status",
+        "statusValue": {
+          "open": "Open",
+          "providerNotified": "Provider notified"
+        },
+        "period": "Suspected period",
+        "evidence": "Evidence",
+        "reports": "Reports: {{count}}",
+        "holds": "Testimonies held by detection: {{count}}",
+        "privateFiles": "Private evidence files: {{count}}",
+        "phoneHint": "This Provider is not claimed. Phone the number on Google, then record the contact in the reason.",
+        "notifiedVia": "Notified via",
+        "via": {
+          "ownerPages": "owner pages",
+          "phone": "phone"
+        },
+        "responseDue": "Response due",
+        "windowOver": "over",
+        "windowOpen": "still running",
+        "response": "Provider's response",
+        "noResponse": "No response yet.",
+        "phoneReasonLabel": "Record the phone contact (who, when, what was said)",
+        "confirmWait": "Can be confirmed once the response window is over.",
+        "open": "Open a suspected violation case",
+        "openTitle": "New suspected violation case",
+        "periodFrom": "From",
+        "periodTo": "To",
+        "notes": "Notes (optional)"
       }
     }
   },
@@ -868,6 +909,8 @@
       "invalid_file": "Upload one photo or PDF of your SIP or practice permit, up to 10 MB.",
       "invalid_facts": "Some practice details need fixing. Check the name, type, region, phone numbers and services.",
       "invalid_reply": "Write a reply of up to 2,000 characters.",
+      "invalid_response": "Write a response, at most 2,000 characters.",
+      "violation_closed": "The FindYourDent team has already decided this case, so the response can no longer be changed.",
       "claim_exists": "This page is already claimed, or another claim is being checked.",
       "not_owner": "Only the owner with an approved claim can do this.",
       "not_found": "This page or Testimony was not found.",
@@ -878,12 +921,32 @@
       "published": "Your practice details are live.",
       "held": "Your practice details are being reviewed by the FindYourDent team, usually within 24 hours. Until then the page shows the previous details."
     },
+    "violationResponse": {
+      "saved": "Your response is saved. The FindYourDent team reads it before deciding."
+    },
     "reply": {
       "published": "Your reply is live under the Testimony.",
       "held": "Your reply is being reviewed by the FindYourDent team, usually within 24 hours."
     }
   },
   "claim": {
+    "violation": {
+      "title": "Suspected testimony policy violation cases",
+      "intro": "The FindYourDent team suspects some Testimonies were written in return for a reward, or only by selected Patients. You have 7 days to respond. After that the team decides and writes its reason here. Only the team reads your response; it is not shown on the public page.",
+      "status": {
+        "providerNotified": "Waiting for your response",
+        "confirmed": "Confirmed",
+        "dismissed": "Closed, not confirmed"
+      },
+      "period": "Suspected between {{from}} and {{to}}",
+      "respondBy": "Respond before {{date}}",
+      "windowOver": "The response window is over. The team will decide soon, and your response is still read until the case is decided.",
+      "responseLabel": "Your response",
+      "responseEdit": "Edit your response",
+      "send": "Send response",
+      "yourResponse": "Your response ({{date}})",
+      "decision": "The team's decision"
+    },
     "title": "Claim this page",
     "manageTitle": "Manage your practice page",
     "back": "Back to the practice page",

@@ -48,10 +48,12 @@ import {
   PROVIDER_TYPES,
 } from "~/lib/claims";
 import { normalizeName } from "~/lib/normalize-name";
+import type { OwnerViolation } from "~/lib/policy-violations";
 import { isValidRegion } from "~/lib/regions";
 import { readSession, type SignedInUser } from "../../server/auth.ts";
 import type { Bucket } from "../../server/firebase.ts";
 import { flattenOwnerFacts, moderateOwnerContent, ownerDecisionDoc } from "./owner-moderation.server.ts";
+import { violationsOf } from "./policy-violations-owner.server.ts";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
 import { isPlaceId } from "./provider.server.ts";
 import { regionValue } from "./testimonies.server.ts";
@@ -75,7 +77,7 @@ export type OwnerFactsValues = Pick<
 
 type ErrorCode = Exclude<ClaimApiError["error"], "app_check_required" | "rate_limited">;
 
-class ClaimRefusal extends Error {
+export class ClaimRefusal extends Error {
   readonly status: number;
   readonly code: ErrorCode;
 
@@ -86,14 +88,14 @@ class ClaimRefusal extends Error {
   }
 }
 
-async function errorResponse(request: Request, status: number, error: ErrorCode): Promise<Response> {
+export async function errorResponse(request: Request, status: number, error: ErrorCode): Promise<Response> {
   const language = await detectLanguage(request);
   const message = getI18n(language).getFixedT(language)(`claimApi.errors.${error}`);
   const body: ClaimApiError = { error, message };
   return Response.json(body, { status });
 }
 
-async function refusalResponse(request: Request, error: unknown): Promise<Response> {
+export async function refusalResponse(request: Request, error: unknown): Promise<Response> {
   if (!(error instanceof ClaimRefusal)) throw error;
   return errorResponse(request, error.status, error.code);
 }
@@ -105,10 +107,10 @@ const testimonies = (firestore: Firestore) => firestore.collection(COLLECTIONS.t
 export const activeClaimsOf = (firestore: Firestore, placeId: string) =>
   claims(firestore).where("placeId", "==", placeId).where("status", "in", ["submitted", "approved"]);
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const trimmed = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+export const trimmed = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
 function parseRegion(value: unknown): RegionRef | null {
   if (!isRecord(value)) return null;
@@ -120,7 +122,7 @@ function parseRegion(value: unknown): RegionRef | null {
 }
 
 /** Signed in first (so the claimant learns to sign in), then App Check and the per-account limit. */
-async function gate(
+export async function gate(
   context: AppLoadContext,
   request: Request,
 ): Promise<{ firestore: Firestore; uploads: Bucket; user: SignedInUser; language: Language } | Response> {
@@ -149,6 +151,21 @@ export async function approvedClaimOf(
   if (!provider.exists || provider.get("claimStatus") !== "claimed" || !claimId) return null;
   const claim = (await read(claims(firestore).doc(claimId))).data() as ClaimDoc | undefined;
   return claim?.status === "approved" && claim.claimantUid === uid ? { claimId, provider } : null;
+}
+
+/**
+ * True when the Claim named by a Provider's `claimId` is approved. Reads the Claim itself,
+ * not the Provider's `claimStatus` mirror, so it agrees with `approvedClaimOf`.
+ */
+export async function hasApprovedClaim(
+  firestore: Firestore,
+  claimId: string | undefined,
+  tx?: Transaction,
+): Promise<boolean> {
+  if (!claimId) return false;
+  const ref = claims(firestore).doc(claimId);
+  const claim = (await (tx ? tx.get(ref) : ref.get())).data() as ClaimDoc | undefined;
+  return claim?.status === "approved";
 }
 
 // Submitting a Claim ---------------------------------------------------------------
@@ -487,6 +504,8 @@ export interface ClaimPageData {
     facts: OwnerFactsValues;
     factsStatus: "published" | "held" | "none";
     testimonies: OwnerTestimony[];
+    /** Cases on this place that the team has notified or decided; never the evidence. */
+    violations: OwnerViolation[];
   } | null;
 }
 
@@ -531,12 +550,15 @@ export async function loadClaimPage(
   const isOwner = provider && myClaim?.status === "approved" && provider.claimId === myClaim.claimId;
   if (!isOwner) return { ...base, myClaim, claimedByOther };
 
-  const published = await testimonies(firestore)
-    .where("placeId", "==", placeId)
-    .where("status", "==", "published")
-    .orderBy("publishedAt", "desc")
-    .limit(100)
-    .get();
+  const [published, cases] = await Promise.all([
+    testimonies(firestore)
+      .where("placeId", "==", placeId)
+      .where("status", "==", "published")
+      .orderBy("publishedAt", "desc")
+      .limit(100)
+      .get(),
+    violationsOf(firestore, placeId),
+  ]);
   // The owner edits their latest version: a held edit if there is one.
   const facts = provider.pendingOwnerFacts ?? provider.ownerFacts;
   return {
@@ -565,6 +587,7 @@ export async function loadClaimPage(
           ...(reply ? { reply: { text: reply.text, status: reply.status } } : {}),
         };
       }),
+      violations: cases,
     },
   };
 }
