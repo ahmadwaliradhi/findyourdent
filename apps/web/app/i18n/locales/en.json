@@ -1531,5 +1531,12 @@
         ]
       }
     ]
+  },
+  "violation": {
+    "badge": "Testimony policy violation",
+    "until": "until {{date}}",
+    "explanation": "The FindYourDent team found that this clinic offered something in exchange for Testimonies or asked only selected Patients to write one. Testimonies from that period do not count toward the score.",
+    "learnMore": "How we verify Testimonies",
+    "excluded": "Not counted: testimony policy violation period"
   }
 }

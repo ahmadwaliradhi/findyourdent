@@ -75,6 +75,7 @@ describe("GET /api/feed", () => {
           procedureCode: "root_canal_treatment",
           pricePaidRupiah: 2_500_000,
           verifiedVisit: true,
+          excludedByViolation: false,
           displayName: "Sari W.",
         },
       ],

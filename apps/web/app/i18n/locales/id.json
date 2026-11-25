@@ -1531,5 +1531,12 @@
         ]
       }
     ]
+  },
+  "violation": {
+    "badge": "Pelanggaran kebijakan testimoni",
+    "until": "hingga {{date}}",
+    "explanation": "Tim FindYourDent menemukan bahwa klinik ini menawarkan imbalan untuk testimoni atau hanya meminta pasien tertentu menulis testimoni. Testimoni dari periode tersebut tidak dihitung dalam skor.",
+    "learnMore": "Cara kami memverifikasi testimoni",
+    "excluded": "Tidak dihitung: periode pelanggaran kebijakan testimoni"
   }
 }

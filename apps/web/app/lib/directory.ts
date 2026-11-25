@@ -25,6 +25,8 @@ export interface DirectoryRow {
   testimonyCount: number;
   verifiedVisitCount: number;
   claimed: boolean;
+  /** ISO end of a confirmed Testimony Policy Violation badge still showing; null otherwise. */
+  violationBadgeUntil: string | null;
   /**
    * Shrunk aspect score over Proven Testimonies (lib/scores.ts); null while `averages` is
    * null (below three Proven Testimonies). The score sort places such a row at the prior mean.

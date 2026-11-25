@@ -15,6 +15,7 @@ REPOSITORY="${REPOSITORY:-findyourdent}"
 WEB_SERVICE=fyd-web
 COORDINATES_JOB=coordinates-refresh
 PROOF_EXPIRY_JOB=proof-expiry
+VIOLATION_BADGE_JOB=violation-badge-expiry
 RECOMPUTE_JOB=aggregates-recompute
 AGENT_SERVICE=fyd-agent
 WEB_SA="fyd-web@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -329,6 +330,31 @@ if [[ "$PROVISION" == 1 ]]; then
     --oauth-service-account-email="$SCHEDULER_SA" \
     --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
   echo "    ${PROOF_EXPIRY_JOB}: 30 3 * * * (Asia/Jakarta)"
+fi
+
+# Violation badge end (spec 09 part 2): six months after a Testimony Policy Violation case
+# is confirmed the public badge is removed and the Provider's aggregates recomputed
+# (apps/web/server/violation-badge-expiry.ts). Daily at 03:45, after the proof expiry.
+log "Violation badge expiry job"
+gcloud run jobs deploy "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --region "$REGION" \
+  --image "$IMAGE" --service-account "$WEB_SA" \
+  --command=node --args=end-violation-badges.ts \
+  --tasks=1 --max-retries=1 --task-timeout=10m --cpu=1 --memory=512Mi \
+  --set-env-vars="FIREBASE_ENABLED=true,GCLOUD_PROJECT=${PROJECT_ID}" \
+  --quiet >/dev/null
+if [[ "$PROVISION" == 1 ]]; then
+  gcloud run jobs add-iam-policy-binding "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --region "$REGION" \
+    --member="serviceAccount:${SCHEDULER_SA}" --role=roles/run.invoker >/dev/null
+  verb=create
+  if gcloud scheduler jobs describe "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --location "$REGION" >/dev/null 2>&1; then
+    verb=update
+  fi
+  gcloud scheduler jobs "$verb" http "$VIOLATION_BADGE_JOB" --project "$PROJECT_ID" --location "$REGION" \
+    --schedule="45 3 * * *" --time-zone=Asia/Jakarta --http-method=POST \
+    --uri="https://run.googleapis.com/v2/projects/${PROJECT_ID}/locations/${REGION}/jobs/${VIOLATION_BADGE_JOB}:run" \
+    --oauth-service-account-email="$SCHEDULER_SA" \
+    --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform >/dev/null
+  echo "    ${VIOLATION_BADGE_JOB}: 45 3 * * * (Asia/Jakarta)"
 fi
 
 # Aggregates recompute (spec 09, ADR-0011): a one-off Cloud Run Job on the web image

@@ -8,6 +8,7 @@ import { NotEnoughProven } from "~/components/proof-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { fieldClassName } from "~/components/ui/field";
+import { ViolationBadge } from "~/components/violation-badge";
 import { getI18n, isLanguage, type Language } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
 import {
@@ -310,6 +311,7 @@ function DirectoryRowItem({ row, distance }: { row: DirectoryRow; distance: stri
               {t("directory.claimed")}
             </Badge>
           )}
+          {row.violationBadgeUntil && <ViolationBadge until={row.violationBadgeUntil} />}
         </div>
 
         <p className="text-sm text-muted-foreground">{regionLabel(row.region)}</p>

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
+import { ExcludedLabel } from "~/components/violation-badge";
 import { TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
 
 /**
@@ -31,5 +32,21 @@ export function NotEnoughProven({ count, className }: { count: number; className
       <span className="font-semibold">{t("proof.notEnough")}</span>
       <span className="text-muted-foreground"> · {t("proof.provenCount", { count })}</span>
     </p>
+  );
+}
+
+/** A published Testimony's labels: its proof label, and the exclusion label when a confirmed violation covers it. */
+export function TestimonyLabels({
+  verifiedVisit,
+  excludedByViolation,
+}: {
+  verifiedVisit: boolean;
+  excludedByViolation: boolean;
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <ProofLabel verifiedVisit={verifiedVisit} />
+      <ExcludedLabel excluded={excludedByViolation} />
+    </span>
   );
 }

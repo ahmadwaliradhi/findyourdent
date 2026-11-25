@@ -13,7 +13,7 @@ import {
 import { MIN_PROVEN_FOR_SCORE } from "../lib/scores.ts";
 
 export type AggregateInput = Pick<TestimonyContent, "ratings" | "procedureCode" | "pricePaidRupiah" | "paymentMethod"> &
-  Pick<TestimonyDoc, "verifiedVisit">;
+  Pick<TestimonyDoc, "verifiedVisit" | "excludedByViolation">;
 
 const twoDecimals = (value: number) => Math.round(value * 100) / 100;
 
@@ -25,7 +25,7 @@ function median(sorted: readonly number[]): number {
 
 /**
  * Aggregates over the published Testimonies of one Provider: every one is counted, but
- * only Proven Testimonies move the averages and price stats, and the averages stay null
+ * only Proven Testimonies not excluded by a violation move the averages and price stats, and the averages stay null
  * below MIN_PROVEN_FOR_SCORE of them.
  */
 export function computeAggregates(published: readonly AggregateInput[]): ProviderAggregates {
@@ -40,7 +40,8 @@ export function computeAggregates(published: readonly AggregateInput[]): Provide
       paymentMethodCounts.asuransi += 1;
       paymentMethodCounts.insurers[payment.insurer] = (paymentMethodCounts.insurers[payment.insurer] ?? 0) + 1;
     }
-    if (!testimony.verifiedVisit) continue;
+    // Excluded by a confirmed violation (spec 09 part 2): counted above, never Proven below.
+    if (!testimony.verifiedVisit || testimony.excludedByViolation) continue;
     verifiedVisitCount += 1;
     sum.service += testimony.ratings.service;
     sum.hygiene += testimony.ratings.hygiene;

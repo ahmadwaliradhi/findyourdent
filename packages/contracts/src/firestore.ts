@@ -183,6 +183,13 @@ export interface ProviderDoc {
   /** An edit Moderation held for the admin; `ownerFacts` stays live until it is decided. */
   pendingOwnerFacts?: ProviderOwnerFacts;
   aggregates: ProviderAggregates;
+  /**
+   * A confirmed Testimony Policy Violation (spec 09 part 2): the public "Pelanggaran
+   * kebijakan testimoni" badge, shown on the Provider page and directory row while
+   * `badgeUntil` is in the future. Set when the case is confirmed; removed by the badge
+   * expiry job, which also recomputes the aggregates (the exclusion stays).
+   */
+  violationBadge?: { violationId: string; badgeUntil: Timestamp };
   /** What made it a Listed Provider. */
   listedBy: "testimony" | "claim";
   createdAt: Timestamp;
@@ -312,6 +319,12 @@ export interface TestimonyDoc extends TestimonyContent {
     moderationDecisionId?: string;
   };
   reply?: TestimonyReply;
+  /**
+   * The confirmed Testimony Policy Violation whose suspected period this Testimony was
+   * published in (spec 09 part 2). It is left out of the aggregates (no average, no price
+   * stat, no Proven count) for good, but stays readable and labelled. Never cleared.
+   */
+  excludedByViolation?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   publishedAt?: Timestamp;
@@ -514,8 +527,8 @@ export type PolicyViolationStatus = "open" | "providerNotified" | "confirmed" | 
 
 /**
  * A Testimony Policy Violation case on a Provider (spec 09 part 2): suspected incentives
- * for Testimonies or asking only selected Patients to write one. Admin only; nothing
- * here is public until a later issue adds the badge. `open` -> `providerNotified` ->
+ * for Testimonies or asking only selected Patients to write one. Admin only, except the
+ * badge a `confirmed` case puts on the Provider (`ProviderDoc.violationBadge`). `open` -> `providerNotified` ->
  * `confirmed` | `dismissed` (an admin may also dismiss from `open`); every move is
  * logged in `adminActions` with a reason. One `open` or `providerNotified` case per place.
  */
@@ -549,6 +562,12 @@ export interface PolicyViolationDoc {
   /** Admin uid who confirmed or dismissed. */
   decidedBy?: Uid;
   decidedAt?: Timestamp;
+  /** On `confirmed`: `decidedAt` + 6 calendar months, the end of the public badge. */
+  badgeUntil?: Timestamp;
+  /** Testimony ids marked `excludedByViolation` on confirm. */
+  excludedTestimonyIds?: string[];
+  /** When the badge expiry job removed the badge and recomputed the aggregates. */
+  badgeEndedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

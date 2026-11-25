@@ -62,6 +62,7 @@ import {
   placeEssentialsFor,
   publishedOf,
   regionValue,
+  runningViolationBadge,
   storedPhotoPaths,
   writeProviderOnPublish,
   writeProviderOnUnpublish,
@@ -567,6 +568,10 @@ async function testimonyAction(context: AppLoadContext, acting: Acting, action: 
     const publicChanges = from === "published" || to === "published";
     const provider = publicChanges ? await tx.get(col(firestore, "providers").doc(testimony.placeId)) : null;
     const published = publicChanges ? await tx.get(publishedOf(firestore, testimony.placeId)) : null;
+    const violationBadge =
+      to === "published" && provider && !provider.exists
+        ? await runningViolationBadge(tx, firestore, testimony.placeId)
+        : undefined;
     const resolution = to === "published" ? "kept" : to === "removed" ? "removed" : null;
     const openReports = resolution ? await tx.get(openReportsOf(firestore, ref.id)) : null;
     // Any decision on the Testimony settles its open spot check too.
@@ -588,7 +593,7 @@ async function testimonyAction(context: AppLoadContext, acting: Acting, action: 
         testimonyId: ref.id,
         self: testimony,
         proposal: testimony.proposedProviderName
-          ? { name: testimony.proposedProviderName, region: testimony.region, essentials }
+          ? { name: testimony.proposedProviderName, region: testimony.region, essentials, violationBadge }
           : null,
       });
       update.region = regionValue(region);
@@ -651,7 +656,7 @@ async function revisionAction(
       provider,
       published,
       testimonyId: ref.id,
-      self: { ...content, verifiedVisit: testimony.verifiedVisit },
+      self: { ...content, verifiedVisit: testimony.verifiedVisit, excludedByViolation: testimony.excludedByViolation },
       proposal: null,
     });
     tx.update(ref, {

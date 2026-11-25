@@ -105,4 +105,22 @@ describe("computeAggregates", () => {
       consultation: { count: 1, medianRupiah: 0, minRupiah: 0, maxRupiah: 0 },
     });
   });
+  it("leaves a Testimony excluded by a violation out of Proven counts, averages and prices, but still counts it", () => {
+    const priced = (service: number, excludedByViolation?: string) => ({
+      ratings: ratings(service, service, service),
+      verifiedVisit: true,
+      procedureCode: "scaling",
+      pricePaidRupiah: service * 100_000,
+      paymentMethod: { method: "bpjs" as const },
+      ...(excludedByViolation ? { excludedByViolation } : {}),
+    });
+    const aggregates = computeAggregates([priced(5), priced(4), priced(3), priced(1, "v1"), priced(2, "v1")]);
+    expect(aggregates.testimonyCount).toBe(5);
+    expect(aggregates.verifiedVisitCount).toBe(3);
+    expect(aggregates.averages).toEqual({ service: 4, hygiene: 4, materialsEquipment: 4 });
+    expect(aggregates.procedurePrices).toEqual({
+      scaling: { count: 3, medianRupiah: 400_000, minRupiah: 300_000, maxRupiah: 500_000 },
+    });
+    expect(aggregates.paymentMethodCounts?.bpjs).toBe(5);
+  });
 });

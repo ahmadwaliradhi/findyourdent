@@ -25,6 +25,7 @@ import {
   authorFixCounterId,
   COLLECTIONS,
   type ModerationDecisionDoc,
+  type PolicyViolationDoc,
   type ProofOfVisitExtracted,
   type ProofOfVisitRecord,
   type ProviderDoc,
@@ -439,6 +440,36 @@ export interface ProviderProposal {
   name: string;
   region: RegionRef;
   essentials: PlaceEssentials;
+  /** A confirmed violation's badge still running at the place (`runningViolationBadge`). */
+  violationBadge?: ProviderDoc["violationBadge"];
+}
+
+/**
+ * The badge of a confirmed Testimony Policy Violation still running at a place, read for
+ * a Provider a publish is about to create (issue #138): a case may be confirmed while the
+ * place has no Provider document yet. Only the published-and-not-Listed path calls it, so
+ * an equality-only query, served without a composite index.
+ */
+export async function runningViolationBadge(
+  tx: Transaction,
+  firestore: Firestore,
+  placeId: string,
+  nowMs: number = Date.now(),
+): Promise<ProviderDoc["violationBadge"]> {
+  const confirmed = await tx.get(
+    firestore
+      .collection(COLLECTIONS.policyViolations)
+      .where("placeId", "==", placeId)
+      .where("status", "==", "confirmed"),
+  );
+  let running: ProviderDoc["violationBadge"];
+  for (const doc of confirmed.docs) {
+    const { badgeUntil } = doc.data() as PolicyViolationDoc;
+    if (!badgeUntil || badgeUntil.toMillis() <= nowMs) continue;
+    if (!running || badgeUntil.toMillis() > running.badgeUntil.toMillis())
+      running = { violationId: doc.id, badgeUntil };
+  }
+  return running;
 }
 
 /** The inferred type of a new Listed Provider: the typed name and Google's types (spec 02). */
@@ -446,12 +477,20 @@ export function proposedProviderType(name: string, essentials: PlaceEssentials):
   return inferProviderType({ displayName: name, types: essentials.types });
 }
 
-/** Aggregates over a place's published Testimonies read in the transaction, with one replaced or left out. */
+/**
+ * Aggregates over a place's published Testimonies read in the transaction, with one replaced or left out.
+ * A replaced one keeps its stored `excludedByViolation` mark (issue #138): callers build `self` from
+ * the edited content, which never carries it.
+ */
 function aggregatesWith(published: QuerySnapshot, testimonyId: string, self: AggregateInput | null) {
-  const list: AggregateInput[] = published.docs
-    .filter((doc) => doc.id !== testimonyId)
-    .map((doc) => doc.data() as TestimonyDoc);
-  if (self) list.push(self);
+  let storedMark: string | undefined;
+  const list: AggregateInput[] = [];
+  for (const doc of published.docs) {
+    const data = doc.data() as TestimonyDoc;
+    if (doc.id === testimonyId) storedMark = data.excludedByViolation;
+    else list.push(data);
+  }
+  if (self) list.push({ ...self, excludedByViolation: self.excludedByViolation ?? storedMark });
   return computeAggregates(list);
 }
 
@@ -495,6 +534,7 @@ export function writeProviderOnPublish(
     providerTypeSource: "inferred",
     claimStatus: "unclaimed",
     aggregates,
+    ...(proposal.violationBadge ? { violationBadge: proposal.violationBadge } : {}),
     listedBy: "testimony",
     createdAt: now,
     updatedAt: now,
@@ -676,6 +716,8 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         const status = detected.length > 0 ? "held" : statusForDecision(moderatedDecision);
         const provider = await tx.get(providers(firestore).doc(value.placeId));
         const published = status === "published" ? await tx.get(publishedOf(firestore, value.placeId)) : null;
+        const violationBadge =
+          published && !provider.exists ? await runningViolationBadge(tx, firestore, value.placeId) : undefined;
         const ids = { testimonyId: ref.id, placeId: value.placeId };
         const reused = sent ? await proofReused(tx, firestore, sent, ids) : false;
 
@@ -704,7 +746,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
             published,
             testimonyId: ref.id,
             self: { ...content, verifiedVisit },
-            proposal: proposedProviderName ? { name: proposedProviderName, region, essentials } : null,
+            proposal: proposedProviderName ? { name: proposedProviderName, region, essentials, violationBadge } : null,
           }));
           proposedProviderName = undefined;
         }
@@ -947,6 +989,8 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
         const provider = await tx.get(providers(firestore).doc(before.placeId));
         const publicChanges = becomesPublished || (editingPublished && status === "published");
         const published = publicChanges ? await tx.get(publishedOf(firestore, before.placeId)) : null;
+        const violationBadge =
+          published && !provider.exists ? await runningViolationBadge(tx, firestore, before.placeId) : undefined;
         // A detection hold still waiting for the admin keeps its triggers on the new decision
         // (spec 09 part 2); once an admin has decided it, they are not carried.
         const heldDecision =
@@ -1022,8 +1066,8 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
               provider,
               published,
               testimonyId,
-              self: { ...content, verifiedVisit },
-              proposal: proposedName ? { name: proposedName, region, essentials } : null,
+              self: { ...content, verifiedVisit, excludedByViolation: before.excludedByViolation },
+              proposal: proposedName ? { name: proposedName, region, essentials, violationBadge } : null,
             }));
             update.proposedProviderName = FieldValue.delete();
             if (!editingPublished) update.publishedAt = now;
