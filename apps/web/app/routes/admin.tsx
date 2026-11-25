@@ -33,6 +33,7 @@ import { procedureLabel } from "~/lib/procedures";
 import { regionLabel } from "~/lib/regions";
 import { testimonyStatusBadge } from "~/lib/testimony-status";
 import { loadAdminQueue } from "~/server/admin-queue.server";
+import { SIMILARITY_THRESHOLD } from "~/server/detection";
 import type { Route } from "./+types/admin";
 
 export function meta({ matches }: Route.MetaArgs) {
@@ -251,7 +252,10 @@ function ModerationLine({ moderation }: { moderation: QueueModeration | null }) 
 }
 
 /** What each detection rule code means to the admin. */
-const DETECTION_RULE: Record<DetectionRuleCode, "velocity"> = { D1: "velocity" };
+const DETECTION_RULE: Record<DetectionRuleCode, "velocity" | "similarity"> = { D1: "velocity", D2: "similarity" };
+
+/** A D2 similarity score as a whole percentage. */
+const percent = (similarity: number) => Math.round(similarity * 100);
 
 /** Admin only: the Provider's other Testimonies behind a detection hold, and who wrote them. */
 function DetectionView({ detection }: { detection: QueueDetection }) {
@@ -274,6 +278,25 @@ function DetectionView({ detection }: { detection: QueueDetection }) {
         <span className="text-muted-foreground">{t("admin.queue.detection.author")}:</span>{" "}
         <strong>{accountState(detection.authorWroteAboutOtherProviders)}</strong>
       </p>
+      {detection.similar && (
+        <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted p-2">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-muted-foreground">{t("admin.queue.detection.similar")}:</span>
+            <strong className="break-words">{detection.similar.displayName}</strong>
+            <Badge {...testimonyStatusBadge(detection.similar.status)}>
+              {t(`admin.queue.status.${detection.similar.status}`)}
+            </Badge>
+            <span className="text-muted-foreground">{formatTime(detection.similar.createdAt, language)}</span>
+            <Badge variant={detection.similar.similarity >= SIMILARITY_THRESHOLD ? "danger" : "outline"}>
+              {t("admin.queue.detection.score", { value: percent(detection.similar.similarity) })}
+            </Badge>
+          </span>
+          <span className={detection.similar.wroteAboutOtherProviders ? "" : "font-semibold text-destructive"}>
+            {accountState(detection.similar.wroteAboutOtherProviders)}
+          </span>
+          <span className="whitespace-pre-line break-words text-muted-foreground">{detection.similar.textPreview}</span>
+        </div>
+      )}
       <p className="text-muted-foreground">{t("admin.queue.detection.linked", { count: detection.linked.length })}</p>
       <ol className="flex flex-col gap-2">
         {detection.linked.map((linked) => (
@@ -283,6 +306,7 @@ function DetectionView({ detection }: { detection: QueueDetection }) {
               <Badge {...testimonyStatusBadge(linked.status)}>{t(`admin.queue.status.${linked.status}`)}</Badge>
               <span className="text-muted-foreground">{formatTime(linked.createdAt, language)}</span>
               {linked.withinDay && <Badge variant="outline">{t("admin.queue.detection.withinDay")}</Badge>}
+              <Badge variant="outline">{t("admin.queue.detection.score", { value: percent(linked.similarity) })}</Badge>
             </span>
             <span className={linked.wroteAboutOtherProviders ? "" : "font-semibold text-destructive"}>
               {accountState(linked.wroteAboutOtherProviders)}

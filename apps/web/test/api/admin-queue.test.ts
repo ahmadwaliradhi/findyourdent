@@ -14,6 +14,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AdminActionRequest, AdminQueueResponse } from "../../app/lib/admin-queue.ts";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
 import type { TestimonyStoredResponse, TestimonySubmission } from "../../app/lib/testimony.ts";
+import { distinctTestimonyText } from "../support/fixtures.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -383,7 +384,8 @@ describe("admin actions on a held Testimony", () => {
 describe("admin actions on a published or reported Testimony", () => {
   it("removes it, recomputes aggregates and the counter, and resolves its reports", async () => {
     const id = await postTestimony("pasien@example.com");
-    await postTestimony("lain@example.com");
+    // A text of its own: the same text twice at one place is held as templated (D2).
+    await postTestimony("lain@example.com", { text: distinctTestimonyText(1) });
     await report(id, { category: "falseClaim" });
     expect((await provider())?.aggregates.testimonyCount).toBe(2);
 

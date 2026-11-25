@@ -388,9 +388,9 @@ export interface PriceListDoc {
 /**
  * Detection triggers (spec 09 part 2), decided by the web service at submission, never
  * by the agent, and shown to admins only. `D1`: velocity (a burst of Testimonies for one
- * Provider).
+ * Provider). `D2`: similarity (text copied from one template for one Provider).
  */
-export type DetectionRuleCode = "D1";
+export type DetectionRuleCode = "D1" | "D2";
 
 /** Every Moderation call's result. Never stores the moderated text or photos. */
 export interface ModerationDecisionDoc {

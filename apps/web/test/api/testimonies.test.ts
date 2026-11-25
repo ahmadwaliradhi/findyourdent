@@ -22,7 +22,7 @@ import type {
   TestimonySubmission,
 } from "../../app/lib/testimony.ts";
 import { AgentUnavailableError } from "../../server/adapters/agent.ts";
-import { submittedBeforeDetectionWindow } from "../support/fixtures.ts";
+import { distinctTestimonyText, submittedBeforeDetectionWindow } from "../support/fixtures.ts";
 import { startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -378,6 +378,8 @@ describe("Moderation: publish", () => {
     const second = await signIn("kedua@example.com");
     const { status } = await createOk(
       submission({
+        // A text of its own: the same text twice at one place is held as templated (D2).
+        text: distinctTestimonyText(1),
         providerName: "Nama Lain Yang Diabaikan",
         region: { provinceCode: "35", regencyCode: "35.78" },
         ratings: { service: 2, hygiene: 3, materialsEquipment: 4 },
@@ -403,7 +405,7 @@ describe("Moderation: publish", () => {
     const [a, b] = await Promise.all([signIn("a@example.com"), signIn("b@example.com")]);
     const results = await Promise.all([
       createOk(submission({ providerName: "Klinik A" }), { cookie: a.cookie }),
-      createOk(submission({ providerName: "Klinik B" }), { cookie: b.cookie }),
+      createOk(submission({ providerName: "Klinik B", text: distinctTestimonyText(1) }), { cookie: b.cookie }),
     ]);
     expect(results.map((r) => r.status)).toEqual(["published", "published"]);
     expect(await count(COLLECTIONS.providers)).toBe(1);
@@ -1062,10 +1064,14 @@ describe("Proven Testimonies and aggregates (spec 09)", () => {
    * day past detection's lookback, as Testimonies that arrived over weeks, so its velocity
    * rule (detection.test.ts) does not hold the third one posted here.
    */
+  let posted = 0;
+
   async function post(email: string, proven: boolean, overrides: Partial<TestimonySubmission> = {}) {
     const { cookie } = await signIn(email);
     moderateWith(proven ? ACCEPTED : PUBLISH);
-    const stored = await createOk(submission(overrides), {
+    posted += 1;
+    // Each with a text of its own: the same text twice at one place is held as templated (D2).
+    const stored = await createOk(submission({ text: distinctTestimonyText(posted), ...overrides }), {
       cookie,
       // Each Patient brings their own receipt: one file twice at a place is possible reuse.
       ...(proven ? { proof: { bytes: Buffer.from(`%PDF-1.4\n% ${email}\n%%EOF\n`), type: "application/pdf" } } : {}),

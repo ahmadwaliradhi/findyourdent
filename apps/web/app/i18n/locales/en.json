@@ -219,6 +219,9 @@
       "detection": {
         "title": "Detection",
         "velocity": "many Testimonies for this Provider in a short time",
+        "similarity": "near-copy of another Testimony for this Provider",
+        "similar": "Most similar Testimony",
+        "score": "{{value}}% similar",
         "author": "Author of this Testimony",
         "linked_one": "{{count}} other Testimony for this Provider in the detection window",
         "linked_other": "{{count}} other Testimonies for this Provider in the detection window",
