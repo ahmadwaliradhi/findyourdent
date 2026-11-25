@@ -8,7 +8,12 @@ import { formatDay } from "~/lib/format";
 export function ExcludedLabel({ excluded }: { excluded: boolean }) {
   const { t } = useTranslation();
   if (!excluded) return null;
-  return <Badge variant="warning">{t("violation.excluded")}</Badge>;
+  return (
+    // Longer than a usual badge: it wraps instead of running out of a 360 px card.
+    <Badge variant="warning" className="shrink whitespace-normal">
+      {t("violation.excluded")}
+    </Badge>
+  );
 }
 
 /** "Pelanggaran kebijakan testimoni" with its end date, on the Provider page and directory rows. */
@@ -16,7 +21,7 @@ export function ViolationBadge({ until }: { until: string }) {
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : "id";
   return (
-    <Badge variant="danger" data-testid="violation-badge">
+    <Badge variant="danger" data-testid="violation-badge" className="shrink whitespace-normal">
       {t("violation.badge")} · {t("violation.until", { date: formatDay(until, language) })}
     </Badge>
   );
