@@ -25,3 +25,6 @@ playwright-report/
 .lighthouseci/
 # Saved Google session for the deployed journeys (apps/web/e2e-deployed/login.ts)
 apps/web/e2e-deployed/.auth/
+# Credentials file google-github-actions/auth writes into the checkout (CI deploy job).
+# Ignored so infra/gcp/deploy.sh's clean-tree check passes; .gcloudignore keeps it out of builds.
+gha-creds-*.json
