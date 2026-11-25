@@ -87,6 +87,12 @@ export interface WebContext {
     firebaseWeb: PublicFirebaseConfig;
     /** Signs shareable Guidance links (app/server/share.server.ts). */
     shareLinkSecret: string;
+    /**
+     * Salt for the hashes in `submissionSignals` (spec 09 part 2). The same secret as the
+     * rate limiter's (RATE_LIMIT_SALT), so a stored hash cannot be reversed to an IP or
+     * browser id, and domain-separated in the hash itself.
+     */
+    signalSalt: string;
     /** Share of auto-published Testimonies sampled for the admin spot check (spec 03: 10%). */
     spotCheckRate: number;
   };
@@ -106,6 +112,8 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
   if (production && !env.RATE_LIMIT_SALT) {
     throw new Error("RATE_LIMIT_SALT must be set in production (secret rate-limit-salt)");
   }
+  // Outside production a random per-process salt is fine: one process, one set of counters and signals.
+  const salt = env.RATE_LIMIT_SALT || crypto.randomUUID();
   const agentUrl = (env.AGENT_URL ?? "http://localhost:8000").replace(/\/+$/, "");
   // On Cloud Run (AGENT_AUTH=id_token) every call carries a fyd-web identity token.
   const idToken = env.AGENT_AUTH === "id_token" ? createMetadataIdTokenSource({ audience: agentUrl }) : undefined;
@@ -131,7 +139,7 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
     firestore: firebase?.firestore ?? null,
     auth: firebase?.auth ?? null,
     uploads: firebase?.uploads ?? null,
-    rateLimiter: rateLimiter(env.RATE_LIMIT_SALT, firebase?.firestore ?? null),
+    rateLimiter: rateLimiter(salt, firebase?.firestore ?? null),
     logger,
     config: {
       production,
@@ -142,6 +150,7 @@ export function createContextFromEnv(env: NodeJS.ProcessEnv = process.env): Base
         .filter(Boolean),
       firebaseWeb: firebaseWebFromEnv(env, production, firebase?.projectId ?? null),
       shareLinkSecret,
+      signalSalt: salt,
       spotCheckRate: SPOT_CHECK_RATE,
     },
   };
@@ -173,9 +182,7 @@ function appCheckVerifier(env: NodeJS.ProcessEnv, production: boolean, app: App 
   return createDebugAppCheckVerifier("");
 }
 
-function rateLimiter(configuredSalt: string | undefined, firestore: Firestore | null): RateLimiter {
-  // Outside production a random per-process salt is fine: one process, one set of counters.
-  const salt = configuredSalt || crypto.randomUUID();
+function rateLimiter(salt: string, firestore: Firestore | null): RateLimiter {
   return firestore ? createFirestoreRateLimiter(firestore, { salt }) : createMemoryRateLimiter({ salt });
 }
 

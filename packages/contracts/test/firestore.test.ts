@@ -25,6 +25,7 @@ describe("Firestore model", () => {
         "proofFingerprints",
         "providers",
         "rateLimits",
+        "submissionSignals",
         "testimonies",
         "testimonyReports",
       ].sort(),

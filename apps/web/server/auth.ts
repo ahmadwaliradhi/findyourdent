@@ -1,6 +1,6 @@
 import type express from "express";
 import type { Auth } from "firebase-admin/auth";
-import { readBrowserState, updateBrowserState } from "./browser-state.ts";
+import { newBrowserId, readBrowserState, updateBrowserState } from "./browser-state.ts";
 import type { BaseContext } from "./context.ts";
 
 /** Google is the only sign-in provider (spec 00). */
@@ -39,11 +39,14 @@ export async function createSession(
 
   const expiresIn = SESSION_DAYS * 24 * 60 * 60 * 1000;
   const value = await auth.createSessionCookie(idToken, { expiresIn });
-  // Kept in the one `__session` cookie beside the language and Guidance session id.
-  return { ok: true, setCookie: await updateBrowserState(cookieHeader, { auth: value }) };
+  // Kept in the one `__session` cookie beside the language and Guidance session id. The
+  // browser id is minted on first sign-in and kept after, so a second account signing in
+  // from the same browser shows the same id (spec 09 part 2, D3).
+  const bid = (await readBrowserState(cookieHeader)).bid ?? newBrowserId();
+  return { ok: true, setCookie: await updateBrowserState(cookieHeader, { auth: value, bid }) };
 }
 
-/** Set-Cookie that signs out, keeping the language toggle and the Guidance session. */
+/** Set-Cookie that signs out, keeping the language toggle, the Guidance session and the browser id. */
 export function clearSession(cookieHeader: string | null | undefined): Promise<string> {
   return updateBrowserState(cookieHeader, { auth: undefined });
 }

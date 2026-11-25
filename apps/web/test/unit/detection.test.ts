@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   detectionRuleCodes,
   SIMILARITY_THRESHOLD,
+  sharedDeviceFires,
+  sharedDeviceLinks,
+  sharesDevice,
   similarityFires,
   trigramSimilarity,
   VELOCITY_DAY_THRESHOLD,
@@ -141,5 +144,167 @@ describe("D2 similarity: the threshold", () => {
 
   it("fires for a templated copy with one word changed", () => {
     expect(similarityFires(TEMPLATED, [TEXT])).toBe(true);
+  });
+});
+
+describe("D3 sharedDevice", () => {
+  const mine = { ipHash: "ip-a", browserIdHash: "bid-a" };
+  const other = (overrides: Partial<{ authorUid: string; ipHash: string; browserIdHash: string }> = {}) => ({
+    authorUid: "uid-other",
+    ipHash: "ip-b",
+    browserIdHash: "bid-b",
+    ...overrides,
+  });
+
+  it("does not fire with no other signals", () => {
+    expect(sharedDeviceFires(mine, [], "uid-me")).toBe(false);
+  });
+
+  it("does not fire when another account shares neither hash", () => {
+    expect(sharedDeviceFires(mine, [other()], "uid-me")).toBe(false);
+  });
+
+  it("fires when another account shares the IP hash", () => {
+    expect(sharedDeviceFires(mine, [other({ ipHash: "ip-a" })], "uid-me")).toBe(true);
+  });
+
+  it("fires when another account shares the browser-id hash", () => {
+    expect(sharedDeviceFires(mine, [other({ browserIdHash: "bid-a" })], "uid-me")).toBe(true);
+  });
+
+  it("never counts the account's own signals", () => {
+    const own = other({ authorUid: "uid-me", ipHash: "ip-a", browserIdHash: "bid-a" });
+    expect(sharedDeviceFires(mine, [own], "uid-me")).toBe(false);
+  });
+
+  it("fires on any one of several signals", () => {
+    const signals = [other(), other({ authorUid: "uid-me", ipHash: "ip-a" }), other({ browserIdHash: "bid-a" })];
+    expect(sharedDeviceFires(mine, signals, "uid-me")).toBe(true);
+  });
+});
+
+describe("detectionRuleCodes with D3", () => {
+  const shared = {
+    mine: { ipHash: "ip-a", browserIdHash: "bid-a" },
+    others: [{ authorUid: "uid-other", ipHash: "ip-a", browserIdHash: "bid-b" }],
+    authorUid: "uid-me",
+  };
+
+  it("names D3 when a device is shared", () => {
+    expect(
+      detectionRuleCodes({ otherSubmittedAtMs: [], nowMs: NOW, text: TEXT, comparableTexts: [], sharedDevice: shared }),
+    ).toEqual(["D3"]);
+  });
+
+  it("lists D1 before D3 when both fire", () => {
+    const input = {
+      otherSubmittedAtMs: [ago(HOUR), ago(2 * HOUR)],
+      nowMs: NOW,
+      text: TEXT,
+      comparableTexts: [],
+      sharedDevice: shared,
+    };
+    expect(detectionRuleCodes(input)).toEqual(["D1", "D3"]);
+  });
+
+  it("lists D1, D2 then D3 when all fire", () => {
+    const input = {
+      otherSubmittedAtMs: [ago(HOUR), ago(2 * HOUR)],
+      nowMs: NOW,
+      text: TEXT,
+      comparableTexts: [TEXT],
+      sharedDevice: shared,
+    };
+    expect(detectionRuleCodes(input)).toEqual(["D1", "D2", "D3"]);
+  });
+});
+
+describe("sharesDevice", () => {
+  const a = { ipHash: "ip-a", browserIdHash: "bid-a" };
+  const b = { ipHash: "ip-b", browserIdHash: "bid-b" };
+
+  it("says which hash is shared", () => {
+    expect(sharesDevice([a], { ipHash: "ip-a", browserIdHash: "bid-x" })).toEqual({
+      sharedIp: true,
+      sharedBrowser: false,
+    });
+    expect(sharesDevice([a], { ipHash: "ip-x", browserIdHash: "bid-a" })).toEqual({
+      sharedIp: false,
+      sharedBrowser: true,
+    });
+    expect(sharesDevice([a], { ipHash: "ip-x", browserIdHash: "bid-x" })).toEqual({
+      sharedIp: false,
+      sharedBrowser: false,
+    });
+  });
+
+  it("matches any of several signals of mine, and ORs what they share", () => {
+    expect(sharesDevice([a, b], { ipHash: "ip-a", browserIdHash: "bid-b" })).toEqual({
+      sharedIp: true,
+      sharedBrowser: true,
+    });
+    expect(sharesDevice([], { ipHash: "ip-a", browserIdHash: "bid-a" })).toEqual({
+      sharedIp: false,
+      sharedBrowser: false,
+    });
+  });
+});
+
+describe("sharedDeviceLinks", () => {
+  const mine = [{ ipHash: "ip-1", browserIdHash: "bid-1" }];
+  const other = (testimonyId: string, authorUid: string, ipHash: string, browserIdHash: string) => ({
+    testimonyId,
+    authorUid,
+    ipHash,
+    browserIdHash,
+  });
+
+  it("names which hash another account shares", () => {
+    const links = sharedDeviceLinks(
+      mine,
+      [
+        other("t-ip", "u-1", "ip-1", "bid-x"),
+        other("t-bid", "u-2", "ip-x", "bid-1"),
+        other("t-both", "u-3", "ip-1", "bid-1"),
+      ],
+      "u-me",
+    );
+    expect(links).toEqual([
+      { testimonyId: "t-ip", authorUid: "u-1", sharedIp: true, sharedBrowser: false },
+      { testimonyId: "t-bid", authorUid: "u-2", sharedIp: false, sharedBrowser: true },
+      { testimonyId: "t-both", authorUid: "u-3", sharedIp: true, sharedBrowser: true },
+    ]);
+  });
+
+  it("skips the author's own signals and signals that share nothing", () => {
+    expect(
+      sharedDeviceLinks(
+        mine,
+        [other("t-own", "u-me", "ip-1", "bid-1"), other("t-none", "u-1", "ip-x", "bid-x")],
+        "u-me",
+      ),
+    ).toEqual([]);
+  });
+
+  it("gives one link per Testimony, OR-ing what its signals share", () => {
+    const links = sharedDeviceLinks(
+      mine,
+      [
+        other("t-1", "u-1", "ip-1", "bid-x"),
+        other("t-2", "u-2", "ip-x", "bid-1"),
+        other("t-1", "u-1", "ip-y", "bid-1"),
+      ],
+      "u-me",
+    );
+    expect(links).toEqual([
+      { testimonyId: "t-1", authorUid: "u-1", sharedIp: true, sharedBrowser: true },
+      { testimonyId: "t-2", authorUid: "u-2", sharedIp: false, sharedBrowser: true },
+    ]);
+  });
+
+  it("matches against every signal of the held Testimony", () => {
+    const edited = [...mine, { ipHash: "ip-2", browserIdHash: "bid-2" }];
+    const links = sharedDeviceLinks(edited, [other("t-1", "u-1", "ip-2", "bid-x")], "u-me");
+    expect(links).toEqual([{ testimonyId: "t-1", authorUid: "u-1", sharedIp: true, sharedBrowser: false }]);
   });
 });

@@ -219,6 +219,7 @@
       "detection": {
         "title": "Deteksi",
         "velocity": "banyak Testimoni untuk tempat ini dalam waktu singkat",
+        "sharedDevice": "akun lain memakai perangkat atau jaringan yang sama untuk tempat ini",
         "similarity": "hampir sama dengan Testimoni lain untuk tempat ini",
         "similar": "Testimoni paling mirip",
         "score": "{{value}}% mirip",
@@ -226,6 +227,13 @@
         "linked_one": "{{count}} Testimoni lain untuk tempat ini dalam jendela deteksi",
         "linked_other": "{{count}} Testimoni lain untuk tempat ini dalam jendela deteksi",
         "withinDay": "jendela pendek",
+        "sameDeviceTitle": "Perangkat sama",
+        "sameDevice_one": "{{count}} akun lain memakai perangkat atau jaringan yang sama untuk tempat ini",
+        "sameDevice_other": "{{count}} akun lain memakai perangkat atau jaringan yang sama untuk tempat ini",
+        "sameDeviceNone": "Tidak ada akun lain yang terhubung. Sinyal perangkatnya mungkin sudah kedaluwarsa.",
+        "sharedIp": "jaringan sama",
+        "sharedBrowser": "peramban sama",
+        "noName": "(tanpa nama)",
         "onlyThisProvider": "hanya menulis tentang tempat ini",
         "otherProviders": "juga menulis tentang tempat lain"
       },

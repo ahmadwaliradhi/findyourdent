@@ -253,7 +253,11 @@ function ModerationLine({ moderation }: { moderation: QueueModeration | null }) 
 }
 
 /** What each detection rule code means to the admin. */
-const DETECTION_RULE: Record<DetectionRuleCode, "velocity" | "similarity"> = { D1: "velocity", D2: "similarity" };
+const DETECTION_RULE: Record<DetectionRuleCode, "velocity" | "similarity" | "sharedDevice"> = {
+  D1: "velocity",
+  D2: "similarity",
+  D3: "sharedDevice",
+};
 
 /** A D2 similarity score as a whole percentage. */
 const percent = (similarity: number) => Math.round(similarity * 100);
@@ -298,24 +302,57 @@ function DetectionView({ detection }: { detection: QueueDetection }) {
           <span className="whitespace-pre-line break-words text-muted-foreground">{detection.similar.textPreview}</span>
         </div>
       )}
-      <p className="text-muted-foreground">{t("admin.queue.detection.linked", { count: detection.linked.length })}</p>
-      <ol className="flex flex-col gap-2">
-        {detection.linked.map((linked) => (
-          <li key={linked.id} className="flex min-w-0 flex-col gap-1 rounded-md bg-muted p-2">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <strong className="break-words">{linked.displayName}</strong>
-              <Badge {...testimonyStatusBadge(linked.status)}>{t(`admin.queue.status.${linked.status}`)}</Badge>
-              <span className="text-muted-foreground">{formatTime(linked.createdAt, language)}</span>
-              {linked.withinDay && <Badge variant="outline">{t("admin.queue.detection.withinDay")}</Badge>}
-              <Badge variant="outline">{t("admin.queue.detection.score", { value: percent(linked.similarity) })}</Badge>
-            </span>
-            <span className={linked.wroteAboutOtherProviders ? "" : "font-semibold text-destructive"}>
-              {accountState(linked.wroteAboutOtherProviders)}
-            </span>
-            <span className="whitespace-pre-line break-words text-muted-foreground">{linked.textPreview}</span>
-          </li>
-        ))}
-      </ol>
+      {(detection.ruleCodes.includes("D1") || detection.ruleCodes.includes("D2")) && (
+        <>
+          <p className="text-muted-foreground">
+            {t("admin.queue.detection.linked", { count: detection.linked.length })}
+          </p>
+          <ol className="flex flex-col gap-2">
+            {detection.linked.map((linked) => (
+              <li key={linked.id} className="flex min-w-0 flex-col gap-1 rounded-md bg-muted p-2">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <strong className="break-words">{linked.displayName}</strong>
+                  <Badge {...testimonyStatusBadge(linked.status)}>{t(`admin.queue.status.${linked.status}`)}</Badge>
+                  <span className="text-muted-foreground">{formatTime(linked.createdAt, language)}</span>
+                  {linked.withinDay && <Badge variant="outline">{t("admin.queue.detection.withinDay")}</Badge>}
+                  <Badge variant="outline">
+                    {t("admin.queue.detection.score", { value: percent(linked.similarity) })}
+                  </Badge>
+                </span>
+                <span className={linked.wroteAboutOtherProviders ? "" : "font-semibold text-destructive"}>
+                  {accountState(linked.wroteAboutOtherProviders)}
+                </span>
+                <span className="whitespace-pre-line break-words text-muted-foreground">{linked.textPreview}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      {detection.sharedDevice && (
+        <div className="flex min-w-0 flex-col gap-2">
+          <h4 className="font-medium">{t("admin.queue.detection.sameDeviceTitle")}</h4>
+          <p className="text-muted-foreground">
+            {detection.sharedDevice.length
+              ? t("admin.queue.detection.sameDevice", { count: detection.sharedDevice.length })
+              : t("admin.queue.detection.sameDeviceNone")}
+          </p>
+          <ul className="flex flex-col gap-2">
+            {detection.sharedDevice.map((account) => (
+              <li key={account.testimonyId} className="flex min-w-0 flex-col gap-1 rounded-md bg-muted p-2">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <strong className="break-words">{account.displayName || t("admin.queue.detection.noName")}</strong>
+                  <Badge {...testimonyStatusBadge(account.status)}>{t(`admin.queue.status.${account.status}`)}</Badge>
+                  {account.sharedIp && <Badge variant="outline">{t("admin.queue.detection.sharedIp")}</Badge>}
+                  {account.sharedBrowser && <Badge variant="outline">{t("admin.queue.detection.sharedBrowser")}</Badge>}
+                </span>
+                <span className={account.wroteAboutOtherProviders ? "" : "font-semibold text-destructive"}>
+                  {accountState(account.wroteAboutOtherProviders)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

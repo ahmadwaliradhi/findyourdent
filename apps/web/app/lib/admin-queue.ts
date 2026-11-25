@@ -168,6 +168,20 @@ export interface QueueLinkedTestimony {
   similarity: number;
 }
 
+/** Another account that used this device for the same Provider (D3), without any hash. */
+export interface QueueSharedDeviceAccount {
+  /** Its Testimony for the Provider (the signal's key); `deleted` when its author deleted it or it is gone. */
+  testimonyId: string;
+  displayName: string;
+  status: TestimonyStatus;
+  /** Same client network (IP) as the held Testimony's submission. */
+  sharedIp: boolean;
+  /** Same browser as the held Testimony's submission. */
+  sharedBrowser: boolean;
+  /** Its author has a Testimony, not deleted, for any other Provider. */
+  wroteAboutOtherProviders: boolean;
+}
+
 /** The published or held Testimony for the same Provider most similar to a D2 hold. */
 export type QueueSimilarTestimony = Omit<QueueLinkedTestimony, "withinDay">;
 
@@ -176,8 +190,10 @@ export interface QueueDetection {
   ruleCodes: DetectionRuleCode[];
   /** The held Testimony's own author has written about any other Provider. */
   authorWroteAboutOtherProviders: boolean;
-  /** The Provider's other Testimonies (not deleted) in the 7 days up to the held one, oldest first. */
+  /** D1 and D2 holds only (else empty): the Provider's other Testimonies (not deleted) in the 7 days up to the held one, oldest first. */
   linked: QueueLinkedTestimony[];
+  /** D3 holds only: other accounts that shared this submission's device, oldest signal first. */
+  sharedDevice?: QueueSharedDeviceAccount[];
   /** On a D2 hold: the Provider's published or held Testimony most similar to it now, if any. */
   similar?: QueueSimilarTestimony;
 }

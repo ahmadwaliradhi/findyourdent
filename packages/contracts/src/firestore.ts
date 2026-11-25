@@ -38,6 +38,7 @@ export const COLLECTIONS = {
   counters: "counters",
   rateLimits: "rateLimits",
   proofFingerprints: "proofFingerprints",
+  submissionSignals: "submissionSignals",
   policyViolations: "policyViolations",
 } as const;
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
@@ -337,6 +338,28 @@ export interface ProofFingerprintDoc {
   createdAt: Timestamp;
 }
 
+// submissionSignals/{autoId} --------------------------------------------------
+
+/**
+ * What is kept of the device behind a Testimony submission or edit, for detection D3
+ * (spec 09 part 2). One per stored submission or edit (auto id), with `testimonyId`; an
+ * edit never overwrites the submission's. No raw IP address and no raw browser id: both
+ * are salted SHA-256 (hex). Queried by `placeId`; Firestore TTL deletes it at `expiresAt`,
+ * 90 days after `createdAt` (lazily, so readers also ignore a signal past `expiresAt`).
+ * Outlives a deleted Testimony on purpose, as a buzzer may delete.
+ */
+export interface SubmissionSignalDoc {
+  testimonyId: string;
+  placeId: PlaceId;
+  authorUid: Uid;
+  /** Salted SHA-256 of the client IP. */
+  ipHash: string;
+  /** Salted SHA-256 of the opaque browser id in the `__session` cookie. */
+  browserIdHash: string;
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+}
+
 // testimonyReports/{reportId} -------------------------------------------------
 
 export type ReportCategory =
@@ -434,9 +457,11 @@ export interface PriceListDoc {
 /**
  * Detection triggers (spec 09 part 2), decided by the web service at submission, never
  * by the agent, and shown to admins only. `D1`: velocity (a burst of Testimonies for one
- * Provider). `D2`: similarity (text copied from one template for one Provider).
+ * Provider). `D2`: similarity (text copied from one template for one Provider). `D3`:
+ * sharedDevice (another account's submission for the same Provider shares the IP hash or
+ * the browser-id hash).
  */
-export type DetectionRuleCode = "D1" | "D2";
+export type DetectionRuleCode = "D1" | "D2" | "D3";
 
 /** Every Moderation call's result. Never stores the moderated text or photos. */
 export interface ModerationDecisionDoc {
