@@ -14,6 +14,8 @@
 //   coordinates (held in memory, never stored; never the browser's): a hospital type →
 //   hospital, "drg. Nama" → privateDentist, anything else → klinik; `providerTypeSource`
 //   "inferred". Without that call's answer, the typed name alone decides.
+// - Each stored submission and edit writes a `submissionSignals` document (salted hashes of
+//   the client IP and browser id, keyed by Testimony); detection D3 reads them.
 // - Fix before submit: an authorFix decision is answered with the flagged spans and
 //   stores nothing (no Testimony, no decision, no photos); only the round count is kept,
 //   per Patient and place (`authorFixCounterId`), until a submission is stored.
@@ -78,6 +80,12 @@ import { fingerprintOf, type ProofFingerprint } from "./proof-fingerprint.ts";
 import { deleteFingerprint, reuseMatchesIn, setFingerprint } from "./proof-fingerprints.server.ts";
 import { protectionRefusalResponse, protectPaidRequest } from "./protection.server.ts";
 import {
+  readPlaceSignals,
+  type SubmissionDevice,
+  submissionDevice,
+  writeSubmissionSignal,
+} from "./submission-signals.server.ts";
+import {
   deleteTestimonyMedia,
   readTestimonyFiles,
   type StoredMedia,
@@ -140,16 +148,29 @@ interface Writer {
   t: TFunction;
 }
 
+/** A submission or edit's writer, with the device it came from. */
+type SubmissionWriter = Writer & { device: SubmissionDevice };
+
+/** A success response, carrying the browser id's Set-Cookie when the cookie had none. */
+function storedJson(body: TestimonyStoredResponse, device: SubmissionDevice, status: number): Response {
+  return Response.json(body, {
+    status,
+    ...(device.setCookie ? { headers: { "Set-Cookie": device.setCookie } } : {}),
+  });
+}
+
 /**
  * Signed-in Google account first (so a signed-out Patient learns to sign in), then
  * App Check and the per-account daily limit for submissions and edits.
  */
-async function gateSubmission(context: AppLoadContext, request: Request): Promise<Writer | Response> {
+async function gateSubmission(context: AppLoadContext, request: Request): Promise<SubmissionWriter | Response> {
   const user = await readSession(context.auth, request.headers.get("cookie"));
   if (!user) return errorResponse(request, 401, "sign_in_required");
   const protection = await protectPaidRequest(context, { request, route: "testimony", uid: user.uid });
   if (!protection.ok) return protectionRefusalResponse(request, protection);
-  return writer(context, request, user);
+  const gate = await writer(context, request, user);
+  if (gate instanceof Response) return gate;
+  return { ...gate, device: await submissionDevice(context, request) };
 }
 
 async function writer(context: AppLoadContext, request: Request, user: SignedInUser): Promise<Writer | Response> {
@@ -507,12 +528,18 @@ async function activeTestimonyId(firestore: Firestore, uid: string, placeId: str
 }
 
 /**
- * Detection for a new Testimony (spec 09 part 2): the triggers it fires, from when the
- * Provider's other Testimonies that are not deleted were submitted. Read in the
- * transaction that creates it, so a concurrent create in the same window makes one of
- * them retry and see the other; a burst sent at once cannot all slip through.
+ * Detection for a new Testimony (spec 09 part 2): the triggers it fires. D1 from when the
+ * Provider's other Testimonies that are not deleted were submitted; D3 from the device
+ * signals of every submission for the Provider (a deleted Testimony's included, and the
+ * author's own never count). Read in the transaction that creates it, so a concurrent
+ * create makes one of them retry and see the other; a burst sent at once cannot all slip through.
  */
-async function detectOnCreate(tx: Transaction, firestore: Firestore, placeId: string): Promise<DetectionRuleCode[]> {
+async function detectOnCreate(
+  tx: Transaction,
+  firestore: Firestore,
+  placeId: string,
+  submitter: { authorUid: string; device: SubmissionDevice },
+): Promise<DetectionRuleCode[]> {
   const nowMs = Date.now();
   const recent = await tx.get(
     testimonies(firestore)
@@ -522,7 +549,12 @@ async function detectOnCreate(tx: Transaction, firestore: Firestore, placeId: st
   const otherSubmittedAtMs = recent.docs
     .filter((doc) => doc.get("status") !== "deleted")
     .map((doc) => (doc.get("createdAt") as Timestamp).toMillis());
-  return detectionRuleCodes({ otherSubmittedAtMs, nowMs });
+  const others = await readPlaceSignals(tx, firestore, placeId);
+  return detectionRuleCodes({
+    otherSubmittedAtMs,
+    nowMs,
+    sharedDevice: { mine: submitter.device.hashes, others, authorUid: submitter.authorUid },
+  });
 }
 
 async function refusalResponse(request: Request, error: unknown): Promise<Response> {
@@ -534,7 +566,7 @@ async function refusalResponse(request: Request, error: unknown): Promise<Respon
 export async function createTestimony(context: AppLoadContext, request: Request): Promise<Response> {
   const gate = await gateSubmission(context, request);
   if (gate instanceof Response) return gate;
-  const { firestore, uploads, user, language, t } = gate;
+  const { firestore, uploads, user, language, t, device } = gate;
 
   const formData = await readForm(request);
   const input = formData ? parseSubmissionJson(formData.get(SUBMISSION_FIELDS.json)) : null;
@@ -617,7 +649,10 @@ export async function createTestimony(context: AppLoadContext, request: Request)
         const active = mine.docs.find((doc) => doc.get("status") !== "deleted");
         if (active) throw new TestimonyRefusal(409, "already_posted", active.id);
         // Detection only ever turns Moderation's publish into hold. A failed read fails the request.
-        const detected = moderatedDecision === "publish" ? await detectOnCreate(tx, firestore, value.placeId) : [];
+        const detected =
+          moderatedDecision === "publish"
+            ? await detectOnCreate(tx, firestore, value.placeId, { authorUid: user.uid, device })
+            : [];
         const attemptOutcome = detected.length > 0 ? heldByDetection(t, moderated, detected) : moderated;
         const status = detected.length > 0 ? "held" : statusForDecision(moderatedDecision);
         const provider = await tx.get(providers(firestore).doc(value.placeId));
@@ -683,6 +718,12 @@ export async function createTestimony(context: AppLoadContext, request: Request)
           ...(status === "published" ? { publishedAt: now } : {}),
         };
         tx.create(ref, doc);
+        writeSubmissionSignal(tx, firestore, {
+          testimonyId: ref.id,
+          placeId: value.placeId,
+          authorUid: user.uid,
+          hashes: device.hashes,
+        });
         recordTestimonyTransition(firestore, tx, null, { status, verifiedVisit });
         stored = { status, outcome: attemptOutcome, detected };
       });
@@ -704,7 +745,7 @@ export async function createTestimony(context: AppLoadContext, request: Request)
       verifiedVisit,
       ...proofFeedback(t, proof),
     };
-    return Response.json(body, { status: 201 });
+    return storedJson(body, device, 201);
   } finally {
     // Best effort: the Testimony is already stored; a leftover private file is not worth a 500.
     if (media.proofPath && !proofKept) await deleteTestimonyMedia(uploads, [media.proofPath]).catch(() => {});
@@ -781,7 +822,7 @@ const ADMIN_DECIDES: ReadonlySet<TestimonyStatus> = new Set(["held", "rejected"]
 export async function editTestimony(context: AppLoadContext, request: Request, testimonyId: string) {
   const gate = await gateSubmission(context, request);
   if (gate instanceof Response) return gate;
-  const { firestore, uploads, user, language, t } = gate;
+  const { firestore, uploads, user, language, t, device } = gate;
 
   let current: TestimonyDoc;
   try {
@@ -978,6 +1019,13 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
           );
         }
         tx.update(ref, update);
+        // The edit's device replaces the earlier one (D3 reads it; detection itself does not run on edits).
+        writeSubmissionSignal(tx, firestore, {
+          testimonyId,
+          placeId: before.placeId,
+          authorUid: user.uid,
+          hashes: device.hashes,
+        });
         tx.delete(authorFixCounter(firestore, user.uid, before.placeId));
         const kept = new Set([...after.photoPaths, ...after.pending]);
         orphaned = storedPhotoPaths(before).filter((path) => !kept.has(path));
@@ -997,7 +1045,7 @@ export async function editTestimony(context: AppLoadContext, request: Request, t
       verifiedVisit: verifiedVisitAfter,
       ...proofFeedback(t, proofApplied),
     };
-    return Response.json(body);
+    return storedJson(body, device, 200);
   } finally {
     // Best effort: the edit is already answered; a leftover private file is not worth a 500.
     if (media.proofPath && proofApplied?.result !== "pending") {

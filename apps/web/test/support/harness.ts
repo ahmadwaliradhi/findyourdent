@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import express from "express";
 import type { Firestore } from "firebase-admin/firestore";
 import { createServer } from "vite";
 import { APP_CHECK_HEADER } from "../../app/lib/app-check.ts";
@@ -56,14 +58,24 @@ export interface TestServer {
   reset(): Promise<void>;
   /** A Firebase ID token from the Auth emulator, as the browser gets right after signing in. */
   emulatorIdToken(user: { email: string; provider: "google.com" | "password" }): Promise<string>;
-  /** Signs in with Google through /auth/session and returns the `cookie` header to send. */
-  signInWithGoogle(email: string): Promise<string>;
+  /**
+   * Signs in with Google through /auth/session and returns the `cookie` header to send.
+   * `cookie` is a browser's existing cookie, as when a second account signs in on the
+   * same browser (the browser id stays).
+   */
+  signInWithGoogle(email: string, options?: { cookie?: string }): Promise<string>;
   /** A new valid App Check token, as a different browser would have. */
   appCheckToken(): string;
   post(pathname: string, body: unknown, init?: PostInit): Promise<Response>;
   /** A GET as the page's own fetch sends it: with an App Check token unless told otherwise. */
   get(pathname: string, init?: PostInit): Promise<Response>;
   close(): Promise<void>;
+}
+
+/** A made-up IPv4 address (documentation range 198.18.0.0/15) that is the same for the same cookie. */
+function deviceIpOf(cookie: string): string {
+  const [a = 0, b = 0, c = 0] = createHash("sha256").update(cookie).digest();
+  return `198.${18 + (a % 2)}.${b}.${c || 1}`;
 }
 
 function freshFakes(): Fakes {
@@ -172,13 +184,26 @@ export async function startTestServer(): Promise<TestServer> {
       adminEmails: ADMIN_EMAILS,
       firebaseWeb: NO_FIREBASE,
       shareLinkSecret: "test-share-link-secret",
+      signalSalt: "test-signal-salt",
       spotCheckRate,
     },
   });
 
   const app = createApp({ mode: "development", vite, context });
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const s = app.listen(0, "127.0.0.1", () => resolve(s));
+  // Every request would come from 127.0.0.1, which makes two accounts look like one device.
+  // A request that carries a `__session` cookie and no X-Forwarded-For gets an address
+  // derived from that cookie, so each browser state is its own device. A test that needs
+  // a shared or a different IP sends X-Forwarded-For itself (the app trusts one proxy hop).
+  // Requests without a cookie stay on 127.0.0.1, which the per-IP rate-limit tests rely on.
+  const front = express();
+  front.use((req, _res, next) => {
+    if (!req.headers["x-forwarded-for"] && req.headers.cookie)
+      req.headers["x-forwarded-for"] = deviceIpOf(req.headers.cookie);
+    next();
+  });
+  front.use(app);
+  const server = await new Promise<ReturnType<typeof front.listen>>((resolve) => {
+    const s = front.listen(0, "127.0.0.1", () => resolve(s));
   });
   const { port } = server.address() as AddressInfo;
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -225,9 +250,9 @@ export async function startTestServer(): Promise<TestServer> {
       spotCheckRate = rate;
     },
     emulatorIdToken,
-    async signInWithGoogle(email) {
+    async signInWithGoogle(email, { cookie } = {}) {
       const idToken = await emulatorIdToken({ email, provider: "google.com" });
-      const response = await post("/auth/session", { idToken });
+      const response = await post("/auth/session", { idToken }, cookie ? { headers: { cookie } } : {});
       if (!response.ok) throw new Error(`sign-in failed: ${response.status}`);
       return response.headers.get("set-cookie")?.split(";")[0] ?? "";
     },

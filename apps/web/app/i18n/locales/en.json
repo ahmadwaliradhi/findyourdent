@@ -218,10 +218,18 @@
       "detection": {
         "title": "Detection",
         "velocity": "many Testimonies for this Provider in a short time",
+        "sharedDevice": "another account used the same device or network for this Provider",
         "author": "Author of this Testimony",
         "linked_one": "{{count}} other Testimony for this Provider in the detection window",
         "linked_other": "{{count}} other Testimonies for this Provider in the detection window",
         "withinDay": "short window",
+        "sameDeviceTitle": "Same device",
+        "sameDevice_one": "{{count}} other account used the same device or network for this Provider",
+        "sameDevice_other": "{{count}} other accounts used the same device or network for this Provider",
+        "sameDeviceNone": "No other account found. Its device signal may have expired.",
+        "sharedIp": "same network",
+        "sharedBrowser": "same browser",
+        "noName": "(no name)",
         "onlyThisProvider": "wrote about this Provider only",
         "otherProviders": "also wrote about other Providers"
       },

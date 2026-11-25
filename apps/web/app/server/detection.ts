@@ -30,15 +30,69 @@ export function velocityFires(otherSubmittedAtMs: readonly number[], nowMs: numb
   );
 }
 
+/** The hashes of one submission's device (`SubmissionSignalDoc`). */
+export interface DeviceHashes {
+  ipHash: string;
+  browserIdHash: string;
+}
+
+/** An earlier submission's signal for the same Provider. */
+export interface OtherSignal extends DeviceHashes {
+  authorUid: string;
+}
+
+/** An earlier signal with the Testimony it belongs to. */
+export interface LinkedSignal extends OtherSignal {
+  testimonyId: string;
+}
+
+/** Another account's signal that shares a hash with this device, and which hash it shares. */
+export interface SharedDeviceLink {
+  testimonyId: string;
+  authorUid: string;
+  sharedIp: boolean;
+  sharedBrowser: boolean;
+}
+
+/**
+ * The other accounts' signals for the Provider that share this device's IP hash or
+ * browser-id hash, with which one. The author's own signals never count against them.
+ */
+export function sharedDeviceLinks(
+  mine: DeviceHashes,
+  others: readonly LinkedSignal[],
+  authorUid: string,
+): SharedDeviceLink[] {
+  return others.flatMap((other) => {
+    const sharedIp = other.ipHash === mine.ipHash;
+    const sharedBrowser = other.browserIdHash === mine.browserIdHash;
+    return other.authorUid !== authorUid && (sharedIp || sharedBrowser)
+      ? [{ testimonyId: other.testimonyId, authorUid: other.authorUid, sharedIp, sharedBrowser }]
+      : [];
+  });
+}
+
+/** D3 sharedDevice: whether another account's submission for the same Provider shares a hash. */
+export function sharedDeviceFires(mine: DeviceHashes, others: readonly OtherSignal[], authorUid: string): boolean {
+  return others.some(
+    (other) =>
+      other.authorUid !== authorUid && (other.ipHash === mine.ipHash || other.browserIdHash === mine.browserIdHash),
+  );
+}
+
 /** What detection looks at for one submission. */
 export interface DetectionInput {
   otherSubmittedAtMs: readonly number[];
   nowMs: number;
+  /** This submission's device and the Provider's earlier signals; D3 is skipped without it. */
+  sharedDevice?: { mine: DeviceHashes; others: readonly OtherSignal[]; authorUid: string };
 }
 
 /** The detection triggers this submission fires, in rule order; empty when it may publish. */
 export function detectionRuleCodes(input: DetectionInput): DetectionRuleCode[] {
   const codes: DetectionRuleCode[] = [];
   if (velocityFires(input.otherSubmittedAtMs, input.nowMs)) codes.push("D1");
+  const device = input.sharedDevice;
+  if (device && sharedDeviceFires(device.mine, device.others, device.authorUid)) codes.push("D3");
   return codes;
 }

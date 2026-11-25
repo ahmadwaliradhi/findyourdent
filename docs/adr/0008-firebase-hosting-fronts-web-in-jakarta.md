@@ -4,7 +4,7 @@ Spec 00 asked us to check whether Firebase Hosting rewrites can reach a Cloud Ru
 
 Two Hosting and Cloud Run rules shape the code:
 
-- Hosting strips every request cookie except `__session` ([Manage cache behavior](https://firebase.google.com/docs/hosting/manage-cache)). The web service keeps all browser state (the language toggle and the opaque Guidance session id) in that one cookie. Any new cookie has to go in it too, or it will work locally and break once deployed.
+- Hosting strips every request cookie except `__session` ([Manage cache behavior](https://firebase.google.com/docs/hosting/manage-cache)). The web service keeps all browser state (the language toggle, the opaque Guidance session id and the opaque browser id) in that one cookie. Any new cookie has to go in it too, or it will work locally and break once deployed.
 - Cloud Run reserves some URL paths ending in `z` ([known issues](https://docs.cloud.google.com/run/docs/issues)), so the health routes are `/health`, not `/healthz`.
 
 Hosting marks dynamic responses `Cache-Control: private` by default, so server-rendered pages are not cached on the CDN unless a route opts in.

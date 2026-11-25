@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { readBrowserState } from "../../server/browser-state.ts";
 import { ADMIN_EMAILS, startTestServer, type TestServer } from "../support/harness.ts";
 
 let server: TestServer;
@@ -54,6 +55,20 @@ describe("Google sign-in", () => {
     });
 
     expect(response.status).toBe(302);
+    const signedOut = await readBrowserState(response.headers.get("set-cookie")?.split(";")[0]);
+    expect(signedOut.auth).toBeUndefined();
+    // The browser id is per browser, not per account: it stays (spec 09 part 2, D3).
+    expect(signedOut.bid).toBe((await readBrowserState(cookie)).bid);
+    expect(signedOut.bid).toBeTruthy();
+  });
+
+  it("signs out by clearing the whole cookie when it held nothing else", async () => {
+    const response = await fetch(new URL("/auth/signout", server.baseUrl), {
+      method: "POST",
+      headers: { cookie: "" },
+      redirect: "manual",
+    });
+
     expect(response.headers.get("set-cookie")).toMatch(/^__session=[^;]*;.*(Max-Age=0|Expires=Thu, 01 Jan 1970)/i);
   });
 });
