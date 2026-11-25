@@ -1,13 +1,13 @@
 import type { PolicyViolationStatus } from "@findyourdent/contracts/firestore";
 import { describe, expect, it } from "vitest";
 import {
-  badgeShowing,
   badgeUntilMs,
   nextViolationStatus,
   VIOLATION_BADGE_MONTHS,
   VIOLATION_MOVES,
   VIOLATION_RESPONSE_DAYS,
   type ViolationMove,
+  visibleBadgeUntil,
 } from "../../app/lib/policy-violations.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -60,11 +60,11 @@ describe("violation badge length", () => {
     expect(badgeUntilMs(Date.parse("2026-12-15T00:00:00Z"))).toBe(Date.parse("2027-06-15T00:00:00Z"));
   });
 
-  it("shows only while now is before badgeUntil", () => {
+  it("gives the badge end as an ISO instant only while now is before badgeUntil", () => {
     const until = Date.parse("2027-05-10T00:00:00Z");
-    const badge = { badgeUntil: { toMillis: () => until } };
-    expect(badgeShowing(badge, until - 1)).toBe(true);
-    expect(badgeShowing(badge, until)).toBe(false);
-    expect(badgeShowing(undefined, until)).toBe(false);
+    const badge = { badgeUntil: { toMillis: () => until, toDate: () => new Date(until) } };
+    expect(visibleBadgeUntil(badge, until - 1)).toBe("2027-05-10T00:00:00.000Z");
+    expect(visibleBadgeUntil(badge, until)).toBeNull();
+    expect(visibleBadgeUntil(undefined, until)).toBeNull();
   });
 });

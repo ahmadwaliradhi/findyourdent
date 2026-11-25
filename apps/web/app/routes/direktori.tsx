@@ -4,10 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { FilterSection } from "~/components/filter-section";
 import { ListingFiltersForm } from "~/components/listing-filters-form";
-import { NotEnoughProven, ViolationBadge } from "~/components/proof-label";
+import { NotEnoughProven } from "~/components/proof-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { fieldClassName } from "~/components/ui/field";
+import { ViolationBadge } from "~/components/violation-badge";
 import { getI18n, isLanguage, type Language } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
 import {

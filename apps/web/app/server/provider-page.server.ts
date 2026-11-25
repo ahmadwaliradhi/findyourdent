@@ -12,7 +12,7 @@ import {
   type TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
-import { badgeShowing } from "~/lib/policy-violations";
+import { visibleBadgeUntil } from "~/lib/policy-violations";
 import type { PublicPriceList } from "~/lib/price-lists";
 import type { OwnerFacts } from "~/lib/provider";
 import { regionLabel } from "~/lib/regions";
@@ -34,8 +34,8 @@ export interface ProviderSummary {
   providerType: ProviderType;
   providerTypeInferred: boolean;
   claimed: boolean;
-  /** ISO end of a confirmed Testimony Policy Violation badge still showing; absent otherwise. */
-  violationBadgeUntil?: string;
+  /** ISO end of a confirmed Testimony Policy Violation badge still showing; null otherwise. */
+  violationBadgeUntil: string | null;
   testimonyCount: number;
   verifiedVisitCount: number;
   averages: AspectRatings | null;
@@ -148,9 +148,7 @@ export async function loadProviderPage(
       providerType: doc.providerType,
       providerTypeInferred: doc.providerTypeSource === "inferred",
       claimed: doc.claimStatus === "claimed",
-      ...(doc.violationBadge && badgeShowing(doc.violationBadge, nowMs)
-        ? { violationBadgeUntil: doc.violationBadge.badgeUntil.toDate().toISOString() }
-        : {}),
+      violationBadgeUntil: visibleBadgeUntil(doc.violationBadge, nowMs),
       testimonyCount: doc.aggregates.testimonyCount,
       verifiedVisitCount: doc.aggregates.verifiedVisitCount,
       averages: doc.aggregates.averages,

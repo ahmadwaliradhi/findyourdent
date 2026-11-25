@@ -9,7 +9,7 @@ import {
   type ProviderDoc,
   type TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AdminActionRequest, AdminActionResponse } from "../../app/lib/admin-queue.ts";
 import type { FeedItem } from "../../app/lib/feed.ts";
@@ -200,7 +200,7 @@ describe("confirming a violation case", () => {
     expect(row?.violationBadgeUntil).not.toBeNull();
     const [later] = await loadDirectory(server.firestore, { ...DIRECTORY, nowMs: until });
     expect(later?.violationBadgeUntil).toBeNull();
-    expect((await loadProviderPage(server.firestore, p.placeId, until))?.provider.violationBadgeUntil).toBeUndefined();
+    expect((await loadProviderPage(server.firestore, p.placeId, until))?.provider.violationBadgeUntil).toBeNull();
   });
 
   it("still marks the Testimonies when the place has no Provider document", async () => {
@@ -214,6 +214,25 @@ describe("confirming a violation case", () => {
 
     expect((await testimony(t.id)).excludedByViolation).toBe(id);
     expect((await violation(id)).excludedTestimonyIds).toEqual([t.id]);
+  });
+
+  it("gives the badge to a Provider first Listed after the confirm", async () => {
+    const p = await seedProvider(server.firestore);
+    // Only a held Testimony at the place when the case is opened, so no Provider document.
+    const held = await seedTestimony(server.firestore, p, { status: "held" });
+    await server.firestore
+      .collection(COLLECTIONS.testimonies)
+      .doc(held.id)
+      .update({ publishedAt: FieldValue.delete(), proposedProviderName: "Klinik Gigi Baru" });
+    await server.firestore.collection(COLLECTIONS.providers).doc(p.placeId).delete();
+    const admin = await adminCookie();
+    const id = await notifiedCase(admin, p.placeId);
+    expect((await confirm(admin, id)).status).toBe(200);
+    const { badgeUntil } = await violation(id);
+
+    expect((await act(admin, { action: "publish", subjectId: held.id, reason: "Sesuai." })).status).toBe(200);
+
+    expect((await provider(p.placeId)).violationBadge).toEqual({ violationId: id, badgeUntil });
   });
 
   it("changes nothing when the case is dismissed", async () => {
@@ -260,7 +279,7 @@ describe("violation badge end job", () => {
     expect((await violation(id)).badgeEndedAt).toBeDefined();
     for (const t of inside) expect((await testimony(t.id)).excludedByViolation).toBe(id);
     expect((await loadDirectory(server.firestore, DIRECTORY))[0]?.violationBadgeUntil).toBeNull();
-    expect((await loadProviderPage(server.firestore, p.placeId))?.provider.violationBadgeUntil).toBeUndefined();
+    expect((await loadProviderPage(server.firestore, p.placeId))?.provider.violationBadgeUntil).toBeNull();
 
     // Nothing is ended twice.
     expect(await run(until + DAY_MS)).toEqual({ ended: 0, failed: 0 });

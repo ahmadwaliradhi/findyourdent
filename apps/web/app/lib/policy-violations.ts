@@ -21,9 +21,13 @@ export function badgeUntilMs(decidedMs: number): number {
   return target.getTime();
 }
 
-/** Whether a Provider's violation badge still shows at `nowMs`. */
-export function badgeShowing(badge: { badgeUntil: { toMillis(): number } } | undefined, nowMs: number): boolean {
-  return badge !== undefined && nowMs < badge.badgeUntil.toMillis();
+/** The ISO end of a Provider's violation badge while it still shows at `nowMs`; null otherwise. */
+export function visibleBadgeUntil(
+  badge: { badgeUntil: { toMillis(): number; toDate(): Date } } | undefined,
+  nowMs: number,
+): string | null {
+  if (!badge || nowMs >= badge.badgeUntil.toMillis()) return null;
+  return badge.badgeUntil.toDate().toISOString();
 }
 
 export const VIOLATION_MOVES = ["notifyViolation", "confirmViolation", "dismissViolation"] as const;

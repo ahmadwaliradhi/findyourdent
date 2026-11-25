@@ -5,7 +5,7 @@ import type { Firestore, Query } from "firebase-admin/firestore";
 import { DIRECTORY_ROW_LIMIT, type DirectoryRow, type DirectorySort } from "~/lib/directory";
 import type { ListingFilters } from "~/lib/listing-filters";
 import { normalizeName } from "~/lib/normalize-name";
-import { badgeShowing } from "~/lib/policy-violations";
+import { visibleBadgeUntil } from "~/lib/policy-violations";
 import { aspectPrior, shrunkAspectScore } from "~/lib/scores";
 
 /**
@@ -43,9 +43,7 @@ function toRow(provider: ProviderDoc, score: number | null, nowMs: number): Dire
     testimonyCount: provider.aggregates.testimonyCount,
     verifiedVisitCount: provider.aggregates.verifiedVisitCount,
     claimed: provider.claimStatus === "claimed",
-    violationBadgeUntil: badgeShowing(provider.violationBadge, nowMs)
-      ? (provider.violationBadge as NonNullable<ProviderDoc["violationBadge"]>).badgeUntil.toDate().toISOString()
-      : null,
+    violationBadgeUntil: visibleBadgeUntil(provider.violationBadge, nowMs),
     score,
     location: provider.location ? { lat: provider.location.lat, lng: provider.location.lng } : null,
   };

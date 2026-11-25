@@ -6,12 +6,13 @@ import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Link } from "react-router";
 import { GoogleReviews } from "~/components/google-reviews";
-import { ExcludedLabel, NotEnoughProven, ProofLabel, ViolationBadge } from "~/components/proof-label";
+import { NotEnoughProven, TestimonyLabels } from "~/components/proof-label";
 import { ReportButton } from "~/components/report-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { AspectRatings, FactList } from "~/components/ui/testimony-card";
+import { ViolationBadge } from "~/components/violation-badge";
 import { getI18n, type Language } from "~/i18n/config";
 import { ASPECTS } from "~/lib/aspects";
 import { useFirebaseConfig } from "~/lib/firebase-config";
@@ -539,10 +540,10 @@ function TestimonyItem({ testimony, language }: { testimony: PublicTestimony; la
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-semibold">{testimony.displayName}</span>
-          <span className="inline-flex flex-wrap items-center gap-2">
-            <ProofLabel verifiedVisit={testimony.verifiedVisit} />
-            <ExcludedLabel excluded={testimony.excludedByViolation} />
-          </span>
+          <TestimonyLabels
+            verifiedVisit={testimony.verifiedVisit}
+            excludedByViolation={testimony.excludedByViolation}
+          />
         </div>
         <p className="text-sm text-muted-foreground">
           {t("provider.visitMonth", { month: formatVisitMonth(testimony.visitMonth, language) })}

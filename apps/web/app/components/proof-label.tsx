@@ -1,8 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
-import { isLanguage } from "~/i18n/config";
-import { formatDay } from "~/lib/format";
+import { ExcludedLabel } from "~/components/violation-badge";
 import { TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
 
 /**
@@ -36,20 +35,18 @@ export function NotEnoughProven({ count, className }: { count: number; className
   );
 }
 
-/** Shown next to the proof label of a Testimony left out of the score by a confirmed violation (spec 09 Part 2). */
-export function ExcludedLabel({ excluded }: { excluded: boolean }) {
-  const { t } = useTranslation();
-  if (!excluded) return null;
-  return <Badge variant="warning">{t("violation.excluded")}</Badge>;
-}
-
-/** "Pelanggaran kebijakan testimoni" with its end date, on the Provider page and directory rows. */
-export function ViolationBadge({ until }: { until: string }) {
-  const { t, i18n } = useTranslation();
-  const language = isLanguage(i18n.language) ? i18n.language : "id";
+/** A published Testimony's labels: its proof label, and the exclusion label when a confirmed violation covers it. */
+export function TestimonyLabels({
+  verifiedVisit,
+  excludedByViolation,
+}: {
+  verifiedVisit: boolean;
+  excludedByViolation: boolean;
+}) {
   return (
-    <Badge variant="danger" data-testid="violation-badge">
-      {t("violation.badge")} · {t("violation.until", { date: formatDay(until, language) })}
-    </Badge>
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <ProofLabel verifiedVisit={verifiedVisit} />
+      <ExcludedLabel excluded={excludedByViolation} />
+    </span>
   );
 }

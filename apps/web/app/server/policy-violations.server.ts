@@ -163,13 +163,14 @@ async function moveViolation(
 
   const reason = acting.request.reason as string;
   // Every read of a confirm comes before its first write.
-  const confirmation = action === "confirmViolation" ? await readConfirmation(tx, acting.firestore, violation) : null;
+  const confirmation =
+    action === "confirmViolation" ? await readConfirmation(tx, acting.firestore, ref.id, violation) : null;
   if (confirmation) {
     const badgeUntil = Timestamp.fromMillis(badgeUntilMs(now.toMillis()));
     for (const doc of confirmation.excluded) tx.update(doc.ref, { excludedByViolation: ref.id, updatedAt: now });
     if (confirmation.provider) {
       tx.update(confirmation.provider.ref, {
-        aggregates: computeAggregates(confirmation.publishedAfter(ref.id)),
+        aggregates: computeAggregates(confirmation.publishedAfter),
         violationBadge: { violationId: ref.id, badgeUntil },
         updatedAt: now,
       });
@@ -221,7 +222,12 @@ async function moveViolation(
  * suspected period (Jakarta dates, both ends inclusive) to mark, and the Provider document
  * when there is one.
  */
-async function readConfirmation(tx: Transaction, firestore: Firestore, violation: PolicyViolationDoc) {
+async function readConfirmation(
+  tx: Transaction,
+  firestore: Firestore,
+  violationId: string,
+  violation: PolicyViolationDoc,
+) {
   const [testimonies, provider] = await Promise.all([
     tx.get(col(firestore, "testimonies").where("placeId", "==", violation.placeId)),
     tx.get(col(firestore, "providers").doc(violation.placeId)),
@@ -240,11 +246,10 @@ async function readConfirmation(tx: Transaction, firestore: Firestore, violation
     excluded,
     provider: provider.exists ? provider : null,
     /** The published Testimonies as they are once the period's ones carry the mark. */
-    publishedAfter: (violationId: string) =>
-      testimonies.docs
-        .map((doc) => ({ doc, data: doc.data() as TestimonyDoc }))
-        .filter(({ data }) => data.status === "published")
-        .map(({ doc, data }) => (excludedIds.has(doc.id) ? { ...data, excludedByViolation: violationId } : data)),
+    publishedAfter: testimonies.docs
+      .map((doc) => ({ doc, data: doc.data() as TestimonyDoc }))
+      .filter(({ data }) => data.status === "published")
+      .map(({ doc, data }) => (excludedIds.has(doc.id) ? { ...data, excludedByViolation: violationId } : data)),
   };
 }
 
