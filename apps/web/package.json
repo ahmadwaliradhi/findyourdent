@@ -12,6 +12,7 @@
     "typecheck": "react-router typegen && tsc",
     "test": "firebase emulators:exec --config ../../firebase.json --project demo-findyourdent --only firestore,auth,storage \"vitest run\"",
     "test:unit": "vitest run --project unit",
+    "eval:detection": "node evals/detection/report.ts",
     "test:e2e": "playwright test",
     "test:e2e:deployed": "playwright test --config playwright.deployed.config.ts",
     "capture:deployed": "playwright test --config playwright.capture.config.ts",

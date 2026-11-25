@@ -1,0 +1,1007 @@
+{
+  "labelling": {
+    "labeller": "Claude",
+    "reviewedOn": null,
+    "status": "agent-drafted"
+  },
+  "gates": {
+    "minCampaignHoldRate": 0.9,
+    "maxGenuineHoldRate": 0.1
+  },
+  "baseline": {
+    "note": "First run with the thresholds as shipped in the Part 2 detection module (D2 at 0.8). The campaign template with several small rewordings scored 0.785 and was published; the most similar genuine pair scored 0.632. D2 was lowered to 0.75, a tightening that catches the template and still clears the genuine pairs by 0.12. D1, D3 and the genuine false holds are unchanged: see the findings.",
+    "constants": {
+      "SIMILARITY_THRESHOLD": 0.8
+    },
+    "campaignHoldRate": 0.8823529411764706,
+    "genuineHoldRate": 0.35294117647058826,
+    "genuineWithoutKnownFalseHoldsRate": 0
+  },
+  "findings": [
+    "D2 was the only threshold the eval asked to move: 0.8 to 0.75 (tightening). No genuine pair came near it (highest 0.632, the two short reviews sharing 'Dokternya ramah dan bersih'); the template with several small rewordings scored 0.785.",
+    "D3 over-holds genuine patients on shared networks: the clinic's waiting-room wifi (two cases), a family on one home network and a couple on one shared tablet are all held, because D3 matches a bare IP hash or browser-id hash across accounts. Four of 17 genuine cases. No threshold applies (D3 has none) and its definition was not changed, as the spec requires. They go to the admin queue, which shows the shared hash and whether the linked account wrote about other Providers. If it overflows with clinic wifi, the follow-up is a product decision (for example an IP hash alone, shared by several accounts across many Providers, counting for less), not a tuning change.",
+    "D1 cannot tell a popular clinic from a campaign: three different patients in 21 hours and five in a week at one a day are held, and they have exactly the shape of camp-burst-day-edge and camp-burst-week-edge. Raising either threshold would let those campaigns through, so D1 stays at 3 per 24 hours and 5 per 7 days. Two of 17 genuine cases; the admin queue releases them.",
+    "Known gap: a paraphrased campaign spread over weeks on different phones and networks (camp-slow-paraphrase, trigram similarity 0.27) is not seen by any rule. It is the one campaign case that is published; that is why the campaign gate is 0.9 and not 1.0. Reports and the Proven Testimony rule (only proven visits count toward the score) are the defence there.",
+    "Short genuine reviews are safe from D2 at either threshold: character trigrams of 25 to 35 characters rarely overlap by more than 0.65 unless the texts are close to identical."
+  ],
+  "cases": [
+    {
+      "id": "camp-burst-day",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D1"],
+      "note": "Three accounts in a few hours with different texts and devices: a plain same-day burst.",
+      "timeline": [
+        {
+          "hoursAgo": 3,
+          "text": "Tambal gigi saya dikerjakan teliti, tidak sakit sama sekali. Terima kasih dokter.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 1.5,
+          "text": "Klinik rapi dan perawatnya sopan. Cabut gigi bungsu lancar, tidak lama.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Pertama kali ke sini untuk scaling, hasilnya bersih dan dokter menjelaskan dengan jelas.",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "id": "camp-burst-week",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D1"],
+      "note": "Five Testimonies in six days at one a day, distinct texts and devices: a slow burst that only the week window sees.",
+      "timeline": [
+        {
+          "hoursAgo": 132,
+          "text": "Dokter gigi di sini sabar, anak saya yang takut malah minta datang lagi.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 108,
+          "text": "Harga sesuai estimasi di awal, tidak ada biaya tambahan yang mengagetkan.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        },
+        {
+          "hoursAgo": 72,
+          "text": "Antreannya teratur, saya dipanggil tepat jam janji. Ruang tunggu nyaman.",
+          "status": "published",
+          "authorUid": "u-3",
+          "ipHash": "ip-3",
+          "browserIdHash": "br-3"
+        },
+        {
+          "hoursAgo": 36,
+          "text": "Behel saya dipasang di sini, kontrol bulanan selalu ditangani dengan rapi.",
+          "status": "published",
+          "authorUid": "u-4",
+          "ipHash": "ip-4",
+          "browserIdHash": "br-4"
+        }
+      ],
+      "submission": {
+        "text": "Sudah dua kali ke sini, pembersihan karang gigi dan tambal. Puas dengan hasilnya.",
+        "authorUid": "u-5",
+        "ipHash": "ip-5",
+        "browserIdHash": "br-5"
+      }
+    },
+    {
+      "nearThreshold": true,
+      "id": "camp-burst-day-edge",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D1"],
+      "note": "Three in just under 24 hours (23.5 h span), distinct texts and devices: sits on the day window edge.",
+      "timeline": [
+        {
+          "hoursAgo": 23.5,
+          "text": "Gigi bungsu saya dicabut tanpa drama. Pemulihan cepat, obatnya jelas aturannya.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 11,
+          "text": "Saya ke sini karena sakit gigi berlubang, langsung ditangani hari itu juga.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Ruangan bersih, alat steril dibuka di depan saya. Tenang memeriksakan gigi di sini.",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "nearThreshold": true,
+      "id": "camp-burst-week-edge",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D1"],
+      "note": "Fifth Testimony of a 6.9-day span, spread over days: one hour inside the week window.",
+      "timeline": [
+        {
+          "hoursAgo": 165.60000000000002,
+          "text": "Perawatan saluran akar saya dikerjakan dalam dua kali kunjungan, hasilnya nyaman.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 120,
+          "text": "Kliniknya mudah dicari dan parkirnya luas. Dokternya tidak terburu-buru.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        },
+        {
+          "hoursAgo": 76.80000000000001,
+          "text": "Biaya ditulis jelas sebelum tindakan. Saya merasa dihargai sebagai pasien.",
+          "status": "published",
+          "authorUid": "u-3",
+          "ipHash": "ip-3",
+          "browserIdHash": "br-3"
+        },
+        {
+          "hoursAgo": 26.400000000000002,
+          "text": "Pasang veneer di sini, hasilnya natural dan dokter mau mendengar keinginan saya.",
+          "status": "published",
+          "authorUid": "u-4",
+          "ipHash": "ip-4",
+          "browserIdHash": "br-4"
+        }
+      ],
+      "submission": {
+        "text": "Anak saya periksa rutin dan diberi fluoride, dokternya pintar mengajak bercanda.",
+        "authorUid": "u-5",
+        "ipHash": "ip-5",
+        "browserIdHash": "br-5"
+      }
+    },
+    {
+      "id": "camp-copypaste",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D2"],
+      "note": "Exact copy of a published testimony from two weeks ago, new account on a new device.",
+      "timeline": [
+        {
+          "hoursAgo": 336,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya terjangkau. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya terjangkau. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "camp-template-one-word",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D2"],
+      "note": "One word swapped (terjangkau for murah) in a copied template.",
+      "timeline": [
+        {
+          "hoursAgo": 480,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya terjangkau. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya murah. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "nearThreshold": true,
+      "id": "camp-template-reworded-ends",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D2"],
+      "note": "Template with several small rewordings and punctuation changes, compared with a held copy.",
+      "timeline": [
+        {
+          "hoursAgo": 960,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya terjangkau. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "held",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah dan profesional, harga terjangkau sekali. Pelayanan cepat, ruangannya bersih. Sangat direkomendasikan buat keluarga!",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "camp-template-english",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D2"],
+      "note": "English template with 'spotless' changed to 'very clean'.",
+      "timeline": [
+        {
+          "hoursAgo": 600,
+          "text": "Best dental clinic in town! The dentist is friendly and professional, the price is fair and the clinic is spotless. Highly recommended for the whole family.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Best dental clinic in town! The dentist is friendly and professional, the price is fair and the clinic is very clean. Highly recommended for the whole family.",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "camp-short-copy",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D2"],
+      "note": "A short five-star line copied word for word.",
+      "timeline": [
+        {
+          "hoursAgo": 216,
+          "text": "Dokter ramah, klinik bersih, harga murah. Recommended banget!",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Dokter ramah, klinik bersih, harga murah. Recommended banget!",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "camp-case-and-spacing",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D2"],
+      "note": "A copy with capitals and spacing changed, the cheapest way to dodge an exact match.",
+      "timeline": [
+        {
+          "hoursAgo": 288,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya terjangkau. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "SAYA SANGAT PUAS DENGAN KLINIK GIGI SEHAT SENTOSA.  DOKTERNYA RAMAH, PROFESIONAL, DAN HARGANYA TERJANGKAU.  PELAYANAN CEPAT DAN RUANGANNYA BERSIH.  SANGAT DIREKOMENDASIKAN UNTUK KELUARGA!",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "camp-one-phone-three-accounts",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D3"],
+      "note": "Three accounts logging in from one phone (same browser id) over two weeks, distinct networks and texts.",
+      "timeline": [
+        {
+          "hoursAgo": 312,
+          "text": "Dokternya teliti dan menjelaskan semua pilihan perawatan. Saya jadi paham.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-phone"
+        },
+        {
+          "hoursAgo": 144,
+          "text": "Kliniknya wangi dan tenang, tidak seperti klinik gigi yang bikin takut.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-phone"
+        }
+      ],
+      "submission": {
+        "text": "Perawatnya cekatan, bius lokal tidak terasa sakit. Ramah sekali.",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-phone"
+      }
+    },
+    {
+      "id": "camp-same-network-staff",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D3"],
+      "note": "Two accounts from the clinic's own network (same IP hash) a week apart, different browsers and texts.",
+      "timeline": [
+        {
+          "hoursAgo": 192,
+          "text": "Pelayanan sangat memuaskan, dokternya sabar dan harga masuk akal.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-clinic",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Rekomendasi untuk yang takut ke dokter gigi, mereka telaten dan lembut.",
+        "authorUid": "u-2",
+        "ipHash": "ip-clinic",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "camp-shared-device-short",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D3"],
+      "note": "Very short texts from two accounts on one browser, ten days apart.",
+      "timeline": [
+        {
+          "hoursAgo": 240,
+          "text": "Mantap!",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-shared"
+        }
+      ],
+      "submission": {
+        "text": "Keren, bersih.",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-shared"
+      }
+    },
+    {
+      "id": "camp-burst-and-template",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D1", "D2"],
+      "note": "Three in four hours, all from one template with small edits, each on its own phone.",
+      "timeline": [
+        {
+          "hoursAgo": 4,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya terjangkau. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 2,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya murah. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah dan profesional, harga terjangkau sekali. Pelayanan cepat, ruangannya bersih. Sangat direkomendasikan buat keluarga!",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "id": "camp-burst-one-phone",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D1", "D3"],
+      "note": "Three accounts in an afternoon from one phone, three different texts.",
+      "timeline": [
+        {
+          "hoursAgo": 5,
+          "text": "Dokter gigi terbaik yang pernah saya datangi, pelayanannya tulus.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-phone2"
+        },
+        {
+          "hoursAgo": 3,
+          "text": "Biayanya transparan dan hasil tambalan rapi. Saya bakal balik lagi.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-phone2"
+        }
+      ],
+      "submission": {
+        "text": "Klinik favorit keluarga kami, anak-anak tidak takut lagi.",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-phone2"
+      }
+    },
+    {
+      "id": "camp-all-three",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": ["D1", "D2", "D3"],
+      "note": "A burst of one template from one office network.",
+      "timeline": [
+        {
+          "hoursAgo": 6,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya terjangkau. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-office",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 2,
+          "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah, profesional, dan harganya murah. Pelayanan cepat dan ruangannya bersih. Sangat direkomendasikan untuk keluarga!",
+          "status": "held",
+          "authorUid": "u-2",
+          "ipHash": "ip-office",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Saya sangat puas dengan Klinik Gigi Sehat Sentosa. Dokternya ramah dan profesional, harga terjangkau sekali. Pelayanan cepat, ruangannya bersih. Sangat direkomendasikan buat keluarga!",
+        "authorUid": "u-3",
+        "ipHash": "ip-office",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "id": "camp-slow-paraphrase",
+      "group": "campaign",
+      "expected": "hold",
+      "expectedRules": [],
+      "note": "Known gap: a paraphrased campaign, one account a week on different phones and networks, each text freshly reworded. Nothing in D1, D2 or D3 sees it.",
+      "timeline": [
+        {
+          "hoursAgo": 432,
+          "text": "Saya puas sekali berobat di Sehat Sentosa; dokter sopan, tarif bersahabat, ruang praktik higienis.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 264,
+          "text": "Berobat di Sehat Sentosa membuat saya tenang. Dokternya santun, biayanya wajar, ruangannya higienis.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Tempat berobat gigi yang saya percaya: dokter santun, ongkos wajar, klinik higienis dan tertata.",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "id": "gen-busy-two-in-day",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "A busy clinic: second Testimony of the day, a few hours after the first.",
+      "timeline": [
+        {
+          "hoursAgo": 5,
+          "text": "Saya cabut gigi geraham kemarin. Dokternya menjelaskan risiko dulu, prosesnya cepat.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Antre sekitar 20 menit, tapi perawatnya minta maaf dan dokternya teliti. Biaya sesuai.",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "nearThreshold": true,
+      "id": "gen-steady-four-in-week",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "A steady clinic: fourth Testimony in a week, never more than two in a day.",
+      "timeline": [
+        {
+          "hoursAgo": 144,
+          "text": "Scaling pertama saya setelah dua tahun. Sedikit ngilu, tapi dokternya sabar.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 96,
+          "text": "Tambal gigi anak saya, dia tidak menangis. Terima kasih Dokter.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        },
+        {
+          "hoursAgo": 48,
+          "text": "Kliniknya dekat stasiun, buka sampai malam. Cocok untuk yang pulang kerja.",
+          "status": "published",
+          "authorUid": "u-3",
+          "ipHash": "ip-3",
+          "browserIdHash": "br-3"
+        }
+      ],
+      "submission": {
+        "text": "Konsultasi behel, dijelaskan semua pilihan dan biayanya. Tidak dipaksa langsung pasang.",
+        "authorUid": "u-4",
+        "ipHash": "ip-4",
+        "browserIdHash": "br-4"
+      }
+    },
+    {
+      "nearThreshold": true,
+      "id": "gen-three-in-day-spread",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "knownFalseHold": ["D1"],
+      "note": "A popular clinic on a Saturday: three different patients over about 21 hours, each text clearly its own. D1 holds it, and it has the same shape as camp-burst-day-edge, so loosening D1 would let that campaign through.",
+      "timeline": [
+        {
+          "hoursAgo": 21,
+          "text": "Gigi saya berlubang dua, dua-duanya ditambal sekali datang. Hasilnya nyaman digigit.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 9,
+          "text": "Bawa ibu saya yang sudah 70 tahun untuk pasang gigi palsu, dokternya sabar sekali.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Bleaching di sini tidak bikin ngilu berlebihan. Warnanya naik tiga tingkat.",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "nearThreshold": true,
+      "id": "gen-five-in-week-busy",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "knownFalseHold": ["D1"],
+      "note": "A very busy clinic: fifth Testimony in a week (one a day), every patient on their own phone and network. D1 holds it, and it has the same shape as camp-burst-week-edge.",
+      "timeline": [
+        {
+          "hoursAgo": 156,
+          "text": "Cabut gigi bungsu miring, saya takut sekali tapi ternyata cepat selesai.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 120,
+          "text": "Pembersihan karang gigi dan konsultasi gigi sensitif, diberi tips sikat yang benar.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        },
+        {
+          "hoursAgo": 72,
+          "text": "Anak saya umur 5 tahun pertama kali ke dokter gigi, diajak main dulu.",
+          "status": "published",
+          "authorUid": "u-3",
+          "ipHash": "ip-3",
+          "browserIdHash": "br-3"
+        },
+        {
+          "hoursAgo": 28.799999999999997,
+          "text": "Saya datang karena gusi bengkak. Diberi obat dan dijadwalkan kontrol, jelas alurnya.",
+          "status": "published",
+          "authorUid": "u-4",
+          "ipHash": "ip-4",
+          "browserIdHash": "br-4"
+        }
+      ],
+      "submission": {
+        "text": "Resep obat dan biaya ditulis rapi di kuitansi. Saya suka klinik yang transparan.",
+        "authorUid": "u-5",
+        "ipHash": "ip-5",
+        "browserIdHash": "br-5"
+      }
+    },
+    {
+      "id": "gen-short-shared-phrase",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "Short genuine reviews that naturally share a phrase.",
+      "timeline": [
+        {
+          "hoursAgo": 360,
+          "text": "Dokternya ramah dan bersih",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Dokternya ramah dan bersih, kliniknya juga",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "gen-short-common-praise",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "Another short pair, 'pelayanan ramah' with a different second half.",
+      "timeline": [
+        {
+          "hoursAgo": 528,
+          "text": "Pelayanan ramah, harga terjangkau.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Pelayanan ramah, dokternya telaten.",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "gen-many-short-reviews",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "Three short reviews over three weeks, the new one shares 'dan cepat' style wording but is its own sentence.",
+      "timeline": [
+        {
+          "hoursAgo": 504,
+          "text": "Pelayanan ramah dan cepat.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 336,
+          "text": "Dokter ramah, klinik bersih.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        },
+        {
+          "hoursAgo": 192,
+          "text": "Harganya terjangkau dan hasilnya bagus.",
+          "status": "published",
+          "authorUid": "u-3",
+          "ipHash": "ip-3",
+          "browserIdHash": "br-3"
+        }
+      ],
+      "submission": {
+        "text": "Perawatnya ramah, antrean cepat, dokternya pintar.",
+        "authorUid": "u-4",
+        "ipHash": "ip-4",
+        "browserIdHash": "br-4"
+      }
+    },
+    {
+      "id": "gen-english-short",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "Short English reviews from expats, sharing the words 'friendly dentist'.",
+      "timeline": [
+        {
+          "hoursAgo": 264,
+          "text": "Very friendly dentist, clean clinic.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Friendly dentist and fair prices. Will come back.",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "gen-same-wording-different-visit",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "Two longer reviews that share one stock sentence but differ in the rest (similarity 0.19).",
+      "timeline": [
+        {
+          "hoursAgo": 408,
+          "text": "Dokternya ramah dan bersih. Saya scaling dan dijelaskan cara menyikat gigi dengan benar, biayanya Rp 350.000.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Pasang tambalan di geraham kiri, dikerjakan satu jam. Dokternya ramah dan bersih, kuitansi lengkap.",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "gen-waiting-room-wifi",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "knownFalseHold": ["D3"],
+      "note": "Two patients wrote on the clinic's waiting-room wifi (same IP hash, own phones and accounts), three days apart. D3 holds it; a threshold cannot fix that.",
+      "timeline": [
+        {
+          "hoursAgo": 72,
+          "text": "Saya menulis ini sambil menunggu giliran kontrol. Dokternya selalu tepat waktu.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-clinic-wifi",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Pasien baru di sini, wifi ruang tunggunya enak dipakai. Dokter menjelaskan rontgen dengan jelas.",
+        "authorUid": "u-2",
+        "ipHash": "ip-clinic-wifi",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "gen-waiting-room-wifi-busy",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "knownFalseHold": ["D3"],
+      "note": "Third patient on the same waiting-room wifi in a month, no other overlap. D3 holds it.",
+      "timeline": [
+        {
+          "hoursAgo": 600,
+          "text": "Kontrol behel bulanan, tidak sampai 30 menit. Perawat hafal nama pasien.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-clinic-wifi2",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 216,
+          "text": "Gigi anak saya dibersihkan dan dioles fluoride, diajari sikat gigi sambil bernyanyi.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-clinic-wifi2",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Datang malam hari, dokter masih sabar. Tambalan sementara sebelum perawatan lanjutan.",
+        "authorUid": "u-3",
+        "ipHash": "ip-clinic-wifi2",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "id": "gen-family-home-network",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "knownFalseHold": ["D3"],
+      "note": "A mother and her son, each with an account and phone, writing on the home wifi four days apart. D3 holds it.",
+      "timeline": [
+        {
+          "hoursAgo": 96,
+          "text": "Ibu saya periksa gigi palsu, dokternya menjelaskan perawatan dengan bahasa yang mudah.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-home",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Saya ikut mengantar ibu, lalu periksa sendiri. Ternyata ada karies kecil yang langsung ditambal.",
+        "authorUid": "u-2",
+        "ipHash": "ip-home",
+        "browserIdHash": "br-2"
+      }
+    },
+    {
+      "id": "gen-family-shared-tablet",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "knownFalseHold": ["D3"],
+      "note": "Two spouses on one shared tablet (same browser id and IP), two weeks apart. D3 holds it.",
+      "timeline": [
+        {
+          "hoursAgo": 336,
+          "text": "Suami saya cabut gigi geraham, tidak ada keluhan setelahnya. Terima kasih.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-home2",
+          "browserIdHash": "br-tablet"
+        }
+      ],
+      "submission": {
+        "text": "Giliran saya scaling. Rasanya geli saja, hasilnya segar.",
+        "authorUid": "u-2",
+        "ipHash": "ip-home2",
+        "browserIdHash": "br-tablet"
+      }
+    },
+    {
+      "id": "gen-same-author-after-delete",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "One author deleted a Testimony and rewrote it from the same phone; the deleted one counts for nothing and the author's own signals never count in D3.",
+      "timeline": [
+        {
+          "hoursAgo": 48,
+          "text": "Dokter baik, tapi saya salah sebut nama klinik.",
+          "status": "deleted",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Dokter baik dan teliti. Saya menulis ulang karena salah menyebut nama klinik di tulisan sebelumnya.",
+        "authorUid": "u-1",
+        "ipHash": "ip-1",
+        "browserIdHash": "br-1"
+      }
+    },
+    {
+      "id": "gen-own-old-held-new-network",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "One author now writes from work wifi and a new phone; the only earlier signal is their own.",
+      "timeline": [
+        {
+          "hoursAgo": 72,
+          "text": "Pertama kali ke sini, kesan awal baik. Saya akan menulis lebih lengkap setelah kontrol.",
+          "status": "deleted",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Sudah kontrol, jahitan dibuka dan semuanya baik. Dokternya tepat janji.",
+        "authorUid": "u-1",
+        "ipHash": "ip-work",
+        "browserIdHash": "br-newphone"
+      }
+    },
+    {
+      "id": "gen-quiet-clinic-old-testimonies",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "A quiet clinic: earlier Testimonies are months old and unrelated.",
+      "timeline": [
+        {
+          "hoursAgo": 1440,
+          "text": "Layanan ortodonti mereka rapi, saya sudah dua tahun memakai behel di sini.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        },
+        {
+          "hoursAgo": 2160,
+          "text": "Dokter gigi anak yang sabar. Anak saya malah senang datang.",
+          "status": "published",
+          "authorUid": "u-2",
+          "ipHash": "ip-2",
+          "browserIdHash": "br-2"
+        }
+      ],
+      "submission": {
+        "text": "Tambal gigi depan, warnanya pas dengan gigi asli. Puas.",
+        "authorUid": "u-3",
+        "ipHash": "ip-3",
+        "browserIdHash": "br-3"
+      }
+    },
+    {
+      "id": "gen-two-visits-same-day-friends",
+      "group": "genuine",
+      "expected": "publish",
+      "expectedRules": [],
+      "note": "Two friends who visited together, on different phones and networks, writing in their own words.",
+      "timeline": [
+        {
+          "hoursAgo": 2,
+          "text": "Kami datang berdua. Saya scaling, teman saya tambal. Dokternya ramah ke dua-duanya.",
+          "status": "published",
+          "authorUid": "u-1",
+          "ipHash": "ip-1",
+          "browserIdHash": "br-1"
+        }
+      ],
+      "submission": {
+        "text": "Diajak teman ke sini. Antre sebentar, lalu cek gigi geraham yang suka ngilu.",
+        "authorUid": "u-2",
+        "ipHash": "ip-2",
+        "browserIdHash": "br-2"
+      }
+    }
+  ]
+}

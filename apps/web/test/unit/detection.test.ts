@@ -124,15 +124,17 @@ describe("D2 similarity: character-trigram Jaccard", () => {
 });
 
 describe("D2 similarity: the threshold", () => {
-  it("is 0.8", () => {
-    expect(SIMILARITY_THRESHOLD).toBe(0.8);
+  it("is 0.75 (tuned with the detection eval, 2026-11-25)", () => {
+    expect(SIMILARITY_THRESHOLD).toBe(0.75);
   });
 
-  it("fires at 0.8 and not just below it", () => {
+  it("fires at 0.75 and not just below it", () => {
     // "abcdefghijkl" has 10 trigrams; "abcdefghijklm" adds "klm": 10 of 11 (0.91).
     expect(similarityFires("abcdefghijklm", ["abcdefghijkl"])).toBe(true);
-    // 4 shared of 5 distinct: {abc,bcd,cde,def} vs {abc,bcd,cde,def,efg}: exactly 0.8.
-    expect(similarityFires("abcdefg", ["abcdef"])).toBe(true);
+    // 3 shared of 4 distinct: {abc,bcd,cde} vs {abc,bcd,cde,def}: exactly 0.75.
+    expect(similarityFires("abcdef", ["abcde"])).toBe(true);
+    // 4 shared of 6 distinct: {abc,bcd,cde,def,efg} vs {abc,bcd,cde,def,efh}: 0.67.
+    expect(similarityFires("abcdefg", ["abcdefh"])).toBe(false);
     // {abc,bcd,cde,def} vs {abc,bcd,cdx}: 2 shared of 5 distinct (0.4).
     expect(similarityFires("abcdef", ["abcdx"])).toBe(false);
   });
