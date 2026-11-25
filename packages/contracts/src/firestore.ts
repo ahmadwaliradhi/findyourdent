@@ -117,6 +117,10 @@ export type PaymentMethod =
   | { method: "asuransi"; insurer: InsurerSlug }
   | { method: "tidakDisebut" };
 export type PaymentMethodKind = PaymentMethod["method"];
+/** Every PaymentMethodKind, in the order the form offers them. */
+export const PAYMENT_METHOD_KINDS = ["pribadi", "bpjs", "asuransi", "tidakDisebut"] as const satisfies readonly PaymentMethodKind[];
+export const isPaymentMethodKind = (value: unknown): value is PaymentMethodKind =>
+  (PAYMENT_METHOD_KINDS as readonly unknown[]).includes(value);
 
 /** Published Testimonies per reported Payment Method; `tidakDisebut` and absent are not counted. */
 export interface PaymentMethodCounts {
@@ -126,6 +130,9 @@ export interface PaymentMethodCounts {
   /** Per insurer within asuransi; only insurers with count >= 1. */
   insurers: Partial<Record<InsurerSlug, number>>;
 }
+
+/** Counts with nothing reported: what aggregates computed before spec 07 read as. */
+export const emptyPaymentMethodCounts = (): PaymentMethodCounts => ({ pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} });
 
 /**
  * Recomputed whenever a Testimony enters or leaves `published` or its proof result

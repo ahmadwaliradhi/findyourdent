@@ -1,7 +1,7 @@
 // XML sitemap (spec 04). Reads only document ids from `providers`; no Places call.
 import { COLLECTIONS } from "@findyourdent/contracts/firestore";
 import type { Firestore } from "firebase-admin/firestore";
-import { providerPath, TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
+import { BPJS_PAGE_PATH, providerPath, TRANSPARENCY_PAGE_PATH } from "~/lib/paths";
 
 function escapeXml(value: string): string {
   return value
@@ -13,11 +13,11 @@ function escapeXml(value: string): string {
 }
 
 /**
- * The landing page, the directory, About, Privacy, Terms, how we verify Testimonies and every
+ * The landing page, the directory, About, Privacy, Terms, how we verify Testimonies, BPJS and dental care and every
  * Listed Provider page.
  */
 export async function sitemapPaths(firestore: Firestore | null): Promise<string[]> {
-  const paths = ["/", "/direktori", "/tentang", "/privasi", "/syarat", TRANSPARENCY_PAGE_PATH];
+  const paths = ["/", "/direktori", "/tentang", "/privasi", "/syarat", TRANSPARENCY_PAGE_PATH, BPJS_PAGE_PATH];
   if (!firestore) return paths;
   const providers = await firestore.collection(COLLECTIONS.providers).select().get();
   for (const doc of providers.docs) paths.push(providerPath(doc.id));

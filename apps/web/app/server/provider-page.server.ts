@@ -4,6 +4,7 @@
 import {
   type AspectRatings,
   COLLECTIONS,
+  emptyPaymentMethodCounts,
   type PaymentMethodCounts,
   type ProcedureCode,
   type ProviderDoc,
@@ -143,7 +144,7 @@ export async function loadProviderPage(
       testimonyCount: doc.aggregates.testimonyCount,
       verifiedVisitCount: doc.aggregates.verifiedVisitCount,
       averages: doc.aggregates.averages,
-      paymentMethodCounts: doc.aggregates.paymentMethodCounts ?? { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} },
+      paymentMethodCounts: doc.aggregates.paymentMethodCounts ?? emptyPaymentMethodCounts(),
       priceSignals: priceSignals(doc),
       ...(priceList ? { priceList: publicPriceList(priceList) } : {}),
       ...(owner ? { owner } : {}),

@@ -31,11 +31,23 @@ test("the Provider page shows how patients paid, from one Testimony, with the FK
   await expect(block.getByText("1 pasien bayar pakai asuransi swasta")).toBeVisible();
   await expect(block.getByText("Prudential: 1 pasien")).toBeVisible();
   await expect(block.getByText(/FKTP tempat peserta terdaftar/)).toBeVisible();
-  await expect(block.getByRole("link", { name: /penjelasan BPJS dan FKTP/ })).toHaveAttribute("href", "/");
+  await expect(block.getByRole("link", { name: /penjelasan BPJS dan FKTP/ })).toHaveAttribute("href", "/bpjs#fktp");
   // The wording is about the author's own visit, never "accepts BPJS".
   await expect(page.getByText(/menerima BPJS|terima BPJS/i)).toHaveCount(0);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("the FKTP link opens the BPJS page at its FKTP section", async ({ page, firestore, unique }) => {
+  const provider = await seedProvider(firestore, { placeId: `bayar-fktp-${unique}`, name: `Klinik FKTP ${unique}` });
+
+  await page.goto(`/tempat/${provider.placeId}`);
+  await page.getByTestId("fktp-note").getByRole("link", { name: /penjelasan BPJS dan FKTP/ }).click();
+
+  await expect(page).toHaveURL(/\/bpjs#fktp$/);
+  await expect(page.getByRole("heading", { level: 1, name: "BPJS Kesehatan dan perawatan gigi" })).toBeVisible();
+  await expect(page.locator("#fktp")).toBeVisible();
+  await expect(page.getByText(/menerima BPJS|terima BPJS/i)).toHaveCount(0);
 });
 
 test("only the methods that were reported are listed", async ({ page, firestore, unique }) => {

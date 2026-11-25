@@ -43,8 +43,6 @@ const ASPECTS = ["service", "hygiene", "materialsEquipment"] as const;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const PAYMENT_METHODS = ["pribadi", "bpjs", "asuransi", "tidakDisebut"] as const;
-
 /** A clean PaymentMethod, or null when the value is not exactly one (unknown keys, bad insurer). */
 function parsePaymentMethod(value: unknown): PaymentMethod | null {
   if (!isRecord(value)) return null;
@@ -54,9 +52,14 @@ function parsePaymentMethod(value: unknown): PaymentMethod | null {
     if (keys.length !== 2 || typeof value.insurer !== "string" || !isInsurerSlug(value.insurer)) return null;
     return { method, insurer: value.insurer };
   }
-  if (typeof method !== "string" || !(PAYMENT_METHODS as readonly string[]).includes(method)) return null;
-  if (keys.length !== 1) return null;
-  return { method } as PaymentMethod;
+  switch (method) {
+    case "pribadi":
+    case "bpjs":
+    case "tidakDisebut":
+      return keys.length === 1 ? { method } : null;
+    default:
+      return null;
+  }
 }
 
 const trimmed = (value: unknown) => (typeof value === "string" ? value.trim() : "");

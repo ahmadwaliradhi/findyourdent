@@ -7,23 +7,38 @@ import { cn } from "~/lib/utils";
 
 /** A paragraph, a bulleted list, or a boxed callout (the Terms emergency note). */
 type LegalBlock = string | readonly string[] | { readonly box: string };
-export type LegalSection = { readonly title: string; readonly blocks: readonly LegalBlock[] };
+/** `anchor` replaces the numbered `s{n}` id, so other pages can link to a section. */
+export type LegalSection = { readonly title: string; readonly anchor?: string; readonly blocks: readonly LegalBlock[] };
 
-const MARKUP = /<b>(.*?)<\/b>|<code>(.*?)<\/code>|<email\/>/g;
+const sectionId = (section: LegalSection, i: number) => section.anchor ?? `s${i + 1}`;
 
-/** Renders the few inline tags the legal copy uses: <b>, <code> and <email/> (the business mailto link). */
+const MARKUP = /<b>(.*?)<\/b>|<code>(.*?)<\/code>|<a href="(https:\/\/[^"]+)">(.*?)<\/a>|<email\/>/g;
+
+/** Renders the few inline tags the legal copy uses: <b>, <code>, <a href="https://...">  (an external source link) and <email/> (the business mailto link). */
 export function LegalText({ text }: { text: string }) {
   const parts: ReactNode[] = [];
   let last = 0;
   for (const match of text.matchAll(MARKUP)) {
     parts.push(text.slice(last, match.index));
-    const [, bold, code] = match;
+    const [, bold, code, href, linkText] = match;
     const key = match.index;
     if (bold !== undefined)
       parts.push(
         <b key={key} className="font-semibold">
           {bold}
         </b>,
+      );
+    else if (href !== undefined)
+      parts.push(
+        <a
+          key={key}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary underline underline-offset-4 break-words"
+        >
+          {linkText}
+        </a>,
       );
     else if (code !== undefined)
       parts.push(
@@ -77,7 +92,7 @@ function Contents({ sections }: { sections: readonly LegalSection[] }) {
       {sections.map((section, i) => (
         <li key={section.title}>
           <a
-            href={`#s${i + 1}`}
+            href={`#${sectionId(section, i)}`}
             className="flex min-h-touch items-center rounded-md px-2.5 text-sm text-foreground no-underline hover:bg-background hover:text-primary"
           >
             {i + 1}. {section.title}
@@ -143,11 +158,11 @@ export function LegalPage({
           {sections.map((section, i) => (
             <section
               key={section.title}
-              id={`s${i + 1}`}
-              aria-labelledby={`s${i + 1}-title`}
+              id={sectionId(section, i)}
+              aria-labelledby={`${sectionId(section, i)}-title`}
               className="flex scroll-mt-6 flex-col gap-3 leading-[26px]"
             >
-              <h2 id={`s${i + 1}-title`} className="text-lg leading-6 font-[650]">
+              <h2 id={`${sectionId(section, i)}-title`} className="text-lg leading-6 font-[650]">
                 {i + 1}. {section.title}
               </h2>
               {section.blocks.map((block) => (

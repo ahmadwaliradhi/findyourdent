@@ -37,6 +37,7 @@ describe("GET /sitemap.xml", () => {
         `${server.baseUrl}/privasi`,
         `${server.baseUrl}/syarat`,
         `${server.baseUrl}/verifikasi-testimoni`,
+        `${server.baseUrl}/bpjs`,
         `${server.baseUrl}/tempat/${first.placeId}`,
         `${server.baseUrl}/tempat/ChIJ%20second%26odd`,
       ].sort(),
@@ -55,6 +56,6 @@ describe("GET /sitemap.xml", () => {
   it("is still valid with no Listed Providers yet", async () => {
     const xml = await (await fetch(new URL("/sitemap.xml", server.baseUrl))).text();
 
-    expect([...xml.matchAll(/<loc>/g)]).toHaveLength(6);
+    expect([...xml.matchAll(/<loc>/g)]).toHaveLength(7);
   });
 });

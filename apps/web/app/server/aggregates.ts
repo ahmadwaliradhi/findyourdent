@@ -3,12 +3,12 @@
 // changes. Only Proven Testimonies (verifiedVisit) feed averages and price stats.
 // Pure; the Firestore side is in testimonies.server.ts.
 
-import type {
-  PaymentMethodCounts,
-  ProcedurePriceAggregate,
-  ProviderAggregates,
-  TestimonyContent,
-  TestimonyDoc,
+import {
+  emptyPaymentMethodCounts,
+  type ProcedurePriceAggregate,
+  type ProviderAggregates,
+  type TestimonyContent,
+  type TestimonyDoc,
 } from "@findyourdent/contracts/firestore";
 import { MIN_PROVEN_FOR_SCORE } from "../lib/scores.ts";
 
@@ -31,7 +31,7 @@ function median(sorted: readonly number[]): number {
 export function computeAggregates(published: readonly AggregateInput[]): ProviderAggregates {
   const sum = { service: 0, hygiene: 0, materialsEquipment: 0 };
   const prices = new Map<string, number[]>();
-  const paymentMethodCounts: PaymentMethodCounts = { pribadi: 0, bpjs: 0, asuransi: 0, insurers: {} };
+  const paymentMethodCounts = emptyPaymentMethodCounts();
   let verifiedVisitCount = 0;
   for (const testimony of published) {
     const payment = testimony.paymentMethod;

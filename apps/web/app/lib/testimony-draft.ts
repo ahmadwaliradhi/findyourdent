@@ -3,7 +3,12 @@
 
 import { isInsurerSlug } from "@findyourdent/contracts";
 import procedureList from "@findyourdent/contracts/data/procedures.json";
-import type { AspectRatings, PaymentMethod, PaymentMethodKind } from "@findyourdent/contracts/firestore";
+import {
+  type AspectRatings,
+  isPaymentMethodKind,
+  type PaymentMethod,
+  type PaymentMethodKind,
+} from "@findyourdent/contracts/firestore";
 import type id from "../i18n/locales/id.json";
 import { ASPECTS } from "./aspects";
 import {
@@ -18,9 +23,6 @@ import {
 export type Aspect = (typeof ASPECTS)[number];
 
 /** The Payment Method choices, in the order the form shows them. "" is the skipped question. */
-export const PAYMENT_METHOD_KINDS: readonly PaymentMethodKind[] = ["pribadi", "bpjs", "asuransi", "tidakDisebut"];
-const isPaymentMethodKind = (value: unknown): value is PaymentMethodKind =>
-  PAYMENT_METHOD_KINDS.includes(value as PaymentMethodKind);
 
 /** Everything typed into the form. Files are kept apart: they cannot go into a draft. */
 export interface TestimonyFormState {
@@ -120,7 +122,7 @@ export function parseDraft(raw: string | null): TestimonyFormState | null {
     visitYear: isString(d.visitYear) && /^\d{4}$/.test(d.visitYear) ? d.visitYear : "",
     visitMonth: isString(d.visitMonth) && /^(0[1-9]|1[0-2])$/.test(d.visitMonth) ? d.visitMonth : "",
     paymentMethod: isPaymentMethodKind(d.paymentMethod) ? d.paymentMethod : "",
-    insurer: isPaymentMethodKind(d.paymentMethod) && isInsurerSlug(d.insurer) ? d.insurer : "",
+    insurer: d.paymentMethod === "asuransi" && isInsurerSlug(d.insurer) ? d.insurer : "",
     displayName: isString(d.displayName) ? d.displayName.slice(0, TESTIMONY_LIMITS.displayNameMaxChars) : "",
     consentHonest: d.consentHonest === true,
     consentNoOthers: d.consentNoOthers === true,

@@ -249,4 +249,9 @@ describe("Payment Method (spec 07)", () => {
     const badInsurer = JSON.stringify({ v: 1, state: { ...filled, paymentMethod: "asuransi", insurer: "admedika" } });
     expect(parseDraft(badInsurer)).toMatchObject({ paymentMethod: "asuransi", insurer: "" });
   });
+
+  it("drops a stored insurer when the method is not asuransi", () => {
+    const stale = JSON.stringify({ v: 1, state: { ...filled, paymentMethod: "pribadi", insurer: "prudential" } });
+    expect(parseDraft(stale)).toMatchObject({ paymentMethod: "pribadi", insurer: "" });
+  });
 });

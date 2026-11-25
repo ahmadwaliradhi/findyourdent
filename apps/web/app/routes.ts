@@ -42,6 +42,7 @@ export default [
   route("tentang", "routes/tentang.tsx"),
   route("privasi", "routes/privasi.tsx"),
   route("syarat", "routes/syarat.tsx"),
+  route("bpjs", "routes/bpjs.tsx"),
   route("verifikasi-testimoni", "routes/verifikasi-testimoni.tsx"),
   route("ceritakan", "routes/ceritakan.tsx"),
   route("foto/:testimonyId/:photoId", "routes/foto.$testimonyId.$photoId.ts"),

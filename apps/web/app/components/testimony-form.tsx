@@ -3,6 +3,7 @@
 // fix-before-submit loop when Moderation flags something the author can fix.
 import { INSURERS } from "@findyourdent/contracts";
 import procedureList from "@findyourdent/contracts/data/procedures.json";
+import { PAYMENT_METHOD_KINDS } from "@findyourdent/contracts/firestore";
 import { Check, FileCheck, Plus, TriangleAlert, Upload } from "lucide-react";
 import type * as React from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -43,7 +44,6 @@ import {
   hasContent,
   isFutureMonth,
   type ListingCheck,
-  PAYMENT_METHOD_KINDS,
   parseDraft,
   serializeDraft,
   stateFromInitial,

@@ -17,7 +17,7 @@ import { ASPECTS } from "~/lib/aspects";
 import { useFirebaseConfig } from "~/lib/firebase-config";
 import { formatDate, formatRupiah, formatScore, formatVisitMonth } from "~/lib/format";
 import { fetchGoogleRoute } from "~/lib/google-routes";
-import { providerPath } from "~/lib/paths";
+import { BPJS_FKTP_PATH, providerPath } from "~/lib/paths";
 import type { PublicPriceList } from "~/lib/price-lists";
 import { procedureLabel } from "~/lib/procedures";
 import type { GoogleBlockResponse, ProviderGoogleBlock } from "~/lib/provider";
@@ -301,8 +301,7 @@ function Aspects({ provider, language }: { provider: ProviderSummary; language: 
 /**
  * Spec 07: how many published Testimonies said each Payment Method, from N=1. It is the
  * authors' own visits, never a claim that the Provider "accepts" a method; BPJS comes
- * with the FKTP note. Home is the Guidance entry: the BPJS and FKTP explanation sits in
- * every Guidance card, and there is no standalone page for it.
+ * with the FKTP note, which links to the BPJS page (`/bpjs#fktp`).
  */
 function PaymentMethods({ counts, language }: { counts: PaymentMethodCounts; language: Language }) {
   const { t } = useTranslation();
@@ -344,7 +343,7 @@ function PaymentMethods({ counts, language }: { counts: PaymentMethodCounts; lan
       )}
       <div className="flex flex-col gap-1 rounded-md bg-muted px-4 py-3 text-sm" data-testid="fktp-note">
         <p>{t("provider.payment.fktpNote")}</p>
-        <Link to="/" className="inline-flex min-h-touch items-center self-start font-semibold">
+        <Link to={BPJS_FKTP_PATH} className="inline-flex min-h-touch items-center self-start font-semibold">
           {t("provider.payment.fktpLink")}
         </Link>
       </div>
