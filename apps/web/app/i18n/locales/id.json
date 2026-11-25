@@ -187,7 +187,8 @@
         "claim": "Klaim halaman",
         "ownerFacts": "Data pemilik ditahan",
         "reply": "Balasan ditahan",
-        "proofReview": "Bukti kunjungan"
+        "proofReview": "Bukti kunjungan",
+        "policyViolation": "Kasus pelanggaran kebijakan"
       },
       "status": {
         "submitted": "Diperiksa",
@@ -247,7 +248,11 @@
         "publishReply": "Tayangkan balasan",
         "rejectReply": "Tolak balasan",
         "acceptProof": "Terima bukti",
-        "rejectProof": "Tolak bukti"
+        "rejectProof": "Tolak bukti",
+        "openViolation": "Buka kasus",
+        "notifyViolation": "Penyedia sudah diberi tahu",
+        "confirmViolation": "Konfirmasi pelanggaran",
+        "dismissViolation": "Tutup kasus"
       },
       "reasonFor": "Alasan untuk \"{{action}}\" (dicatat; penulis melihatnya kecuali saat disembunyikan)",
       "logged": "Setiap tindakan dicatat dengan nama admin, waktu dan alasan.",

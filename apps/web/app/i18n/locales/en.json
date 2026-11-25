@@ -187,7 +187,8 @@
         "claim": "Page claim",
         "ownerFacts": "Owner details held",
         "reply": "Reply held",
-        "proofReview": "Proof of visit"
+        "proofReview": "Proof of visit",
+        "policyViolation": "Policy violation case"
       },
       "status": {
         "submitted": "Being checked",
@@ -247,7 +248,11 @@
         "publishReply": "Publish reply",
         "rejectReply": "Reject reply",
         "acceptProof": "Accept proof",
-        "rejectProof": "Reject proof"
+        "rejectProof": "Reject proof",
+        "openViolation": "Open case",
+        "notifyViolation": "Provider notified",
+        "confirmViolation": "Confirm violation",
+        "dismissViolation": "Dismiss case"
       },
       "reasonFor": "Reason for \"{{action}}\" (logged; the author sees it except for hide)",
       "logged": "Every action is logged with the admin, time and reason.",

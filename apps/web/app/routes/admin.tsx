@@ -145,6 +145,9 @@ function QueueCard({ item }: { item: QueueItem }) {
           {item.claim && <span className="font-normal"> · {item.claim.providerName}</span>}
           {item.reply && <span className="font-normal"> · {item.reply.providerName}</span>}
           {item.ownerFacts && <span className="font-normal"> · {item.ownerFacts.currentName}</span>}
+          {item.violation && (
+            <span className="font-normal"> · {item.violation.providerName || item.violation.placeId}</span>
+          )}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {item.testimony && (
