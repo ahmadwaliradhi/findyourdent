@@ -105,8 +105,12 @@ export function sharedDeviceFires(
 /** D2 compares a new Testimony with the Provider's Testimonies in these statuses. */
 export const SIMILARITY_COMPARED_STATUSES = ["published", "held"] as const satisfies readonly TestimonyStatus[];
 
-/** D2: a Testimony this similar or more to another for the same Provider is held. */
-export const SIMILARITY_THRESHOLD = 0.8;
+/**
+ * D2: a Testimony this similar or more to another for the same Provider is held. 0.8 until the
+ * detection eval (docs/research/detection-eval-2026-11-25.md): a template with several small
+ * rewordings scored 0.785 and slipped; the most similar genuine pair scores 0.63.
+ */
+export const SIMILARITY_THRESHOLD = 0.75;
 
 /** Lower case, NFKC, whitespace runs as one space: a template reworded only in those still matches. */
 function normalized(text: string): string {
